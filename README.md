@@ -145,4 +145,16 @@ python3 projects/Trinity_Assistant/RAG/build_index.py
 
 ---
 
+## 🗺️ Roadmap & Nächste Schritte
+
+Trinity wird stetig weiterentwickelt. Die nächsten Meilensteine umfassen:
+
+*   **Q2 2026:** Integration der PowerPoint-Steuerung (Automation Agent).
+*   **Q2 2026:** Natural Conversation Mode ("Chat-Modus") für trigger-freies Sprechen.
+*   **Q3 2026:** Native macOS App & iPad-Begleit-App für den Hörsaal.
+
+Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
+
+---
+
 *Entwickelt von ProfEngel und Eve · Trinity ist bereit.* 🧞‍♀️

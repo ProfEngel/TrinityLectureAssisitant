@@ -891,7 +891,7 @@ class TrinityBrain:
             
         except Exception as e:
             print(f"Fehler bei der Kommunikation mit dem Gehirn: {e}")
-            return "Entschuldigung Prof. Engel, ich habe gerade den Faden verloren. Bitte wiederhole das.", False
+            return "Entschuldigung, ich habe gerade den Faden verloren. Bitte wiederhole das.", False
 
 if __name__ == "__main__":
     # Kalttest-Skript

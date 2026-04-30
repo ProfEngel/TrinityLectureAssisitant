@@ -28,7 +28,7 @@ PROJECT_DIR = os.path.dirname(CORE_DIR)
 MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 os.makedirs(MEMORY_DIR, exist_ok=True)
 SILENCE_THRESHOLD = 0.05
-INITIAL_PROMPT = "Trinity, Spieltheorie, Mathias, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
+INITIAL_PROMPT = "Trinity, Spieltheorie, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
 
 # Fuzzy Wake-Word Varianten (Fallback, wird aus config.json überschrieben)
 TRIGGER_VARIANTS = ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trenty", "trendy"]
@@ -270,12 +270,12 @@ class MorpheusEar:
         if "mach dich sichtbar" in lower_text or "zeig dich" in lower_text:
             set_state("visible")
             set_state("idle")
-            subprocess.Popen(["say", "Bin wieder voll da, Mathias."])
+            subprocess.Popen(["say", "Bin wieder voll da, Partner."])
             return
             
         if "böse" in lower_text or "wütend" in lower_text or "sauer" in lower_text:
             set_state("angry")
-            subprocess.Popen(["say", "Vorsicht, Mathias. Reize mich lieber nicht."])
+            subprocess.Popen(["say", "Vorsicht, Partner. Reize mich lieber nicht."])
             # Revert nach 5 Sekunden
             threading.Timer(5.0, lambda: set_state("idle")).start()
             return

@@ -24,14 +24,14 @@
 - **Ziel**: Trinity über den Python-Launcher hinaus verfügbar machen.
 - **Konzept**: 
     - **macOS App**: Verpackung als native Swift/AppKit Anwendung für bessere Systemintegration und Performance.
-    - **iPad App**: Entwicklung einer Begleit-App, die das Dashboard und Trinitys Augen auf das iPad spiegelt (perfekt für das Pult während Mathias im Raum herumläuft).
+    - **iPad App**: Entwicklung einer Begleit-App, die das Dashboard und Trinitys Augen auf das iPad spiegelt (perfekt für das Pult während der Dozent im Raum herumläuft).
     - **Sync**: Nahtlose Synchronisation des Wissensstands zwischen Mac und iPad.
 
 ## 4. Persona & Rhythmus (Soul-Update) - ✅ IMPLEMENTIERT
 - **Ziel**: Maximale Effizienz in der Kommunikation.
 - **Umgesetzt**: 
     - Trinity hält sich ab sofort an die **2-3 Sätze** Regel (Brevity).
-    - Feedback-Muster ("Einen Moment, Mathias...") ist aktiv.
+    - Feedback-Muster ("Einen Moment...") ist aktiv.
     - Trinity ist die Chefin, Hermes ist ihr Werkzeug.
 
 ---
