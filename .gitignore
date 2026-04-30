@@ -1,6 +1,11 @@
-# Sensitive Files
+# Sensitive Personal Files
 core/config.json
+core/Soul.md
+core/User.md
 .env
+
+# Lecture Documents (PDFs)
+RAG/*.pdf
 
 # Session Data & Build Artifacts
 RAG/index/

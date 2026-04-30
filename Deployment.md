@@ -55,8 +55,14 @@ Es ist keine Installation nötig. Trinity nutzt den nativen macOS Befehl `say`.
 Lege deine PDF-Skripte einfach in den Ordner `projects/Trinity_Assistant/RAG/`.
 - Beim ersten Start baut Trinity automatisch den Vektor-Index.
 
-## 4. API Keys konfigurieren
-Erstelle/Bearbeite `projects/Trinity_Assistant/core/config.json`:
+## 4. Konfiguration & Personalisierung
+Trinity benötigt einige Dateien für den Start, die in der GitHub-Version als `.example` vorliegen:
+
+1.  **API-Keys:** Erstelle `core/config.json` aus der `core/config.json.example` und trage deine Keys ein.
+2.  **Persona:** Erstelle `core/Soul.md` aus der `core/Soul.md.example` und passe Trinitys Persönlichkeit an.
+3.  **Nutzerprofil:** Erstelle `core/User.md` aus der `core/User.md.example` und trage Informationen über dich und deine Zielgruppe ein.
+
+### Beispiel config.json:
 ```json
 {
   "llm": {

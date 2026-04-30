@@ -145,4 +145,4 @@ python3 projects/Trinity_Assistant/RAG/build_index.py
 
 ---
 
-*Entwickelt für Mathias · Trinity ist bereit.* 🧞‍♀️
+*Entwickelt von ProfEngel und Eve · Trinity ist bereit.* 🧞‍♀️
