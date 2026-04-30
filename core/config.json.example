@@ -1,0 +1,30 @@
+{
+  "llm": {
+    "use_local": true,
+    "local_url": "http://localhost:1234/v1/chat/completions",
+    "local_model": "qwen/qwen3.6-35b-a3b",
+    "remote_url": "https://openrouter.ai/api/v1/chat/completions",
+    "remote_model": "deepseek/deepseek-v4-pro",
+    "api_key": "YOUR_OPENROUTER_KEY"
+  },
+  "apis": {
+    "tavily": "YOUR_TAVILY_KEY",
+    "fal_ai": "YOUR_FAL_AI_KEY"
+  },
+  "persona": {
+    "agent_name": "Trinity",
+    "trigger_variants": ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trenty", "trendy"]
+  },
+  "image": {
+    "primary_model": "fal-ai/nano-banana-2",
+    "fallback_model": "fal-ai/nano-banana-pro"
+  },
+  "stt": {
+    "model": "small",
+    "silence_threshold": 0.015,
+    "chunk_duration": 6
+  },
+  "tts": {
+    "voice": "Samantha"
+  }
+}

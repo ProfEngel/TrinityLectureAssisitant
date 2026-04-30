@@ -1,0 +1,13 @@
+# Sensitive Files
+core/config.json
+.env
+
+# Session Data & Build Artifacts
+RAG/index/
+gen_images/
+memory/
+__pycache__/
+*.pyc
+
+# OS specific
+.DS_Store

@@ -1,0 +1,254 @@
+:root {
+    --core-color: rgba(0, 191, 255, 0.8);
+    --glow-color: rgba(0, 255, 255, 0.3);
+    --bg-blur: blur(20px);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    font-family: var(--font-family);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+}
+
+/* Der schwebende Avatar (kleiner und dezenter) */
+#morpheus-container {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    cursor: grab;
+    -webkit-app-region: drag;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: float_cloud 4s ease-in-out infinite;
+}
+
+#morpheus-container:active {
+    cursor: grabbing;
+}
+
+#morpheus-container:hover {
+    transform: scale(1.1);
+}
+
+/* RoboEyes Container (Schwarzer Ovaler Block) */
+.robo-eyes {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 50px;
+    background: #0a0a0a;
+    border-radius: 40px;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 10px rgba(0,0,0,1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+/* Die leuchtenden Augen */
+.eye {
+    width: 16px;
+    height: 8px;
+    background: var(--core-color);
+    border-radius: 8px;
+    box-shadow: 0 0 10px var(--core-color);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: blink 4s infinite;
+}
+
+@keyframes blink {
+    0%, 96%, 98%, 100% { transform: scaleY(1); }
+    97% { transform: scaleY(0.1); }
+}
+
+
+/* Animationen */
+@keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+    50% { transform: translate(-50%, -50%) scale(1.1); filter: brightness(1.3); }
+}
+
+@keyframes drift_eyes {
+    0%, 100% { transform: translateX(0px); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes speak_eyes {
+    0%, 100% { height: 10px; }
+    50% { height: 16px; }
+    75% { height: 8px; }
+}
+
+@keyframes float_cloud {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Status-Text */
+#status-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    letter-spacing: 2px;
+    font-weight: 300;
+    text-transform: uppercase;
+    margin-top: 20px;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    display: none; /* Text unter dem Avatar ausblenden */
+}
+
+/* Content Overlay (Full Screen) */
+#content-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: var(--bg-blur);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    transition: opacity 0.3s ease;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.glass-card {
+    background: var(--glass-bg);
+    width: 80%;
+    max-width: 900px;
+    height: 70%;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+h2 {
+    margin: 0;
+    font-weight: 300;
+    letter-spacing: 1px;
+}
+
+#close-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+#close-btn:hover {
+    opacity: 1;
+}
+
+#content-body {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* States */
+body.listening .robo-eyes {
+    box-shadow: 0 0 20px rgba(0, 255, 127, 0.4), inset 0 0 10px rgba(0,0,0,1);
+}
+body.listening .eye {
+    --core-color: rgba(0, 255, 127, 1);
+    height: 14px; 
+    border-radius: 12px 12px 4px 4px; /* Neugieriger, wacher Blick */
+    transform: translateY(-2px);
+    animation: none; /* Kein Blinzeln beim konzentrierten Zuhören */
+}
+
+body.thinking .robo-eyes {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(0,0,0,1);
+}
+body.thinking .eye {
+    --core-color: rgba(255, 215, 0, 1);
+    height: 4px; /* Augen stark zusammengekniffen */
+    border-radius: 4px;
+    animation: drift_eyes 1.5s infinite alternate ease-in-out, think_pulse 0.5s infinite alternate;
+}
+
+@keyframes think_pulse {
+    0% { opacity: 0.7; transform: scaleX(0.9); }
+    100% { opacity: 1; transform: scaleX(1.1); }
+}
+
+body.speaking .robo-eyes {
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.6), inset 0 0 10px rgba(0,0,0,1);
+}
+body.speaking .eye {
+    --core-color: rgba(0, 191, 255, 1);
+    border-radius: 10px 10px 4px 4px; /* Freundliche Halbmonde */
+    animation: speak_eyes 0.4s infinite alternate ease-in-out;
+}
+
+body.reporting .robo-eyes {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.7;
+}
+
+body.hidden-mode .robo-eyes {
+    opacity: 0.05;
+    transition: opacity 1.5s ease-in-out;
+}
+
+/* Neuer Böse-Modus */
+body.angry .robo-eyes {
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8), inset 0 0 10px rgba(0,0,0,1);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+body.angry .eye {
+    --core-color: rgba(255, 0, 0, 1);
+    height: 12px;
+    width: 20px;
+    border-radius: 20px 20px 2px 2px;
+    transform: rotate(15deg); /* Sauer-Blick links */
+    animation: none;
+}
+
+body.angry .right-eye {
+    transform: rotate(-15deg); /* Sauer-Blick rechts */
+}
+
+@keyframes angry_pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.5) contrast(1.2); }
+}
+body.angry {
+    animation: angry_pulse 0.3s infinite alternate;
+}

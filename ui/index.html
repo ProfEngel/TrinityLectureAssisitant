@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpheus Avatar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="idle">
+    <div id="morpheus-container">
+        <!-- RoboEyes (Eve Style) -->
+        <div class="robo-eyes">
+            <div class="eye left-eye"></div>
+            <div class="eye right-eye"></div>
+        </div>
+        
+        <!-- Status Indikator Text (optional, dezent) -->
+        <div id="status-text">Morpheus</div>
+    </div>
+
+    <!-- Container für HTML-Content (wird bei Bedarf eingeblendet) -->
+    <div id="content-overlay" class="hidden">
+        <div class="glass-card">
+            <header>
+                <h2 id="content-title">Recherche-Ergebnisse</h2>
+                <button id="close-btn">&times;</button>
+            </header>
+            <main id="content-body">
+                <!-- Hier landet der dynamische Content -->
+            </main>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
