@@ -248,10 +248,18 @@ class MorpheusEar:
 
     def _speak_thread(self, text):
         set_state("speaking")
-        self.speak_process = subprocess.Popen(["say", text])
-        self.speak_process.wait() # Blockiert nur diesen Hintergrund-Thread
+        print(f"🔊 Trinity spricht: {text[:60]}...")
         
-        # Wenn der Prozess normal beendet wurde (nicht gekillt), setze wieder auf idle
+        # Sicherstellen, dass der Text für die Shell sicher ist
+        safe_text = text.replace('"', '').replace('$', '').replace('`', '')
+        
+        try:
+            # Nutzt die macOS Systemstimme (deine voreingestellte Siri Stimme)
+            self.speak_process = subprocess.Popen(["say", safe_text])
+            self.speak_process.wait()
+        except Exception as e:
+            print(f"⚠️ Fehler bei Sprachausgabe: {e}")
+            
         if self.speak_process and self.speak_process.returncode == 0:
             set_state("idle")
 

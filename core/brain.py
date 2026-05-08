@@ -203,7 +203,9 @@ class TrinityBrain:
         try:
             resp = requests.post(self.url, headers=headers, json=data, timeout=30)
             if resp.status_code == 200:
-                return resp.json()['choices'][0]['message']['content'].strip()
+                msg = resp.json()['choices'][0]['message']
+                # Qwen3-Fix: Fallback auf reasoning_content wenn content leer
+                return (msg.get('content') or msg.get('reasoning_content') or '').strip()
         except Exception as e:
             print(f"⚠️ ask_llm Fehler: {e}")
         return ""
@@ -780,10 +782,13 @@ class TrinityBrain:
                             f.write(html_payload)
                         has_payload = True
                         search_context = (
-                            f"--- AGENTIC ACTION ---\n"
-                            f"Du hast den aktuellen Kurs von {name_display} ({ticker}) abgerufen: "
+                            f"--- AGENTIC ACTION: ABGESCHLOSSEN ---\n"
+                            f"Du hast den Kurs von {name_display} ({ticker}) live abgerufen: "
                             f"{price:.2f} {currency} ({arrow} {change_pct:+.2f}% heute). "
-                            f"Bestätige dem Nutzer kurz den Kurs und weise auf das Nebenfenster hin.\n\n"
+                            f"Das interaktive Chart ist BEREITS im Nebenfenster sichtbar.\n"
+                            f"DEINE AUFGABE JETZT: Sag NUR einen einzigen kurzen Satz auf Deutsch, der den Kurs bestätigt. "
+                            f"Beispiel: 'Nvidia steht gerade bei 950 Dollar, heute plus zwei Prozent.'\n"
+                            f"VERBOTEN: CSV, Tabellen, Listen, Markdown, erklärende Sätze, Quellenangaben.\n\n"
                         )
                 except Exception as e:
                     print(f"⚠️ Aktienkurs Fehler: {e}")
@@ -870,7 +875,10 @@ class TrinityBrain:
             response.raise_for_status()
             
             result = response.json()
-            answer = result['choices'][0]['message']['content'].strip()
+            msg = result['choices'][0]['message']
+            # Qwen3-Fix: Im Thinking-Modus ist 'content' leer, Antwort steht in 'reasoning_content'
+            answer = (msg.get('content') or msg.get('reasoning_content') or '').strip()
+            print(f"💡 Antwort ({len(answer)} Zeichen): {answer[:80]}...")
             
             # Falls Textmodus aktiv ist und noch kein Payload gesetzt wurde (z.B. keine Map), erzeuge Untertitel-Payload
             if text_mode and not has_payload:
