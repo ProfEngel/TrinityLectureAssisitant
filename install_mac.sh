@@ -23,12 +23,12 @@ fi
 # 3. Projekt herunterladen (Git Clone, falls Git existiert, ansonsten ZIP)
 if command -v git &> /dev/null; then
     echo "📥 Lade Repository herunter (via Git)..."
-    git clone https://github.com/DEIN-GITHUB-NAME/Trinity_Assistant.git "$INSTALL_DIR"
+    git clone https://github.com/ProfEngel/TrinityLectureAssisitant.git "$INSTALL_DIR"
 else
     echo "📥 Lade Repository herunter (via ZIP)..."
-    curl -L -o trinity.zip https://github.com/DEIN-GITHUB-NAME/Trinity_Assistant/archive/refs/heads/main.zip
+    curl -L -o trinity.zip https://github.com/ProfEngel/TrinityLectureAssisitant/archive/refs/heads/main.zip
     unzip -q trinity.zip
-    mv Trinity_Assistant-main "$INSTALL_DIR"
+    mv TrinityLectureAssisitant-main "$INSTALL_DIR"
     rm trinity.zip
 fi
 
