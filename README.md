@@ -63,9 +63,19 @@ Trinity_Assistant/
 
 ## Installation & Start
 
-### Voraussetzungen
-- macOS mit Apple Silicon (M1–M4)
-- Python 3.9
+### Option 1: Automatische Installation (Empfohlen)
+Für alle, die sich nicht mit der Kommandozeile herumschlagen wollen, gibt es ein automatisiertes Skript. Es lädt Trinity herunter, installiert alle benötigten Pakete in einer isolierten Umgebung (`venv`) und erstellt ein Start-Icon auf dem Desktop.
+
+Öffne ein Terminal und füge folgenden Befehl ein:
+```bash
+curl -sSL https://raw.githubusercontent.com/DEIN-GITHUB-NAME/Trinity_Assistant/main/install_mac.sh | bash
+```
+*(Hinweis: Ersetze `DEIN-GITHUB-NAME` durch deinen tatsächlichen GitHub-Nutzernamen, sobald das Projekt öffentlich oder über Token erreichbar ist. Alternativ kannst du die Datei `install_mac.sh` direkt ausführen, wenn du den Ordner bereits heruntergeladen hast).*
+
+Nach der Installation findest du auf deinem Desktop die Datei **Starte_Trinity.command**. Ein Doppelklick reicht, um Trinity zu starten.
+
+### Option 2: Manuelle Installation (Für Entwickler)
+- macOS mit Apple Silicon (M1–M4) & Python 3.9
 - Pakete installieren:
 
 ```bash
@@ -73,7 +83,7 @@ pip install faster-whisper sounddevice numpy requests PySide6 \
             sentence-transformers pyobjc-framework-Speech
 ```
 
-### Starten
+**Manuell Starten:**
 Der Standard-Weg (nutzt OpenAI Whisper):
 ```bash
 cd "/Users/matmax/Library/Mobile Documents/iCloud~md~obsidian/Documents/Ideaverse"
