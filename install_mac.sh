@@ -57,6 +57,14 @@ EOF
 
 chmod +x "$START_SCRIPT"
 
+echo "🖼️ Setze Trinity-Icon für den Desktop-Button..."
+./venv/bin/python3 -c "
+import Cocoa, sys
+image = Cocoa.NSImage.alloc().initWithContentsOfFile_('$INSTALL_DIR/core/icon.png')
+if image:
+    Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, '$START_SCRIPT', 0)
+"
+
 echo ""
 echo "🎉 Installation erfolgreich abgeschlossen!"
 echo "========================================"
