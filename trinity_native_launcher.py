@@ -19,6 +19,15 @@ def launch_trinity_native():
     base_dir   = os.path.dirname(os.path.abspath(__file__))
     ui_script  = os.path.join(base_dir, "trinity_app.py")
     ear_script = os.path.join(base_dir, "core", "transcriber_native.py")
+    config_file = os.path.join(base_dir, "core", "config.json")
+    settings_script = os.path.join(base_dir, "core", "settings_ui.py")
+
+    if not os.path.exists(config_file):
+        print("⚙️ Erstes Setup erkannt. Öffne Konfiguration...")
+        subprocess.run([sys.executable, settings_script])
+        if not os.path.exists(config_file):
+            print("❌ Konfiguration abgebrochen. Beende Trinity.")
+            sys.exit(1)
 
     print("-> Aktiviere das Gehör (macOS SFSpeechRecognizer, Deutsch)...")
     ear_process = subprocess.Popen(

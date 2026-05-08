@@ -112,6 +112,7 @@ Trinitys Logik wurde vollständig in **11 unabhängige Agent-Skills** (`agents/`
 | **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
 | **Review-Agent** | *„Trinity, Zusammenfassung der letzten Vorlesung"* | Liest das letzte Summary vor. |
 | **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus. |
+| **Settings-Agent** | *„Trinity, öffne Einstellungen"* | Öffnet das Konfigurations-UI auf dem Desktop. |
 
 ---
 

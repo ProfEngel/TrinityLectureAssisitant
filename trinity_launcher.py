@@ -10,6 +10,16 @@ def launch_trinity():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     ui_script = os.path.join(base_dir, "trinity_app.py")
     ear_script = os.path.join(base_dir, "core", "transcriber.py")
+    config_file = os.path.join(base_dir, "core", "config.json")
+    settings_script = os.path.join(base_dir, "core", "settings_ui.py")
+
+    # 1.5 Prüfen ob config existiert (Erster Start)
+    if not os.path.exists(config_file):
+        print("⚙️ Erstes Setup erkannt. Öffne Konfiguration...")
+        subprocess.run([sys.executable, settings_script])
+        if not os.path.exists(config_file):
+            print("❌ Konfiguration abgebrochen. Beende Trinity.")
+            sys.exit(1)
 
     # 2. Prozesse starten
     print("-> Aktiviere das Gehör (Whisper)...")

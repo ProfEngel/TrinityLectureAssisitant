@@ -101,6 +101,11 @@ Lädt das Summary der vergangenen Woche.
 - **Trigger:** *"Zusammenfassung der letzten Vorlesung"* oder *"Letzte Sitzung"*
 - **Aktion:** Liest das aggregierte Transkript/Summary der letzten Woche vor, um die Klasse wieder abzuholen.
 
+### ⚙️ 12. Settings Agent (`settings_agent`)
+Öffnet das Konfigurationsmenü auf Zuruf.
+- **Trigger:** *"Öffne Einstellungen"* oder *"Konfiguration öffnen"*
+- **Aktion:** Startet das UI für API-Keys und Modelle, ohne dass man das Terminal bemühen muss.
+
 ---
 
 ## 🛠️ Eigene Skills erstellen
