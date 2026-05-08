@@ -111,6 +111,11 @@ class ContentWindow(QMainWindow):
                 win_w = min(img_w + 40, max_w)   # 20px padding je Seite
                 win_h = min(img_h + 60, max_h)   # 30px oben+unten
                 self.resize(win_w, win_h)
+                
+                # Fenster nach Resize neu zentrieren
+                target_x = (screen.width() - win_w) // 2
+                target_y = (screen.height() - win_h) // 2
+                self.move(target_x, target_y)
             except Exception:
                 pass
 
@@ -170,21 +175,11 @@ class ContentWindow(QMainWindow):
         base_url = QUrl.fromLocalFile(os.path.dirname(os.path.abspath(__file__)) + "/")
         self.browser.setHtml(full_html, base_url)
         
-        # Position berechnen: Links neben Trinity, mittig auf dem Bildschirm
+        # Position berechnen: Exakt mittig auf dem Bildschirm
         screen = QApplication.primaryScreen().geometry()
-        target_x = parent_pos.x() - self.DEFAULT_W - 20
-        target_y = parent_pos.y() - 500
+        target_x = (screen.width() - self.DEFAULT_W) // 2
+        target_y = (screen.height() - self.DEFAULT_H) // 2
         
-        # Korrekturen, damit das Fenster immer auf dem Bildschirm bleibt
-        if target_x < 10:
-            target_x = 10
-        if target_y < 10:
-            target_y = 10
-        if target_x + self.DEFAULT_W > screen.width():
-            target_x = screen.width() - self.DEFAULT_W - 20
-        if target_y + self.DEFAULT_H > screen.height():
-            target_y = screen.height() - self.DEFAULT_H - 20
-            
         self.move(target_x, target_y)
         self.show()
 
@@ -353,6 +348,12 @@ class TrinityWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Icon setzen
+    icon_path = os.path.join(os.path.dirname(__file__), "core", "icon.png")
+    if os.path.exists(icon_path):
+        from PySide6.QtGui import QIcon
+        app.setWindowIcon(QIcon(icon_path))
     
     # Trinity starten
     window = TrinityWindow()

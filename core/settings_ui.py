@@ -373,6 +373,13 @@ class SettingsWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Icon setzen
+    icon_path = os.path.join(CORE_DIR, "icon.png")
+    if os.path.exists(icon_path):
+        from PySide6.QtGui import QIcon
+        app.setWindowIcon(QIcon(icon_path))
+        
     config_path = os.path.join(CORE_DIR, "config.json")
     window = SettingsWindow(config_path)
     window.show()
