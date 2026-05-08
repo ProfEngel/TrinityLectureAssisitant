@@ -5,20 +5,21 @@
 - **Rolle**: Trinity bleibt der IMMER verfügbare Direktkontakt und das primäre Interface. Sie filtert 90% der Anfragen.
 - **Workflow**: Nur bei komplexen, tiefgehenden Aufgaben (Deep Research, Code-Analyse, Strategie) delegiert Trinity die Aufgabe an Hermes "auf Steroiden". Hermes liefert die Ergebnisse an Trinity zurück, und sie präsentiert sie.
 
-## 2. RAG-Integration (Wissensbasis)
+## 2. RAG-Integration (Wissensbasis) - ✅ IMPLEMENTIERT
 - **Ziel**: Trinity Zugriff auf deine Lehrinhalte geben.
-- **Technik**: Integration einer lokalen Vektordatenbank. 
-- **Workflow**: 
-    1. Skripte werden in einen `/knowledge` Ordner gelegt.
-    2. Trinity indiziert diese.
-    3. Bei Fragen wie "Was steht dazu in Skript XY?" greift Trinity direkt auf das Wissen zu.
+- **Umgesetzt**: 
+    - Integration der lokalen `sentence-transformers` Vektorsuche.
+    - PDFs in `/RAG` werden automatisch indiziert.
+    - RAG-Agent greift über Trigger-Wörter autonom auf das Wissen zu.
 
-## 3. Dynamische Research-Widgets (Deep Research)
+## 3. Dynamische Research-Widgets (Deep Research) - ✅ TEIL-IMPLEMENTIERT
 - **Ziel**: On-the-fly Erstellung von Dashboards.
-- **Features**:
+- **Umgesetzt**:
+    - **Deep Research**: Der `websearch_agent` führt Tavily-Suchen durch und baut Echtzeit-Dashboards.
+    - **Diagramme / Daten**: Der `stock_agent` visualisiert Kursdaten in Echtzeit (inkl. SVG-Sparklines).
+    - **Schaubilder**: Der `image_agent` generiert edukative Grafiken auf Zuruf.
+- **Offen**:
     - **YouTube**: Automatisches Einbetten relevanter Lehrvideos.
-    - **Diagramme**: Nutzung von Chart.js für dynamische Datenvisualisierungen.
-    - **Deep Research**: Hermes führt eine Tavily-Suche durch, fasst die Top-Quellen zusammen und baut daraus ein HTML-Dashboard-Widget.
 
 ## 5. Plattform-Expansion (Native Apps)
 - **Ziel**: Trinity über den Python-Launcher hinaus verfügbar machen.
