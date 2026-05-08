@@ -39,8 +39,9 @@ python3 -m venv venv
 
 # 5. Abhängigkeiten installieren
 echo "📦 Installiere Abhängigkeiten (das kann einen Moment dauern)..."
+export PYTHONIOENCODING=utf-8
 ./venv/bin/python3 -m pip install --upgrade pip
-./venv/bin/python3 -m pip install faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech
+./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech
 
 # 6. Start-Skript für den Desktop erstellen
 DESKTOP_DIR="$HOME/Desktop"
