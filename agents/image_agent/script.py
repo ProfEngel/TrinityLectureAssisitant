@@ -13,6 +13,10 @@ def execute(query: str, context: dict = None) -> dict:
         
     brain = context["brain"]
     
+    if not brain.fal_key or not str(brain.fal_key).strip():
+        search_context = "--- INFO ---\nDer Nutzer hat um ein Bild gebeten, aber in der Konfiguration ist kein fal.ai API-Key hinterlegt. Bitte weise den Nutzer freundlich darauf hin, dass er den Key erst in den Einstellungen eintragen muss (Tipp: 'Trinity, öffne Einstellungen').\n\n"
+        return {"has_payload": False, "html_payload": "", "search_context": search_context}
+        
     if len(query) < 15:
         print(f"⚠️ Bild-Trigger ignoriert: Query zu kurz ({len(query)} Zeichen).")
         return {"has_payload": False, "html_payload": "", "search_context": ""}

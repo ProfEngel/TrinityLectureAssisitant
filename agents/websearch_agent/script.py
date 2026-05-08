@@ -10,6 +10,10 @@ def execute(query: str, context: dict = None) -> dict:
         
     brain = context["brain"]
     
+    if not brain.tavily_key or not str(brain.tavily_key).strip():
+        search_context = "--- INFO ---\nDer Nutzer hat um eine Websuche gebeten, aber in der Konfiguration ist kein Tavily API-Key hinterlegt. Bitte weise den Nutzer freundlich darauf hin, dass er den Key erst in den Einstellungen eintragen muss (Tipp: 'Trinity, öffne Einstellungen').\n\n"
+        return {"has_payload": False, "html_payload": "", "search_context": search_context}
+        
     # Aktuelles Datum für zeitliche Einordnung
     now = datetime.now()
     timestamp = now.strftime("%A, %d. %B %Y, %H:%M Uhr")

@@ -33,9 +33,9 @@ DEFAULT_CONFIG = {
         "fallback_model": "fal-ai/nano-banana-pro"
     },
     "stt": {
-        "model": "mlx-community/whisper-small-mlx",
-        "silence_threshold": 0.01,
-        "chunk_duration": 3
+        "model": "small",
+        "silence_threshold": 0.015,
+        "chunk_duration": 6
     },
     "tts": {
         "voice": "Samantha"
@@ -298,11 +298,11 @@ class SettingsWindow(QMainWindow):
         
         self.stt_model_combo = QComboBox()
         self.stt_model_combo.addItems([
-            "mlx-community/whisper-tiny-mlx",
-            "mlx-community/whisper-base-mlx",
-            "mlx-community/whisper-small-mlx",
-            "mlx-community/whisper-medium-mlx",
-            "mlx-community/whisper-large-v3-mlx"
+            "tiny",
+            "base",
+            "small",
+            "medium",
+            "large-v3"
         ])
         self.stt_model_combo.setCurrentText(self.config["stt"]["model"])
         stt_form.addRow("Whisper Modell:", self.stt_model_combo)
