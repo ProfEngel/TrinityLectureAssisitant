@@ -74,52 +74,54 @@ pip install faster-whisper sounddevice numpy requests PySide6 \
 ```
 
 ### Starten
+Der Standard-Weg (nutzt OpenAI Whisper):
 ```bash
 cd "/Users/matmax/Library/Mobile Documents/iCloud~md~obsidian/Documents/Ideaverse"
 python3 projects/Trinity_Assistant/trinity_launcher.py
 ```
+*(Hinweis: `trinity_native_launcher.py` ist experimentell und funktioniert in dieser Umgebung aktuell nicht zuverlässig.)*
 
 ---
 
-## Bedienung (Sprachbefehle)
+## Bedienung & Modulares Skill-System
 
-| Befehl | Aktion |
-|---|---|
-| *„Trinity, [Frage]"* | Freie Konversation |
-| *„Trinity, schlag im Skript nach …"* | RAG-Suche in den PDFs |
-| *„Trinity, recherchiere …"* | Live Web-Suche via Tavily |
-| *„Trinity, erstelle eine Infografik zu …"* | Bildgenerierung via fal.ai |
-| *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI |
-| *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI |
-| *„Trinity, Big Picture"* | Sitzungs-Zusammenfassung |
-| *„Trinity, hör kurz weg"* | Stummschalten |
-| *„Trinity, hör wieder zu"* | Reaktivieren |
+Trinitys Logik wurde vollständig in **11 unabhängige Agent-Skills** (`agents/`) ausgelagert. Hier die wichtigsten Funktionen:
+
+| Skill | Befehl / Trigger | Aktion |
+|---|---|---|
+| **Freie Konversation** | *„Trinity, [Frage]"* | Max. 1-2 Sätze Antwort (siehe `Soul.md`). Für mehr Infos: *„Erkläre ausführlich…"* |
+| **RAG-Agent** | *„Trinity, schlag im Skript nach …"* | RAG-Suche in den eigenen Vorlesungs-PDFs. |
+| **WebSearch-Agent** | *„Trinity, recherchiere …"* | Live Web-Suche via Tavily. |
+| **Image-Agent** | *„Trinity, erstelle ein Schaubild …"* | Bildgenerierung (einfache Infografiken) via fal.ai. |
+| **Maps-Agent** | *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI. |
+| **Timer-Agent** | *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI. |
+| **Stock-Agent** | *„Trinity, wie steht der Aktienkurs von Apple?"* | Live-Kurs und SVG-Chart im UI. |
+| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive HTML5/JS-Simulation. |
+| **Summary-Agent** | *„Trinity, Big Picture"* | Sitzungs-Zusammenfassung erstellen. |
+| **PowerPoint-Agent** | *„Trinity, nächste Folie"* | Steuert PowerPoint nativ via AppleScript. |
+| **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
+| **Review-Agent** | *„Trinity, Zusammenfassung der letzten Vorlesung"* | Liest das letzte Summary vor. |
+| **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus. |
 
 ---
 
-## Konfiguration (`core/config.json`)
+## 🔒 Datenschutz & DSGVO-Konformität
 
-```json
-{
-  "llm": {
-    "use_local": true,
-    "local_url": "http://192.168.10.33:1234/v1/chat/completions",
-    "local_model": "qwen/qwen3.6-35b-a3b"
-  },
-  "stt": {
-    "model": "small",
-    "silence_threshold": 0.015,
-    "chunk_duration": 6
-  },
-  "tts": { "voice": "Samantha" }
-}
-```
+Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert.
+Da die Spracheingabe **exklusiv über ein einzelnes Apple AirPod** erfolgt, ist der Aufnahmeradius des Mikrofons auf ca. 20 cm um den Dozenten beschränkt. **Es werden keine Stimmen, Zwischenrufe oder Fragen der Studierenden im Saal aufgezeichnet.** Alle lokalen Mitschnitte und Transkripte (`memory/`) enthalten somit ausschließlich die Stimme des Dozenten.
 
-**STT-Modell wechseln** (Qualität vs. Speed):
+---
+
+## Konfiguration (`core/config.json` & `core/Soul.md`)
+
+Trinity ist hochgradig anpassbar:
+1. **API Keys & LLM (`core/config.json`):** Trage hier deine Keys (OpenRouter, Fal.ai) und Modelle ein. Noch einfacher geht es über das UI: `python3 projects/Trinity_Assistant/core/settings_ui.py`.
+2. **Persönlichkeit (`core/Soul.md`):** Bestimmt Trinitys Verhalten. Hier ist fest verankert, dass sie nur extrem kurz antwortet (max. 1-2 Sätze), es sei denn, du forderst explizit eine längere Antwort an.
+
+**STT-Modell wechseln** (in `config.json`):
 - `tiny` → ~0.3s, schwächstes Deutsch
 - `small` → ~0.8s, gut ✅ **(Standard)**
 - `medium` → ~2s, besser für Akzente
-- `large-v3-turbo` → ~8s, beste Qualität (zu langsam für Echtzeit)
 
 ---
 
@@ -148,9 +150,6 @@ python3 projects/Trinity_Assistant/RAG/build_index.py
 ## 🗺️ Roadmap & Nächste Schritte
 
 Trinity wird stetig weiterentwickelt. Die nächsten Meilensteine umfassen:
-
-*   **Q2 2026:** Integration der PowerPoint-Steuerung (Automation Agent).
-*   **Q2 2026:** Natural Conversation Mode ("Chat-Modus") für trigger-freies Sprechen.
 *   **Q3 2026:** Native macOS App & iPad-Begleit-App für den Hörsaal.
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
@@ -158,3 +157,4 @@ Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.m
 ---
 
 *Entwickelt von ProfEngel und Eve · Trinity ist bereit.* 🧞‍♀️
+
