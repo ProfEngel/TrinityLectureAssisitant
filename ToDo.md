@@ -33,5 +33,10 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [ ] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung.
 - [ ] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen.
 
+## 4. Zukünftige Features & Ideen (Phase 3)
+- [ ] **Mail-Reader Agent (Experimentell):** 
+    - Trinity soll (read-only) eingehende E-Mails überwachen (z.B. Krankmeldungen von Studenten kurz vor der Vorlesung).
+    - Gibt dem Dozenten während der Vorlesung proaktiv Bescheid oder auf Zuruf ("Gibt es neue wichtige Mails?").
+
 ---
 *Status: In Planung für KW 18/19*
