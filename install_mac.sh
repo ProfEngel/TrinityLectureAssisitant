@@ -36,12 +36,11 @@ fi
 echo "🐍 Erstelle virtuelle Python-Umgebung..."
 cd "$INSTALL_DIR" || exit
 python3 -m venv venv
-source venv/bin/activate
 
 # 5. Abhängigkeiten installieren
 echo "📦 Installiere Abhängigkeiten (das kann einen Moment dauern)..."
-pip install --upgrade pip
-pip install faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech
+./venv/bin/python3 -m pip install --upgrade pip
+./venv/bin/python3 -m pip install faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech
 
 # 6. Start-Skript für den Desktop erstellen
 DESKTOP_DIR="$HOME/Desktop"
@@ -50,10 +49,9 @@ START_SCRIPT="$DESKTOP_DIR/Starte_Trinity.command"
 echo "📝 Erstelle Start-Verknüpfung auf dem Desktop..."
 cat << 'EOF' > "$START_SCRIPT"
 #!/bin/bash
-cd "$HOME/Trinity_Assistant"
-source venv/bin/activate
+cd "$HOME/Trinity_Assistant" || exit
 echo "Starte Trinity..."
-python3 trinity_launcher.py
+./venv/bin/python3 trinity_launcher.py
 EOF
 
 chmod +x "$START_SCRIPT"
