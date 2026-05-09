@@ -161,7 +161,18 @@ python3 projects/Trinity_Assistant/RAG/build_index.py
 ## 🗺️ Roadmap & Nächste Schritte
 
 Trinity wird stetig weiterentwickelt. Die nächsten Meilensteine umfassen:
-*   **Q3 2026:** Native macOS App & iPad-Begleit-App für den Hörsaal.
+
+### Phase 3: Proaktiver Agentic Companion (Mai 2026)
+*   **Heartbeat-System:** Kontinuierliche Analyse des Vorlesungsverlaufs (alle 2 Min.) auf Fehler oder alternative Perspektiven.
+*   **UI-Bubbles:** Interaktive Benachrichtigungs-Bubbles (Gelb/Rot/Grün) über dem Avatar für lautlose Hinweise.
+*   **System-Control:** Sprachsteuerung für Bildschirm-Setups (Mirror/Extended Mode) und Fenster-Management.
+*   **Telegram-Bridge:** Direkte Verbindung zum Smartphone für proaktive Impulse bei Single-Monitor-Setups.
+
+### Phase 4: Cognitive Evolution & Dreaming (Q3 2026)
+*   **Dreaming-Funktion:** Hintergrund-Verarbeitung und "Reflektion" über vergangene Sessions zur Vorbereitung neuer Inhalte.
+*   **Deep Memory:** Automatisierte RAG-Integration aller Session-Summaries für ein perfektes Langzeitgedächtnis.
+*   **Accent-Correction:** Intelligente Bereinigung von Transkriptionsfehlern (verursacht durch Dialekte/Akzente) während der Ruhephasen.
+*   **Native App:** Standalone macOS App & iPad-Begleit-App für den Hörsaal.
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
 

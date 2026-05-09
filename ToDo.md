@@ -33,10 +33,31 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [ ] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung.
 - [ ] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen.
 
-## 4. Zukünftige Features & Ideen (Phase 3)
-- [ ] **Mail-Reader Agent (Experimentell):** 
-    - Trinity soll (read-only) eingehende E-Mails überwachen (z.B. Krankmeldungen von Studenten kurz vor der Vorlesung).
-    - Gibt dem Dozenten während der Vorlesung proaktiv Bescheid oder auf Zuruf ("Gibt es neue wichtige Mails?").
+## 4. Zukünftige Features & Ideen (Phase 3: Cognitive & System Evolution)
+> [!IMPORTANT]
+> Diese Erweiterungen markieren den Übergang von Trinity als reaktivem Assistenten hin zu einem proaktiven "Agentic Companion". Dies erfordert einen architektonischen Shift hin zu einem permanent laufenden Hintergrund-Dienst (Daemon).
+
+- [ ] **Proaktiver Heartbeat (2-Minuten-Takt):**
+    - [ ] Kontinuierliche Analyse des Transkripts auf Fehler in Aussagen.
+    - [ ] Einblendung alternativer Perspektiven oder Ergänzungen.
+    - [ ] **Repetitions-Check:** Abgleich mit RAG (vorherige Sessions), um Redundanzen aufzuzeigen.
+    - [ ] **Proaktive Visuals:** Automatisches Zeigen von Schaubildern/Erklärungen auf dem Second Screen.
+    - [ ] **UI-Integration (Bubbles):**
+        - [ ] Anzeige kleiner Benachrichtigungs-Bubbles über dem Trinity-Icon:
+            - **Gelb:** Alternative Perspektiven (Counter).
+            - **Rot:** Fehler in Aussagen (Counter).
+            - **Grün:** Proaktive Visuals/Schaubilder (Counter).
+        - [ ] **Interaktion:** Klick auf Bubble öffnet Vorschau-Fenster.
+        - [ ] **Action-Trigger:** Option zum Teilen via ScreenSharing oder Ausgabe über den "AirpodSouffleur" (TTS).
+- [ ] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
+- [ ] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (ideal bei Single-Monitor-Setup).
+- [ ] **Dreaming-Funktion (Deep Reflection):**
+    - [ ] Hintergrund-Verarbeitung von Informationen in Ruhezeiten.
+    - [ ] **Akzent-Korrektur:** Intelligente Bereinigung von TTS-Fehlern (durch Akzent bedingt) im "Schlaf".
+    - [ ] Aufbereitung von Inhalten für zukünftige Sessions.
+- [ ] **System- & Screen-Control:**
+    - [ ] "Trinity, zeig mir das auf beiden Bildschirmen" -> Toggle Mirror/Extended Mode.
+    - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
 
 ---
-*Status: In Planung für KW 18/19*
+*Status: In Planung für KW 19/20 (Architektur-Erweiterung erforderlich)*
