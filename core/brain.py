@@ -80,6 +80,9 @@ class TrinityBrain:
                     if hasattr(module, "can_handle") and hasattr(module, "execute"):
                         self.live_skills.append(module)
                         print(f"🔌 Live-Skill geladen: {item}")
+                        # Optionaler Init-Hook (z.B. für Index-Vorladung beim Start)
+                        if hasattr(module, "init"):
+                            module.init()
                 except Exception as e:
                     print(f"⚠️ Fehler beim Laden des Skills {item}: {e}")
 
@@ -146,7 +149,6 @@ class TrinityBrain:
         lower_query = user_query.lower()
         
         # --- DYNAMIC SKILL DISPATCH ---
-        skill_handled = False
         for skill in getattr(self, 'live_skills', []):
             if skill.can_handle(router_text):
                 try:
@@ -156,23 +158,17 @@ class TrinityBrain:
                         with open(payload_path, "w", encoding="utf-8") as f:
                             f.write(result.get("html_payload", ""))
                         has_payload = True
-                        search_context = result.get("search_context", "")
-                    skill_handled = True
-                    break
+                    # search_context: Kontext vom Skill (Web, RAG, etc.) – nur einmal verwenden
+                    search_context = result.get("search_context", search_context)
                 except Exception as e:
                     print(f"⚠️ Fehler bei der Skill-Ausführung: {e}")
-        
-
-        # Die RAG Logik wurde in den rag_agent ausgelagert.
-        # Er gibt den 'search_context' über die Live-Skills Pipeline zurück.
-        rag_context = search_context
+                break
 
         context_prompt = (
             f"{soul_prompt}\n\n"
             f"--- INFORMATIONEN ZUM NUTZER UND ZIELPUBLIKUM ---\n"
             f"{user_prompt}\n\n"
             f"{search_context}"
-            f"{rag_context}"
             f"--- AKTUELLES VORLESUNGS-TRANSKRIPT ---\n"
             f"Hier ist das aktuelle Transkript der Vorlesung inklusive Zeitstempel:\n"
             f"{transcript}\n\n"
