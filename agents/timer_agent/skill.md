@@ -1,11 +1,20 @@
-# Timer Agent Skill
+# Skill: Timer Agent
 
 ## Beschreibung
-Dieser Live-Skill ermöglicht es Trinity, auf Zuruf einen visuellen Countdown-Timer im Glas-Fenster einzublenden.
+Startet einen visuellen Countdown im Content-Fenster. Erkennt Zeitangaben in Worten oder Ziffern und rendert einen animierten HTML/JS-Timer.
 
-## Trigger-Erkennung
-Der Skill reagiert auf Keywords wie "timer" in Kombination mit einer Zeitangabe (z.B. "5 minuten"). Zahlwörter (eins, zwei, ...) werden automatisch erkannt und konvertiert.
+## Trigger-Wörter
+`timer` + Zeitangabe (z.B. `5 Minuten`, `10`, `zwei Minuten`)  
+Unterstützt Zahlen als Wörter: `ein`, `zwei`, `drei`, ... `zehn`, `fünfzehn`, `zwanzig`
 
-## Interface
-- `can_handle(query: str) -> bool`: Erkennt Timer-Trigger.
-- `execute(query: str) -> dict`: Generiert den HTML-Payload für den Timer und den System-Prompt für Trinity.
+## Ausgabe
+- **html_payload:** Animierter Countdown mit großer Anzeige im Content-Fenster (bleibt offen: `KEEP_OPEN`)
+
+## Beispiel-Sprachbefehle
+- *„Trinity, starte einen Timer für 10 Minuten"*
+- *„Trinity, Timer 5 Minuten"*
+- *„Trinity, stell einen Timer auf zwei Minuten"*
+
+## Abhängigkeiten
+- `re` (Regex für Zeitangaben)
+- Keine externen APIs nötig
