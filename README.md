@@ -1,5 +1,15 @@
 # Trinity Assistant 🧞‍♀️
 
+![GitHub stars](https://img.shields.io/github/stars/ProfEngel/TrinityLectureAssisitant?style=social)
+![GitHub forks](https://img.shields.io/github/forks/ProfEngel/TrinityLectureAssisitant?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/ProfEngel/TrinityLectureAssisitant?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/ProfEngel/TrinityLectureAssisitant)
+![GitHub language count](https://img.shields.io/github/languages/count/ProfEngel/TrinityLectureAssisitant)
+![GitHub top language](https://img.shields.io/github/languages/top/ProfEngel/TrinityLectureAssisitant)
+![GitHub last commit](https://img.shields.io/github/last-commit/ProfEngel/TrinityLectureAssisitant?color=red)
+[![Sponsor](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=ff69b4)](https://github.com/sponsors/ProfEngel)
+[![YouTube](https://img.shields.io/badge/YouTube-MatMaxEngel-red?logo=youtube&logoColor=white)](https://www.youtube.com/user/MatMaxEngel)
+
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
@@ -317,3 +327,98 @@ Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.m
 
 *Entwickelt von ProfEngel und Eve · Trinity ist bereit.* 🧞‍♀️
 
+---
+
+## Lizenz 📜
+
+Dieses Projekt steht unter der **Apache License 2.0**.
+
+**Nutzungsrechte:**
+- ✅ **Private Nutzung**: Komplett kostenlos
+- ✅ **Bildungseinrichtungen**: Kostenlos für Forschung und Lehre
+- ✅ **Kommerzielle Nutzung**: Kostenlos
+
+Bei kommerziellem Einsatz bitten wir freundlich darum, über den [GitHub Sponsor](https://github.com/sponsors/ProfEngel)-Link den erbrachten Mehrwert zu würdigen!
+
+Die vollständigen Lizenzbedingungen befinden sich in der [LICENSE](LICENSE)-Datei.
+
+---
+
+## Danksagungen 🙏
+
+Trinity wäre ohne diese exzellenten Open-Source-Projekte nicht möglich:
+
+**Core-Frameworks:**
+- [faster-whisper](https://github.com/guillaumekln/faster-whisper) – Schnelle, effiziente Spracherkennung (STT)
+- [LM Studio](https://lmstudio.ai) / [Ollama](https://ollama.com) – Flexible lokale LLM-Infrastruktur
+- [PySide6](https://doc.qt.io/qtforpython-6/) – Leistungsstarkes, natives macOS-UI
+- [sentence-transformers](https://www.sbert.net) – Hochwertige Embeddings für das RAG-System
+- [fal.ai](https://fal.ai) – Blitzschnelle KI-Bildgenerierung
+- [Tavily](https://tavily.com) – Zuverlässige Echtzeit-Web-Recherche
+
+**Danke an die gesamte Open-Source-Community!** 🎉
+
+---
+
+## Zitation & Forschung 📚
+
+Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
+
+```bibtex
+@software{trinity2025,
+  title={Trinity: KI-gestützte Vorlesungsassistentin für macOS mit modularem Agentic-Skill-System},
+  author={Engel, Prof. Dr. Mathias},
+  year={2025},
+  institution={Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen},
+  note={Teilfinanziert durch MWK Baden-Württemberg und Stifterverband Deutschland},
+  url={https://github.com/ProfEngel/TrinityLectureAssisitant}
+}
+```
+
+---
+
+## Support 💬
+
+Hast du Fragen, Anregungen oder benötigst Unterstützung?
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/ProfEngel/TrinityLectureAssisitant/issues)
+- 💬 **Diskussionen**: [GitHub Discussions](https://github.com/ProfEngel/TrinityLectureAssisitant/discussions)
+- 🎓 **Akademische Zusammenarbeit**: [research@opentuneweaver.com](mailto:research@opentuneweaver.com)
+
+---
+
+**Erstellt von Prof. Dr. Mathias Engel 2024–2025** – Lass uns Trinity gemeinsam noch besser machen! 💪
+
+_Made with ❤️ in Stuttgart / Nürtingen, Germany_
+
+---
+
+## Über das Projekt
+
+KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agentic-Skill-System und lokaler RAG-Wissensbasis.
+
+**Prof. Dr. Mathias Engel – ProfEngel**
+
+**Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen**  
+*Teilfinanziert durch MWK Baden-Württemberg und Stifterverband Deutschland*
+
+---
+
+## 🤝 Offen für Beiträge
+
+Beiträge sind herzlich willkommen!  
+Wenn du Ideen, Verbesserungen oder Fehlerberichte hast, öffne gerne ein **Issue** oder einen **Pull Request**.
+
+## Star History
+
+<a href="https://star-history.com/#ProfEngel/TrinityLectureAssisitant&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ProfEngel/TrinityLectureAssisitant&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ProfEngel/TrinityLectureAssisitant&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ProfEngel/TrinityLectureAssisitant&type=Date" />
+  </picture>
+</a>
+
+### Topics
+
+`voice-assistant` `llm` `ai` `macos` `apple-silicon` `lecture-assistant` `rag` `speech-recognition` `tts` `pyside6` `agentic-ai` `educational-ai` `local-llm`
