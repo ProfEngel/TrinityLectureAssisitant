@@ -61,35 +61,126 @@ Trinity_Assistant/
 
 ---
 
-## Installation & Start
+## 🚀 Onboarding – Schritt für Schritt
 
-### Option 1: Automatische Installation (Empfohlen)
-Für alle, die sich nicht mit der Kommandozeile herumschlagen wollen, gibt es ein automatisiertes Skript. Es lädt Trinity herunter, installiert alle benötigten Pakete in einer isolierten Umgebung (`venv`) und erstellt ein Start-Icon auf dem Desktop.
+> Keine Sorge, wenn du kein Technik-Profi bist. Diese Anleitung führt dich durch alles, was du brauchst.
 
-Öffne ein Terminal und füge folgenden Befehl ein:
+---
+
+### Schritt 1: Was du brauchst (Übersicht)
+
+Trinity läuft lokal auf deinem Mac. Du brauchst drei Dinge:
+
+| Was | Wozu | Pflicht? |
+|---|---|---|
+| **Ein KI-Sprachmodell (LLM)** | Trinitys „Gehirn" – sie denkt damit | ✅ Ja |
+| **Tavily API-Key** | Damit Trinity live im Internet suchen kann | ⬜ Optional |
+| **fal.ai API-Key** | Damit Trinity Schaubilder erzeugen kann | ⬜ Optional |
+
+---
+
+### Schritt 2: Das richtige LLM wählen
+
+Trinity braucht ein „Gehirn" – ein sogenanntes **Large Language Model (LLM)**. Das ist die KI, die deine Fragen versteht und antwortet. Du hast zwei Wege:
+
+#### 🌐 Weg A: OpenRouter (Empfohlen – ideal für ≤ 16 GB RAM)
+
+OpenRouter ist ein Online-Dienst, der dir Zugang zu leistungsstarken KI-Modellen gibt, **ohne dass du etwas lokal installieren musst**. Du zahlst nur für das, was du nutzt (oft wenige Cent pro Stunde Vorlesung).
+
+1. Gehe auf [openrouter.ai](https://openrouter.ai) und erstelle ein kostenloses Konto.
+2. Klicke oben rechts auf deinen Namen → **„API Keys"** → **„Create Key"**.
+3. Kopiere den Key (sieht aus wie `sk-or-v1-abc123...`). Du brauchst ihn gleich.
+4. **Welches Modell?** Wir empfehlen für den Einstieg:
+   - **`deepseek/deepseek-chat-v3-0324`** – sehr günstig, schnell, sehr gut auf Deutsch
+   - **`google/gemini-flash-1.5`** – ebenfalls günstig und schnell
+   - **`anthropic/claude-3.5-haiku`** – etwas teurer, aber sehr präzise
+
+> 💡 **Was kostet das?** Eine 90-minütige Vorlesung mit `deepseek-chat` kostet ca. 1–5 Cent.
+
+#### 💻 Weg B: Lokales LLM (Für Macs mit ≥ 16 GB RAM)
+
+Wenn du kein Geld ausgeben willst und einen leistungsstarken Mac (M2/M3/M4 mit ≥ 16 GB) hast, kannst du ein KI-Modell **komplett lokal** betreiben. Dein Gespräch verlässt dann deinen Computer nie.
+
+**Option B1: LM Studio** (Empfohlen für Einsteiger)
+1. Lade [LM Studio](https://lmstudio.ai) herunter und installiere es.
+2. Suche im Suchfeld nach `Qwen3` und lade das Modell `Qwen3-8B` (ca. 5 GB) herunter.
+3. Starte das Modell und klicke auf **„Local Server"** → **„Start Server"**.
+4. Die lokale URL lautet: `http://localhost:1234/v1/chat/completions`
+
+**Option B2: Ollama** (für Technik-Affinere)
+```bash
+brew install ollama
+ollama pull qwen3:8b
+ollama serve
+```
+
+> ⚠️ **Wichtig:** Bei weniger als 16 GB RAM läuft ein lokales Modell sehr langsam. In diesem Fall ist **Weg A (OpenRouter) die deutlich bessere Wahl**.
+
+---
+
+### Schritt 3: Optionale API-Keys besorgen
+
+Diese Keys sind **nicht nötig zum Starten**, erweitern aber Trinitys Fähigkeiten erheblich.
+
+#### 🔍 Tavily (Web-Suche)
+Damit Trinity live Fakten recherchieren kann (z.B. *„Trinity, such die aktuellen KI-News"*).
+1. Gehe auf [tavily.com](https://tavily.com) → **"Get API Key"** (kostenloser Plan verfügbar).
+2. Kopiere deinen Key (sieht aus wie `tvly-abc123...`).
+
+#### 🎨 fal.ai (Schaubilder)
+Damit Trinity auf Zuruf Infografiken und Visualisierungen erzeugen kann.
+1. Gehe auf [fal.ai](https://fal.ai) → Registrieren → **Dashboard → API Keys → "Add key"**.
+2. Kopiere deinen Key (sieht aus wie `fal-key-abc123...`).
+
+---
+
+### Schritt 4: Installation
+
+> **Was ist eine „Sandbox" (venv)?**  
+> Das Installationsskript erstellt eine sogenannte **virtuelle Umgebung** (englisch: *virtual environment* oder kurz *venv*). Das ist wie ein abgeschlossener Container auf deinem Computer. Alle Python-Pakete für Trinity werden nur dort installiert – sie verändern nichts an deinem restlichen System und können jederzeit durch einfaches Löschen des Ordners rückstandslos entfernt werden. Dein Mac bleibt sauber.
+
+**Öffne das Terminal** (Spotlight: `⌘ + Leertaste` → "Terminal" eingeben) und führe diesen Befehl aus:
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 ```
-*(Hinweis: Du kannst die Datei `install_mac.sh` auch direkt ausführen, wenn du den Ordner bereits heruntergeladen hast).*
 
-Nach der Installation findest du auf deinem Desktop die Datei **Starte_Trinity.command**. Ein Doppelklick reicht, um Trinity zu starten.
+Das Skript macht automatisch folgendes:
+- ✅ Lädt Trinity herunter
+- ✅ Erstellt die isolierte Sandbox (venv) in `~/Trinity_Assistant/`
+- ✅ Installiert alle nötigen Pakete darin (dauert ca. 2–5 Minuten)
+- ✅ Legt eine Datei **`Starte_Trinity.command`** auf deinem Desktop ab
 
-### Option 2: Manuelle Installation (Für Entwickler)
-- macOS mit Apple Silicon (M1–M4) & Python 3.9
-- Pakete installieren:
+**Nach der Installation:** Doppelklick auf `Starte_Trinity.command` – Trinity startet. ✅
+
+---
+
+### Schritt 5: Einrichten (API-Keys eintragen)
+
+Beim ersten Start siehst du das Trinity-Avatar-Icon auf deinem Bildschirm. Sage:
+
+> *„Trinity, öffne Einstellungen"*
+
+Ein Fenster öffnet sich. Trage dort ein:
+- Dein **LLM** (OpenRouter URL + Key, oder lokale LM-Studio-URL)
+- Optional: **Tavily Key** für Web-Suche
+- Optional: **fal.ai Key** für Bildgenerierung
+
+Speichern – fertig! 🎉
+
+---
+
+### Manuelle Installation (Für Entwickler)
 
 ```bash
+# Python 3.11 empfohlen
 pip install faster-whisper sounddevice numpy requests PySide6 \
             sentence-transformers pyobjc-framework-Speech
+
+# Starten
+python3 trinity_launcher.py
 ```
 
-**Manuell Starten:**
-Der Standard-Weg (nutzt OpenAI Whisper):
-```bash
-cd "/Users/matmax/Library/Mobile Documents/iCloud~md~obsidian/Documents/Ideaverse"
-python3 projects/Trinity_Assistant/trinity_launcher.py
-```
-*(Hinweis: `trinity_native_launcher.py` ist experimentell und funktioniert in dieser Umgebung aktuell nicht zuverlässig.)*
 
 ---
 
