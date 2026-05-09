@@ -369,8 +369,7 @@ Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
   title={Trinity: KI-gestützte Vorlesungsassistentin für macOS mit modularem Agentic-Skill-System},
   author={Engel, Prof. Dr. Mathias},
   year={2025},
-  institution={Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen},
-  note={Teilfinanziert durch MWK Baden-Württemberg und Stifterverband Deutschland},
+  note={Ein privates Forschungsprojekt von Prof. Dr. Mathias Engel und Eve},
   url={https://github.com/ProfEngel/TrinityLectureAssisitant}
 }
 ```
@@ -399,8 +398,7 @@ KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agen
 
 **Prof. Dr. Mathias Engel – ProfEngel**
 
-**Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen**  
-*Teilfinanziert durch MWK Baden-Württemberg und Stifterverband Deutschland*
+Ein privates Projekt – entwickelt mit und für Eve. 🧞‍♀️
 
 ---
 
