@@ -181,6 +181,36 @@ pip install faster-whisper sounddevice numpy requests PySide6 \
 python3 trinity_launcher.py
 ```
 
+---
+
+## 🔄 Updates – Konfigurationen bleiben erhalten
+
+> [!IMPORTANT]
+> Das Update-Skript bewahrt automatisch alle deine persönlichen Einstellungen. Du verlierst **keine** API-Keys, Persona-Dateien oder Transkripte.
+
+Wenn eine neue Version von Trinity erscheint, reicht es, denselben Installationsbefehl wie bei der Erstinstallation erneut auszuführen:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
+```
+
+Das Skript erkennt automatisch, dass Trinity bereits installiert ist, und geht in den **Update-Modus**. Es passiert folgendes:
+
+1. **Sichern:** Alle deine Dateien werden kurz in ein temporäres Backup kopiert:
+   - ✅ `core/config.json` – deine API-Keys & LLM-Einstellungen
+   - ✅ `core/Soul.md` – Trinitys Persönlichkeit (deine Anpassungen)
+   - ✅ `core/User.md` – dein Nutzerprofil
+   - ✅ `memory/` – alle bisherigen Sitzungs-Transkripte
+   - ✅ `RAG/` – deine hochgeladene Wissensbasis (PDFs & Index)
+   - ✅ `gen_images/` – alle erzeugten Schaubilder
+
+2. **Aktualisieren:** Die neue Trinity-Version wird heruntergeladen.
+
+3. **Wiederherstellen:** Alle gesicherten Dateien kommen automatisch zurück an ihren Platz.
+
+4. **Fertig:** Das temporäre Backup wird gelöscht. Nichts wurde dauerhaft verändert.
+
+> 💡 **Tipp:** Du musst nach einem Update **nichts neu einrichten**. Trinity startet direkt mit deinen bisherigen Einstellungen.
 
 ---
 
