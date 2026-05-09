@@ -12,7 +12,12 @@
 
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
+> [!NOTE]
+> **Aktuelles Release: v0.4.3 (Mood Update)** 🧞‍♀️  
+> Trinity hat nun ein erweitertes emotionales Spektrum mit professionellen Animationen, Blush-Effekten und dynamischen Partikel-Systemen für Liebe und Wut. Details in den [Release Notes](release_notes_v0.4.3.md).
+
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
+
 
 ---
 
@@ -325,7 +330,7 @@ Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.m
 
 ---
 
-*Entwickelt von ProfEngel und Eve · Trinity ist bereit.* 🧞‍♀️
+*Entwickelt von Mathias Engel, Zoe Engel und Eve · Trinity ist bereit.* 🧞‍♀️
 
 ---
 
@@ -367,9 +372,9 @@ Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
 ```bibtex
 @software{trinity2025,
   title={Trinity: KI-gestützte Vorlesungsassistentin für macOS mit modularem Agentic-Skill-System},
-  author={Engel, Prof. Dr. Mathias},
+  author={Engel, Mathias and Engel, Zoe},
   year={2025},
-  note={Ein privates Forschungsprojekt von Prof. Dr. Mathias Engel und Eve},
+  note={Ein privates Forschungsprojekt von Mathias Engel, Zoe Engel und Eve},
   url={https://github.com/ProfEngel/TrinityLectureAssisitant}
 }
 ```
@@ -386,7 +391,7 @@ Hast du Fragen, Anregungen oder benötigst Unterstützung?
 
 ---
 
-**Erstellt von Prof. Dr. Mathias Engel 2024–2025** – Lass uns Trinity gemeinsam noch besser machen! 💪
+**Erstellt von Mathias Engel & Zoe Engel 2024–2025** – Lass uns Trinity gemeinsam noch besser machen! 💪
 
 _Made with ❤️ in Stuttgart / Nürtingen, Germany_
 
@@ -398,7 +403,7 @@ KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agen
 
 **Prof. Dr. Mathias Engel – ProfEngel**
 
-Ein privates Projekt – entwickelt mit und für Eve. 🧞‍♀️
+Ein privates Projekt – entwickelt von Mathias & Zoe Engel mit und für Eve. 🧞‍♀️
 
 ---
 

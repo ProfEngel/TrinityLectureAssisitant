@@ -35,10 +35,15 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - Workflow: Trinity schließt das Log-File, verschiebt es in `memory/` und startet automatisch den `session_summarizer_agent` Agent-Task.
 - [X] **Review-Modus:** Trinity liest auf Wunsch die Zusammenfassung der letzten Session kurz vor Beginn der neuen vor.
 
-## 3. Finetuning & UX
+## 3. Finetuning, UX & Moods
 
+- [X] **Emotional Spectrum (Mood Update v0.4.3):**
+  - [X] **Refined Love Mode:** Heart eyes, blush effect, and dynamic floating heart particles.
+  - [X] **Refined Angry Mode:** Sharp trapezoidal eyes, visor jitter/shake, and aggressive particles (sparks/fire).
+  - [X] **State Persistence:** Automatic revert to idle after 5 seconds.
 - [ ] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung.
 - [ ] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen.
+
 
 ## 4. Zukünftige Features & Ideen (Phase 3: Cognitive & System Evolution)
 

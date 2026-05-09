@@ -4,6 +4,42 @@ const overlay = document.getElementById('content-overlay');
 const closeBtn = document.getElementById('close-btn');
 const statusText = document.getElementById('status-text');
 
+let heartInterval = null;
+let angryInterval = null;
+
+function spawnHeart() {
+    if (!body.classList.contains('love')) return;
+    const heart = document.createElement('div');
+    heart.className = 'floating-heart';
+    heart.innerText = ['❤️', '💖', '💝', '💕'][Math.floor(Math.random() * 4)];
+    
+    // Zufällige Position rund um Trinity
+    const x = Math.random() * 80 - 10;
+    heart.style.left = x + 'px';
+    heart.style.top = '10px';
+    heart.style.fontSize = (Math.random() * 10 + 10) + 'px';
+    
+    trinity.appendChild(heart);
+    setTimeout(() => heart.remove(), 2000);
+}
+
+function spawnAngryParticle() {
+    if (!body.classList.contains('angry')) return;
+    const p = document.createElement('div');
+    p.className = 'angry-particle';
+    p.innerText = ['⚡', '🔥', '💢', '☄️'][Math.floor(Math.random() * 4)];
+    p.style.color = 'red';
+    
+    const x = Math.random() * 100 - 20;
+    const y = Math.random() * 40 - 20;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.fontSize = (Math.random() * 15 + 10) + 'px';
+    
+    trinity.appendChild(p);
+    setTimeout(() => p.remove(), 600);
+}
+
 // State Manager global verfügbar machen, damit Python (runJavaScript) ihn aufrufen kann
 window.setTrinityState = (state) => {
     if (state === 'invisible') {
@@ -25,7 +61,21 @@ window.setTrinityState = (state) => {
     } else {
         overlay.classList.add('hidden');
     }
+
+    // Intervalle aufräumen
+    clearInterval(heartInterval);
+    clearInterval(angryInterval);
+
+    if (state === 'love') {
+        heartInterval = setInterval(spawnHeart, 300);
+        for(let i=0; i<3; i++) setTimeout(spawnHeart, i*100);
+    } else if (state === 'angry') {
+        angryInterval = setInterval(spawnAngryParticle, 150);
+        for(let i=0; i<3; i++) setTimeout(spawnAngryParticle, i*50);
+    }
 };
+
+
 
 // Klick auf Trinity simuliert Zustandswechsel (nur für optisches Feedback)
 trinity.addEventListener('click', () => {

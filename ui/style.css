@@ -226,29 +226,142 @@ body.hidden-mode .robo-eyes {
     transition: opacity 1.5s ease-in-out;
 }
 
-/* Neuer Böse-Modus */
+/* 😡 Böse-Modus – Aggressiver Look (REFINED) */
 body.angry .robo-eyes {
-    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8), inset 0 0 10px rgba(0,0,0,1);
-    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.9), inset 0 0 15px rgba(0,0,0,1);
+    transform: translate(-50%, -50%) scale(1.15);
+    background: #000;
+    animation: visor_shake 0.2s infinite;
+}
+
+@keyframes visor_shake {
+    0% { transform: translate(-50%, -50%) scale(1.15) translate(0, 0); }
+    25% { transform: translate(-50%, -50%) scale(1.15) translate(-1px, 1px); }
+    50% { transform: translate(-50%, -50%) scale(1.15) translate(1px, -1px); }
+    75% { transform: translate(-50%, -50%) scale(1.15) translate(-1px, -1px); }
+    100% { transform: translate(-50%, -50%) scale(1.15) translate(1px, 1px); }
 }
 
 body.angry .eye {
     --core-color: rgba(255, 0, 0, 1);
-    height: 12px;
-    width: 20px;
-    border-radius: 20px 20px 2px 2px;
-    transform: rotate(15deg); /* Sauer-Blick links */
-    animation: none;
+    width: 24px;
+    height: 14px;
+    background: var(--core-color);
+    box-shadow: 0 0 15px var(--core-color), 0 0 30px rgba(255, 0, 0, 0.5);
+    border-radius: 2px;
+    /* Scharfer, böser Blick */
+    clip-path: polygon(15% 35%, 100% 0%, 100% 100%, 0% 100%);
+    transform: none !important;
+    animation: angry_eye_flicker 0.1s infinite alternate;
 }
 
 body.angry .right-eye {
-    transform: rotate(-15deg); /* Sauer-Blick rechts */
+    clip-path: polygon(0% 0%, 85% 35%, 100% 100%, 0% 100%);
 }
 
-@keyframes angry_pulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.5) contrast(1.2); }
+@keyframes angry_eye_flicker {
+    from { filter: brightness(1) contrast(1); }
+    to { filter: brightness(1.4) contrast(1.2); }
 }
+
+/* Wut-Partikel (via JS gespawnt) */
+.angry-particle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+    font-weight: bold;
+    animation: angry_pop 0.6s ease-out forwards;
+}
+
+@keyframes angry_pop {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    50% { transform: scale(1.5) rotate(20deg); opacity: 1; }
+    100% { transform: scale(1.2) translateY(-30px) rotate(-20deg); opacity: 0; }
+}
+
+@keyframes angry_red_glow {
+    0%, 100% { filter: brightness(1) saturate(1.2); }
+    50% { filter: brightness(1.3) saturate(2) drop-shadow(0 0 15px red); }
+}
+
 body.angry {
-    animation: angry_pulse 0.3s infinite alternate;
+    animation: angry_red_glow 0.4s infinite alternate;
 }
+
+
+/* ❤️ Love-Modus – Herzchenaugen (REFINED) */
+body.love .robo-eyes {
+    box-shadow: 0 0 40px rgba(255, 105, 180, 0.8), inset 0 0 15px rgba(0,0,0,1);
+    transform: translate(-50%, -50%) scale(1.1);
+    background: linear-gradient(145deg, #1a0a10, #0a0a0a);
+}
+
+/* Blush-Effekt auf dem Visier */
+body.love .robo-eyes::before,
+body.love .robo-eyes::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    width: 24px;
+    height: 12px;
+    background: rgba(255, 105, 180, 0.25);
+    border-radius: 50%;
+    filter: blur(6px);
+    animation: blush_pulse 2s infinite alternate ease-in-out;
+    z-index: 1;
+}
+body.love .robo-eyes::before { left: 8px; }
+body.love .robo-eyes::after { right: 8px; }
+
+@keyframes blush_pulse {
+    from { opacity: 0.4; transform: scale(1); }
+    to { opacity: 0.8; transform: scale(1.15); }
+}
+
+body.love .eye {
+    --core-color: rgba(255, 20, 147, 1);
+    width: 22px;
+    height: 22px;
+    background: var(--core-color);
+    box-shadow: 0 0 20px var(--core-color), 0 0 40px rgba(255, 20, 147, 0.4);
+    border-radius: 0;
+    z-index: 2;
+    /* Optimierte Herzform */
+    clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+    transform: none !important;
+    animation: love_pulse 0.8s ease-in-out infinite alternate;
+}
+
+body.love .right-eye {
+    transform: none !important;
+}
+
+@keyframes love_pulse {
+    0%   { transform: scale(1);    filter: brightness(1); }
+    100% { transform: scale(1.25); filter: brightness(1.3) drop-shadow(0 0 10px rgba(255,20,147,0.8)); }
+}
+
+/* Dynamische Herz-Partikel (via JS gespawnt) */
+.floating-heart {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+    animation: heart_float_up 2s ease-out forwards;
+    filter: drop-shadow(0 0 5px rgba(255, 20, 147, 0.5));
+}
+
+@keyframes heart_float_up {
+    0% { transform: translateY(0) scale(0) rotate(0deg); opacity: 0; }
+    20% { opacity: 1; transform: translateY(-10px) scale(1.2) rotate(10deg); }
+    100% { transform: translateY(-50px) scale(0.8) rotate(-20deg); opacity: 0; }
+}
+
+@keyframes love_body_glow {
+    0%, 100% { filter: brightness(1); }
+    50%       { filter: brightness(1.1) saturate(1.2); }
+}
+
+body.love {
+    animation: love_body_glow 1.5s ease-in-out infinite alternate;
+}
+

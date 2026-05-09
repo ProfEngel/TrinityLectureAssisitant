@@ -287,6 +287,13 @@ class MorpheusEar:
             # Revert nach 5 Sekunden
             threading.Timer(5.0, lambda: set_state("idle")).start()
             return
+
+        if any(w in lower_text for w in ["lieb", "herz", "herzchen", "ich liebe", "süß", "knuddel", "küss", "bussi", "liebevoll", "herzlich", "hab dich lieb"]):
+            set_state("love")
+            subprocess.Popen(["say", "Aww. Du machst mich verlegen, Partner."])
+            # Revert nach 5 Sekunden
+            threading.Timer(5.0, lambda: set_state("idle")).start()
+            return
             
         if "schließ" in lower_text and ("fenster" in lower_text or "timer" in lower_text or "anzeige" in lower_text):
             set_state("hide_window")
