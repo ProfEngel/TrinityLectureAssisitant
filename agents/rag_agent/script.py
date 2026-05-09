@@ -10,12 +10,19 @@ def _load_rag_index():
     global rag_chunks, rag_embeddings, index_loaded
     if index_loaded:
         return
-        
+
     rag_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "RAG")
     index_dir = os.path.join(rag_dir, "index")
-    
+
     if not os.path.isdir(rag_dir):
         print("📚 RAG-Ordner nicht gefunden, Wissensbasis deaktiviert.")
+        index_loaded = True
+        return
+
+    # Keine PDFs vorhanden → RAG deaktiviert, kein Fehler
+    current_pdfs = sorted([f for f in os.listdir(rag_dir) if f.lower().endswith('.pdf')])
+    if not current_pdfs:
+        print("📚 RAG: Keine PDFs in RAG/ – Wissensbasis deaktiviert (einfach PDF ablegen zum Aktivieren).")
         index_loaded = True
         return
 
@@ -27,7 +34,6 @@ def _load_rag_index():
     if not all(os.path.exists(p) for p in [chunks_path, embeddings_path, meta_path]):
         needs_rebuild = True
     else:
-        current_pdfs = sorted([f for f in os.listdir(rag_dir) if f.lower().endswith('.pdf')])
         try:
             import json as _json
             with open(meta_path, "r") as f:
@@ -68,6 +74,12 @@ def _load_rag_index():
             print("⚠️ build_index.py nicht gefunden. Bitte erst ausführen.")
             index_loaded = True
             return
+
+    # Sicherheitscheck: Existiert der Index wirklich nach dem Build?
+    if not all(os.path.exists(p) for p in [chunks_path, embeddings_path, meta_path]):
+        print("📚 RAG-Index konnte nicht erstellt werden (keine gültigen Inhalte in den PDFs?).")
+        index_loaded = True
+        return
 
     try:
         import json as _json
