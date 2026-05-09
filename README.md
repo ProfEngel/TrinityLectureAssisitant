@@ -153,6 +153,22 @@ Das Skript macht automatisch folgendes:
 
 **Nach der Installation:** Doppelklick auf `Starte_Trinity.command` – Trinity startet. ✅
 
+> 📁 **Wo ist Trinity installiert?**  
+> Trinity liegt nach der Installation in deinem Benutzerordner unter:  
+> **`/Users/DEINNAME/Trinity_Assistant/`**  
+> (oder kurz: **`~/Trinity_Assistant/`**)  
+>  
+> Die wichtigsten Unterordner auf einen Blick:  
+> | Ordner / Datei | Inhalt |  
+> |---|---|  
+> | `core/config.json` | Deine API-Keys & LLM-Einstellungen |  
+> | `core/Soul.md` | Trinitys Persönlichkeit (anpassbar) |  
+> | `core/User.md` | Dein Nutzerprofil (anpassbar) |  
+> | `RAG/` | Hier PDFs ablegen für die Wissensbasis |  
+> | `memory/` | Transkripte & Session-Zusammenfassungen |  
+> | `gen_images/` | Alle von Trinity erzeugten Schaubilder |  
+> | `agents/` | Die einzelnen Skills (erweiterbar) |
+
 ---
 
 ### Schritt 5: Einrichten (API-Keys eintragen)
