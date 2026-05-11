@@ -200,8 +200,9 @@ class TrinityBrain:
             # Falls Textmodus aktiv ist und noch kein Payload gesetzt wurde (z.B. keine Map), erzeuge Untertitel-Payload
             if text_mode and not has_payload:
                 formatted_answer = answer.replace('\n', '<br>')
-                # Ohne KEEP_OPEN, damit es automatisch schließt, wenn sie aufhört zu sprechen
+                # Mit KEEP_OPEN, damit das Fenster offen bleibt, bis der User es explizit schließt
                 html_payload = f"""
+                <!-- KEEP_OPEN -->
                 <h2 style="margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;">Antwort</h2>
                 <div style="font-size: 16px; line-height: 1.5; opacity: 0.9;">
                     {formatted_answer}
