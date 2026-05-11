@@ -81,33 +81,31 @@ export PYTHONIOENCODING=utf-8
 ./venv/bin/python3 -m pip install --upgrade pip -q
 ./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech pyobjc-framework-AVFoundation -q
 
-# 7. Desktop-Verknüpfung erstellen
+# 7. Desktop-Verknüpfung (Native macOS App) erstellen
 DESKTOP_DIR="$HOME/Desktop"
-START_SCRIPT="$DESKTOP_DIR/Starte_Trinity.command"
+APP_PATH="$DESKTOP_DIR/Trinity.app"
 
-echo "📝 Erstelle Start-Verknüpfung auf dem Desktop..."
-cat << 'EOF' > "$START_SCRIPT"
-#!/bin/bash
-cd "$HOME/Trinity_Assistant" || exit
-echo "Starte Trinity..."
-./venv/bin/python3 trinity_launcher.py
-EOF
+echo "📝 Erstelle native macOS App auf dem Desktop..."
+# Alte .command Verknüpfung entfernen, falls vorhanden
+rm -f "$DESKTOP_DIR/Starte_Trinity.command"
+rm -rf "$APP_PATH"
 
-chmod +x "$START_SCRIPT"
+osacompile -o "$APP_PATH" -e "do shell script \"cd '$INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py\""
 
-echo "🖼️ Setze Trinity-Icon für den Desktop-Button..."
+echo "🖼️ Setze Trinity-Icon für die App..."
 ./venv/bin/python3 -c "
 import Cocoa, sys
 image = Cocoa.NSImage.alloc().initWithContentsOfFile_('$INSTALL_DIR/core/icon.png')
 if image:
-    Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, '$START_SCRIPT', 0)
+    Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, '$APP_PATH', 0)
 " 2>/dev/null || true
 
 echo ""
 echo "🎉 ${IS_UPDATE:+Update}${IS_UPDATE:-Installation} erfolgreich abgeschlossen!"
 echo "============================================"
-echo "👉 Ein Start-Icon ('Starte_Trinity.command') liegt auf deinem Schreibtisch."
+echo "👉 Eine native App ('Trinity.app') liegt auf deinem Schreibtisch."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
+echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
 echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte)"
