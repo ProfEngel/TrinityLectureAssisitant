@@ -142,6 +142,11 @@ class MorpheusEar:
 
                         # VAD: Nur transkribieren wenn Lautstärke über Threshold
                         rms = np.sqrt(np.mean(audio_data**2))
+                        
+                        # --- DIAGNOSE: Lautstärke-Anzeige im Terminal ---
+                        bar = "#" * int(rms * 500) + "." * max(0, 50 - int(rms * 500))
+                        status = "✅" if rms >= self.silence_threshold else "🔇"
+                        print(f"\rLevel: [{bar}] {rms:.4f} {status}", end="", flush=True)
 
                         if rms < self.silence_threshold:
                             if not (self.speak_process and self.speak_process.poll() is None):
@@ -201,7 +206,7 @@ class MorpheusEar:
 
     def process_text(self, text):
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] {text}")
+        print(f"\n[{timestamp}] {text}")
         
         # In Datei schreiben (immer, auch wenn stumm)
         with open(self.transcript_file, "a") as f:

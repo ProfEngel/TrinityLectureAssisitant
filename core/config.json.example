@@ -22,7 +22,7 @@
   "stt": {
     "model": "small",
     "silence_threshold": 0.015,
-    "chunk_duration": 6
+    "chunk_duration": 2
   },
   "tts": {
     "voice": "Samantha"

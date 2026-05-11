@@ -106,4 +106,8 @@ window.displayContent = (title, html) => {
 };
 
 // Startzustand
-window.setTrinityState('idle');
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.setTrinityState === 'function') {
+        window.setTrinityState('idle');
+    }
+});
