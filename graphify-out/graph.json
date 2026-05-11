@@ -1,0 +1,3652 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "trinity_launcher.py",
+      "file_type": "code",
+      "source_file": "trinity_launcher.py",
+      "source_location": "L1",
+      "id": "trinity_launcher_py",
+      "community": 24,
+      "norm_label": "trinity_launcher.py"
+    },
+    {
+      "label": "launch_trinity()",
+      "file_type": "code",
+      "source_file": "trinity_launcher.py",
+      "source_location": "L6",
+      "id": "trinity_assistant_trinity_launcher_launch_trinity",
+      "community": 24,
+      "norm_label": "launch_trinity()"
+    },
+    {
+      "label": "trinity_app.py",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L1",
+      "id": "trinity_app_py",
+      "community": 0,
+      "norm_label": "trinity_app.py"
+    },
+    {
+      "label": "ContentResizeFilter",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L7",
+      "id": "trinity_assistant_trinity_app_contentresizefilter",
+      "community": 0,
+      "norm_label": "contentresizefilter"
+    },
+    {
+      "label": "QObject",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "",
+      "id": "qobject",
+      "community": 0,
+      "norm_label": "qobject"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L11",
+      "id": "trinity_assistant_trinity_app_contentresizefilter_init",
+      "community": 0,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": "._detect_edges()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L19",
+      "id": "trinity_assistant_trinity_app_contentresizefilter_detect_edges",
+      "community": 0,
+      "norm_label": "._detect_edges()"
+    },
+    {
+      "label": ".eventFilter()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L29",
+      "id": "trinity_assistant_trinity_app_contentresizefilter_eventfilter",
+      "community": 0,
+      "norm_label": ".eventfilter()"
+    },
+    {
+      "label": "ContentWindow",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L75",
+      "id": "trinity_assistant_trinity_app_contentwindow",
+      "community": 0,
+      "norm_label": "contentwindow"
+    },
+    {
+      "label": "QMainWindow",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "",
+      "id": "qmainwindow",
+      "community": 0,
+      "norm_label": "qmainwindow"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L79",
+      "id": "trinity_assistant_trinity_app_contentwindow_init",
+      "community": 0,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": "._on_url_changed()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L100",
+      "id": "trinity_assistant_trinity_app_contentwindow_on_url_changed",
+      "community": 0,
+      "norm_label": "._on_url_changed()"
+    },
+    {
+      "label": "._install_resize_filter()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L122",
+      "id": "trinity_assistant_trinity_app_contentwindow_install_resize_filter",
+      "community": 0,
+      "norm_label": "._install_resize_filter()"
+    },
+    {
+      "label": ".show_content()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L129",
+      "id": "trinity_assistant_trinity_app_contentwindow_show_content",
+      "community": 0,
+      "norm_label": ".show_content()"
+    },
+    {
+      "label": ".hide_content()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L186",
+      "id": "trinity_assistant_trinity_app_contentwindow_hide_content",
+      "community": 0,
+      "norm_label": ".hide_content()"
+    },
+    {
+      "label": "ChatWindow",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L189",
+      "id": "trinity_assistant_trinity_app_chatwindow",
+      "community": 0,
+      "norm_label": "chatwindow"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L190",
+      "id": "trinity_assistant_trinity_app_chatwindow_init",
+      "community": 0,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".show_chat()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L221",
+      "id": "trinity_assistant_trinity_app_chatwindow_show_chat",
+      "community": 0,
+      "norm_label": ".show_chat()"
+    },
+    {
+      "label": ".send_message()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L227",
+      "id": "trinity_assistant_trinity_app_chatwindow_send_message",
+      "community": 0,
+      "norm_label": ".send_message()"
+    },
+    {
+      "label": "WebEngineDragFilter",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L236",
+      "id": "trinity_assistant_trinity_app_webenginedragfilter",
+      "community": 0,
+      "norm_label": "webenginedragfilter"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L237",
+      "id": "trinity_assistant_trinity_app_webenginedragfilter_init",
+      "community": 0,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".eventFilter()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L243",
+      "id": "trinity_assistant_trinity_app_webenginedragfilter_eventfilter",
+      "community": 0,
+      "norm_label": ".eventfilter()"
+    },
+    {
+      "label": "TrinityWindow",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L265",
+      "id": "trinity_assistant_trinity_app_trinitywindow",
+      "community": 0,
+      "norm_label": "trinitywindow"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L266",
+      "id": "trinity_assistant_trinity_app_trinitywindow_init",
+      "community": 0,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".check_state()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L312",
+      "id": "trinity_assistant_trinity_app_trinitywindow_check_state",
+      "community": 0,
+      "norm_label": ".check_state()"
+    },
+    {
+      "label": ".mousePressEvent()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L338",
+      "id": "trinity_assistant_trinity_app_trinitywindow_mousepressevent",
+      "community": 0,
+      "norm_label": ".mousepressevent()"
+    },
+    {
+      "label": ".mouseMoveEvent()",
+      "file_type": "code",
+      "source_file": "trinity_app.py",
+      "source_location": "L344",
+      "id": "trinity_assistant_trinity_app_trinitywindow_mousemoveevent",
+      "community": 0,
+      "norm_label": ".mousemoveevent()"
+    },
+    {
+      "label": "EventFilter der auf dem WebEngine-FocusProxy lauscht und Resize an den R\u00e4ndern e",
+      "file_type": "rationale",
+      "source_file": "trinity_app.py",
+      "source_location": "L8",
+      "id": "trinity_assistant_trinity_app_rationale_8",
+      "community": 0,
+      "norm_label": "eventfilter der auf dem webengine-focusproxy lauscht und resize an den randern e"
+    },
+    {
+      "label": "Passt Fenstergr\u00f6\u00dfe an Bildgr\u00f6\u00dfe an wenn IMAGE_PAYLOAD gesetzt.",
+      "file_type": "rationale",
+      "source_file": "trinity_app.py",
+      "source_location": "L101",
+      "id": "trinity_assistant_trinity_app_rationale_101",
+      "community": 0,
+      "norm_label": "passt fenstergro\u00dfe an bildgro\u00dfe an wenn image_payload gesetzt."
+    },
+    {
+      "label": "trinity_native_launcher.py",
+      "file_type": "code",
+      "source_file": "trinity_native_launcher.py",
+      "source_location": "L1",
+      "id": "trinity_native_launcher_py",
+      "community": 13,
+      "norm_label": "trinity_native_launcher.py"
+    },
+    {
+      "label": "launch_trinity_native()",
+      "file_type": "code",
+      "source_file": "trinity_native_launcher.py",
+      "source_location": "L16",
+      "id": "trinity_assistant_trinity_native_launcher_launch_trinity_native",
+      "community": 13,
+      "norm_label": "launch_trinity_native()"
+    },
+    {
+      "label": "TrinityNative Launcher STT: macOS SFSpeechRecognizer (Apple Neural Engine, Deuts",
+      "file_type": "rationale",
+      "source_file": "trinity_native_launcher.py",
+      "source_location": "L1",
+      "id": "trinity_assistant_trinity_native_launcher_rationale_1",
+      "community": 13,
+      "norm_label": "trinitynative launcher stt: macos sfspeechrecognizer (apple neural engine, deuts"
+    },
+    {
+      "label": "trinity_chat.py",
+      "file_type": "code",
+      "source_file": "trinity_chat.py",
+      "source_location": "L1",
+      "id": "trinity_chat_py",
+      "community": 25,
+      "norm_label": "trinity_chat.py"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "trinity_chat.py",
+      "source_location": "L4",
+      "id": "trinity_assistant_trinity_chat_main",
+      "community": 25,
+      "norm_label": "main()"
+    },
+    {
+      "label": "main.js",
+      "file_type": "code",
+      "source_file": "ui/main.js",
+      "source_location": "L1",
+      "id": "ui_main_js",
+      "community": 14,
+      "norm_label": "main.js"
+    },
+    {
+      "label": "spawnHeart()",
+      "file_type": "code",
+      "source_file": "ui/main.js",
+      "source_location": "L10",
+      "id": "ui_main_spawnheart",
+      "community": 14,
+      "norm_label": "spawnheart()"
+    },
+    {
+      "label": "spawnAngryParticle()",
+      "file_type": "code",
+      "source_file": "ui/main.js",
+      "source_location": "L26",
+      "id": "ui_main_spawnangryparticle",
+      "community": 14,
+      "norm_label": "spawnangryparticle()"
+    },
+    {
+      "label": "test_voice.py",
+      "file_type": "code",
+      "source_file": "core/test_voice.py",
+      "source_location": "L1",
+      "id": "core_test_voice_py",
+      "community": 15,
+      "norm_label": "test_voice.py"
+    },
+    {
+      "label": "speak()",
+      "file_type": "code",
+      "source_file": "core/test_voice.py",
+      "source_location": "L4",
+      "id": "core_test_voice_speak",
+      "community": 15,
+      "norm_label": "speak()"
+    },
+    {
+      "label": "Nutzt das native macOS 'say' Kommando.     Dies ist die schnellste und einfachst",
+      "file_type": "rationale",
+      "source_file": "core/test_voice.py",
+      "source_location": "L5",
+      "id": "core_test_voice_rationale_5",
+      "community": 15,
+      "norm_label": "nutzt das native macos 'say' kommando.     dies ist die schnellste und einfachst"
+    },
+    {
+      "label": "transcriber_native.py",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L1",
+      "id": "core_transcriber_native_py",
+      "community": 4,
+      "norm_label": "transcriber_native.py"
+    },
+    {
+      "label": "NativeMorpheusEar",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L28",
+      "id": "core_transcriber_native_nativemorpheusear",
+      "community": 4,
+      "norm_label": "nativemorpheusear"
+    },
+    {
+      "label": "MorpheusEar",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "",
+      "id": "morpheusear",
+      "community": 4,
+      "norm_label": "morpheusear"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L31",
+      "id": "core_transcriber_native_nativemorpheusear_init",
+      "community": 2,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": "._run_loop_tick()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L55",
+      "id": "core_transcriber_native_nativemorpheusear_run_loop_tick",
+      "community": 4,
+      "norm_label": "._run_loop_tick()"
+    },
+    {
+      "label": "._request_authorization()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L59",
+      "id": "core_transcriber_native_nativemorpheusear_request_authorization",
+      "community": 4,
+      "norm_label": "._request_authorization()"
+    },
+    {
+      "label": "._handle_result()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L72",
+      "id": "core_transcriber_native_nativemorpheusear_handle_result",
+      "community": 4,
+      "norm_label": "._handle_result()"
+    },
+    {
+      "label": "._start_recognition()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L87",
+      "id": "core_transcriber_native_nativemorpheusear_start_recognition",
+      "community": 4,
+      "norm_label": "._start_recognition()"
+    },
+    {
+      "label": "._stop_recognition()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L120",
+      "id": "core_transcriber_native_nativemorpheusear_stop_recognition",
+      "community": 4,
+      "norm_label": "._stop_recognition()"
+    },
+    {
+      "label": ".start()",
+      "file_type": "code",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L132",
+      "id": "core_transcriber_native_nativemorpheusear_start",
+      "community": 4,
+      "norm_label": ".start()"
+    },
+    {
+      "label": "Native macOS STT loop for Trinity.  This module uses Apple's Speech framework fo",
+      "file_type": "rationale",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L1",
+      "id": "core_transcriber_native_rationale_1",
+      "community": 4,
+      "norm_label": "native macos stt loop for trinity.  this module uses apple's speech framework fo"
+    },
+    {
+      "label": "MorpheusEar variant backed by macOS SFSpeechRecognizer.",
+      "file_type": "rationale",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L29",
+      "id": "core_transcriber_native_rationale_29",
+      "community": 4,
+      "norm_label": "morpheusear variant backed by macos sfspeechrecognizer."
+    },
+    {
+      "label": "transcriber.py",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L1",
+      "id": "core_transcriber_py",
+      "community": 1,
+      "norm_label": "transcriber.py"
+    },
+    {
+      "label": "has_trigger()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L36",
+      "id": "core_transcriber_has_trigger",
+      "community": 1,
+      "norm_label": "has_trigger()"
+    },
+    {
+      "label": "set_state()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L42",
+      "id": "core_transcriber_set_state",
+      "community": 1,
+      "norm_label": "set_state()"
+    },
+    {
+      "label": "MorpheusEar",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L50",
+      "id": "core_transcriber_morpheusear",
+      "community": 1,
+      "norm_label": "morpheusear"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L51",
+      "id": "core_transcriber_morpheusear_init",
+      "community": 1,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".load_config()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L74",
+      "id": "core_transcriber_morpheusear_load_config",
+      "community": 1,
+      "norm_label": ".load_config()"
+    },
+    {
+      "label": ".audio_callback()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L96",
+      "id": "core_transcriber_morpheusear_audio_callback",
+      "community": 1,
+      "norm_label": ".audio_callback()"
+    },
+    {
+      "label": ".start()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L103",
+      "id": "core_transcriber_morpheusear_start",
+      "community": 1,
+      "norm_label": ".start()"
+    },
+    {
+      "label": ".process_text()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L202",
+      "id": "core_transcriber_morpheusear_process_text",
+      "community": 1,
+      "norm_label": ".process_text()"
+    },
+    {
+      "label": "._speak_thread()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L249",
+      "id": "core_transcriber_morpheusear_speak_thread",
+      "community": 1,
+      "norm_label": "._speak_thread()"
+    },
+    {
+      "label": ".trigger_action()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L266",
+      "id": "core_transcriber_morpheusear_trigger_action",
+      "community": 1,
+      "norm_label": ".trigger_action()"
+    },
+    {
+      "label": "._silent_thread()",
+      "file_type": "code",
+      "source_file": "core/transcriber.py",
+      "source_location": "L372",
+      "id": "core_transcriber_morpheusear_silent_thread",
+      "community": 1,
+      "norm_label": "._silent_thread()"
+    },
+    {
+      "label": "Pr\u00fcft ob das Wake-Word (oder eine Variante) im Text vorkommt.",
+      "file_type": "rationale",
+      "source_file": "core/transcriber.py",
+      "source_location": "L37",
+      "id": "core_transcriber_rationale_37",
+      "community": 1,
+      "norm_label": "pruft ob das wake-word (oder eine variante) im text vorkommt."
+    },
+    {
+      "label": "L\u00e4dt STT-spezifische Settings aus der config.json.",
+      "file_type": "rationale",
+      "source_file": "core/transcriber.py",
+      "source_location": "L75",
+      "id": "core_transcriber_rationale_75",
+      "community": 1,
+      "norm_label": "ladt stt-spezifische settings aus der config.json."
+    },
+    {
+      "label": "Wird vom sounddevice Stream aufgerufen.",
+      "file_type": "rationale",
+      "source_file": "core/transcriber.py",
+      "source_location": "L97",
+      "id": "core_transcriber_rationale_97",
+      "community": 1,
+      "norm_label": "wird vom sounddevice stream aufgerufen."
+    },
+    {
+      "label": "brain_trigger.py",
+      "file_type": "code",
+      "source_file": "core/brain_trigger.py",
+      "source_location": "L1",
+      "id": "core_brain_trigger_py",
+      "community": 26,
+      "norm_label": "brain_trigger.py"
+    },
+    {
+      "label": "simulate_trigger()",
+      "file_type": "code",
+      "source_file": "core/brain_trigger.py",
+      "source_location": "L4",
+      "id": "core_brain_trigger_simulate_trigger",
+      "community": 26,
+      "norm_label": "simulate_trigger()"
+    },
+    {
+      "label": "brain.py",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L1",
+      "id": "core_brain_py",
+      "community": 2,
+      "norm_label": "brain.py"
+    },
+    {
+      "label": "TrinityBrain",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L9",
+      "id": "core_brain_trinitybrain",
+      "community": 2,
+      "norm_label": "trinitybrain"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L10",
+      "id": "core_brain_trinitybrain_init",
+      "community": 2,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".load_config()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L27",
+      "id": "core_brain_trinitybrain_load_config",
+      "community": 2,
+      "norm_label": ".load_config()"
+    },
+    {
+      "label": "._load_live_skills()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L64",
+      "id": "core_brain_trinitybrain_load_live_skills",
+      "community": 2,
+      "norm_label": "._load_live_skills()"
+    },
+    {
+      "label": ".ask_llm()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L89",
+      "id": "core_brain_trinitybrain_ask_llm",
+      "community": 2,
+      "norm_label": ".ask_llm()"
+    },
+    {
+      "label": ".get_file_content()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L107",
+      "id": "core_brain_trinitybrain_get_file_content",
+      "community": 2,
+      "norm_label": ".get_file_content()"
+    },
+    {
+      "label": ".get_soul()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L115",
+      "id": "core_brain_trinitybrain_get_soul",
+      "community": 2,
+      "norm_label": ".get_soul()"
+    },
+    {
+      "label": ".get_user()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L118",
+      "id": "core_brain_trinitybrain_get_user",
+      "community": 2,
+      "norm_label": ".get_user()"
+    },
+    {
+      "label": ".read_transcript()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L121",
+      "id": "core_brain_trinitybrain_read_transcript",
+      "community": 2,
+      "norm_label": ".read_transcript()"
+    },
+    {
+      "label": ".ask()",
+      "file_type": "code",
+      "source_file": "core/brain.py",
+      "source_location": "L130",
+      "id": "core_brain_trinitybrain_ask",
+      "community": 2,
+      "norm_label": ".ask()"
+    },
+    {
+      "label": "L\u00e4dt die Konfiguration aus der config.json.",
+      "file_type": "rationale",
+      "source_file": "core/brain.py",
+      "source_location": "L28",
+      "id": "core_brain_rationale_28",
+      "community": 2,
+      "norm_label": "ladt die konfiguration aus der config.json."
+    },
+    {
+      "label": "L\u00e4dt alle Live-Skills aus dem agents/ Ordner dynamisch beim Start.",
+      "file_type": "rationale",
+      "source_file": "core/brain.py",
+      "source_location": "L65",
+      "id": "core_brain_rationale_65",
+      "community": 2,
+      "norm_label": "ladt alle live-skills aus dem agents/ ordner dynamisch beim start."
+    },
+    {
+      "label": "Hilfsmethode f\u00fcr interne LLM-Aufrufe (z.B. Context Enrichment).",
+      "file_type": "rationale",
+      "source_file": "core/brain.py",
+      "source_location": "L90",
+      "id": "core_brain_rationale_90",
+      "community": 2,
+      "norm_label": "hilfsmethode fur interne llm-aufrufe (z.b. context enrichment)."
+    },
+    {
+      "label": "ear.py",
+      "file_type": "code",
+      "source_file": "core/ear.py",
+      "source_location": "L1",
+      "id": "core_ear_py",
+      "community": 8,
+      "norm_label": "ear.py"
+    },
+    {
+      "label": "MorpheusEar",
+      "file_type": "code",
+      "source_file": "core/ear.py",
+      "source_location": "L4",
+      "id": "core_ear_morpheusear",
+      "community": 8,
+      "norm_label": "morpheusear"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "core/ear.py",
+      "source_location": "L9",
+      "id": "core_ear_morpheusear_init",
+      "community": 8,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".start_listening()",
+      "file_type": "code",
+      "source_file": "core/ear.py",
+      "source_location": "L15",
+      "id": "core_ear_morpheusear_start_listening",
+      "community": 8,
+      "norm_label": ".start_listening()"
+    },
+    {
+      "label": ".append_to_transcript()",
+      "file_type": "code",
+      "source_file": "core/ear.py",
+      "source_location": "L25",
+      "id": "core_ear_morpheusear_append_to_transcript",
+      "community": 8,
+      "norm_label": ".append_to_transcript()"
+    },
+    {
+      "label": "Diese Klasse simuliert oder integriert den Whisper-MLX Stream.     In der finale",
+      "file_type": "rationale",
+      "source_file": "core/ear.py",
+      "source_location": "L5",
+      "id": "core_ear_rationale_5",
+      "community": 8,
+      "norm_label": "diese klasse simuliert oder integriert den whisper-mlx stream.     in der finale"
+    },
+    {
+      "label": "settings_ui.py",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L1",
+      "id": "core_settings_ui_py",
+      "community": 3,
+      "norm_label": "settings_ui.py"
+    },
+    {
+      "label": "SettingsWindow",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L46",
+      "id": "core_settings_ui_settingswindow",
+      "community": 3,
+      "norm_label": "settingswindow"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L47",
+      "id": "core_settings_ui_settingswindow_init",
+      "community": 3,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".load_config()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L59",
+      "id": "core_settings_ui_settingswindow_load_config",
+      "community": 3,
+      "norm_label": ".load_config()"
+    },
+    {
+      "label": ".load_text_file()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L74",
+      "id": "core_settings_ui_settingswindow_load_text_file",
+      "community": 3,
+      "norm_label": ".load_text_file()"
+    },
+    {
+      "label": ".save_text_file()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L81",
+      "id": "core_settings_ui_settingswindow_save_text_file",
+      "community": 3,
+      "norm_label": ".save_text_file()"
+    },
+    {
+      "label": ".save_config()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L85",
+      "id": "core_settings_ui_settingswindow_save_config",
+      "community": 3,
+      "norm_label": ".save_config()"
+    },
+    {
+      "label": ".apply_stylesheet()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L128",
+      "id": "core_settings_ui_settingswindow_apply_stylesheet",
+      "community": 3,
+      "norm_label": ".apply_stylesheet()"
+    },
+    {
+      "label": ".init_ui()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L150",
+      "id": "core_settings_ui_settingswindow_init_ui",
+      "community": 3,
+      "norm_label": ".init_ui()"
+    },
+    {
+      "label": "._create_persona_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L187",
+      "id": "core_settings_ui_settingswindow_create_persona_tab",
+      "community": 3,
+      "norm_label": "._create_persona_tab()"
+    },
+    {
+      "label": "._create_llm_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L213",
+      "id": "core_settings_ui_settingswindow_create_llm_tab",
+      "community": 3,
+      "norm_label": "._create_llm_tab()"
+    },
+    {
+      "label": "._create_api_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L254",
+      "id": "core_settings_ui_settingswindow_create_api_tab",
+      "community": 3,
+      "norm_label": "._create_api_tab()"
+    },
+    {
+      "label": "._create_stt_tts_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L292",
+      "id": "core_settings_ui_settingswindow_create_stt_tts_tab",
+      "community": 3,
+      "norm_label": "._create_stt_tts_tab()"
+    },
+    {
+      "label": "._create_soul_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L342",
+      "id": "core_settings_ui_settingswindow_create_soul_tab",
+      "community": 3,
+      "norm_label": "._create_soul_tab()"
+    },
+    {
+      "label": "._create_user_tab()",
+      "file_type": "code",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L358",
+      "id": "core_settings_ui_settingswindow_create_user_tab",
+      "community": 3,
+      "norm_label": "._create_user_tab()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_rag_agent_script_py",
+      "community": 9,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "_load_rag_index()",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L9",
+      "id": "rag_agent_script_load_rag_index",
+      "community": 9,
+      "norm_label": "_load_rag_index()"
+    },
+    {
+      "label": "_load_rag_model()",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L107",
+      "id": "rag_agent_script_load_rag_model",
+      "community": 9,
+      "norm_label": "_load_rag_model()"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L121",
+      "id": "rag_agent_script_can_handle",
+      "community": 9,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L126",
+      "id": "rag_agent_script_execute",
+      "community": 9,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "init()",
+      "file_type": "code",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L163",
+      "id": "rag_agent_script_init",
+      "community": 9,
+      "norm_label": "init()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_maps_agent_script_py",
+      "community": 10,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L3",
+      "id": "maps_agent_script_can_handle",
+      "community": 10,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L10",
+      "id": "maps_agent_script_execute",
+      "community": 10,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "Pr\u00fcft, ob die Anfrage einen Maps-Befehl enth\u00e4lt.",
+      "file_type": "rationale",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L4",
+      "id": "maps_agent_script_rationale_4",
+      "community": 10,
+      "norm_label": "pruft, ob die anfrage einen maps-befehl enthalt."
+    },
+    {
+      "label": "F\u00fchrt die Maps-Logik aus und liefert Payload sowie Suchkontext zur\u00fcck.",
+      "file_type": "rationale",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L11",
+      "id": "maps_agent_script_rationale_11",
+      "community": 10,
+      "norm_label": "fuhrt die maps-logik aus und liefert payload sowie suchkontext zuruck."
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_image_agent_script_py",
+      "community": 5,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L5",
+      "id": "image_agent_script_can_handle",
+      "community": 5,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L10",
+      "id": "image_agent_script_execute",
+      "community": 5,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "_generate_image_fal()",
+      "file_type": "code",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L58",
+      "id": "image_agent_script_generate_image_fal",
+      "community": 5,
+      "norm_label": "_generate_image_fal()"
+    },
+    {
+      "label": "_build_image_payload()",
+      "file_type": "code",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L96",
+      "id": "image_agent_script_build_image_payload",
+      "community": 5,
+      "norm_label": "_build_image_payload()"
+    },
+    {
+      "label": "Erzeugt ein Bild mit fal.ai und speichert es lokal.",
+      "file_type": "rationale",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L59",
+      "id": "image_agent_script_rationale_59",
+      "community": 5,
+      "norm_label": "erzeugt ein bild mit fal.ai und speichert es lokal."
+    },
+    {
+      "label": "Erzeugt das HTML f\u00fcr die Anzeige des generierten Bildes \u2013 Fenster passt sich an",
+      "file_type": "rationale",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L97",
+      "id": "image_agent_script_rationale_97",
+      "community": 5,
+      "norm_label": "erzeugt das html fur die anzeige des generierten bildes \u2013 fenster passt sich an"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_timer_agent_script_py",
+      "community": 6,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L4",
+      "id": "timer_agent_script_can_handle",
+      "community": 6,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L15",
+      "id": "timer_agent_script_execute",
+      "community": 6,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "_convert_number_words()",
+      "file_type": "code",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L73",
+      "id": "timer_agent_script_convert_number_words",
+      "community": 6,
+      "norm_label": "_convert_number_words()"
+    },
+    {
+      "label": "Pr\u00fcft, ob die Anfrage einen Timer-Befehl enth\u00e4lt.",
+      "file_type": "rationale",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L5",
+      "id": "timer_agent_script_rationale_5",
+      "community": 6,
+      "norm_label": "pruft, ob die anfrage einen timer-befehl enthalt."
+    },
+    {
+      "label": "F\u00fchrt die Timer-Logik aus und liefert Payload sowie Suchkontext zur\u00fcck.",
+      "file_type": "rationale",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L16",
+      "id": "timer_agent_script_rationale_16",
+      "community": 6,
+      "norm_label": "fuhrt die timer-logik aus und liefert payload sowie suchkontext zuruck."
+    },
+    {
+      "label": "Hilfsfunktion zur Konvertierung von Zahlw\u00f6rtern in Ziffern.",
+      "file_type": "rationale",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L74",
+      "id": "timer_agent_script_rationale_74",
+      "community": 6,
+      "norm_label": "hilfsfunktion zur konvertierung von zahlwortern in ziffern."
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/chat_mode_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_chat_mode_agent_script_py",
+      "community": 16,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/chat_mode_agent/script.py",
+      "source_location": "L3",
+      "id": "chat_mode_agent_script_can_handle",
+      "community": 16,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/chat_mode_agent/script.py",
+      "source_location": "L9",
+      "id": "chat_mode_agent_script_execute",
+      "community": 16,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/simulation_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_simulation_agent_script_py",
+      "community": 17,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/simulation_agent/script.py",
+      "source_location": "L3",
+      "id": "simulation_agent_script_can_handle",
+      "community": 17,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/simulation_agent/script.py",
+      "source_location": "L7",
+      "id": "simulation_agent_script_execute",
+      "community": 17,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/review_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_review_agent_script_py",
+      "community": 18,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/review_agent/script.py",
+      "source_location": "L3",
+      "id": "review_agent_script_can_handle",
+      "community": 18,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/review_agent/script.py",
+      "source_location": "L9",
+      "id": "review_agent_script_execute",
+      "community": 18,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_session_summarizer_agent_script_py",
+      "community": 11,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "summarize_session()",
+      "file_type": "code",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L11",
+      "id": "session_summarizer_agent_script_summarize_session",
+      "community": 11,
+      "norm_label": "summarize_session()"
+    },
+    {
+      "label": "Skill: Session Summarizer Dieses Skript dient als Platzhalter/Logik-Rahmen f\u00fcr d",
+      "file_type": "rationale",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L1",
+      "id": "session_summarizer_agent_script_rationale_1",
+      "community": 11,
+      "norm_label": "skill: session summarizer dieses skript dient als platzhalter/logik-rahmen fur d"
+    },
+    {
+      "label": "Simuliert die Verarbeitung einer Log-Datei.     In der Praxis w\u00fcrde hier die Dat",
+      "file_type": "rationale",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L12",
+      "id": "session_summarizer_agent_script_rationale_12",
+      "community": 11,
+      "norm_label": "simuliert die verarbeitung einer log-datei.     in der praxis wurde hier die dat"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/summary_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_summary_agent_script_py",
+      "community": 19,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/summary_agent/script.py",
+      "source_location": "L3",
+      "id": "summary_agent_script_can_handle",
+      "community": 19,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/summary_agent/script.py",
+      "source_location": "L12",
+      "id": "summary_agent_script_execute",
+      "community": 19,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/focus_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_focus_agent_script_py",
+      "community": 20,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/focus_agent/script.py",
+      "source_location": "L3",
+      "id": "focus_agent_script_can_handle",
+      "community": 20,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/focus_agent/script.py",
+      "source_location": "L9",
+      "id": "focus_agent_script_execute",
+      "community": 20,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_websearch_agent_script_py",
+      "community": 12,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L3",
+      "id": "websearch_agent_script_can_handle",
+      "community": 12,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L7",
+      "id": "websearch_agent_script_execute",
+      "community": 12,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "_search_tavily()",
+      "file_type": "code",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L62",
+      "id": "websearch_agent_script_search_tavily",
+      "community": 12,
+      "norm_label": "_search_tavily()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/settings_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_settings_agent_script_py",
+      "community": 21,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/settings_agent/script.py",
+      "source_location": "L5",
+      "id": "settings_agent_script_can_handle",
+      "community": 21,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/settings_agent/script.py",
+      "source_location": "L12",
+      "id": "settings_agent_script_execute",
+      "community": 21,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/stock_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_stock_agent_script_py",
+      "community": 22,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/stock_agent/script.py",
+      "source_location": "L4",
+      "id": "stock_agent_script_can_handle",
+      "community": 22,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/stock_agent/script.py",
+      "source_location": "L8",
+      "id": "stock_agent_script_execute",
+      "community": 22,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "script.py",
+      "file_type": "code",
+      "source_file": "agents/powerpoint_agent/script.py",
+      "source_location": "L1",
+      "id": "agents_powerpoint_agent_script_py",
+      "community": 23,
+      "norm_label": "script.py"
+    },
+    {
+      "label": "can_handle()",
+      "file_type": "code",
+      "source_file": "agents/powerpoint_agent/script.py",
+      "source_location": "L3",
+      "id": "powerpoint_agent_script_can_handle",
+      "community": 23,
+      "norm_label": "can_handle()"
+    },
+    {
+      "label": "execute()",
+      "file_type": "code",
+      "source_file": "agents/powerpoint_agent/script.py",
+      "source_location": "L10",
+      "id": "powerpoint_agent_script_execute",
+      "community": 23,
+      "norm_label": "execute()"
+    },
+    {
+      "label": "build_index.py",
+      "file_type": "code",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L1",
+      "id": "rag_build_index_py",
+      "community": 7,
+      "norm_label": "build_index.py"
+    },
+    {
+      "label": "extract_text_from_pdf()",
+      "file_type": "code",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L30",
+      "id": "rag_build_index_extract_text_from_pdf",
+      "community": 7,
+      "norm_label": "extract_text_from_pdf()"
+    },
+    {
+      "label": "chunk_pages()",
+      "file_type": "code",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L42",
+      "id": "rag_build_index_chunk_pages",
+      "community": 7,
+      "norm_label": "chunk_pages()"
+    },
+    {
+      "label": "build_index()",
+      "file_type": "code",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L61",
+      "id": "rag_build_index_build_index",
+      "community": 7,
+      "norm_label": "build_index()"
+    },
+    {
+      "label": "Extrahiert sauberen Text aus einer PDF.",
+      "file_type": "rationale",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L31",
+      "id": "rag_build_index_rationale_31",
+      "community": 7,
+      "norm_label": "extrahiert sauberen text aus einer pdf."
+    },
+    {
+      "label": "Zerlegt Seitentext in \u00fcberlappende Chunks.",
+      "file_type": "rationale",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L43",
+      "id": "rag_build_index_rationale_43",
+      "community": 7,
+      "norm_label": "zerlegt seitentext in uberlappende chunks."
+    },
+    {
+      "label": "Hauptfunktion: PDFs lesen \u2192 Chunks \u2192 Embeddings \u2192 Speichern.",
+      "file_type": "rationale",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L62",
+      "id": "rag_build_index_rationale_62",
+      "community": 7,
+      "norm_label": "hauptfunktion: pdfs lesen \u2192 chunks \u2192 embeddings \u2192 speichern."
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_launcher.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_launcher_py",
+      "target": "trinity_assistant_trinity_launcher_launch_trinity"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_app_py",
+      "target": "trinity_assistant_trinity_app_contentresizefilter"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_app_py",
+      "target": "trinity_assistant_trinity_app_contentwindow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_app_py",
+      "target": "trinity_assistant_trinity_app_chatwindow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L236",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_app_py",
+      "target": "trinity_assistant_trinity_app_webenginedragfilter"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L265",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_app_py",
+      "target": "trinity_assistant_trinity_app_trinitywindow"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter",
+      "target": "qobject"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter",
+      "target": "trinity_assistant_trinity_app_contentresizefilter_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter",
+      "target": "trinity_assistant_trinity_app_contentresizefilter_detect_edges"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter",
+      "target": "trinity_assistant_trinity_app_contentresizefilter_eventfilter"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow_init",
+      "target": "trinity_assistant_trinity_app_contentresizefilter"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_rationale_8",
+      "target": "trinity_assistant_trinity_app_contentresizefilter"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L236",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_webenginedragfilter",
+      "target": "qobject"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter_init",
+      "target": "trinity_assistant_trinity_app_trinitywindow_init"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentresizefilter_eventfilter",
+      "target": "trinity_assistant_trinity_app_contentresizefilter_detect_edges"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "qmainwindow"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "trinity_assistant_trinity_app_contentwindow_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "trinity_assistant_trinity_app_contentwindow_on_url_changed"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "trinity_assistant_trinity_app_contentwindow_install_resize_filter"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L129",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "trinity_assistant_trinity_app_contentwindow_show_content"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L186",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow",
+      "target": "trinity_assistant_trinity_app_contentwindow_hide_content"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L293",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow_init",
+      "target": "trinity_assistant_trinity_app_contentwindow"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_chatwindow",
+      "target": "qmainwindow"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L265",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow",
+      "target": "qmainwindow"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "qmainwindow"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L80",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_contentwindow_init",
+      "target": "trinity_assistant_trinity_app_trinitywindow_init"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L101",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_rationale_101",
+      "target": "trinity_assistant_trinity_app_contentwindow_on_url_changed"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L325",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow_check_state",
+      "target": "trinity_assistant_trinity_app_contentwindow_show_content"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L328",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow_check_state",
+      "target": "trinity_assistant_trinity_app_contentwindow_hide_content"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L190",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_chatwindow",
+      "target": "trinity_assistant_trinity_app_chatwindow_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L221",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_chatwindow",
+      "target": "trinity_assistant_trinity_app_chatwindow_show_chat"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L227",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_chatwindow",
+      "target": "trinity_assistant_trinity_app_chatwindow_send_message"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L296",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow_init",
+      "target": "trinity_assistant_trinity_app_chatwindow"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L191",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_chatwindow_init",
+      "target": "trinity_assistant_trinity_app_trinitywindow_init"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L260",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_webenginedragfilter_eventfilter",
+      "target": "trinity_assistant_trinity_app_chatwindow_show_chat"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L237",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_webenginedragfilter",
+      "target": "trinity_assistant_trinity_app_webenginedragfilter_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L243",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_webenginedragfilter",
+      "target": "trinity_assistant_trinity_app_webenginedragfilter_eventfilter"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L299",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow_init",
+      "target": "trinity_assistant_trinity_app_webenginedragfilter"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L238",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_webenginedragfilter_init",
+      "target": "trinity_assistant_trinity_app_trinitywindow_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L266",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow",
+      "target": "trinity_assistant_trinity_app_trinitywindow_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L312",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow",
+      "target": "trinity_assistant_trinity_app_trinitywindow_check_state"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L338",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow",
+      "target": "trinity_assistant_trinity_app_trinitywindow_mousepressevent"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_app.py",
+      "source_location": "L344",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_app_trinitywindow",
+      "target": "trinity_assistant_trinity_app_trinitywindow_mousemoveevent"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_native_launcher.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_native_launcher_py",
+      "target": "trinity_assistant_trinity_native_launcher_launch_trinity_native"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_native_launcher.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_assistant_trinity_native_launcher_rationale_1",
+      "target": "trinity_native_launcher_py"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "trinity_chat.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "trinity_chat_py",
+      "target": "trinity_assistant_trinity_chat_main"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ui/main.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "ui_main_js",
+      "target": "ui_main_spawnheart"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ui/main.js",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "ui_main_js",
+      "target": "ui_main_spawnangryparticle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/test_voice.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "core_test_voice_py",
+      "target": "core_test_voice_speak",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/test_voice.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "core_test_voice_rationale_5",
+      "target": "core_test_voice_speak",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_py",
+      "target": "core_transcriber_native_nativemorpheusear"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_rationale_1",
+      "target": "core_transcriber_native_py"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "morpheusear"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_run_loop_tick"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_request_authorization"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L72",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_handle_result"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_start_recognition"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L120",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_stop_recognition"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L132",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_native_nativemorpheusear_start"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_rationale_29",
+      "target": "core_transcriber_native_nativemorpheusear"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L24",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_brain_trinitybrain"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L25",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "core_transcriber_native_nativemorpheusear",
+      "target": "core_transcriber_morpheusear"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_init",
+      "target": "core_brain_trinitybrain"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_request_authorization",
+      "target": "core_transcriber_native_nativemorpheusear_run_loop_tick"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L160",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_start",
+      "target": "core_transcriber_native_nativemorpheusear_run_loop_tick"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L137",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_start",
+      "target": "core_transcriber_native_nativemorpheusear_request_authorization"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L143",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_start",
+      "target": "core_transcriber_native_nativemorpheusear_start_recognition"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L162",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_start",
+      "target": "core_transcriber_native_nativemorpheusear_stop_recognition"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "core/transcriber_native.py",
+      "source_location": "L134",
+      "weight": 1.0,
+      "source": "core_transcriber_native_nativemorpheusear_start",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_py",
+      "target": "core_transcriber_has_trigger"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_py",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L50",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_py",
+      "target": "core_transcriber_morpheusear"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L219",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_process_text",
+      "target": "core_transcriber_has_trigger"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_rationale_37",
+      "target": "core_transcriber_has_trigger"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L105",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_start",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L224",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_process_text",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L250",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_speak_thread",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L274",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_trigger_action",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L373",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_silent_thread",
+      "target": "core_transcriber_set_state"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_load_config"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L96",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_audio_callback"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_start"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L202",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_process_text"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L249",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_speak_thread"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L266",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_trigger_action"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L372",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_transcriber_morpheusear_silent_thread"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L19",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "core_transcriber_morpheusear",
+      "target": "core_brain_trinitybrain"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_init",
+      "target": "core_transcriber_morpheusear_load_config"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "core/transcriber.py",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "core_transcriber_morpheusear_init",
+      "target": "core_brain_trinitybrain"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_rationale_75",
+      "target": "core_transcriber_morpheusear_load_config"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_rationale_97",
+      "target": "core_transcriber_morpheusear_audio_callback"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L288",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_trigger_action",
+      "target": "core_transcriber_morpheusear_start"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L198",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_start",
+      "target": "core_transcriber_morpheusear_process_text"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/transcriber.py",
+      "source_location": "L242",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_transcriber_morpheusear_process_text",
+      "target": "core_transcriber_morpheusear_trigger_action"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain_trigger.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trigger_py",
+      "target": "core_brain_trigger_simulate_trigger"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_py",
+      "target": "core_brain_trinitybrain"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_load_config"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_load_live_skills"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_ask_llm"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L107",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_get_file_content"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L115",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_get_soul"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L118",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_get_user"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L121",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_read_transcript"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L130",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain",
+      "target": "core_brain_trinitybrain_ask"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_init",
+      "target": "core_brain_trinitybrain_load_config"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_init",
+      "target": "core_brain_trinitybrain_load_live_skills"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_init",
+      "target": "core_brain_trinitybrain_get_file_content"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_rationale_28",
+      "target": "core_brain_trinitybrain_load_config"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_rationale_65",
+      "target": "core_brain_trinitybrain_load_live_skills"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L90",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_rationale_90",
+      "target": "core_brain_trinitybrain_ask_llm"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L139",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_ask",
+      "target": "core_brain_trinitybrain_get_soul"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L140",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_ask",
+      "target": "core_brain_trinitybrain_get_user"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/brain.py",
+      "source_location": "L138",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_brain_trinitybrain_ask",
+      "target": "core_brain_trinitybrain_read_transcript"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_py",
+      "target": "core_ear_morpheusear"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_morpheusear",
+      "target": "core_ear_morpheusear_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_morpheusear",
+      "target": "core_ear_morpheusear_start_listening"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_morpheusear",
+      "target": "core_ear_morpheusear_append_to_transcript"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_rationale_5",
+      "target": "core_ear_morpheusear"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/ear.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_ear_morpheusear_start_listening",
+      "target": "core_ear_morpheusear_append_to_transcript"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_py",
+      "target": "core_settings_ui_settingswindow"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_load_config"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_load_text_file"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_save_text_file"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_save_config"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L128",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_apply_stylesheet"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L150",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_init_ui"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L187",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_persona_tab"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L213",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_llm_tab"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L254",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_api_tab"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L292",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_stt_tts_tab"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L342",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_soul_tab"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L358",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow",
+      "target": "core_settings_ui_settingswindow_create_user_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init",
+      "target": "core_settings_ui_settingswindow_load_config"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init",
+      "target": "core_settings_ui_settingswindow_init_ui"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init",
+      "target": "core_settings_ui_settingswindow_apply_stylesheet"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L352",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_create_soul_tab",
+      "target": "core_settings_ui_settingswindow_load_text_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L368",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_create_user_tab",
+      "target": "core_settings_ui_settingswindow_load_text_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L120",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_save_config",
+      "target": "core_settings_ui_settingswindow_save_text_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L164",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_persona_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L165",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_llm_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_api_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L167",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_stt_tts_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L168",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_soul_tab"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "core/settings_ui.py",
+      "source_location": "L169",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_settings_ui_settingswindow_init_ui",
+      "target": "core_settings_ui_settingswindow_create_user_tab"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_rag_agent_script_py",
+      "target": "rag_agent_script_load_rag_index"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L107",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_rag_agent_script_py",
+      "target": "rag_agent_script_load_rag_model"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L121",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_rag_agent_script_py",
+      "target": "rag_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_rag_agent_script_py",
+      "target": "rag_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L163",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_rag_agent_script_py",
+      "target": "rag_agent_script_init"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L128",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_agent_script_execute",
+      "target": "rag_agent_script_load_rag_index"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L164",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_agent_script_init",
+      "target": "rag_agent_script_load_rag_index"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/rag_agent/script.py",
+      "source_location": "L132",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_agent_script_execute",
+      "target": "rag_agent_script_load_rag_model"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_maps_agent_script_py",
+      "target": "maps_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_maps_agent_script_py",
+      "target": "maps_agent_script_execute"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "maps_agent_script_rationale_4",
+      "target": "maps_agent_script_can_handle"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/maps_agent/script.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "maps_agent_script_rationale_11",
+      "target": "maps_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_image_agent_script_py",
+      "target": "image_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_image_agent_script_py",
+      "target": "image_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_image_agent_script_py",
+      "target": "image_agent_script_generate_image_fal"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L96",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_image_agent_script_py",
+      "target": "image_agent_script_build_image_payload"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "image_agent_script_execute",
+      "target": "image_agent_script_generate_image_fal"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "image_agent_script_execute",
+      "target": "image_agent_script_build_image_payload"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "image_agent_script_rationale_59",
+      "target": "image_agent_script_generate_image_fal"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/image_agent/script.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "image_agent_script_rationale_97",
+      "target": "image_agent_script_build_image_payload"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_timer_agent_script_py",
+      "target": "timer_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_timer_agent_script_py",
+      "target": "timer_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_timer_agent_script_py",
+      "target": "timer_agent_script_convert_number_words"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "timer_agent_script_can_handle",
+      "target": "timer_agent_script_convert_number_words"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "timer_agent_script_rationale_5",
+      "target": "timer_agent_script_can_handle"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "timer_agent_script_execute",
+      "target": "timer_agent_script_convert_number_words"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "timer_agent_script_rationale_16",
+      "target": "timer_agent_script_execute"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/timer_agent/script.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "timer_agent_script_rationale_74",
+      "target": "timer_agent_script_convert_number_words"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/chat_mode_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_chat_mode_agent_script_py",
+      "target": "chat_mode_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/chat_mode_agent/script.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_chat_mode_agent_script_py",
+      "target": "chat_mode_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/simulation_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_simulation_agent_script_py",
+      "target": "simulation_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/simulation_agent/script.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_simulation_agent_script_py",
+      "target": "simulation_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/review_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_review_agent_script_py",
+      "target": "review_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/review_agent/script.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_review_agent_script_py",
+      "target": "review_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_session_summarizer_agent_script_py",
+      "target": "session_summarizer_agent_script_summarize_session"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "session_summarizer_agent_script_rationale_1",
+      "target": "agents_session_summarizer_agent_script_py"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/session_summarizer_agent/script.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "session_summarizer_agent_script_rationale_12",
+      "target": "session_summarizer_agent_script_summarize_session"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/summary_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_summary_agent_script_py",
+      "target": "summary_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/summary_agent/script.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_summary_agent_script_py",
+      "target": "summary_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/focus_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_focus_agent_script_py",
+      "target": "focus_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/focus_agent/script.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_focus_agent_script_py",
+      "target": "focus_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_websearch_agent_script_py",
+      "target": "websearch_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_websearch_agent_script_py",
+      "target": "websearch_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_websearch_agent_script_py",
+      "target": "websearch_agent_script_search_tavily"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/websearch_agent/script.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "websearch_agent_script_execute",
+      "target": "websearch_agent_script_search_tavily"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/settings_agent/script.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_settings_agent_script_py",
+      "target": "settings_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/settings_agent/script.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_settings_agent_script_py",
+      "target": "settings_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/stock_agent/script.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_stock_agent_script_py",
+      "target": "stock_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/stock_agent/script.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_stock_agent_script_py",
+      "target": "stock_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/powerpoint_agent/script.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_powerpoint_agent_script_py",
+      "target": "powerpoint_agent_script_can_handle"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "agents/powerpoint_agent/script.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_powerpoint_agent_script_py",
+      "target": "powerpoint_agent_script_execute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_py",
+      "target": "rag_build_index_extract_text_from_pdf"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_py",
+      "target": "rag_build_index_chunk_pages"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_py",
+      "target": "rag_build_index_build_index"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L80",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_build_index",
+      "target": "rag_build_index_extract_text_from_pdf"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_rationale_31",
+      "target": "rag_build_index_extract_text_from_pdf"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_build_index",
+      "target": "rag_build_index_chunk_pages"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_rationale_43",
+      "target": "rag_build_index_chunk_pages"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "RAG/build_index.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_index_rationale_62",
+      "target": "rag_build_index_build_index"
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "eb148026a3d7729dd24770ddd7b8a9a57208089d"
+}

@@ -59,6 +59,7 @@ class MorpheusEar:
         self.speak_process = None
         self.recent_chunks = []  # Kontext-Ringpuffer (letzten N Chunks)
         self.is_muted = False  # Stumm-Modus: Trinity hört nicht zu
+        self.trigger_armed = False # Wartet auf Ende des Satzes nach Wake-Word
         
         # Neues Transkript für diese Sitzung anlegen
         timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -149,7 +150,10 @@ class MorpheusEar:
                         print(f"\rLevel: [{bar}] {rms:.4f} {status}", end="", flush=True)
 
                         if rms < self.silence_threshold:
-                            if not (self.speak_process and self.speak_process.poll() is None):
+                            if self.trigger_armed:
+                                print("\n🔇 Stille erkannt. Führe Aktion aus...")
+                                self.fire_trigger()
+                            elif not (self.speak_process and self.speak_process.poll() is None):
                                 set_state("idle")
                             continue
 
@@ -233,23 +237,32 @@ class MorpheusEar:
             
         # Trigger Check (Fuzzy)
         if has_trigger(text, self.trigger_variants):
-            # Falls sie gerade spricht, sofort abbrechen!
-            if self.speak_process and self.speak_process.poll() is None:
-                print(f"🛑 {self.agent_name.upper()} WURDE UNTERBROCHEN!")
-                self.speak_process.kill()
-                self.speak_process = None
-
-            set_state("thinking")
-            # Vollen Kontext übergeben (alle letzten Chunks), nicht nur den Trigger-Chunk
-            full_context = " ".join(self.recent_chunks)
-            # Aktuelle Anfrage = nur die letzten 3 Chunks (für Keyword-Erkennung im Router)
-            recent_text = " ".join(self.recent_chunks[-3:])
-            self.trigger_action(full_context, recent_text=recent_text)
-            self.recent_chunks.clear()  # Reset nach Trigger
+            self.trigger_armed = True
+            print(f"🎯 Wake-Word erkannt! Höre weiter zu... ({text})")
+            set_state("listening") # Signalisiert, dass sie auf den restlichen Satz wartet
         else:
-            # Nur auf Idle setzen, wenn sie gerade NICHT spricht
-            if not (self.speak_process and self.speak_process.poll() is None):
+            # Nur auf Idle setzen, wenn sie gerade NICHT spricht und wir nicht auf das Ende eines Satzes warten
+            if not self.trigger_armed and not (self.speak_process and self.speak_process.poll() is None):
                 set_state("idle")
+
+    def fire_trigger(self):
+        if not self.trigger_armed:
+            return
+        self.trigger_armed = False
+        
+        # Falls sie gerade spricht, sofort abbrechen!
+        if self.speak_process and self.speak_process.poll() is None:
+            print(f"🛑 {self.agent_name.upper()} WURDE UNTERBROCHEN!")
+            self.speak_process.kill()
+            self.speak_process = None
+
+        set_state("thinking")
+        # Vollen Kontext übergeben (alle letzten Chunks), nicht nur den Trigger-Chunk
+        full_context = " ".join(self.recent_chunks)
+        # Aktuelle Anfrage = nur die letzten 3 Chunks (für Keyword-Erkennung im Router)
+        recent_text = " ".join(self.recent_chunks[-3:])
+        self.trigger_action(full_context, recent_text=recent_text)
+        self.recent_chunks.clear()  # Reset nach Trigger
 
     def _speak_thread(self, text):
         set_state("speaking")

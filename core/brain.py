@@ -152,7 +152,7 @@ class TrinityBrain:
         for skill in getattr(self, 'live_skills', []):
             if skill.can_handle(router_text):
                 try:
-                    result = skill.execute(router_text, context={"brain": self})
+                    result = skill.execute(user_query, context={"brain": self})
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
                         with open(payload_path, "w", encoding="utf-8") as f:
@@ -179,7 +179,7 @@ class TrinityBrain:
         data = {
             "model": self.model,
             "temperature": 0.1,
-            "max_tokens": 250,   # Kurze Sprachantworten – größter Latenzgewinn
+            "max_tokens": 1500,   # Längere Antworten für ausführliche Erklärungen erlauben
             "messages": [
                 {"role": "system", "content": context_prompt},
                 {"role": "user", "content": user_query}

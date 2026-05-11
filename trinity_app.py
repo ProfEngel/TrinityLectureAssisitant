@@ -12,9 +12,11 @@ class ContentResizeFilter(QObject):
         super().__init__(window)
         self.win = window
         self.resizing = False
+        self.dragging = False
         self.edges = ()
         self.drag_start = None
         self.start_geo = None
+        self.window_start = None
 
     def _detect_edges(self, local_pos):
         w, h = self.win.width(), self.win.height()
@@ -35,6 +37,11 @@ class ContentResizeFilter(QObject):
                 self.drag_start = event.globalPosition().toPoint()
                 self.start_geo = self.win.geometry()
                 return True
+            else:
+                self.dragging = True
+                self.drag_start = event.globalPosition().toPoint()
+                self.window_start = self.win.pos()
+                return False # Let the browser handle clicks if needed, but we start drag
         elif event.type() == QEvent.Type.MouseMove:
             if self.resizing and self.drag_start:
                 from PySide6.QtCore import QRect
@@ -51,6 +58,10 @@ class ContentResizeFilter(QObject):
                     nh = max(minH, g.height() - delta.y())
                     y = g.y() + g.height() - nh; h = nh
                 self.win.setGeometry(QRect(x, y, w, h))
+                return True
+            elif self.dragging and self.drag_start and self.window_start:
+                delta = event.globalPosition().toPoint() - self.drag_start
+                self.win.move(self.window_start + delta)
                 return True
             # Cursor-Feedback am Rand
             edges = self._detect_edges(event.position().toPoint())
@@ -69,6 +80,9 @@ class ContentResizeFilter(QObject):
                 self.resizing = False
                 self.edges = ()
                 return True
+            if self.dragging:
+                self.dragging = False
+                return False
         return False
 
 
@@ -100,6 +114,11 @@ class ContentWindow(QMainWindow):
     def _on_url_changed(self, url):
         """Passt Fenstergröße an Bildgröße an wenn IMAGE_PAYLOAD gesetzt."""
         fragment = url.fragment()
+        if fragment == "close":
+            self.is_sticky = False
+            self.hide_content()
+            return
+
         if fragment.startswith("imgsize_"):
             try:
                 _, w, h = fragment.split("_")
@@ -165,6 +184,7 @@ class ContentWindow(QMainWindow):
         </head>
         <body>
             <div class="glass-container">
+                <div onclick="window.location.hash='close'" style="position: absolute; top: 15px; right: 25px; font-size: 20px; font-weight: bold; cursor: pointer; color: white; opacity: 0.5; z-index: 1000; font-family: sans-serif;">✕</div>
                 {html_content}
             </div>
         </body>
