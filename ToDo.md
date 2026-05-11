@@ -50,18 +50,21 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 > [!IMPORTANT]
 > Diese Erweiterungen markieren den Übergang von Trinity als reaktivem Assistenten hin zu einem proaktiven "Agentic Companion". Dies erfordert einen architektonischen Shift hin zu einem permanent laufenden Hintergrund-Dienst (Daemon).
 
-- [ ] **Proaktiver Heartbeat (2-Minuten-Takt):**
-  - [ ] Kontinuierliche Analyse des Transkripts auf Fehler in Aussagen.
-  - [ ] Einblendung alternativer Perspektiven oder Ergänzungen.
+- [x] **Proaktiver Heartbeat (2-Minuten-Takt):**
+  - [x] Kontinuierliche Analyse des Transkripts auf Fehler in Aussagen.
+  - [x] Einblendung alternativer Perspektiven oder Ergänzungen.
   - [ ] **Repetitions-Check:** Abgleich mit RAG (vorherige Sessions), um Redundanzen aufzuzeigen.
   - [ ] **Proaktive Visuals:** Automatisches Zeigen von Schaubildern/Erklärungen auf dem Second Screen.
-  - [ ] **UI-Integration (Bubbles):**
-    - [ ] Anzeige kleiner Benachrichtigungs-Bubbles über dem Trinity-Icon:
+  - [x] **UI-Integration (Bubbles):**
+    - [x] Anzeige kleiner Benachrichtigungs-Bubbles über dem Trinity-Icon:
       - **Gelb:** Alternative Perspektiven (Counter).
       - **Rot:** Fehler in Aussagen (Counter).
       - **Grün:** Proaktive Visuals/Schaubilder (Counter).
-    - [ ] **Interaktion:** Klick auf Bubble öffnet Vorschau-Fenster.
-    - [ ] **Action-Trigger:** Option zum Teilen via ScreenSharing oder Ausgabe über den "AirpodSouffleur" (TTS).
+    - [x] **Interaktion:** Klick auf Bubble öffnet Vorschau-Fenster.
+    - [x] **Action-Trigger:** Option zum Teilen via ScreenSharing oder Ausgabe über den "AirpodSouffleur" (TTS).
+- [x] **Souffleur-Skill (Dynamisches Audio-Routing):**
+  - [x] Umschalten der Audio-Ausgabe zwischen Kopfhörer (Privat) und Lautsprecher (Plenum) via `[SPEAKER]` Tag.
+  - [x] Kontextbezogenes Wiederholen von Erklärungen für die Zuhörerschaft.
 - [ ] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
 - [ ] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (ideal bei Single-Monitor-Setup).
 - [ ] **Dreaming-Funktion (Deep Reflection):**

@@ -48,6 +48,10 @@ DEFAULT_CONFIG = {
     },
     "system": {
         "show_terminal": False
+    },
+    "audio_routing": {
+        "private_device": "Standard",
+        "public_device": "Standard"
     }
 }
 
@@ -134,6 +138,14 @@ class SettingsWindow(QMainWindow):
             self.config["system"] = {}
         self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
         
+        # Audio Routing
+        if "audio_routing" not in self.config:
+            self.config["audio_routing"] = {}
+        if hasattr(self, 'private_audio_combo'):
+            self.config["audio_routing"]["private_device"] = self.private_audio_combo.currentText()
+        if hasattr(self, 'public_audio_combo'):
+            self.config["audio_routing"]["public_device"] = self.public_audio_combo.currentText()
+        
         # Config-Datei speichern
         with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=2)
@@ -187,6 +199,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_llm_tab(), "🧠 LLM")
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
+        tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_system_tab(), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
@@ -258,6 +271,52 @@ class SettingsWindow(QMainWindow):
         form.addRow(self.terminal_cb)
         
         hint = QLabel("Wenn aktiv, öffnet die native macOS App beim Starten zusätzlich das Terminal, damit du Logs sehen kannst.\nBenötigt einen Neustart der App.")
+        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setWordWrap(True)
+        form.addRow("", hint)
+        
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
+    # --- TAB: Audio-Routing (Souffleur) ---
+    def _create_audio_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        group = QGroupBox("Souffleur-Skill (Dynamisches Audio-Routing)")
+        form = QFormLayout()
+        
+        # Lese verfügbare Audio-Ausgänge (Mac-only)
+        devices = ["Standard"]
+        try:
+            import subprocess
+            out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
+            for line in out.strip().split("\\n"):
+                parts = line.strip().split(" ", 1)
+                if len(parts) == 2:
+                    devices.append(parts[1])
+        except Exception as e:
+            print("Konnte Audio-Geräte nicht auslesen:", e)
+            
+        routing_conf = self.config.get("audio_routing", {})
+        
+        self.private_audio_combo = QComboBox()
+        self.private_audio_combo.addItems(devices)
+        curr_priv = routing_conf.get("private_device", "Standard")
+        if curr_priv in devices:
+            self.private_audio_combo.setCurrentText(curr_priv)
+        form.addRow("Privates Gerät (AirPods):", self.private_audio_combo)
+        
+        self.public_audio_combo = QComboBox()
+        self.public_audio_combo.addItems(devices)
+        curr_pub = routing_conf.get("public_device", "Standard")
+        if curr_pub in devices:
+            self.public_audio_combo.setCurrentText(curr_pub)
+        form.addRow("Plenum Gerät (Lautsprecher):", self.public_audio_combo)
+        
+        hint = QLabel("Wenn Trinity einen Text mit dem unsichtbaren [SPEAKER]-Tag generiert, leitet sie die Sprache automatisch auf das 'Plenum Gerät' um. Andernfalls spricht sie über das 'Private Gerät'.")
         hint.setStyleSheet("color: #888; font-size: 11px;")
         hint.setWordWrap(True)
         form.addRow("", hint)

@@ -89,6 +89,8 @@ class MorpheusEar:
             
             # Proactive-Config
             self.proactive_cfg = config.get("proactive", {})
+            # Audio-Routing Config
+            self.audio_routing = config.get("audio_routing", {})
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -97,6 +99,7 @@ class MorpheusEar:
             self.agent_name = TRIGGER_WORD
             self.trigger_variants = TRIGGER_VARIANTS
             self.proactive_cfg = {}
+            self.audio_routing = {}
 
     def _heartbeat_loop(self):
         interval_min = self.proactive_cfg.get("interval_minutes", 2)
@@ -328,14 +331,32 @@ class MorpheusEar:
 
     def _speak_thread(self, text):
         set_state("speaking")
-        print(f"🔊 Trinity spricht: {text[:60]}...")
+        
+        target_device = self.audio_routing.get("private_device", "Standard")
+        if "[SPEAKER]" in text:
+            text = text.replace("[SPEAKER]", "").strip()
+            target_device = self.audio_routing.get("public_device", "Standard")
+            
+        print(f"🔊 Trinity spricht (Device: {target_device}): {text[:60]}...")
         
         # Sicherstellen, dass der Text für die Shell sicher ist
         safe_text = text.replace('"', '').replace('$', '').replace('`', '')
         
         try:
-            # Nutzt die macOS Systemstimme (deine voreingestellte Siri Stimme)
-            self.speak_process = subprocess.Popen(["say", safe_text])
+            cmd = ["say"]
+            if target_device != "Standard":
+                try:
+                    out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
+                    for line in out.strip().split("\n"):
+                        parts = line.strip().split(" ", 1)
+                        if len(parts) == 2 and parts[1] == target_device:
+                            cmd.extend(["-a", parts[0]])
+                            break
+                except Exception as ex:
+                    print("Warnung beim Auslesen der Audio-Geräte:", ex)
+            cmd.append(safe_text)
+            
+            self.speak_process = subprocess.Popen(cmd)
             self.speak_process.wait()
         except Exception as e:
             print(f"⚠️ Fehler bei Sprachausgabe: {e}")
