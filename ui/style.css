@@ -48,7 +48,9 @@ body {
     height: 50px;
     background: #0a0a0a;
     border-radius: 40px;
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 10px rgba(0,0,0,1);
+    border: none;
+    outline: none;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
     display: flex;
     justify-content: center;
     align-items: center;

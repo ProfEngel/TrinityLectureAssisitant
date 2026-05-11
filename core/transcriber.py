@@ -166,6 +166,45 @@ class MorpheusEar:
                             print(f"⚠️ Telegram Sende-Fehler: {tg_ex}")
             except Exception as e:
                 print(f"⚠️ Heartbeat Error: {e}")
+                
+    def _telegram_listener_loop(self):
+        """Hintergrund-Thread für den Empfang von Telegram-Nachrichten (Two-Way Bridge)."""
+        print("📱 Telegram Listener Thread gestartet.")
+        last_update_id = 0
+        import requests
+        
+        while self.is_running:
+            try:
+                url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/getUpdates"
+                params = {"offset": last_update_id, "timeout": 10}
+                resp = requests.get(url, params=params, timeout=15)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("ok"):
+                        for result in data.get("result", []):
+                            update_id = result.get("update_id")
+                            last_update_id = update_id + 1
+                            
+                            message = result.get("message", {})
+                            text = message.get("text", "")
+                            chat_id = message.get("chat", {}).get("id")
+                            
+                            # Nur Nachrichten vom authorisierten Admin-Chat akzeptieren
+                            if str(chat_id) == str(self.telegram_cfg.get("chat_id")) and text:
+                                print(f"📥 Telegram Nachricht empfangen: {text}")
+                                
+                                # Ins Session-Log schreiben
+                                t_stamp = time.strftime("%H:%M:%S")
+                                with open(self.transcript_file, "a", encoding="utf-8") as f:
+                                    f.write(f"[{t_stamp}] [User (via Telegram)]: {text}\\n")
+                                
+                                # Trinity triggern, als wäre es gesprochen worden
+                                trigger_text = f"{self.agent_name}, {text}"
+                                self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
+            except Exception as e:
+                pass
+            time.sleep(2)
         
     def audio_callback(self, indata, frames, time, status):
         """Wird vom sounddevice Stream aufgerufen."""
@@ -181,6 +220,10 @@ class MorpheusEar:
         # Start Heartbeat Thread if enabled
         if self.proactive_cfg.get("heartbeat_enabled", False):
             threading.Thread(target=self._heartbeat_loop, daemon=True).start()
+            
+        # Start Telegram Listener Thread if enabled
+        if self.telegram_cfg.get("enabled", False) and self.telegram_cfg.get("bot_token"):
+            threading.Thread(target=self._telegram_listener_loop, daemon=True).start()
         
         cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
         # Wir lesen in kleineren Häppchen (0.5s), um stabiler zu sein
@@ -384,7 +427,7 @@ class MorpheusEar:
         if self.speak_process and self.speak_process.returncode == 0:
             set_state("idle")
 
-    def trigger_action(self, text, silent_response=False, recent_text=None):
+    def trigger_action(self, text, silent_response=False, recent_text=None, from_telegram=False):
         print(f"!!! TRIGGER GEFUNDEN: {text[-60:]} !!!")
         lower_text = text.lower()
         # recent_text = die letzten 2-3 Chunks (für präzise Keyword-Erkennung)
@@ -478,6 +521,19 @@ class MorpheusEar:
             with open(self.transcript_file, "a") as f:
                 t_stamp = time.strftime("%H:%M:%S")
                 f.write(f"[{t_stamp}] [{self.agent_name}]: {antwort}\n")
+                
+            # 📱 Telegram Feedback: Antwort zurückschicken, falls von dort angetriggert
+            if from_telegram and self.telegram_cfg.get("enabled", False):
+                try:
+                    import requests
+                    tg_url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage"
+                    requests.post(tg_url, json={
+                        "chat_id": self.telegram_cfg["chat_id"],
+                        "text": f"*{self.agent_name} antwortet:*\n{antwort}",
+                        "parse_mode": "Markdown"
+                    }, timeout=5)
+                except Exception as e:
+                    print(f"⚠️ Fehler beim Senden der Telegram-Antwort: {e}")
         
         # Antwort bereinigen
         sichere_antwort = re.sub(r'[*_#]', '', antwort)
