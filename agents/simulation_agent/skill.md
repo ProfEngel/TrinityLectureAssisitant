@@ -13,7 +13,8 @@ Rendert interaktive **HTML5/JavaScript-Simulationen** direkt im Content-Fenster.
 | „Sierpinski" | Sierpinski-Dreieck (Fraktal) |
 | „Fourier" | Fourier-Reihen Visualisierung |
 | „Sort Algorithmus" | Visualisierung von Sortieralgorithmen (z.B. Bubble Sort) |
-| „Neural Network" | Einfaches neuronales Netz animiert (Forward Pass) |
+| „Neural Training" / „Perceptron" | Neuronales Netz (Training): TensorFlow Playground Style (Interaktive Architektur & Datensätze) |
+| „Inferenz" / „Neural Erkennung" | Neuronales Netz (Inferenz): Forward-Pass und Objekterkennung (Katze/Hund/etc.) mit Konfidenz-Visualisierung |
 | „Bienen" / „Bee" | Bienen-Ökosystem (Schwarmintelligenz mit Stöcken, Blumen, Fressfeinden) |
 | „Raumzeitkrümmung" | Visualisierung einer Gravitationssenke |
 | „Ameisen" / „Ant" | Langton's Ant (Zellulärer Automat) |

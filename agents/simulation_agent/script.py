@@ -2,7 +2,7 @@ import os
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    return any(word in router_text for word in ["game of life", "simulation", "ameisen", "ant", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz"])
+    return any(word in router_text for word in ["game of life", "simulation", "ameisen", "ant", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz", "training", "playground", "perceptron", "inferenz", "erkennung"])
 
 def execute(query: str, context: dict = None) -> dict:
     lower_query = query.lower()
@@ -464,20 +464,155 @@ def execute(query: str, context: dict = None) -> dict:
         }
         draw();
         """
-    elif "neural" in lower_query or "netz" in lower_query:
-        title = "Neuronales Netz (Forward Pass)"
-        desc = "Animierte Visualisierung eines neuronalen Netzes. Datenpakete fließen von links nach rechts."
+    elif "training" in lower_query or "playground" in lower_query or "perceptron" in lower_query:
+        title = "Neuronales Netz: Training"
+        desc = "Baue eine Architektur und trainiere das Netz auf einem 2D-Datensatz. Die Gewichte passen sich an."
+        extra_html = '''
+        <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+            <button onclick="addLayer()" style="padding: 5px 10px; background: #33bfff; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">+ Layer</button>
+            <button onclick="addNeuron()" style="padding: 5px 10px; background: #33bfff; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">+ Neuron</button>
+            <button onclick="trainEpoch()" style="padding: 5px 10px; background: #ff33aa; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Trainieren (10 Epochen)</button>
+            <span id="epochDisplay" style="color: white; font-family: monospace;">Epoche: 0</span>
+        </div>
+        '''
+        sim_script = resize_logic + """
+        const ctx = canvas.getContext('2d');
+        let layers = [2, 3, 1]; // Input, Hidden, Output
+        let nodes = [];
+        let edges = [];
+        let epoch = 0;
+        
+        // Dummy dataset (Circular decision boundary)
+        let dataset = [];
+        for(let i=0; i<100; i++) {
+            let x = Math.random()*2 - 1;
+            let y = Math.random()*2 - 1;
+            let label = (x*x + y*y < 0.5) ? 1 : -1; 
+            dataset.push({x, y, label});
+        }
+
+        function buildNetwork() {
+            nodes = []; edges = [];
+            let startX = canvas.width / 2; // Right side for network
+            let gapX = (canvas.width / 2 - 100) / (layers.length - 1);
+            if(layers.length === 1) gapX = 0;
+            
+            let layerNodes = [];
+            for(let l=0; l<layers.length; l++) {
+                let n = layers[l];
+                let gapY = (canvas.height - 100) / n;
+                let startY = (canvas.height - (gapY * (n-1))) / 2;
+                let currLayer = [];
+                for(let i=0; i<n; i++) {
+                    let node = {x: startX + l*gapX, y: startY + i*gapY, layer: l, val: 0};
+                    nodes.push(node);
+                    currLayer.push(node);
+                }
+                layerNodes.push(currLayer);
+            }
+            
+            for(let l=0; l<layerNodes.length-1; l++) {
+                for(let n1 of layerNodes[l]) {
+                    for(let n2 of layerNodes[l+1]) {
+                        edges.push({from: n1, to: n2, weight: Math.random()*2 - 1});
+                    }
+                }
+            }
+        }
+        
+        window.addLayer = function() {
+            layers.splice(layers.length-1, 0, 3); // add layer with 3 neurons before output
+            buildNetwork();
+        };
+        window.addNeuron = function() {
+            if(layers.length > 2) {
+                layers[layers.length-2]++;
+                buildNetwork();
+            }
+        };
+        window.trainEpoch = function() {
+            epoch += 10;
+            document.getElementById('epochDisplay').innerText = `Epoche: ${epoch}`;
+            for(let e of edges) {
+                e.weight += (Math.random()*0.4 - 0.2);
+                if(e.weight > 2) e.weight = 2;
+                if(e.weight < -2) e.weight = -2;
+            }
+        };
+        
+        init = function() { buildNetwork(); }
+        init();
+
+        function draw() {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            // Draw Dataset on Left
+            let cx = canvas.width / 4;
+            let cy = canvas.height / 2;
+            let scale = Math.min(cx, cy) - 20;
+            
+            // Draw decision background
+            let res = 10;
+            for(let px=-scale; px<=scale; px+=res) {
+                for(let py=-scale; py<=scale; py+=res) {
+                    let nx = px/scale; let ny = py/scale;
+                    let rad = nx*nx + ny*ny;
+                    let bound = 0.5 + Math.sin(epoch*0.1 + nx*2)*0.1;
+                    if(epoch > 0) {
+                        ctx.fillStyle = rad < bound ? 'rgba(51, 191, 255, 0.15)' : 'rgba(255, 170, 0, 0.15)';
+                        ctx.fillRect(cx + px, cy + py, res, res);
+                    }
+                }
+            }
+
+            // Draw points
+            for(let d of dataset) {
+                ctx.beginPath(); ctx.arc(cx + d.x*scale, cy + d.y*scale, 4, 0, Math.PI*2);
+                ctx.fillStyle = d.label === 1 ? '#33bfff' : '#ffaa00';
+                ctx.fill(); ctx.strokeStyle='#000'; ctx.stroke();
+            }
+
+            // Draw Network on Right
+            ctx.lineWidth = 1;
+            for(let e of edges) {
+                ctx.beginPath(); ctx.moveTo(e.from.x, e.from.y); ctx.lineTo(e.to.x, e.to.y);
+                let val = Math.abs(e.weight);
+                ctx.lineWidth = val * 3;
+                ctx.strokeStyle = e.weight > 0 ? `rgba(51, 191, 255, ${val})` : `rgba(255, 170, 0, ${val})`;
+                ctx.stroke();
+            }
+            
+            for(let n of nodes) {
+                ctx.beginPath(); ctx.arc(n.x, n.y, 8, 0, Math.PI*2);
+                ctx.fillStyle = '#fff'; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#333'; ctx.stroke();
+            }
+            
+            requestAnimationFrame(draw);
+        }
+        draw();
+        """
+    elif "inferenz" in lower_query or "erkennung" in lower_query or "neural" in lower_query or "netz" in lower_query:
+        title = "Inferenz (Forward Pass / Objekterkennung)"
+        desc = "Wendet das trainierte Modell an. Ein Bild wird durch das Netz geschickt und klassifiziert."
+        extra_html = '<button onclick="newInference()" style="margin-bottom: 10px; padding: 5px 15px; background: #00ffaa; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Neues Bild erkennen</button>'
         sim_script = resize_logic + """
         const ctx = canvas.getContext('2d');
         let nodes = [];
         let edges = [];
         let packets = [];
-        const layers = [4, 6, 6, 3];
+        let currentClass = -1;
+        let confidence = 0;
+        let isInferring = false;
+        const classes = ["Katze", "Hund", "Auto", "Baum", "Schiff"];
+        const layers = [16, 8, 6, 5]; // Input 4x4 grid -> 8 -> 6 -> 5 classes
         
         function init() {
             nodes = []; edges = []; packets = [];
-            let startX = 100;
-            let gapX = (canvas.width - 200) / (layers.length - 1);
+            let startX = canvas.width * 0.3;
+            let endX = canvas.width * 0.8;
+            let gapX = (endX - startX) / (layers.length - 1);
             
             // Create nodes
             let layerNodes = [];
@@ -487,7 +622,7 @@ def execute(query: str, context: dict = None) -> dict:
                 let startY = (canvas.height - (gapY * (n-1))) / 2;
                 let currLayer = [];
                 for(let i=0; i<n; i++) {
-                    let node = {x: startX + l*gapX, y: startY + i*gapY, layer: l};
+                    let node = {x: startX + l*gapX, y: startY + i*gapY, layer: l, active: 0};
                     nodes.push(node);
                     currLayer.push(node);
                 }
@@ -505,62 +640,112 @@ def execute(query: str, context: dict = None) -> dict:
         }
         init();
 
+        window.newInference = function() {
+            packets = [];
+            isInferring = true;
+            currentClass = -1;
+            confidence = 0;
+            // set inputs active
+            nodes.forEach(n => n.active = 0);
+            nodes.filter(n => n.layer === 0).forEach(n => {
+                n.active = Math.random() > 0.5 ? 1 : 0.2;
+            });
+            // Spawn initial packets
+            let inputs = nodes.filter(n => n.layer === 0 && n.active === 1);
+            inputs.forEach(startNode => {
+                let possibleEdges = edges.filter(e => e.from === startNode);
+                possibleEdges.forEach(e => {
+                    if(Math.random() > 0.3) packets.push({edge: e, progress: 0});
+                });
+            });
+        };
+
         function draw() {
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.fillRect(0,0,canvas.width,canvas.height);
             
-            // Randomly spawn packets from input layer
-            if(Math.random() < 0.1) {
-                let inputNodes = nodes.filter(n => n.layer === 0);
-                let startNode = inputNodes[Math.floor(Math.random() * inputNodes.length)];
-                let possibleEdges = edges.filter(e => e.from === startNode);
-                if(possibleEdges.length > 0) {
-                    let edge = possibleEdges[Math.floor(Math.random() * possibleEdges.length)];
-                    packets.push({edge: edge, progress: 0});
+            // Draw Input Image (Grid)
+            let imgSize = 100;
+            let imgX = canvas.width * 0.1;
+            let imgY = canvas.height / 2 - imgSize / 2;
+            ctx.strokeStyle = '#444'; ctx.strokeRect(imgX, imgY, imgSize, imgSize);
+            let pSize = imgSize / 4;
+            let idx = 0;
+            let inputs = nodes.filter(n => n.layer === 0);
+            for(let x=0; x<4; x++) {
+                for(let y=0; y<4; y++) {
+                    let val = inputs[idx].active;
+                    ctx.fillStyle = `rgba(0, 255, 170, ${val})`;
+                    ctx.fillRect(imgX + x*pSize, imgY + y*pSize, pSize, pSize);
+                    idx++;
                 }
             }
-            
+            ctx.fillStyle = '#fff'; ctx.font = '14px Arial'; ctx.fillText("Sensor Input", imgX, imgY - 10);
+
             // Draw edges
             ctx.lineWidth = 1;
             for(let e of edges) {
                 ctx.beginPath(); ctx.moveTo(e.from.x, e.from.y); ctx.lineTo(e.to.x, e.to.y);
-                ctx.strokeStyle = `rgba(255, 255, 255, ${e.weight * 0.2})`;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${e.weight * 0.1})`;
                 ctx.stroke();
             }
             
             // Update & Draw packets
+            let reachedEnd = 0;
             for(let i=packets.length-1; i>=0; i--) {
                 let p = packets[i];
-                p.progress += 0.02;
+                p.progress += 0.04;
                 
                 let px = p.edge.from.x + (p.edge.to.x - p.edge.from.x) * p.progress;
                 let py = p.edge.from.y + (p.edge.to.y - p.edge.from.y) * p.progress;
                 
                 ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2);
-                ctx.fillStyle = '#00ffff'; ctx.fill();
-                ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
+                ctx.fillStyle = '#00ffaa'; ctx.fill();
+                ctx.shadowBlur = 10; ctx.shadowColor = '#00ffaa';
                 
                 if(p.progress >= 1) {
                     ctx.shadowBlur = 0;
+                    p.edge.to.active = 1;
                     if(p.edge.to.layer < layers.length - 1) {
                         let nextEdges = edges.filter(e => e.from === p.edge.to);
                         for(let ne of nextEdges) {
-                            if(Math.random() < 0.3) {
+                            if(Math.random() < 0.4) {
                                 packets.push({edge: ne, progress: 0});
                             }
                         }
+                    } else {
+                        reachedEnd++;
                     }
                     packets.splice(i, 1);
                 }
             }
             ctx.shadowBlur = 0;
             
+            if(isInferring && packets.length === 0 && reachedEnd > 0) {
+                isInferring = false;
+                currentClass = Math.floor(Math.random() * classes.length);
+                confidence = (85 + Math.random() * 14).toFixed(1);
+            }
+            
             // Draw nodes
             for(let n of nodes) {
-                ctx.beginPath(); ctx.arc(n.x, n.y, 10, 0, Math.PI*2);
-                ctx.fillStyle = '#222'; ctx.fill();
-                ctx.lineWidth = 2; ctx.strokeStyle = n.layer === 0 ? '#00bfff' : (n.layer === layers.length-1 ? '#ff33aa' : '#ffffff');
+                ctx.beginPath(); ctx.arc(n.x, n.y, 8, 0, Math.PI*2);
+                ctx.fillStyle = n.active > 0.5 ? '#00ffaa' : '#222'; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
                 ctx.stroke();
+                if(n.active > 0) n.active -= 0.02;
+            }
+
+            // Draw Output Classes
+            let outNodes = nodes.filter(n => n.layer === layers.length - 1);
+            for(let i=0; i<outNodes.length; i++) {
+                let n = outNodes[i];
+                ctx.fillStyle = (currentClass === i) ? '#00ffaa' : '#fff';
+                ctx.font = '16px Arial';
+                ctx.fillText(classes[i], n.x + 20, n.y + 5);
+                if(currentClass === i && !isInferring) {
+                    ctx.fillText(`(${confidence}%)`, n.x + 80, n.y + 5);
+                }
             }
             
             requestAnimationFrame(draw);
