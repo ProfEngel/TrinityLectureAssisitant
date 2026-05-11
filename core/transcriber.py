@@ -81,6 +81,7 @@ class MorpheusEar:
             self.model_name = config["stt"]["model"]
             self.silence_threshold = config["stt"]["silence_threshold"]
             self.chunk_duration = config["stt"]["chunk_duration"]
+            self.show_volume_meter = config["stt"].get("show_volume_meter", False)
             self.voice = config["tts"]["voice"]
             # Persona-Config laden
             persona = config.get("persona", {})
@@ -97,6 +98,7 @@ class MorpheusEar:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
             self.chunk_duration = CHUNK_DURATION
+            self.show_volume_meter = False
             self.voice = "Samantha"
             self.agent_name = TRIGGER_WORD
             self.trigger_variants = TRIGGER_VARIANTS
@@ -220,9 +222,10 @@ class MorpheusEar:
                         rms = np.sqrt(np.mean(audio_data**2))
                         
                         # --- DIAGNOSE: Lautstärke-Anzeige im Terminal ---
-                        bar = "#" * int(rms * 500) + "." * max(0, 50 - int(rms * 500))
-                        status = "✅" if rms >= self.silence_threshold else "🔇"
-                        print(f"\rLevel: [{bar}] {rms:.4f} {status}", end="", flush=True)
+                        if self.show_volume_meter:
+                            bar = "#" * int(rms * 500) + "." * max(0, 50 - int(rms * 500))
+                            status = "✅" if rms >= self.silence_threshold else "🔇"
+                            print(f"\rLevel: [{bar}] {rms:.4f} {status}", end="", flush=True)
 
                         if rms < self.silence_threshold:
                             if self.trigger_armed:

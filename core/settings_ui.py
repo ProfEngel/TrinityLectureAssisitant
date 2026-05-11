@@ -35,7 +35,8 @@ DEFAULT_CONFIG = {
     "stt": {
         "model": "small",
         "silence_threshold": 0.015,
-        "chunk_duration": 6
+        "chunk_duration": 6,
+        "show_volume_meter": False
     },
     "tts": {
         "voice": "Samantha"
@@ -127,6 +128,7 @@ class SettingsWindow(QMainWindow):
         self.config["stt"]["model"] = self.stt_model_combo.currentText()
         self.config["stt"]["silence_threshold"] = self.stt_thresh_spin.value()
         self.config["stt"]["chunk_duration"] = self.stt_duration_spin.value()
+        self.config["stt"]["show_volume_meter"] = getattr(self, 'vol_meter_cb', QCheckBox()).isChecked()
         
         # TTS
         self.config["tts"]["voice"] = self.tts_voice_edit.text()
@@ -504,6 +506,10 @@ class SettingsWindow(QMainWindow):
         self.stt_duration_spin.setRange(1, 10)
         self.stt_duration_spin.setValue(self.config["stt"]["chunk_duration"])
         stt_form.addRow("Chunk Duration (sek):", self.stt_duration_spin)
+        
+        self.vol_meter_cb = QCheckBox("Volume-Meter im Terminal anzeigen")
+        self.vol_meter_cb.setChecked(self.config.get("stt", {}).get("show_volume_meter", False))
+        stt_form.addRow("", self.vol_meter_cb)
         
         stt_group.setLayout(stt_form)
         layout.addWidget(stt_group)
