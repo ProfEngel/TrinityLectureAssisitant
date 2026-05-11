@@ -39,6 +39,12 @@ DEFAULT_CONFIG = {
     },
     "tts": {
         "voice": "Samantha"
+    },
+    "proactive": {
+        "heartbeat_enabled": False,
+        "bubbles_enabled": False,
+        "visuals_enabled": False,
+        "interval_minutes": 2
     }
 }
 
@@ -112,6 +118,14 @@ class SettingsWindow(QMainWindow):
         # TTS
         self.config["tts"]["voice"] = self.tts_voice_edit.text()
         
+        # Proactive
+        if "proactive" not in self.config:
+            self.config["proactive"] = {}
+        self.config["proactive"]["heartbeat_enabled"] = getattr(self, 'hb_cb', QCheckBox()).isChecked()
+        self.config["proactive"]["bubbles_enabled"] = getattr(self, 'bubble_cb', QCheckBox()).isChecked()
+        self.config["proactive"]["visuals_enabled"] = getattr(self, 'visual_cb', QCheckBox()).isChecked()
+        self.config["proactive"]["interval_minutes"] = getattr(self, 'hb_interval_spin', QSpinBox()).value()
+        
         # Config-Datei speichern
         with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=2)
@@ -165,6 +179,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_llm_tab(), "🧠 LLM")
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
+        tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
         main_layout.addWidget(tabs)
@@ -182,6 +197,43 @@ class SettingsWindow(QMainWindow):
         btn_layout.addStretch()
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
+
+    # --- TAB: Proaktiv ---
+    def _create_proactive_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        group = QGroupBox("Proaktiver Agentic Companion (Phase 4)")
+        form = QFormLayout()
+        
+        proactive_conf = self.config.get("proactive", {})
+        
+        self.hb_cb = QCheckBox("Heartbeat aktivieren (Regelmäßige Analyse)")
+        self.hb_cb.setChecked(proactive_conf.get("heartbeat_enabled", False))
+        form.addRow(self.hb_cb)
+        
+        self.hb_interval_spin = QSpinBox()
+        self.hb_interval_spin.setRange(1, 30)
+        self.hb_interval_spin.setValue(proactive_conf.get("interval_minutes", 2))
+        form.addRow("Intervall (Minuten):", self.hb_interval_spin)
+        
+        self.bubble_cb = QCheckBox("UI-Bubbles aktivieren (Ampelsystem)")
+        self.bubble_cb.setChecked(proactive_conf.get("bubbles_enabled", False))
+        form.addRow(self.bubble_cb)
+        
+        self.visual_cb = QCheckBox("Proaktive Visuals aktivieren (Zusatzinfos einblenden)")
+        self.visual_cb.setChecked(proactive_conf.get("visuals_enabled", False))
+        form.addRow(self.visual_cb)
+        
+        hint = QLabel("Achtung: Heartbeat verursacht im Hintergrund Traffic zum LLM.\nNur bei performanten Modellen/APIs empfohlen!")
+        hint.setStyleSheet("color: #ffaa00; font-size: 11px; margin-top: 10px;")
+        hint.setWordWrap(True)
+        form.addRow("", hint)
+        
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
 
     # --- TAB: Persona ---
     def _create_persona_tab(self):
