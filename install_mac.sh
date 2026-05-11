@@ -61,9 +61,9 @@ if [ "$IS_UPDATE" = true ]; then
     [ -f "$BACKUP_DIR/config.json" ] && cp "$BACKUP_DIR/config.json" "$INSTALL_DIR/core/config.json"  && echo "   ✅ config.json wiederhergestellt"
     [ -f "$BACKUP_DIR/Soul.md" ]    && cp "$BACKUP_DIR/Soul.md"     "$INSTALL_DIR/core/Soul.md"       && echo "   ✅ Soul.md wiederhergestellt"
     [ -f "$BACKUP_DIR/User.md" ]    && cp "$BACKUP_DIR/User.md"     "$INSTALL_DIR/core/User.md"       && echo "   ✅ User.md wiederhergestellt"
-    [ -d "$BACKUP_DIR/memory" ]     && cp -r "$BACKUP_DIR/memory"   "$INSTALL_DIR/memory"             && echo "   ✅ memory/ wiederhergestellt"
-    [ -d "$BACKUP_DIR/RAG" ]        && cp -r "$BACKUP_DIR/RAG"      "$INSTALL_DIR/RAG"                && echo "   ✅ RAG/ wiederhergestellt"
-    [ -d "$BACKUP_DIR/gen_images" ] && cp -r "$BACKUP_DIR/gen_images" "$INSTALL_DIR/gen_images"       && echo "   ✅ gen_images/ wiederhergestellt"
+    [ -d "$BACKUP_DIR/memory" ]     && mkdir -p "$INSTALL_DIR/memory" && cp -a "$BACKUP_DIR/memory/." "$INSTALL_DIR/memory/" && echo "   ✅ memory/ wiederhergestellt"
+    [ -d "$BACKUP_DIR/RAG" ]        && mkdir -p "$INSTALL_DIR/RAG" && cp -a "$BACKUP_DIR/RAG/." "$INSTALL_DIR/RAG/" && echo "   ✅ RAG/ wiederhergestellt"
+    [ -d "$BACKUP_DIR/gen_images" ] && mkdir -p "$INSTALL_DIR/gen_images" && cp -a "$BACKUP_DIR/gen_images/." "$INSTALL_DIR/gen_images/" && echo "   ✅ gen_images/ wiederhergestellt"
 
     echo ""
     echo "   🗑️  Temporäres Backup wird entfernt..."
