@@ -173,6 +173,14 @@ Damit Trinity auf Zuruf Infografiken und Visualisierungen erzeugen kann.
 1. Gehe auf [fal.ai](https://fal.ai) → Registrieren → **Dashboard → API Keys → "Add key"**.
 2. Kopiere deinen Key (sieht aus wie `fal-key-abc123...`).
 
+#### 📱 Telegram-Bridge (Proaktive Benachrichtigungen)
+Damit Trinity dir bei Full-Screen-Präsentationen lautlos Warnungen und Ratschläge via Heartbeat-Souffleur aufs Handy pushen kann.
+1. Öffne die Telegram-App und suche nach **`@BotFather`** (dem offiziellen Bot mit blauem Haken).
+2. Schreibe ihm `/newbot` und folge den Anweisungen. Gib deinem Bot einen Namen (z.B. *Trinity_DeinName_Bot*).
+3. BotFather gibt dir am Ende einen **Bot-Token** (sieht etwa so aus: `123456789:ABCdefGHIjkl...`). Kopiere diesen für die Trinity-Einstellungen.
+4. **WICHTIG:** Suche deinen neuen Bot jetzt selbst in Telegram und klicke auf **Starten** (oder schreibe `/start`), damit er dir Nachrichten schicken darf.
+5. Um deine persönliche **Chat-ID** zu bekommen, suche in Telegram nach **`@userinfobot`** und starte ihn. Er antwortet dir direkt mit deiner ID (z.B. `123456789`). Trage auch diese in die Trinity-Einstellungen ein.
+
 ---
 
 ### Schritt 4: Installation
