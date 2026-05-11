@@ -13,8 +13,8 @@
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
-> **Aktuelles Release: v0.6.0 (Agentic Evolution & Deep Memory)** 🧞‍♀️  
-> Dieses Update bringt den Souffleur-Skill (Audio-Routing), die Telegram Bridge, RAG-Automatisierung und den Hintergrund-Heartbeat. Details in den Release Notes.
+> **Aktuelles Release: v0.6.1 (Two-Way Telegram Bridge & UI Polish)** 🧞‍♀️  
+> Dieses Update bringt die volle Zwei-Wege-Kommunikation für Telegram (Trinity hört und antwortet auf Chat-Nachrichten), ein neues App-Icon (Souffleur-Geist) und UI-Verbesserungen (kein schwarzer Rand mehr). Details in den Release Notes.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
