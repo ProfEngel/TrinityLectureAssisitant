@@ -32,6 +32,8 @@ Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizub
 *   **Echtzeit-Daten:** *"Wie haben sich die Aktienkurse von Nvidia in den letzten 3 Wochen entwickelt?"* – Trinity recherchiert live (via Tavily) und blendet die Antwort sowie interaktive Charts direkt ein.
 *   **Interaktive Lehre:** Ob YouTube-Videos, Google Maps Navigationsrouten oder interaktive Simulationen (wie das Game of Life) – Trinity bringt Dynamik in den Hörsaal.
 *   **Korrektur & Synthese:** Du bemerkst einen Fehler im Skript oder möchtest am Ende der Stunde ein **Big Picture** der heutigen Inhalte? Trinity greift auf deine eigenen Dokumente (via lokalem RAG) zurück und fasst alles präzise zusammen.
+*   **Natürliche Interaktion:** Trinity hört aktiv zu und erkennt ihr Wake-Word egal ob am Anfang (*"Trinity, was ist..."*) oder am Ende (*"... findest du nicht auch, Trinity?"*) des Satzes. Sie nutzt den vollen Kontext davor und danach.
+*   **Fenster-Management:** Alle eingeblendeten Fenster sind frei verschiebbar und können per Mausklick geschlossen werden – ideal für Multi-Monitor-Setups im Hörsaal.
 
 Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (RAG), dem World Wide Web und der visuellen Vermittlung im Hörsaal.
 
@@ -259,7 +261,7 @@ Trinitys Logik wurde vollständig in **11 unabhängige Agent-Skills** (`agents/`
 | **Maps-Agent** | *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI. |
 | **Timer-Agent** | *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI. |
 | **Stock-Agent** | *„Trinity, wie steht der Aktienkurs von Apple?"* | Live-Kurs und SVG-Chart im UI. |
-| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive HTML5/JS-Simulation. |
+| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive, responsive Simulationen (Bienen, Piraten vs. Fischer, etc.). |
 | **Summary-Agent** | *„Trinity, Big Picture"* | Sitzungs-Zusammenfassung erstellen. |
 | **PowerPoint-Agent** | *„Trinity, nächste Folie"* | Steuert PowerPoint nativ via AppleScript. |
 | **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
