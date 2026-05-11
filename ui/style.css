@@ -399,6 +399,12 @@ body.love {
     box-shadow: 0 0 15px #00ff66, inset 0 0 5px rgba(255,255,255,0.8);
 }
 
+.bubble-blue {
+    background-color: #00e5ff;
+    box-shadow: 0 0 15px #00e5ff, inset 0 0 5px rgba(255,255,255,0.8);
+    animation: pulse_bubble 2s infinite;
+}
+
 @keyframes pulse_bubble {
     0% { transform: scale(1); }
     50% { transform: scale(1.2); }

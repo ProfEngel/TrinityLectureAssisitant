@@ -138,10 +138,22 @@ class MorpheusEar:
                     
                     # Schreibe Payload
                     payload_path = os.path.join(CORE_DIR, "bubble_payload.html")
-                    title = "⚠️ Fehler erkannt" if color == "red" else ("💡 Alternative Perspektive" if color == "yellow" else "ℹ️ Info")
-                    html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{msg}</p>"
-                    with open(payload_path, "w") as f:
-                        f.write(html)
+                    if color == "blue":
+                        title = "📘 Übungsaufgabe"
+                        task_text = result.get("task", "")
+                        solution_text = result.get("solution", "")
+                        html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{task_text}</p><div style='height: 500px; display: flex; align-items:flex-end; justify-content:center; opacity:0.5;'>Scroll runter für die Lösung 👇</div><div style='padding-top: 50px; border-top: 1px solid rgba(255,255,255,0.2);'><strong style='color:#00e5ff;'>Lösung:</strong><p style='font-size:16px; line-height: 1.5;'>{solution_text}</p></div>"
+                        msg_log = f"{task_text} (Lösung: {solution_text})"
+                    else:
+                        title = "⚠️ Fehler erkannt" if color == "red" else ("💡 Alternative Perspektive" if color == "yellow" else "ℹ️ Info")
+                        html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{msg}</p>"
+                        msg_log = msg
+
+                    # Füge Separator hinzu, falls es schon andere Bubbles gibt (Akkumulation)
+                    separator = "<hr style='border:none; border-top:1px dashed rgba(255,255,255,0.3); margin:20px 0;'>" if os.path.exists(payload_path) else ""
+
+                    with open(payload_path, "a") as f:
+                        f.write(separator + html)
                         
                     # State auf bubble_* setzen (damit Trinity_App es zeichnet)
                     set_state(f"bubble_{color}")
@@ -149,7 +161,7 @@ class MorpheusEar:
                     # 📝 Heartbeat Findings direkt ins Transkript schreiben für Langzeitgedächtnis und Summary!
                     with open(self.transcript_file, "a", encoding="utf-8") as f:
                         t_stamp = time.strftime("%H:%M:%S")
-                        f.write(f"[{t_stamp}] [Heartbeat-Analyse ({title})]: {msg}\n")
+                        f.write(f"[{t_stamp}] [Heartbeat-Analyse ({title})]: {msg_log}\n")
                         
                     # 📱 Telegram Bridge (falls aktiv)
                     if self.telegram_cfg.get("enabled", False) and self.telegram_cfg.get("bot_token") and self.telegram_cfg.get("chat_id"):

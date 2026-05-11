@@ -21,12 +21,40 @@ def execute(query: str, context: dict = None) -> dict:
         print(f"⚠️ Bild-Trigger ignoriert: Query zu kurz ({len(query)} Zeichen).")
         return {"has_payload": False, "html_payload": "", "search_context": ""}
     
-    print(f"🚀 Starte Bildgenerierung für: '{query[:50]}'")
+    import json
+    index_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "memory", "images_index.json")
+    
+    # Lade existierende Bilder
+    existing_images = []
+    if os.path.exists(index_file):
+        try:
+            with open(index_file, "r", encoding="utf-8") as f:
+                existing_images = json.load(f)
+        except Exception:
+            pass
+            
+    if existing_images:
+        images_context = "\n".join([f"ID {i}: {img.get('topic', 'Unbekannt')}" for i, img in enumerate(existing_images)])
+        mem_prompt = [
+            {"role": "system", "content": "Du analysierst einen Nutzerbefehl bezüglich eines Schaubilds. Entscheide, ob der Nutzer ein GANZ NEUES Bild generieren will, oder ob er ein BEREITS EXISTIERENDES Bild NOCHMAL sehen möchte. Antworte NUR mit der ID des Bildes (Zahl) ODER mit 'NEU'."},
+            {"role": "user", "content": f"Bestehende Bilder:\n{images_context}\n\nNutzerbefehl: '{query}'\n\nAntwort:"}
+        ]
+        decision = brain.ask_llm(mem_prompt).strip().upper()
+        if decision.isdigit() and int(decision) < len(existing_images):
+            img_data = existing_images[int(decision)]
+            img_path = img_data.get("path")
+            topic = img_data.get("topic")
+            print(f"♻️ Zeige existierendes Bild aus Asset-Memory: {topic}")
+            html_payload = _build_image_payload(img_path, topic)
+            search_context = f"--- IMAGE MEMORY ---\nDu hast dem Nutzer soeben das bereits bekannte Schaubild zum Thema '{topic}' erneut auf den Bildschirm geholt. Erwähne kurz, dass du es wieder hervorgeholt hast.\n\n"
+            return {"has_payload": True, "html_payload": html_payload, "search_context": search_context}
+    
+    print(f"🚀 Starte NEUE Bildgenerierung für: '{query[:50]}'")
     
     # Extrahiere das Thema
     prompt = brain.ask_llm([{"role": "user", "content": 
         f"Der Nutzer hat folgendes gesagt: '{query}'\n"
-        f"Extrahiere daraus das THEMA für ein Schaubild/Infografik.\n"
+        f"Extrahiere daraus das THEMA für ein NEUES Schaubild/Infografik.\n"
         f"Antworte NUR mit dem Thema (max 10 Wörter, keine Erklärung, kein Name wie 'Trinity')."
     }]).strip('" \n.')
     print(f"🎨 Extrahiertes Bildthema: '{prompt}'")
@@ -44,8 +72,14 @@ def execute(query: str, context: dict = None) -> dict:
     img_path = _generate_image_fal(image_prompt, brain)
     
     if img_path:
+        # Im Index speichern
+        existing_images.append({"path": img_path, "topic": prompt, "timestamp": time.time()})
+        os.makedirs(os.path.dirname(index_file), exist_ok=True)
+        with open(index_file, "w", encoding="utf-8") as f:
+            json.dump(existing_images, f, indent=2, ensure_ascii=False)
+            
         html_payload = _build_image_payload(img_path, prompt)
-        search_context = f"--- IMAGE GENERATION ---\nDu hast soeben ein Schaubild zu '{prompt}' generiert. Bestätige dem Nutzer, dass er das Bild nun im Nebenfenster sehen kann und biete an, Details dazu zu erklären.\n\n"
+        search_context = f"--- IMAGE GENERATION ---\nDu hast soeben ein NEUES Schaubild zu '{prompt}' generiert. Bestätige dem Nutzer, dass er das Bild nun im Nebenfenster sehen kann und biete an, Details dazu zu erklären.\n\n"
         return {
             "has_payload": True,
             "html_payload": html_payload,

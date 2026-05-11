@@ -14,8 +14,8 @@ def analyze_transcript(brain, transcript_text: str) -> dict:
         return None
         
     prompt = [
-        {"role": "system", "content": "Du bist ein präziser, leiser Hintergrund-Analyst für eine Vorlesung. Du suchst nach offensichtlichen fachlichen Fehlern des Dozenten oder nach sehr wichtigen alternativen Perspektiven, die fehlen. Du antwortest IMMER in reinem JSON ohne Markdown-Blöcke."},
-        {"role": "user", "content": f"Hier ist das Transkript der letzten Minuten:\n\n{transcript_text}\n\nPrüfe dies kurz. Gibt es einen kritischen Fehler oder eine wichtige alternative Perspektive? Antworte in diesem JSON-Format:\n{{\"has_finding\": true/false, \"type\": \"error\"/\"perspective\", \"message\": \"Kurzer, hilfreicher Text\"}}\nWenn alles in Ordnung ist, setze has_finding auf false."}
+        {"role": "system", "content": "Du bist ein präziser Hintergrund-Analyst für eine universitäre Vorlesung. WICHTIG: Wenn das Transkript nach einem Alltagsgespräch, Pausen-Gequatsche oder einem Meeting ohne akademischen Inhalt klingt, brich sofort ab (has_finding: false)!\n\nWenn es eine ECHTE Vorlesung ist, suche nach:\n1. Offensichtlichen Fehlern (type: error, color: red)\n2. Wichtigen alternativen Perspektiven (type: perspective, color: yellow)\n3. Wenn 1. und 2. nicht zutreffen, aber der Stoff sich gut für eine kurze Verständnisfrage eignet, generiere eine kleine Übungsaufgabe (type: exercise, color: blue).\n\nDu antwortest IMMER in reinem JSON ohne Markdown."},
+        {"role": "user", "content": f"Hier ist das Transkript der letzten Minuten:\n\n{transcript_text}\n\nPrüfe dies. Antworte Eines von beidem in reinem JSON:\nEntweder (Fehler/Perspektive): {{\\\"has_finding\\\": true, \\\"type\\\": \\\"error\\\"/\\\"perspective\\\", \\\"bubble_color\\\": \\\"red\\\"/\\\"yellow\\\", \\\"message\\\": \\\"Kurzer Text\\\"}}\nOder (Übung): {{\\\"has_finding\\\": true, \\\"type\\\": \\\"exercise\\\", \\\"bubble_color\\\": \\\"blue\\\", \\\"task\\\": \\\"Kurze Frage\\\", \\\"solution\\\": \\\"Kurze Lösung\\\"}}\nOder (Nichts/Alltag): {{\\\"has_finding\\\": false}}"}
     ]
     
     try:

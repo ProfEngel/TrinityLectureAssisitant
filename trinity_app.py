@@ -392,6 +392,8 @@ class TrinityWindow(QMainWindow):
             with open(payload_file, "r", encoding="utf-8") as f:
                 content = f.read()
             self.content_window.show_content(content, self.pos())
+            # Nach dem Lesen löschen, damit sich neue Bubbles frisch sammeln können
+            os.remove(payload_file)
         # Bubble verstecken
         self.bubble_active = False
         self.browser.page().runJavaScript("window.setBubbleColor('none');")
