@@ -377,7 +377,7 @@ class MorpheusEar:
 
     def process_text(self, text):
         timestamp = time.strftime("%H:%M:%S")
-        print(f"\n[{timestamp}] {text}")
+        print(f"[{timestamp}] {text}")
         
         # In Datei schreiben (immer, auch wenn stumm)
         with open(self.transcript_file, "a") as f:
@@ -575,8 +575,7 @@ class MorpheusEar:
                     tg_url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage"
                     requests.post(tg_url, json={
                         "chat_id": self.telegram_cfg["chat_id"],
-                        "text": f"*{self.agent_name} antwortet:*\n{antwort}",
-                        "parse_mode": "Markdown"
+                        "text": f"*{self.agent_name} antwortet:*\n{antwort}"
                     }, timeout=5)
                 except Exception as e:
                     print(f"⚠️ Fehler beim Senden der Telegram-Antwort: {e}")
