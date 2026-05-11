@@ -45,6 +45,9 @@ DEFAULT_CONFIG = {
         "bubbles_enabled": False,
         "visuals_enabled": False,
         "interval_minutes": 2
+    },
+    "system": {
+        "show_terminal": False
     }
 }
 
@@ -126,6 +129,11 @@ class SettingsWindow(QMainWindow):
         self.config["proactive"]["visuals_enabled"] = getattr(self, 'visual_cb', QCheckBox()).isChecked()
         self.config["proactive"]["interval_minutes"] = getattr(self, 'hb_interval_spin', QSpinBox()).value()
         
+        # System
+        if "system" not in self.config:
+            self.config["system"] = {}
+        self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
+        
         # Config-Datei speichern
         with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=2)
@@ -180,6 +188,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
+        tabs.addTab(self._create_system_tab(), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
         main_layout.addWidget(tabs)
@@ -227,6 +236,29 @@ class SettingsWindow(QMainWindow):
         
         hint = QLabel("Achtung: Heartbeat verursacht im Hintergrund Traffic zum LLM.\nNur bei performanten Modellen/APIs empfohlen!")
         hint.setStyleSheet("color: #ffaa00; font-size: 11px; margin-top: 10px;")
+        hint.setWordWrap(True)
+        form.addRow("", hint)
+        
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
+    # --- TAB: System ---
+    def _create_system_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        group = QGroupBox("System & App-Verhalten")
+        form = QFormLayout()
+        
+        system_conf = self.config.get("system", {})
+        self.terminal_cb = QCheckBox("Terminal-Fenster im Hintergrund anzeigen (Log-Ausgabe)")
+        self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
+        form.addRow(self.terminal_cb)
+        
+        hint = QLabel("Wenn aktiv, öffnet die native macOS App beim Starten zusätzlich das Terminal, damit du Logs sehen kannst.\nBenötigt einen Neustart der App.")
+        hint.setStyleSheet("color: #888; font-size: 11px;")
         hint.setWordWrap(True)
         form.addRow("", hint)
         

@@ -295,7 +295,7 @@ class WebEngineDragFilter(QObject):
                 diff = event.globalPosition().toPoint() - getattr(self, 'click_start', event.globalPosition().toPoint())
                 if diff.manhattanLength() < 5:
                     # Es war ein Klick, kein Drag!
-                    if getattr(self.window, 'bubble_active', False) and self.click_start.x() > self.window.width() - 40 and self.click_start.y() < 40:
+                    if getattr(self.window, 'bubble_active', False):
                         self.window.show_bubble_content()
                     else:
                         self.window.chat_window.show_chat(self.window.pos())

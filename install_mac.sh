@@ -90,7 +90,28 @@ echo "📝 Erstelle native macOS App auf dem Desktop..."
 rm -f "$DESKTOP_DIR/Starte_Trinity.command"
 rm -rf "$APP_PATH"
 
-osacompile -o "$APP_PATH" -e "do shell script \"cd '$INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py\""
+cat << 'EOF' > /tmp/trinity_app.applescript
+set configFile to "INSTALL_DIR/core/config.json"
+set showTerminal to false
+try
+    set configText to do shell script "cat '" & configFile & "'"
+    if configText contains "\"show_terminal\": true" then
+        set showTerminal to true
+    end if
+end try
+
+if showTerminal then
+    tell application "Terminal"
+        do script "cd 'INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py"
+        activate
+    end tell
+else
+    do shell script "cd 'INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py > /dev/null 2>&1 &"
+end if
+EOF
+sed -i '' "s|INSTALL_DIR|$INSTALL_DIR|g" /tmp/trinity_app.applescript
+osacompile -o "$APP_PATH" /tmp/trinity_app.applescript
+rm /tmp/trinity_app.applescript
 
 echo "🖼️ Setze Trinity-Icon für die App..."
 ./venv/bin/python3 -c "
