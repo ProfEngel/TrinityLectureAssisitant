@@ -377,6 +377,12 @@ class MorpheusEar:
         antwort, has_payload = self.brain.ask(text, self.transcript_file, text_mode=use_text_mode, action_text=recent_text or text)
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")
         
+        # 🧠 Kontext-Gedächtnis: Trinitys eigene Antwort ins Transkript speichern!
+        if antwort and len(antwort.strip()) > 0:
+            with open(self.transcript_file, "a") as f:
+                t_stamp = time.strftime("%H:%M:%S")
+                f.write(f"[{t_stamp}] [{self.agent_name}]: {antwort}\n")
+        
         # Antwort bereinigen
         sichere_antwort = re.sub(r'[*_#]', '', antwort)
         sichere_antwort = sichere_antwort.replace('\n', ' ').replace("'", "").replace('"', "")
