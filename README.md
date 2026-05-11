@@ -11,9 +11,6 @@
 [![YouTube](https://img.shields.io/badge/YouTube-MatMaxEngel-red?logo=youtube&logoColor=white)](https://www.youtube.com/user/MatMaxEngel)
 
 ![Trinity Assistant Banner](assets/banner.png)
-
-![Trinity Big Picture](assets/trinity_big_picture.jpg)
-
 > [!NOTE]
 > **Aktuelles Release: v0.7.1 (Brand Assets & Proactive Updates)** 🧞‍♀️  
 > Dieses Update erweitert Trinity um proaktive Übungsaufgaben (Blaues Bubble), das Asset-Memory für Schaubilder, sowie offizielle hochauflösende Wallpaper und Logos für Desktop/Mobile. Details in den Release Notes.
@@ -22,6 +19,8 @@ Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon).
 
 
 ---
+
+![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 ## 💡 Warum dieses Projekt? (Die Vision)
 

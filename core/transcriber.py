@@ -2,6 +2,8 @@ from faster_whisper import WhisperModel
 import sounddevice as sd
 import numpy as np
 import os
+os.environ["OMP_NUM_THREADS"] = "8"
+os.environ["KMP_BLOCKTIME"] = "1"
 import time
 import queue
 import sys
@@ -69,7 +71,7 @@ class MorpheusEar:
             
         print(f"Lade Whisper Modell ({self.model_name}) via faster-whisper...")
         # int8 = quantisiert, cpu = Apple Silicon kompatibel, download_root cached das Modell
-        self._whisper = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+        self._whisper = WhisperModel(self.model_name, device="cpu", compute_type="int8", cpu_threads=8)
         print("✅ Whisper Modell geladen.")
 
     def load_config(self):
