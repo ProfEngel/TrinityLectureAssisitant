@@ -65,6 +65,7 @@ class TrinityBrain:
         """Lädt alle Live-Skills aus dem agents/ Ordner dynamisch beim Start."""
         import importlib.util
         agents_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agents")
+        print(f"📂 Suche nach Live-Skills in: {os.path.abspath(agents_dir)}")
         if not os.path.exists(agents_dir):
             return
             

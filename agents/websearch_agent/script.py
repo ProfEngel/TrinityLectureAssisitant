@@ -2,7 +2,7 @@ from datetime import datetime
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online", "aktuell", "heute", "heutige", "neuigkeiten", "news", "gerade los"])
+    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online", "aktuell", "heute", "heutige", "neuigkeiten", "news", "gerade los", "web", "tavily"])
 
 def execute(query: str, context: dict = None) -> dict:
     if not context or "brain" not in context:
@@ -20,12 +20,24 @@ def execute(query: str, context: dict = None) -> dict:
     date_iso = now.strftime("%Y-%m-%d")
     
     # Aus dem vollen Kontext die eigentliche Suchanfrage extrahieren
-    search_query = brain.ask_llm([{"role": "user", "content": 
+    raw_extraction = brain.ask_llm([{"role": "user", "content": 
         f"Heute ist {timestamp}.\n"
         f"Der Nutzer hat folgendes gesagt: '{query}'\n"
         f"Extrahiere daraus die EINE Suchanfrage für eine Web-Suchmaschine.\n"
         f"Antworte NUR mit dem Suchbegriff (max 8 Wörter, keine Erklärung)."
-    }]).strip('" \n.')
+    }])
+    
+    search_query = raw_extraction.strip('" \n.')
+    
+    # Robustheits-Fallback: Falls LLM-Extraktion fehlschlägt oder zu kurz ist, 
+    # säubern wir die Original-Anfrage (Wake-Word entfernen)
+    if len(search_query) < 3:
+        clean_query = query.lower()
+        for trigger in getattr(brain, 'trigger_variants', ['trinity']):
+            clean_query = clean_query.replace(trigger.lower(), "")
+        search_query = clean_query.strip(",.?! ")
+        print(f"⚠️ LLM Extraktion fehlgeschlagen. Nutze Fallback-Query: '{search_query}'")
+
     print(f"🔎 Extrahierte Suchanfrage: '{search_query}'")
 
     if len(search_query) < 3:
