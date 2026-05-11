@@ -44,7 +44,7 @@ def execute(query: str, context: dict = None) -> dict:
     img_path = _generate_image_fal(image_prompt, brain)
     
     if img_path:
-        html_payload = _build_image_payload(img_path)
+        html_payload = _build_image_payload(img_path, prompt)
         search_context = f"--- IMAGE GENERATION ---\nDu hast soeben ein Schaubild zu '{prompt}' generiert. Bestätige dem Nutzer, dass er das Bild nun im Nebenfenster sehen kann und biete an, Details dazu zu erklären.\n\n"
         return {
             "has_payload": True,
@@ -93,13 +93,14 @@ def _generate_image_fal(prompt, brain):
         print(f"⚠️ Fal.ai Fehler: {e}")
     return None
 
-def _build_image_payload(image_path):
+def _build_image_payload(image_path, prompt):
     """Erzeugt das HTML für die Anzeige des generierten Bildes – Fenster passt sich an Bildgröße an."""
     if not image_path: return ""
     file_url = f"file://{image_path}"
     html = f"""
     <!-- KEEP_OPEN -->
     <!-- IMAGE_PAYLOAD -->
+    <h2 style="margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;">🎨 {prompt}</h2>
     <img id="mainImg" src="{file_url}"
          style="width: 100%; display: block; border-radius: 10px;"
          onload="

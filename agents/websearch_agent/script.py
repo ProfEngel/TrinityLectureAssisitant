@@ -2,7 +2,7 @@ from datetime import datetime
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online"])
+    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online", "aktuell", "heute", "heutige", "neuigkeiten", "news", "gerade los"])
 
 def execute(query: str, context: dict = None) -> dict:
     if not context or "brain" not in context:
