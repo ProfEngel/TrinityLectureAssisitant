@@ -76,6 +76,10 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [ ] **System- & Screen-Control:**
   - [ ] "Trinity, zeig mir das auf beiden Bildschirmen" -> Toggle Mirror/Extended Mode.
   - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
+- [ ] **Onboarding & UX:**
+  - [ ] Tutorial für Erstbenutzer erstellen.
+- [ ] **Simulation Engine Updates:**
+  - [ ] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
 
 ---
 
