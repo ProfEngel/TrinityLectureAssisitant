@@ -137,6 +137,11 @@ class MorpheusEar:
                         
                     # State auf bubble_* setzen (damit Trinity_App es zeichnet)
                     set_state(f"bubble_{color}")
+                    
+                    # 📝 Heartbeat Findings direkt ins Transkript schreiben für Langzeitgedächtnis und Summary!
+                    with open(self.transcript_file, "a", encoding="utf-8") as f:
+                        t_stamp = time.strftime("%H:%M:%S")
+                        f.write(f"[{t_stamp}] [Heartbeat-Analyse ({title})]: {msg}\n")
             except Exception as e:
                 print(f"⚠️ Heartbeat Error: {e}")
         
