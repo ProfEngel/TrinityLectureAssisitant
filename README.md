@@ -10,6 +10,8 @@
 [![Sponsor](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=ff69b4)](https://github.com/sponsors/ProfEngel)
 [![YouTube](https://img.shields.io/badge/YouTube-MatMaxEngel-red?logo=youtube&logoColor=white)](https://www.youtube.com/user/MatMaxEngel)
 
+![Trinity Assistant Banner](assets/banner.png)
+
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
