@@ -188,20 +188,54 @@ class MorpheusEar:
                             
                             message = result.get("message", {})
                             text = message.get("text", "")
+                            voice = message.get("voice", {})
                             chat_id = message.get("chat", {}).get("id")
                             
                             # Nur Nachrichten vom authorisierten Admin-Chat akzeptieren
-                            if str(chat_id) == str(self.telegram_cfg.get("chat_id")) and text:
-                                print(f"📥 Telegram Nachricht empfangen: {text}")
+                            if str(chat_id) == str(self.telegram_cfg.get("chat_id")):
+                                if text:
+                                    print(f"📥 Telegram Nachricht empfangen: {text}")
+                                    
+                                    # Ins Session-Log schreiben
+                                    t_stamp = time.strftime("%H:%M:%S")
+                                    with open(self.transcript_file, "a", encoding="utf-8") as f:
+                                        f.write(f"[{t_stamp}] [User (via Telegram)]: {text}\\n")
+                                    
+                                    # Trinity triggern, als wäre es gesprochen worden
+                                    trigger_text = f"{self.agent_name}, {text}"
+                                    self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
                                 
-                                # Ins Session-Log schreiben
-                                t_stamp = time.strftime("%H:%M:%S")
-                                with open(self.transcript_file, "a", encoding="utf-8") as f:
-                                    f.write(f"[{t_stamp}] [User (via Telegram)]: {text}\\n")
-                                
-                                # Trinity triggern, als wäre es gesprochen worden
-                                trigger_text = f"{self.agent_name}, {text}"
-                                self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
+                                elif voice:
+                                    print("📥 Telegram Sprachnachricht empfangen. Lade herunter...")
+                                    try:
+                                        file_id = voice.get("file_id")
+                                        tg_token = self.telegram_cfg['bot_token']
+                                        file_info = requests.get(f"https://api.telegram.org/bot{tg_token}/getFile?file_id={file_id}").json()
+                                        if file_info.get("ok"):
+                                            file_path = file_info["result"]["file_path"]
+                                            audio_url = f"https://api.telegram.org/file/bot{tg_token}/{file_path}"
+                                            audio_data = requests.get(audio_url).content
+                                            tmp_file = "/tmp/tg_voice.oga"
+                                            with open(tmp_file, "wb") as f:
+                                                f.write(audio_data)
+                                                
+                                            print("🎙️ Transkribiere Telegram Sprachnachricht...")
+                                            segments, _ = self._whisper.transcribe(tmp_file, language="de")
+                                            voice_text = " ".join([segment.text for segment in segments]).strip()
+                                            
+                                            if voice_text:
+                                                print(f"📥 Telegram Sprachnachricht (transkribiert): {voice_text}")
+                                                
+                                                # Ins Session-Log schreiben
+                                                t_stamp = time.strftime("%H:%M:%S")
+                                                with open(self.transcript_file, "a", encoding="utf-8") as f:
+                                                    f.write(f"[{t_stamp}] [User (via Telegram Voice)]: {voice_text}\\n")
+                                                
+                                                # Trinity triggern, als wäre es gesprochen worden
+                                                trigger_text = f"{self.agent_name}, {voice_text}"
+                                                self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
+                                    except Exception as ex:
+                                        print(f"⚠️ Fehler bei der Verarbeitung der Sprachnachricht: {ex}")
             except Exception as e:
                 pass
             time.sleep(2)
