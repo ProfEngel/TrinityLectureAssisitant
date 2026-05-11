@@ -79,7 +79,7 @@ python3 -m venv venv
 echo "📦 Installiere Abhängigkeiten (das kann 2–5 Minuten dauern)..."
 export PYTHONIOENCODING=utf-8
 ./venv/bin/python3 -m pip install --upgrade pip -q
-./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech -q
+./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech pyobjc-framework-AVFoundation -q
 
 # 7. Desktop-Verknüpfung erstellen
 DESKTOP_DIR="$HOME/Desktop"

@@ -13,8 +13,8 @@
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
-> **Aktuelles Release: v0.4.3 (Mood Update)** 🧞‍♀️  
-> Trinity hat nun ein erweitertes emotionales Spektrum mit professionellen Animationen, Blush-Effekten und dynamischen Partikel-Systemen für Liebe und Wut. Details in den [Release Notes](release_notes_v0.4.3.md).
+> **Aktuelles Release: v0.4.4 (Bugfix Update)** 🧞‍♀️  
+> Dieses Release enthält wichtige Stabilitäts-Fixes und Code-Optimierungen für die Trinity-Core Komponenten. Details in den [Release Notes](release_notes_v0.4.4.md).
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
@@ -206,7 +206,8 @@ Speichern – fertig! 🎉
 ```bash
 # Python 3.11 empfohlen
 pip install faster-whisper sounddevice numpy requests PySide6 \
-            sentence-transformers pyobjc-framework-Speech
+            sentence-transformers pyobjc-framework-Speech \
+            pyobjc-framework-AVFoundation
 
 # Starten
 python3 trinity_launcher.py
