@@ -20,10 +20,23 @@ def analyze_transcript(brain, transcript_text: str) -> dict:
     
     try:
         response = brain.ask_llm(prompt)
-        # Bereinige Markdown, falls das LLM doch welches schickt
-        clean_json = re.sub(r'```json\n?|\n?```', '', response).strip()
+        
+        # Falls das Modell leer antwortet
+        if not response or len(response.strip()) == 0:
+            return None
+            
+        # Extrahiere JSON, falls das Modell Text drumherum generiert hat
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            clean_json = json_match.group(0)
+        else:
+            clean_json = response
+            
         result = json.loads(clean_json)
         return result
+    except json.JSONDecodeError:
+        # Passiert, wenn das Modell sagt "Kein Fehler gefunden" statt JSON
+        return None
     except Exception as e:
-        print(f"⚠️ Heartbeat-Analyse fehlgeschlagen: {e}")
+        print(f"⚠️ Heartbeat-Analyse Fehler: {e}")
         return None

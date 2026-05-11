@@ -89,7 +89,12 @@ class TrinityBrain:
 
     def ask_llm(self, messages):
         """Hilfsmethode für interne LLM-Aufrufe (z.B. Context Enrichment)."""
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "HTTP-Referer": "http://localhost",
+            "X-Title": "Trinity Assistant",
+            "Content-Type": "application/json"
+        }
         data = {
             "model": self.model,
             "messages": messages,
