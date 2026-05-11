@@ -60,7 +60,7 @@ def execute(query: str, context: dict = None) -> dict:
         
         # Payload für das UI-Dashboard erstellen
         html_items = "".join([f"<div style='margin-bottom:20px;'><a href='{r.get('url','')}' style='color:#00bfff; font-weight:bold;'>{r['title']}</a><div style='font-size:15px; opacity:0.9; margin-top:5px; line-height:1.4;'>{r['content']}</div></div>" for r in results])
-        html_payload = f"<h2 style='margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;'>🔍 {search_query}</h2><div style='padding-top:10px;'>{html_items}</div>"
+        html_payload = f"<!-- KEEP_OPEN -->\n<h2 style='margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;'>🔍 {search_query}</h2><div style='padding-top:10px;'>{html_items}</div>"
         
         return {
             "has_payload": True,

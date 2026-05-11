@@ -60,6 +60,7 @@ def execute(query: str, context: dict = None) -> dict:
                     sparkline = f'<line x1="0" y1="30" x2="{svg_width}" y2="30" stroke="{color}" stroke-width="2"/>'
 
                 html_payload = f"""
+<!-- KEEP_OPEN -->
 <h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>📈 {name_display}</h2>
 <div style='text-align:center;padding:15px 0;'>
   <div style='font-size:48px;font-weight:bold;color:{color};text-shadow:0 0 20px {color};'>{price:.2f} <span style='font-size:20px;'>{currency}</span></div>
