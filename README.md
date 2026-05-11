@@ -13,8 +13,8 @@
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
-> **Aktuelles Release: v0.6.2 (Voice & Vision)** 🧞‍♀️  
-> Dieses Update bringt Support für Telegram-Sprachnachrichten (direkte lokale Transkription via Whisper) und ein auf Mac-Standards angepasstes (verkleinertes) App-Icon. Details in den Release Notes.
+> **Aktuelles Release: v0.7.1 (Brand Assets & Proactive Updates)** 🧞‍♀️  
+> Dieses Update erweitert Trinity um proaktive Übungsaufgaben (Blaues Bubble), das Asset-Memory für Schaubilder, sowie offizielle hochauflösende Wallpaper und Logos für Desktop/Mobile. Details in den Release Notes.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
