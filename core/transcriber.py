@@ -239,6 +239,13 @@ class MorpheusEar:
         if has_trigger(text, self.trigger_variants):
             self.trigger_armed = True
             print(f"🎯 Wake-Word erkannt! Höre weiter zu... ({text})")
+            
+            # 🛑 Interrupt-Handling: Unterbreche laufende Sprachausgabe sofort
+            if hasattr(self, 'speak_process') and self.speak_process and self.speak_process.poll() is None:
+                self.speak_process.terminate()
+                self.speak_process = None
+                print("🛑 Laufende Sprachausgabe durch User-Interrupt unterbrochen!")
+                
             set_state("listening") # Signalisiert, dass sie auf den restlichen Satz wartet
         else:
             # Nur auf Idle setzen, wenn sie gerade NICHT spricht und wir nicht auf das Ende eines Satzes warten

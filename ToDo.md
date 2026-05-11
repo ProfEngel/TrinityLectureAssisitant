@@ -41,8 +41,8 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [X] **Refined Love Mode:** Heart eyes, blush effect, and dynamic floating heart particles.
   - [X] **Refined Angry Mode:** Sharp trapezoidal eyes, visor jitter/shake, and aggressive particles (sparks/fire).
   - [X] **State Persistence:** Automatic revert to idle after 5 seconds.
-- [ ] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung.
-- [ ] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen.
+- [X] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung (Wake-Word Terminate).
+- [X] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen (via Rolling-Chunk-Context implementiert).
 
 
 ## 4. Zukünftige Features & Ideen (Phase 3: Cognitive & System Evolution)
