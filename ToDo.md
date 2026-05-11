@@ -60,13 +60,15 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
       - **Gelb:** Alternative Perspektiven (Counter).
       - **Rot:** Fehler in Aussagen (Counter).
       - **Grün:** Proaktive Visuals/Schaubilder (Counter).
+      - **Blau:** Proaktive Übungsaufgaben (Generiert eine Aufgabe, gefolgt von Leerzeilen und dann der Lösung zum Scrollen).
     - [x] **Interaktion:** Klick auf Bubble öffnet Vorschau-Fenster.
     - [x] **Action-Trigger:** Option zum Teilen via ScreenSharing oder Ausgabe über den "AirpodSouffleur" (TTS).
 - [x] **Souffleur-Skill (Dynamisches Audio-Routing):**
   - [x] Umschalten der Audio-Ausgabe zwischen Kopfhörer (Privat) und Lautsprecher (Plenum) via `[SPEAKER]` Tag.
   - [x] Kontextbezogenes Wiederholen von Erklärungen für die Zuhörerschaft.
-- [ ] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
-- [ ] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (ideal bei Single-Monitor-Setup).
+- [x] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
+- [x] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (inkl. Two-Way Listener für Text- und Sprachnachrichten).
+- [ ] **Schaubilder-Gedächtnis (Asset-Memory):** Trinity behält den Überblick über generierte Schaubilder im Projektordner, kennt deren Inhalt/Kontext und kann diese auf Zuruf jederzeit erneut anzeigen.
 - [ ] **Dreaming-Funktion (Deep Reflection):**
   - [ ] Hintergrund-Verarbeitung von Informationen in Ruhezeiten.
   - [ ] **Akzent-Korrektur:** Intelligente Bereinigung von TTS-Fehlern (durch Akzent bedingt) im "Schlaf".
