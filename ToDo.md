@@ -78,8 +78,9 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
 - [ ] **Onboarding & UX:**
   - [ ] Tutorial für Erstbenutzer erstellen.
-- [ ] **Simulation Engine Updates:**
-  - [ ] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
+- [x] **Simulation Engine Updates:**
+  - [x] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
+  - [x] Fehlende Simulationen (Bubble Sort, Neuronales Netz) implementiert und `skill.md` aktualisiert.
 
 ---
 

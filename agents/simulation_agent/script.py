@@ -2,7 +2,7 @@ import os
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    return any(word in router_text for word in ["game of life", "simulation", "ameisen", "ant", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie"])
+    return any(word in router_text for word in ["game of life", "simulation", "ameisen", "ant", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz"])
 
 def execute(query: str, context: dict = None) -> dict:
     lower_query = query.lower()
@@ -178,11 +178,21 @@ def execute(query: str, context: dict = None) -> dict:
         draw();
         """
     elif "bienen" in lower_query or "bee" in lower_query:
-        title = "Bienen-Schwarm Simulation"
-        desc = "Agentenbasierte Schwarmintelligenz um einen Bienenstock."
+        title = "Bienen-Ökosystem"
+        desc = "Erweitertes Schwarmverhalten. Klicke die Buttons, um Stöcke, Blumen und Fressfeinde hinzuzufügen."
+        extra_html = '''
+        <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <button onclick="addEntity('hive')" style="padding: 5px 10px; background: #ffaa00; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">+ Bienenstock</button>
+            <button onclick="addEntity('flower')" style="padding: 5px 10px; background: #ff33aa; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">+ Blume</button>
+            <button onclick="addEntity('predator')" style="padding: 5px 10px; background: #ff3333; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">+ Fressfeind</button>
+        </div>
+        '''
         sim_script = resize_logic + """
         const ctx = canvas.getContext('2d');
         let bees = [];
+        let hives = [{x: canvas.width/2, y: canvas.height/2}];
+        let flowers = [];
+        let predators = [];
         const numBees = 150;
 
         function init() {
@@ -192,51 +202,111 @@ def execute(query: str, context: dict = None) -> dict:
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
                     vx: (Math.random() - 0.5) * 4,
-                    vy: (Math.random() - 0.5) * 4
+                    vy: (Math.random() - 0.5) * 4,
+                    hasNectar: false
                 });
             }
         }
         init();
 
+        window.addEntity = function(type) {
+            let rx = Math.random() * canvas.width;
+            let ry = Math.random() * canvas.height;
+            if(type === 'hive') hives.push({x: rx, y: ry});
+            if(type === 'flower') flowers.push({x: rx, y: ry, nectar: 100});
+            if(type === 'predator') predators.push({x: rx, y: ry, vx: Math.random()*2-1, vy: Math.random()*2-1});
+        };
+
+        function getClosest(x, y, arr) {
+            let minDist = Infinity;
+            let closest = null;
+            for(let item of arr) {
+                let d = Math.hypot(item.x - x, item.y - y);
+                if(d < minDist) { minDist = d; closest = item; }
+            }
+            return {item: closest, dist: minDist};
+        }
+
         function draw() {
-            ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Motion blur
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Motion blur
             ctx.fillRect(0,0,canvas.width,canvas.height);
-            
-            let cx = canvas.width/2;
-            let cy = canvas.height/2;
 
-            // Hive
-            ctx.beginPath();
-            ctx.arc(cx, cy, 20, 0, Math.PI*2);
-            ctx.fillStyle = '#ffaa00';
-            ctx.fill();
+            // Draw Hives
+            for(let h of hives) {
+                ctx.beginPath(); ctx.arc(h.x, h.y, 20, 0, Math.PI*2);
+                ctx.fillStyle = '#ffaa00'; ctx.fill();
+                ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+            }
 
-            ctx.fillStyle = '#ffee44';
+            // Draw Flowers
+            for(let i = flowers.length - 1; i >= 0; i--) {
+                let f = flowers[i];
+                ctx.beginPath(); ctx.arc(f.x, f.y, 10, 0, Math.PI*2);
+                ctx.fillStyle = '#ff33aa'; ctx.fill();
+                f.nectar -= 0.1; // Blume verwelkt langsam
+                if(f.nectar <= 0) flowers.splice(i, 1);
+            }
+
+            // Update & Draw Predators
+            for(let p of predators) {
+                p.x += p.vx; p.y += p.vy;
+                if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
+                ctx.fillStyle = '#ff3333'; ctx.fill();
+            }
+
+            // Update & Draw Bees
             for(let bee of bees) {
-                // Towards center
-                let dx = cx - bee.x;
-                let dy = cy - bee.y;
-                let dist = Math.sqrt(dx*dx + dy*dy) + 0.1;
+                let ax = 0, ay = 0;
                 
-                bee.vx += (dx / dist) * 0.1;
-                bee.vy += (dy / dist) * 0.1;
-
-                // Random wiggle
-                bee.vx += (Math.random() - 0.5) * 1.5;
-                bee.vy += (Math.random() - 0.5) * 1.5;
-
-                // Speed limit
-                let speed = Math.sqrt(bee.vx*bee.vx + bee.vy*bee.vy);
-                if(speed > 5) {
-                    bee.vx = (bee.vx/speed)*5;
-                    bee.vy = (bee.vy/speed)*5;
+                // 1. Flee from predator
+                let pred = getClosest(bee.x, bee.y, predators);
+                if(pred.item && pred.dist < 80) {
+                    ax -= (pred.item.x - bee.x) * 0.05;
+                    ay -= (pred.item.y - bee.y) * 0.05;
+                } else {
+                    // 2. Goal finding
+                    if(bee.hasNectar) {
+                        let hive = getClosest(bee.x, bee.y, hives);
+                        if(hive.item) {
+                            ax += (hive.item.x - bee.x) * 0.005;
+                            ay += (hive.item.y - bee.y) * 0.005;
+                            if(hive.dist < 20) bee.hasNectar = false; // Abladen
+                        }
+                    } else {
+                        let flower = getClosest(bee.x, bee.y, flowers);
+                        if(flower.item) {
+                            ax += (flower.item.x - bee.x) * 0.01;
+                            ay += (flower.item.y - bee.y) * 0.01;
+                            if(flower.dist < 10) bee.hasNectar = true; // Aufladen
+                        } else {
+                            // Kein Nektar, keine Blume -> kreisen um nächsten Stock
+                            let hive = getClosest(bee.x, bee.y, hives);
+                            if(hive.item) {
+                                ax += (hive.item.x - bee.x) * 0.002;
+                                ay += (hive.item.y - bee.y) * 0.002;
+                            }
+                        }
+                    }
                 }
 
-                bee.x += bee.vx;
-                bee.y += bee.vy;
+                // Random wiggle
+                ax += (Math.random() - 0.5) * 1.0;
+                ay += (Math.random() - 0.5) * 1.0;
 
-                ctx.beginPath();
-                ctx.arc(bee.x, bee.y, 2, 0, Math.PI*2);
+                bee.vx += ax; bee.vy += ay;
+                let speed = Math.hypot(bee.vx, bee.vy);
+                let maxSpeed = bee.hasNectar ? 3 : 5;
+                if(speed > maxSpeed) {
+                    bee.vx = (bee.vx/speed)*maxSpeed;
+                    bee.vy = (bee.vy/speed)*maxSpeed;
+                }
+
+                bee.x += bee.vx; bee.y += bee.vy;
+
+                ctx.beginPath(); ctx.arc(bee.x, bee.y, 2, 0, Math.PI*2);
+                ctx.fillStyle = bee.hasNectar ? '#ffffff' : '#ffee44';
                 ctx.fill();
             }
             requestAnimationFrame(draw);
@@ -334,6 +404,165 @@ def execute(query: str, context: dict = None) -> dict:
                 for(let i=0; i<30; i++) agents.push({type: 0, x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, energy: 100});
             }
 
+            requestAnimationFrame(draw);
+        }
+        draw();
+        """
+    elif "sort" in lower_query:
+        title = "Sortieralgorithmus (Bubble Sort)"
+        desc = "Visualisierung eines Sortier-Vorgangs. Das Array wird live neu geordnet."
+        extra_html = '<button onclick="resetArray()" style="margin-bottom: 10px; padding: 5px 15px; background: #00bfff; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Neu mischen</button>'
+        sim_script = resize_logic + """
+        const ctx = canvas.getContext('2d');
+        let arr = [];
+        let i = 0, j = 0;
+        let isSorting = false;
+
+        window.resetArray = function() {
+            arr = [];
+            for(let n=0; n<50; n++) { arr.push(Math.random() * (canvas.height - 50) + 10); }
+            i = 0; j = 0;
+            isSorting = true;
+        };
+
+        function init() {
+            resetArray();
+        }
+        init();
+
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            if(isSorting) {
+                if(i < arr.length) {
+                    if(j < arr.length - i - 1) {
+                        if(arr[j] > arr[j+1]) {
+                            let temp = arr[j]; arr[j] = arr[j+1]; arr[j+1] = temp;
+                        }
+                        j++;
+                    } else {
+                        j = 0; i++;
+                    }
+                } else {
+                    isSorting = false;
+                }
+            }
+
+            let w = canvas.width / arr.length;
+            for(let k=0; k<arr.length; k++) {
+                if(isSorting && (k === j || k === j+1)) {
+                    ctx.fillStyle = '#ff3333';
+                } else if (!isSorting) {
+                    ctx.fillStyle = '#33ff33';
+                } else {
+                    ctx.fillStyle = '#00bfff';
+                }
+                ctx.fillRect(k*w, canvas.height - arr[k], w-2, arr[k]);
+            }
+            requestAnimationFrame(draw);
+        }
+        draw();
+        """
+    elif "neural" in lower_query or "netz" in lower_query:
+        title = "Neuronales Netz (Forward Pass)"
+        desc = "Animierte Visualisierung eines neuronalen Netzes. Datenpakete fließen von links nach rechts."
+        sim_script = resize_logic + """
+        const ctx = canvas.getContext('2d');
+        let nodes = [];
+        let edges = [];
+        let packets = [];
+        const layers = [4, 6, 6, 3];
+        
+        function init() {
+            nodes = []; edges = []; packets = [];
+            let startX = 100;
+            let gapX = (canvas.width - 200) / (layers.length - 1);
+            
+            // Create nodes
+            let layerNodes = [];
+            for(let l=0; l<layers.length; l++) {
+                let n = layers[l];
+                let gapY = (canvas.height - 100) / n;
+                let startY = (canvas.height - (gapY * (n-1))) / 2;
+                let currLayer = [];
+                for(let i=0; i<n; i++) {
+                    let node = {x: startX + l*gapX, y: startY + i*gapY, layer: l};
+                    nodes.push(node);
+                    currLayer.push(node);
+                }
+                layerNodes.push(currLayer);
+            }
+            
+            // Create edges
+            for(let l=0; l<layerNodes.length-1; l++) {
+                for(let n1 of layerNodes[l]) {
+                    for(let n2 of layerNodes[l+1]) {
+                        edges.push({from: n1, to: n2, weight: Math.random()});
+                    }
+                }
+            }
+        }
+        init();
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            // Randomly spawn packets from input layer
+            if(Math.random() < 0.1) {
+                let inputNodes = nodes.filter(n => n.layer === 0);
+                let startNode = inputNodes[Math.floor(Math.random() * inputNodes.length)];
+                let possibleEdges = edges.filter(e => e.from === startNode);
+                if(possibleEdges.length > 0) {
+                    let edge = possibleEdges[Math.floor(Math.random() * possibleEdges.length)];
+                    packets.push({edge: edge, progress: 0});
+                }
+            }
+            
+            // Draw edges
+            ctx.lineWidth = 1;
+            for(let e of edges) {
+                ctx.beginPath(); ctx.moveTo(e.from.x, e.from.y); ctx.lineTo(e.to.x, e.to.y);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${e.weight * 0.2})`;
+                ctx.stroke();
+            }
+            
+            // Update & Draw packets
+            for(let i=packets.length-1; i>=0; i--) {
+                let p = packets[i];
+                p.progress += 0.02;
+                
+                let px = p.edge.from.x + (p.edge.to.x - p.edge.from.x) * p.progress;
+                let py = p.edge.from.y + (p.edge.to.y - p.edge.from.y) * p.progress;
+                
+                ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2);
+                ctx.fillStyle = '#00ffff'; ctx.fill();
+                ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
+                
+                if(p.progress >= 1) {
+                    ctx.shadowBlur = 0;
+                    if(p.edge.to.layer < layers.length - 1) {
+                        let nextEdges = edges.filter(e => e.from === p.edge.to);
+                        for(let ne of nextEdges) {
+                            if(Math.random() < 0.3) {
+                                packets.push({edge: ne, progress: 0});
+                            }
+                        }
+                    }
+                    packets.splice(i, 1);
+                }
+            }
+            ctx.shadowBlur = 0;
+            
+            // Draw nodes
+            for(let n of nodes) {
+                ctx.beginPath(); ctx.arc(n.x, n.y, 10, 0, Math.PI*2);
+                ctx.fillStyle = '#222'; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = n.layer === 0 ? '#00bfff' : (n.layer === layers.length-1 ? '#ff33aa' : '#ffffff');
+                ctx.stroke();
+            }
+            
             requestAnimationFrame(draw);
         }
         draw();
