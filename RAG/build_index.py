@@ -21,7 +21,9 @@ from sentence_transformers import SentenceTransformer
 
 # Konfiguration
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 INDEX_DIR = os.path.join(SCRIPT_DIR, "index")
+MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 CHUNK_SIZE = 500       # Zeichen pro Chunk (kleiner = präziser)
 CHUNK_OVERLAP = 100    # Überlappung
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"  # ~120MB, Deutsch-optimiert
@@ -37,6 +39,20 @@ def extract_text_from_pdf(pdf_path):
             pages.append({"page": i + 1, "text": text})
     doc.close()
     return pages
+
+
+def extract_text_from_md(md_path):
+    """Extrahiert Text aus Markdown-Dateien (Session Summaries)."""
+    with open(md_path, "r", encoding="utf-8") as f:
+        text = f.read().strip()
+    
+    # Optional: HTML Tags oder Markdown-Sonderzeichen bereinigen, wenn nötig
+    import re
+    text = re.sub(r'<[^>]+>', '', text) # HTML Tags entfernen
+    
+    if text:
+        return [{"page": 1, "text": text}]
+    return []
 
 
 def chunk_pages(pages, source_name):
@@ -67,23 +83,42 @@ def build_index():
 
     # 1. PDFs finden
     pdf_files = [f for f in os.listdir(SCRIPT_DIR) if f.lower().endswith('.pdf')]
-    if not pdf_files:
-        print("❌ Keine PDFs im RAG-Ordner gefunden!")
+    
+    # 1.5. MDs (Summaries) aus memory/ finden
+    md_files = []
+    if os.path.exists(MEMORY_DIR):
+        md_files = [f for f in os.listdir(MEMORY_DIR) if f.lower().endswith('.md')]
+
+    if not pdf_files and not md_files:
+        print("❌ Keine PDFs im RAG-Ordner und keine MDs im memory-Ordner gefunden!")
         return
 
     # 2. Text extrahieren und chunken
     all_chunks = []
+    
+    # PDFs verarbeiten
     for fname in sorted(pdf_files):
         path = os.path.join(SCRIPT_DIR, fname)
         source = fname.replace('.pdf', '')
-        print(f"📄 Lese: {fname}...")
+        print(f"📄 Lese PDF: {fname}...")
         pages = extract_text_from_pdf(path)
         chunks = chunk_pages(pages, source)
         all_chunks.extend(chunks)
         total_chars = sum(len(p["text"]) for p in pages)
         print(f"   → {len(pages)} Seiten, {total_chars:,} Zeichen, {len(chunks)} Chunks")
+        
+    # MDs verarbeiten
+    for fname in sorted(md_files):
+        path = os.path.join(MEMORY_DIR, fname)
+        source = fname.replace('.md', '')
+        print(f"📝 Lese MD: {fname}...")
+        pages = extract_text_from_md(path)
+        chunks = chunk_pages(pages, source)
+        all_chunks.extend(chunks)
+        total_chars = sum(len(p["text"]) for p in pages)
+        print(f"   → Summary, {total_chars:,} Zeichen, {len(chunks)} Chunks")
 
-    print(f"\n📊 Gesamt: {len(all_chunks)} Chunks aus {len(pdf_files)} Dokumenten")
+    print(f"\n📊 Gesamt: {len(all_chunks)} Chunks aus {len(pdf_files) + len(md_files)} Dokumenten")
 
     # 3. Embedding-Modell laden
     print(f"\n🤖 Lade Embedding-Modell: {MODEL_NAME}...")

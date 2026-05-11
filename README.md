@@ -13,8 +13,8 @@
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
-> **Aktuelles Release: v0.4.7 (UI Polish & Intelligence Update)** 🧞‍♀️  
-> Dieses Update bringt Sticky-Antworten, verbesserte Web-Suche und UI-Anpassungen für Bilder. Details in den [Release Notes](docs/release_notes/release_notes_v0.4.7.md).
+> **Aktuelles Release: v0.6.0 (Agentic Evolution & Deep Memory)** 🧞‍♀️  
+> Dieses Update bringt den Souffleur-Skill (Audio-Routing), die Telegram Bridge, RAG-Automatisierung und den Hintergrund-Heartbeat. Details in den Release Notes.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
@@ -29,13 +29,37 @@ Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizub
 
 *   **Der Assistent an deiner Seite:** Stell dir vor, du könntest mitten in einer Übung einfach sagen: *"Trinity, setze einen Timer für 10 Minuten"*, ohne dein Tablet oder Laptop zu berühren.
 *   **Wissen on the fly:** Du möchtest einen neuen Blickwinkel auf eine Definition hören oder eine komplexe Metapher visualisieren? Trinity generiert (dank fal.ai) in Sekunden ein passendes **Schaubild oder Skizze**.
-*   **Echtzeit-Daten:** *"Wie haben sich die Aktienkurse von Nvidia in den letzten 3 Wochen entwickelt?"* – Trinity recherchiert live (via Tavily) und blendet die Antwort sowie interaktive Charts direkt ein.
-*   **Interaktive Lehre:** Ob YouTube-Videos, Google Maps Navigationsrouten oder interaktive Simulationen (wie das Game of Life) – Trinity bringt Dynamik in den Hörsaal.
-*   **Korrektur & Synthese:** Du bemerkst einen Fehler im Skript oder möchtest am Ende der Stunde ein **Big Picture** der heutigen Inhalte? Trinity greift auf deine eigenen Dokumente (via lokalem RAG) zurück und fasst alles präzise zusammen.
+*   **Heartbeat-Souffleur (Audio-Routing):** Trinity fungiert als dein privater Souffleur auf dem AirPods. Hörst du eine Erklärung, die das Plenum (die Klasse) hören sollte, reicht ein *"Trinity, wiederhole das für alle"*, und sie wechselt automatisch die Audioausgabe auf die externen Lautsprecher.
+*   **Proaktiver Begleiter (Telegram-DM):** Trinity analysiert deine Vorlesung live im Hintergrund. Fällt ihr ein logischer Fehler auf, zeigt sie im UI eine rote "Bubble". Arbeitest du im Vollbildmodus am Beamer? Kein Problem, die Telegram-Bridge sendet dir Trinitys Anmerkungen lautlos als Direktnachricht aufs Smartphone.
+*   **Deep Memory (RAG Automation):** Am Ende einer Vorlesung generiert Trinity ein Summary. Damit das Wissen nicht verloren geht, fügt sie diese Zusammenfassungen ab sofort automatisch in ihr Langzeitgedächtnis (RAG-Index) ein. So weiß sie nächste Woche noch genau, worüber gesprochen wurde.
 *   **Natürliche Interaktion:** Trinity hört aktiv zu und erkennt ihr Wake-Word egal ob am Anfang (*"Trinity, was ist..."*) oder am Ende (*"... findest du nicht auch, Trinity?"*) des Satzes. Sie nutzt den vollen Kontext davor und danach.
 *   **Fenster-Management:** Alle eingeblendeten Fenster sind frei verschiebbar und können per Mausklick geschlossen werden – ideal für Multi-Monitor-Setups im Hörsaal.
 
 Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (RAG), dem World Wide Web und der visuellen Vermittlung im Hörsaal.
+
+---
+
+## Bedienung & Modulares Skill-System (Die Agenten)
+
+Trinitys Logik wurde vollständig in **unabhängige Agent-Skills** ausgelagert. Hier die Mega-Features im Überblick:
+
+| Skill | Befehl / Trigger | Aktion |
+|---|---|---|
+| **Freie Konversation** | *„Trinity, [Frage]"* | Max. 1-2 Sätze Antwort (siehe `Soul.md`). Für mehr Infos: *„Erkläre ausführlich…"* |
+| **RAG-Agent** | *„Trinity, schlag im Skript nach …"* | RAG-Suche in den eigenen Vorlesungs-PDFs und automatischen Session-Summaries. |
+| **WebSearch-Agent** | *„Trinity, recherchiere …"* | Live Web-Suche via Tavily. |
+| **Image-Agent** | *„Trinity, erstelle ein Schaubild …"* | Bildgenerierung (einfache Infografiken) via fal.ai. |
+| **Maps-Agent** | *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI. |
+| **Timer-Agent** | *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI. |
+| **Stock-Agent** | *„Trinity, wie steht der Aktienkurs von Apple?"* | Live-Kurs und SVG-Chart im UI. |
+| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive, responsive Simulationen (Bienen, Piraten vs. Fischer, etc.). |
+| **Summary-Agent** | *„Trinity, Session beenden und zusammenfassen"* | Sitzungs-Zusammenfassung erstellen und automatisch ins Deep Memory indexieren. |
+| **PowerPoint-Agent** | *„Trinity, nächste Folie"* | Steuert PowerPoint nativ via AppleScript. |
+| **Souffleur-Skill** | *„Trinity, wiederhole das für das Plenum"* | Dynamisches Audio-Routing auf externe Lautsprecher für die Studierenden. |
+| **Heartbeat (Proaktiv)** | *Hintergrundprozess (alle 2 Min)* | Analysiert Sitzungs-Transkripte auf Fehler und sendet Warnungen via UI-Bubbles oder Telegram-Bridge. |
+| **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
+| **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus ohne explizites Trigger-Wort. |
+| **Settings-Agent** | *„Trinity, öffne Einstellungen"* | Öffnet das Konfigurations-UI auf dem Desktop. |
 
 ---
 

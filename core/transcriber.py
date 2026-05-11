@@ -91,6 +91,8 @@ class MorpheusEar:
             self.proactive_cfg = config.get("proactive", {})
             # Audio-Routing Config
             self.audio_routing = config.get("audio_routing", {})
+            # Telegram Config
+            self.telegram_cfg = config.get("telegram", {})
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -100,6 +102,7 @@ class MorpheusEar:
             self.trigger_variants = TRIGGER_VARIANTS
             self.proactive_cfg = {}
             self.audio_routing = {}
+            self.telegram_cfg = {}
 
     def _heartbeat_loop(self):
         interval_min = self.proactive_cfg.get("interval_minutes", 2)
@@ -145,6 +148,20 @@ class MorpheusEar:
                     with open(self.transcript_file, "a", encoding="utf-8") as f:
                         t_stamp = time.strftime("%H:%M:%S")
                         f.write(f"[{t_stamp}] [Heartbeat-Analyse ({title})]: {msg}\n")
+                        
+                    # 📱 Telegram Bridge (falls aktiv)
+                    if self.telegram_cfg.get("enabled", False) and self.telegram_cfg.get("bot_token") and self.telegram_cfg.get("chat_id"):
+                        try:
+                            import requests
+                            tg_url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage"
+                            tg_msg = f"*{title}*\n{msg}"
+                            requests.post(tg_url, json={
+                                "chat_id": self.telegram_cfg["chat_id"],
+                                "text": tg_msg,
+                                "parse_mode": "Markdown"
+                            }, timeout=5)
+                        except Exception as tg_ex:
+                            print(f"⚠️ Telegram Sende-Fehler: {tg_ex}")
             except Exception as e:
                 print(f"⚠️ Heartbeat Error: {e}")
         

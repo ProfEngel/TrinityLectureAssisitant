@@ -31,6 +31,31 @@ def execute(query: str, context: dict = None) -> dict:
         formatted_summary = "".join([f"<p style='margin-bottom:15px; line-height:1.5;'>{p}</p>" for p in paragraphs])
         html_payload = f"<!-- KEEP_OPEN --><h2>📊 Sitzungs-Überblick</h2><div style='font-size:15px; opacity:0.9;'>{formatted_summary}</div>"
         
+        # Speichere das Summary in memory/
+        import time
+        date_str = time.strftime("%Y-%m-%d_%H-%M-%S")
+        os.makedirs("memory", exist_ok=True)
+        summary_path = f"memory/Session_Summary_{date_str}.md"
+        with open(summary_path, "w", encoding="utf-8") as f:
+            f.write(f"# Session Summary – {date_str}\n\n{summary}\n")
+            
+        print(f"✅ Summary gespeichert unter {summary_path}")
+        
+        # Deep Memory: Auto-RAG Indexierung
+        try:
+            import json
+            config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "core", "config.json")
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                if config.get("proactive", {}).get("auto_rag_indexing", False):
+                    print("🚀 Deep Memory: Starte RAG-Indexierung im Hintergrund...")
+                    import subprocess
+                    rag_script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "RAG", "build_index.py")
+                    subprocess.Popen(["python3", rag_script])
+        except Exception as e:
+            print(f"⚠️ Fehler beim Auto-RAG Trigger: {e}")
+            
         search_context = "--- SUMMARY ---\nDu hast eine Zusammenfassung der Sitzung erstellt. Erkläre dem Nutzer kurz die wichtigsten Punkte.\n\n"
         
         return {

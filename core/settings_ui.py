@@ -44,7 +44,8 @@ DEFAULT_CONFIG = {
         "heartbeat_enabled": False,
         "bubbles_enabled": False,
         "visuals_enabled": False,
-        "interval_minutes": 2
+        "interval_minutes": 2,
+        "auto_rag_indexing": False
     },
     "system": {
         "show_terminal": False
@@ -52,6 +53,11 @@ DEFAULT_CONFIG = {
     "audio_routing": {
         "private_device": "Standard",
         "public_device": "Standard"
+    },
+    "telegram": {
+        "enabled": False,
+        "bot_token": "",
+        "chat_id": ""
     }
 }
 
@@ -145,6 +151,18 @@ class SettingsWindow(QMainWindow):
             self.config["audio_routing"]["private_device"] = self.private_audio_combo.currentText()
         if hasattr(self, 'public_audio_combo'):
             self.config["audio_routing"]["public_device"] = self.public_audio_combo.currentText()
+            
+        # Telegram
+        if "telegram" not in self.config:
+            self.config["telegram"] = {}
+        if hasattr(self, 'telegram_cb'):
+            self.config["telegram"]["enabled"] = self.telegram_cb.isChecked()
+            self.config["telegram"]["bot_token"] = self.tg_token_edit.text()
+            self.config["telegram"]["chat_id"] = self.tg_chatid_edit.text()
+            
+        # Proactive Additions
+        if hasattr(self, 'auto_rag_cb'):
+            self.config["proactive"]["auto_rag_indexing"] = self.auto_rag_cb.isChecked()
         
         # Config-Datei speichern
         with open(self.config_path, "w") as f:
@@ -247,10 +265,35 @@ class SettingsWindow(QMainWindow):
         self.visual_cb.setChecked(proactive_conf.get("visuals_enabled", False))
         form.addRow(self.visual_cb)
         
+        self.auto_rag_cb = QCheckBox("Deep Memory: Session-Summaries automatisch ins RAG indexieren")
+        self.auto_rag_cb.setChecked(proactive_conf.get("auto_rag_indexing", False))
+        form.addRow(self.auto_rag_cb)
+        
         hint = QLabel("Achtung: Heartbeat verursacht im Hintergrund Traffic zum LLM.\nNur bei performanten Modellen/APIs empfohlen!")
         hint.setStyleSheet("color: #ffaa00; font-size: 11px; margin-top: 10px;")
         hint.setWordWrap(True)
         form.addRow("", hint)
+        
+        # --- Telegram Bridge ---
+        tg_conf = self.config.get("telegram", {})
+        
+        form.addRow(QLabel(" ")) # Spacer
+        tg_label = QLabel("Telegram Bridge (Single-Monitor Setup)")
+        tg_label.setStyleSheet("color: #00bfff; font-weight: bold; font-size: 13px;")
+        form.addRow(tg_label)
+        
+        self.telegram_cb = QCheckBox("Bubble-Nachrichten per Telegram-DM senden")
+        self.telegram_cb.setChecked(tg_conf.get("enabled", False))
+        form.addRow(self.telegram_cb)
+        
+        self.tg_token_edit = QLineEdit(tg_conf.get("bot_token", ""))
+        self.tg_token_edit.setPlaceholderText("z z.B. 123456789:ABCdefGHIjklMNOpqrsTUVwxyz")
+        self.tg_token_edit.setEchoMode(QLineEdit.Password)
+        form.addRow("Bot Token:", self.tg_token_edit)
+        
+        self.tg_chatid_edit = QLineEdit(tg_conf.get("chat_id", ""))
+        self.tg_chatid_edit.setPlaceholderText("z.B. 123456789")
+        form.addRow("Chat ID:", self.tg_chatid_edit)
         
         group.setLayout(form)
         layout.addWidget(group)
@@ -293,7 +336,7 @@ class SettingsWindow(QMainWindow):
         try:
             import subprocess
             out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
-            for line in out.strip().split("\\n"):
+            for line in out.strip().split("\n"):
                 parts = line.strip().split(" ", 1)
                 if len(parts) == 2:
                     devices.append(parts[1])
