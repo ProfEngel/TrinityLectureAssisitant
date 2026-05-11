@@ -38,10 +38,14 @@ class ContentResizeFilter(QObject):
                 self.start_geo = self.win.geometry()
                 return True
             else:
-                self.dragging = True
-                self.drag_start = event.globalPosition().toPoint()
-                self.window_start = self.win.pos()
-                return False # Let the browser handle clicks if needed, but we start drag
+                local_pos = event.position().toPoint()
+                # Top 50 pixels for dragging, excluding the top-right 50 pixels for the close button
+                if local_pos.y() < 50 and local_pos.x() < self.win.width() - 50:
+                    self.dragging = True
+                    self.drag_start = event.globalPosition().toPoint()
+                    self.window_start = self.win.pos()
+                    return True # Event konsumieren, damit Browser den Drag nicht stiehlt
+                return False
         elif event.type() == QEvent.Type.MouseMove:
             if self.resizing and self.drag_start:
                 from PySide6.QtCore import QRect
@@ -177,6 +181,20 @@ class ContentWindow(QMainWindow):
                     height: calc(100% - 62px);
                     overflow-y: auto;
                     box-sizing: border-box;
+                }}
+                ::-webkit-scrollbar {{
+                    width: 10px;
+                    height: 10px;
+                }}
+                ::-webkit-scrollbar-track {{
+                    background: transparent;
+                }}
+                ::-webkit-scrollbar-thumb {{
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 5px;
+                }}
+                ::-webkit-scrollbar-thumb:hover {{
+                    background: rgba(255, 255, 255, 0.4);
                 }}
                 h2 {{ margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px; }}
                 a {{ color: #00bfff; text-decoration: none; }}

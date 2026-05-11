@@ -13,8 +13,8 @@
 ![Trinity Big Picture](assets/trinity_big_picture.jpg)
 
 > [!NOTE]
-> **Aktuelles Release: v0.4.6 (Natural Interaction Update)** 🧞‍♀️  
-> Dieses Update bringt ein natürlicheres Wake-Word Verhalten, verschiebbare Fenster und neue Simulationen. Details in den [Release Notes](release_notes_v0.4.6.md).
+> **Aktuelles Release: v0.4.7 (UI Polish & Intelligence Update)** 🧞‍♀️  
+> Dieses Update bringt Sticky-Antworten, verbesserte Web-Suche und UI-Anpassungen für Bilder. Details in den [Release Notes](release_notes_v0.4.7.md).
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
