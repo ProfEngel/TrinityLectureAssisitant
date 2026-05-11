@@ -75,6 +75,15 @@ window.setTrinityState = (state) => {
     }
 };
 
+window.setBubbleColor = (color) => {
+    const bubble = document.getElementById('notification-bubble');
+    if (!color || color === 'none') {
+        bubble.className = 'hidden';
+    } else {
+        bubble.className = `bubble-${color}`;
+    }
+};
+
 
 
 // Klick auf Trinity simuliert Zustandswechsel (nur für optisches Feedback)

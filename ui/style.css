@@ -365,3 +365,41 @@ body.love {
     animation: love_body_glow 1.5s ease-in-out infinite alternate;
 }
 
+/* 🟢🟡🔴 Notification Bubbles (Phase 4) */
+#notification-bubble {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    z-index: 100;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255,255,255,0.8);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none; /* Klicks gehen durch aufs Fenster-System von Qt */
+}
+
+.bubble-red {
+    background-color: #ff3333;
+    box-shadow: 0 0 15px #ff3333, inset 0 0 5px rgba(255,255,255,0.8);
+    animation: pulse_bubble 2s infinite;
+}
+
+.bubble-yellow {
+    background-color: #ffaa00;
+    box-shadow: 0 0 15px #ffaa00, inset 0 0 5px rgba(255,255,255,0.8);
+    animation: pulse_bubble 2s infinite;
+}
+
+.bubble-green {
+    background-color: #00ff66;
+    box-shadow: 0 0 15px #00ff66, inset 0 0 5px rgba(255,255,255,0.8);
+}
+
+@keyframes pulse_bubble {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+

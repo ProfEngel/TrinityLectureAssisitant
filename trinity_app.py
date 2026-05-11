@@ -295,7 +295,10 @@ class WebEngineDragFilter(QObject):
                 diff = event.globalPosition().toPoint() - getattr(self, 'click_start', event.globalPosition().toPoint())
                 if diff.manhattanLength() < 5:
                     # Es war ein Klick, kein Drag!
-                    self.window.chat_window.show_chat(self.window.pos())
+                    if getattr(self.window, 'bubble_active', False) and self.click_start.x() > self.window.width() - 40 and self.click_start.y() < 40:
+                        self.window.show_bubble_content()
+                    else:
+                        self.window.chat_window.show_chat(self.window.pos())
             self.drag_pos = None
         return False
 
@@ -353,25 +356,45 @@ class TrinityWindow(QMainWindow):
                 with open(self.state_file, "r") as f:
                     current_state = f.read().strip()
                 if current_state and current_state != self.last_state:
-                    self.browser.page().runJavaScript(f"window.setTrinityState('{current_state}');")
-                    
-                    if current_state == "reporting":
-                        payload_file = os.path.join(os.path.dirname(__file__), "core", "payload.html")
-                        if os.path.exists(payload_file):
-                            with open(payload_file, "r", encoding="utf-8") as f:
-                                content = f.read()
-                            self.content_window.show_content(content, self.pos())
-                    elif current_state == "idle":
-                        if not getattr(self.content_window, 'is_sticky', False):
-                            self.content_window.hide_content()
-                    elif current_state == "hide_window":
-                        self.content_window.is_sticky = False
-                        self.content_window.hide_content()
-                        self.browser.page().runJavaScript("window.setTrinityState('idle');")
+                    if current_state.startswith("bubble_"):
+                        color = current_state.split("_")[1]
+                        self.bubble_active = True
+                        self.browser.page().runJavaScript(f"window.setBubbleColor('{color}');")
+                        # State in Datei wieder auf idle setzen, damit der Bubble-State verarbeitet ist
+                        with open(self.state_file, "w") as f:
+                            f.write("idle")
+                        self.last_state = "idle"
+                    else:
+                        self.browser.page().runJavaScript(f"window.setTrinityState('{current_state}');")
                         
-                    self.last_state = current_state
+                        if current_state == "reporting":
+                            payload_file = os.path.join(os.path.dirname(__file__), "core", "payload.html")
+                            if os.path.exists(payload_file):
+                                with open(payload_file, "r", encoding="utf-8") as f:
+                                    content = f.read()
+                                self.content_window.show_content(content, self.pos())
+                        elif current_state == "idle":
+                            if not getattr(self.content_window, 'is_sticky', False):
+                                self.content_window.hide_content()
+                        elif current_state == "hide_window":
+                            self.content_window.is_sticky = False
+                            self.content_window.hide_content()
+                            self.browser.page().runJavaScript("window.setTrinityState('idle');")
+                            
+                        self.last_state = current_state
         except Exception:
             pass
+
+    def show_bubble_content(self):
+        # Bubble-Info anzeigen
+        payload_file = os.path.join(os.path.dirname(__file__), "core", "bubble_payload.html")
+        if os.path.exists(payload_file):
+            with open(payload_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.content_window.show_content(content, self.pos())
+        # Bubble verstecken
+        self.bubble_active = False
+        self.browser.page().runJavaScript("window.setBubbleColor('none');")
 
     def mousePressEvent(self, event):
         # Ermöglicht das Verschieben des Widgets

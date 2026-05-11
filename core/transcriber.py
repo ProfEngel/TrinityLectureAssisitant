@@ -86,6 +86,9 @@ class MorpheusEar:
             persona = config.get("persona", {})
             self.agent_name = persona.get("agent_name", TRIGGER_WORD)
             self.trigger_variants = persona.get("trigger_variants", TRIGGER_VARIANTS)
+            
+            # Proactive-Config
+            self.proactive_cfg = config.get("proactive", {})
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -93,6 +96,49 @@ class MorpheusEar:
             self.voice = "Samantha"
             self.agent_name = TRIGGER_WORD
             self.trigger_variants = TRIGGER_VARIANTS
+            self.proactive_cfg = {}
+
+    def _heartbeat_loop(self):
+        interval_min = self.proactive_cfg.get("interval_minutes", 2)
+        print(f"💓 Heartbeat aktiv (Intervall: {interval_min} Min).")
+        while self.is_running:
+            time.sleep(interval_min * 60)
+            if not self.is_running or not self.proactive_cfg.get("heartbeat_enabled", False):
+                break
+                
+            try:
+                # Transkript auslesen (die letzten ca. 3000 Zeichen sollten für 2 Min reichen)
+                with open(self.transcript_file, "r") as f:
+                    content = f.read()
+                recent_text = content[-3000:] if len(content) > 3000 else content
+                
+                # Check ob wir überhaupt Content haben
+                if len(recent_text.strip()) < 100:
+                    continue
+                    
+                print("💓 Heartbeat: Analysiere Transkript im Hintergrund...")
+                
+                sys.path.append(os.path.join(PROJECT_DIR, "agents"))
+                import importlib
+                hb_module = importlib.import_module("heartbeat_agent.script")
+                
+                result = hb_module.analyze_transcript(self.brain, recent_text)
+                if result and result.get("has_finding"):
+                    color = result.get("bubble_color", "red")
+                    msg = result.get("message", "Heartbeat Hinweis.")
+                    print(f"💓 Heartbeat Finding ({color}): {msg}")
+                    
+                    # Schreibe Payload
+                    payload_path = os.path.join(CORE_DIR, "bubble_payload.html")
+                    title = "⚠️ Fehler erkannt" if color == "red" else ("💡 Alternative Perspektive" if color == "yellow" else "ℹ️ Info")
+                    html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{msg}</p>"
+                    with open(payload_path, "w") as f:
+                        f.write(html)
+                        
+                    # State auf bubble_* setzen (damit Trinity_App es zeichnet)
+                    set_state(f"bubble_{color}")
+            except Exception as e:
+                print(f"⚠️ Heartbeat Error: {e}")
         
     def audio_callback(self, indata, frames, time, status):
         """Wird vom sounddevice Stream aufgerufen."""
@@ -104,6 +150,10 @@ class MorpheusEar:
     def start(self):
         self.is_running = True
         set_state("idle")
+        
+        # Start Heartbeat Thread if enabled
+        if self.proactive_cfg.get("heartbeat_enabled", False):
+            threading.Thread(target=self._heartbeat_loop, daemon=True).start()
         
         cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
         # Wir lesen in kleineren Häppchen (0.5s), um stabiler zu sein
