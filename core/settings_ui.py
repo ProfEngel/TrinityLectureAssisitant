@@ -1,24 +1,35 @@
 import sys
 import json
 import os
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                              QCheckBox, QComboBox, QGroupBox, QFormLayout,
                              QTextEdit, QTabWidget, QDoubleSpinBox, QSpinBox,
-                             QScrollArea, QFrame, QMessageBox)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+                             QScrollArea, QFrame, QMessageBox, QRadioButton,
+                             QButtonGroup)
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CONFIG = {
     "llm": {
-        "use_local": True,
-        "local_url": "http://localhost:1234/v1/chat/completions",
-        "local_model": "",
-        "remote_url": "https://openrouter.ai/api/v1/chat/completions",
-        "remote_model": "",
-        "api_key": ""
+        "active_slot": "local",
+        "local": {
+            "url": "http://localhost:1234/v1/chat/completions",
+            "model": "",
+            "api_key": "lm-studio"
+        },
+        "remote_1": {
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "model": "",
+            "api_key": ""
+        },
+        "remote_2": {
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "model": "",
+            "api_key": ""
+        }
     },
     "apis": {
         "tavily": "",
@@ -108,13 +119,25 @@ class SettingsWindow(QMainWindow):
             f.write(content)
 
     def save_config(self):
-        # LLM
-        self.config["llm"]["use_local"] = self.local_llm_cb.isChecked()
-        self.config["llm"]["local_url"] = self.local_url_edit.text()
-        self.config["llm"]["local_model"] = self.local_model_edit.text()
-        self.config["llm"]["remote_url"] = self.remote_url_edit.text()
-        self.config["llm"]["remote_model"] = self.remote_model_edit.text()
-        self.config["llm"]["api_key"] = self.remote_key_edit.text()
+        # LLM Slots
+        if "active_slot" not in self.config["llm"]:
+             self.config["llm"]["active_slot"] = "local"
+             
+        if self.llm_radio_local.isChecked(): self.config["llm"]["active_slot"] = "local"
+        elif self.llm_radio_remote1.isChecked(): self.config["llm"]["active_slot"] = "remote_1"
+        elif self.llm_radio_remote2.isChecked(): self.config["llm"]["active_slot"] = "remote_2"
+
+        self.config["llm"]["local"]["url"] = self.local_url_edit.text()
+        self.config["llm"]["local"]["model"] = self.local_model_edit.text()
+        self.config["llm"]["local"]["api_key"] = self.local_key_edit.text()
+
+        self.config["llm"]["remote_1"]["url"] = self.remote1_url_edit.text()
+        self.config["llm"]["remote_1"]["model"] = self.remote1_model_edit.text()
+        self.config["llm"]["remote_1"]["api_key"] = self.remote1_key_edit.text()
+
+        self.config["llm"]["remote_2"]["url"] = self.remote2_url_edit.text()
+        self.config["llm"]["remote_2"]["model"] = self.remote2_model_edit.text()
+        self.config["llm"]["remote_2"]["api_key"] = self.remote2_key_edit.text()
         
         # APIs
         self.config["apis"]["tavily"] = self.tavily_key_edit.text()
@@ -173,7 +196,7 @@ class SettingsWindow(QMainWindow):
         if hasattr(self, 'comfyui_cb'):
             self.config["comfyui"]["enabled"] = self.comfyui_cb.isChecked()
             self.config["comfyui"]["server_url"] = self.comfyui_url_edit.text().strip()
-            self.config["comfyui"]["default_workflow"] = self.comfyui_workflow_edit.text().strip()
+            # self.config["comfyui"]["default_workflow"] = self.comfyui_workflow_edit.text().strip()
             
         # Proactive Additions
         if hasattr(self, 'auto_rag_cb'):
@@ -194,24 +217,121 @@ class SettingsWindow(QMainWindow):
 
     def apply_stylesheet(self):
         self.setStyleSheet("""
-            QMainWindow { background-color: #1a1a2e; }
-            QTabWidget::pane { border: 1px solid #333; background: #16213e; border-radius: 8px; }
-            QTabBar::tab { background: #1a1a2e; color: #888; padding: 10px 18px; margin-right: 2px; border-top-left-radius: 6px; border-top-right-radius: 6px; }
-            QTabBar::tab:selected { background: #16213e; color: #00bfff; border-bottom: 2px solid #00bfff; }
-            QGroupBox { color: #00bfff; font-weight: bold; border: 1px solid #333; border-radius: 8px; margin-top: 12px; padding-top: 16px; }
-            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; }
-            QLabel { color: #ccc; }
-            QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox { 
-                background: #0f3460; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 6px; 
+            QMainWindow { background-color: #1e1e2e; }
+            
+            QTabWidget::pane { 
+                border: 1px solid #363a4f; 
+                background: #24273a; 
+                border-bottom-left-radius: 12px; 
+                border-bottom-right-radius: 12px;
+                border-top-right-radius: 12px;
             }
-            QLineEdit:focus, QComboBox:focus { border-color: #00bfff; }
-            QTextEdit { background: #0f3460; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 6px; font-family: monospace; }
-            QCheckBox { color: #ccc; }
-            QCheckBox::indicator:checked { background: #00bfff; border: 1px solid #00bfff; }
-            QPushButton { background: #333; color: #ccc; border: 1px solid #444; border-radius: 6px; padding: 8px 16px; }
-            QPushButton:hover { background: #444; }
-            QPushButton#saveBtn { background: #00bfff; color: #000; font-weight: bold; }
-            QPushButton#saveBtn:hover { background: #33ccff; }
+            
+            QTabBar::tab { 
+                background: transparent; 
+                color: #939ab7; 
+                padding: 12px 20px; 
+                margin-right: 4px; 
+                font-weight: 500;
+                border-top-left-radius: 8px; 
+                border-top-right-radius: 8px; 
+            }
+            
+            QTabBar::tab:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: #cad3f5;
+            }
+            
+            QTabBar::tab:selected { 
+                background: #24273a; 
+                color: #8aadf4; 
+                border-bottom: None;
+            }
+            
+            QGroupBox { 
+                color: #8aadf4; 
+                font-size: 13px;
+                font-weight: bold; 
+                border: 1px solid #363a4f; 
+                border-radius: 10px; 
+                margin-top: 20px; 
+                padding-top: 20px; 
+                background: rgba(255, 255, 255, 0.02);
+            }
+            
+            QGroupBox::title { 
+                subcontrol-origin: margin; 
+                left: 15px; 
+                padding: 0 8px; 
+                color: #b7bdf8;
+            }
+            
+            QLabel { color: #cad3f5; font-size: 13px; }
+            
+            QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox { 
+                background: #1e1e2e; 
+                color: #cad3f5; 
+                border: 1px solid #363a4f; 
+                border-radius: 6px; 
+                padding: 8px; 
+            }
+            
+            QLineEdit:focus, QComboBox:focus { 
+                border-color: #8aadf4; 
+                background: #24273a;
+            }
+            
+            QTextEdit { 
+                background: #1e1e2e; 
+                color: #cad3f5; 
+                border: 1px solid #363a4f; 
+                border-radius: 8px; 
+                padding: 10px; 
+                font-family: 'SF Mono', 'Menlo', monospace; 
+                font-size: 12px;
+            }
+            
+            QCheckBox { color: #cad3f5; spacing: 8px; }
+            QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #363a4f; background: #1e1e2e; }
+            QCheckBox::indicator:checked { background: #8aadf4; border: 1px solid #8aadf4; image: none; }
+            
+            QRadioButton { color: #cad3f5; spacing: 8px; padding: 4px; }
+            QRadioButton::indicator { width: 18px; height: 18px; border-radius: 10px; border: 1px solid #363a4f; background: #1e1e2e; }
+            QRadioButton::indicator:checked { background: #8aadf4; border: 4px solid #1e1e2e; }
+            
+            QPushButton { 
+                background: #363a4f; 
+                color: #cad3f5; 
+                border: 1px solid #494d64; 
+                border-radius: 8px; 
+                padding: 10px 20px; 
+                font-weight: 500;
+            }
+            
+            QPushButton:hover { background: #494d64; }
+            
+            QPushButton#saveBtn { 
+                background: #8aadf4; 
+                color: #181926; 
+                font-weight: bold; 
+                border: none;
+            }
+            
+            QPushButton#saveBtn:hover { background: #b7bdf8; }
+            
+            QScrollArea { background: transparent; border: none; }
+            QScrollBar:vertical {
+                border: none;
+                background: #1e1e2e;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #363a4f;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical:hover { background: #494d64; }
         """)
 
     def init_ui(self):
@@ -413,42 +533,56 @@ class SettingsWindow(QMainWindow):
     # --- TAB: LLM ---
     def _create_llm_tab(self):
         widget = QWidget()
-        layout = QVBoxLayout(widget)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        content = QWidget()
+        layout = QVBoxLayout(content)
         
-        # Lokal
-        local_group = QGroupBox("Lokales LLM (LMStudio)")
-        local_form = QFormLayout()
+        llm_conf = self.config.get("llm", {})
+        active = llm_conf.get("active_slot", "local")
+        self.llm_group = QButtonGroup(self)
+
+        # Helper to create LLM sections
+        def create_llm_box(title, key, radio_attr, url_attr, model_attr, key_attr):
+            box = QGroupBox(title)
+            form = QFormLayout()
+            
+            radio = QRadioButton("Diesen Provider als aktiv markieren")
+            radio.setChecked(active == key)
+            setattr(self, radio_attr, radio)
+            self.llm_group.addButton(radio)
+            form.addRow(radio)
+            
+            data = llm_conf.get(key, {})
+            url_edit = QLineEdit(data.get("url", ""))
+            setattr(self, url_attr, url_edit)
+            form.addRow("URL:", url_edit)
+            
+            model_edit = QLineEdit(data.get("model", ""))
+            setattr(self, model_attr, model_edit)
+            form.addRow("Modell:", model_edit)
+            
+            key_edit = QLineEdit(data.get("api_key", ""))
+            key_edit.setEchoMode(QLineEdit.Password)
+            setattr(self, key_attr, key_edit)
+            form.addRow("API Key:", key_edit)
+            
+            box.setLayout(form)
+            return box
+
+        layout.addWidget(create_llm_box("🧠 LLM 1: Lokal (z.B. LMStudio / Ollama)", "local", 
+                                       "llm_radio_local", "local_url_edit", "local_model_edit", "local_key_edit"))
         
-        self.local_llm_cb = QCheckBox("Lokales LLM aktivieren")
-        self.local_llm_cb.setChecked(self.config["llm"]["use_local"])
-        local_form.addRow(self.local_llm_cb)
+        layout.addWidget(create_llm_box("🌐 LLM 2: Remote (z.B. OpenRouter / DeepSeek)", "remote_1", 
+                                       "llm_radio_remote1", "remote1_url_edit", "remote1_model_edit", "remote1_key_edit"))
         
-        self.local_url_edit = QLineEdit(self.config["llm"]["local_url"])
-        local_form.addRow("URL:", self.local_url_edit)
+        layout.addWidget(create_llm_box("📡 LLM 3: Alternative (z.B. Groq / Custom)", "remote_2", 
+                                       "llm_radio_remote2", "remote2_url_edit", "remote2_model_edit", "remote2_key_edit"))
         
-        self.local_model_edit = QLineEdit(self.config["llm"]["local_model"])
-        local_form.addRow("Modell:", self.local_model_edit)
-        
-        local_group.setLayout(local_form)
-        layout.addWidget(local_group)
-        
-        # Remote
-        remote_group = QGroupBox("Remote LLM (OpenRouter / API)")
-        remote_form = QFormLayout()
-        
-        self.remote_url_edit = QLineEdit(self.config["llm"]["remote_url"])
-        remote_form.addRow("URL:", self.remote_url_edit)
-        
-        self.remote_model_edit = QLineEdit(self.config["llm"]["remote_model"])
-        remote_form.addRow("Modell:", self.remote_model_edit)
-        
-        self.remote_key_edit = QLineEdit(self.config["llm"]["api_key"])
-        self.remote_key_edit.setEchoMode(QLineEdit.Password)
-        remote_form.addRow("API Key:", self.remote_key_edit)
-        
-        remote_group.setLayout(remote_form)
-        layout.addWidget(remote_group)
         layout.addStretch()
+        scroll.setWidget(content)
+        QVBoxLayout(widget).addWidget(scroll)
         return widget
 
     # --- TAB: APIs & Image ---
@@ -499,22 +633,24 @@ class SettingsWindow(QMainWindow):
 
         self.comfyui_url_edit = QLineEdit(comfyui_conf.get("server_url", ""))
         self.comfyui_url_edit.setPlaceholderText("z.B. http://100.122.13.123:8188")
+        self.comfyui_url_edit.setMinimumWidth(350)
         comfy_form.addRow("Server URL:", self.comfyui_url_edit)
 
-        self.comfyui_workflow_edit = QLineEdit(comfyui_conf.get("default_workflow", "Flux2_Klein_T2I_API.json"))
-        self.comfyui_workflow_edit.setPlaceholderText("Flux2_Klein_T2I_API.json")
-        comfy_form.addRow("Standard-Workflow:", self.comfyui_workflow_edit)
+        # self.comfyui_workflow_edit = QLineEdit(comfyui_conf.get("default_workflow", "Flux2_Klein_T2I_API.json"))
+        # self.comfyui_workflow_edit.setPlaceholderText("Flux2_Klein_T2I_API.json")
+        # comfy_form.addRow("Standard-Workflow:", self.comfyui_workflow_edit)
 
-        test_btn = QPushButton("🔗 Verbindung testen")
+        test_btn = QPushButton("🔗 Verbindung zum Server testen")
+        test_btn.setMinimumHeight(40)
         test_btn.clicked.connect(self._test_comfyui_connection)
         comfy_form.addRow("", test_btn)
 
         comfy_hint = QLabel(
-            "Trigger: 'lokales Bild erstellen', 'flux render', 'auf meinem Server' …\n"
-            "Workflows liegen in: agents/comfyui_agent/workflows/\n"
-            "Generierte Bilder: agents/comfyui_agent/media/output/"
+            "Trinity wählt Workflows automatisch basierend auf deiner Anfrage aus.\n"
+            "Server erreichbar? → Test-Button nutzen.\n"
+            "Trigger: 'lokales Bild', 'flux render', 'mach ein video', 'song schreiben' …"
         )
-        comfy_hint.setStyleSheet("color: #666; font-size: 11px;")
+        comfy_hint.setStyleSheet("color: #00bfff; font-size: 11px; margin-top: 10px;")
         comfy_hint.setWordWrap(True)
         comfy_form.addRow("", comfy_hint)
 

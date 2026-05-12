@@ -34,15 +34,23 @@ class TrinityBrain:
             with open(self.config_path, "r") as f:
                 config = json.load(f)
             
-            self.use_local_llm = config["llm"]["use_local"]
-            if self.use_local_llm:
-                self.url = config["llm"]["local_url"]
-                self.model = config["llm"]["local_model"]
+            # LLM-Konfiguration (3 Slots Support)
+            llm_conf = config.get("llm", {})
+            active_slot = llm_conf.get("active_slot", "local")
+            
+            # Falls noch alte Struktur vorhanden ist (use_local Boolean)
+            if "use_local" in llm_conf and "active_slot" not in llm_conf:
+                active_slot = "local" if llm_conf["use_local"] else "remote_1"
+            
+            slot_data = llm_conf.get(active_slot, llm_conf.get("local", {}))
+            
+            self.url = slot_data.get("url", "")
+            self.model = slot_data.get("model", "")
+            self.api_key = slot_data.get("api_key", "")
+            
+            # LM-Studio Fallback für Key wenn leer im lokalen Slot
+            if active_slot == "local" and not self.api_key:
                 self.api_key = "lm-studio"
-            else:
-                self.url = config["llm"]["remote_url"]
-                self.model = config["llm"]["remote_model"]
-                self.api_key = config["llm"]["api_key"]
             
             apis = config.get("apis", {})
             self.tavily_key = apis.get("tavily", "")
