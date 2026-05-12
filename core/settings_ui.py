@@ -215,6 +215,7 @@ class SettingsWindow(QMainWindow):
         QMessageBox.information(self, "Gespeichert", 
             "Einstellungen gespeichert.\nBitte starte Trinity neu, damit die Änderungen wirksam werden.")
 
+    def apply_stylesheet(self):
         self.setStyleSheet("""
             QMainWindow { background-color: #1e1e2e; }
             
