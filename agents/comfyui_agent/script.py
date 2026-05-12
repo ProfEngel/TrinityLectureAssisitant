@@ -1087,7 +1087,12 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
     # Node 173: Positive Prompt
     p_node = wf.get(I2V_PROMPT_NODE, {})
     if "inputs" in p_node:
-        p_node["inputs"]["value"] = params["motion_prompt"]
+        # Sicherstellen, dass es ein String ist und nicht None
+        prompt_val = params.get("motion_prompt")
+        if not prompt_val or not isinstance(prompt_val, str):
+            prompt_val = "smooth cinematic movement, subtle ambient motion, high quality"
+        
+        p_node["inputs"]["value"] = str(prompt_val)
         wf[I2V_PROMPT_NODE] = p_node
         print(f"💉 I2V Prompt → Node {I2V_PROMPT_NODE}")
 
