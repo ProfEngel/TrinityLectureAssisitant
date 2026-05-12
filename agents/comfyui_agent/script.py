@@ -80,9 +80,12 @@ def _extract_dimensions(query: str) -> Optional[tuple]:
     match = re.search(r"(\d{3,4})\s*[xX]\s*(\d{3,4})", query)
     if match:
         w, h = int(match.group(1)), int(match.group(2))
-        # Sicherheits-Check: Nicht zu klein, nicht zu groß (max 2048 für Flux Klein)
+        # Sicherheits-Check: Nicht zu klein, nicht zu groß
         w = max(256, min(2048, w))
         h = max(256, min(2048, h))
+        # Runden auf 32 (Zwingend erforderlich für LTX 2.3 und CUDA-Stabilität)
+        w = (w // 32) * 32
+        h = (h // 32) * 32
         return (w, h)
     return None
 
