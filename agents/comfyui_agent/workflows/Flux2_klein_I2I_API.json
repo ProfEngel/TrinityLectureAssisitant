@@ -160,7 +160,7 @@
   "45": {
     "inputs": {
       "upscale_method": "lanczos",
-      "megapixels": 1,
+      "megapixels": 1.6,
       "resolution_steps": 1,
       "image": [
         "46",
@@ -183,8 +183,8 @@
   },
   "47": {
     "inputs": {
-      "width": 1536,
-      "height": 1536,
+      "width": 1280,
+      "height": 1280,
       "batch_size": 1
     },
     "class_type": "EmptyFlux2LatentImage",
@@ -195,8 +195,8 @@
   "48": {
     "inputs": {
       "steps": 10,
-      "width": 1536,
-      "height": 1536
+      "width": 1280,
+      "height": 1280
     },
     "class_type": "Flux2Scheduler",
     "_meta": {
