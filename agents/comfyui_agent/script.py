@@ -53,6 +53,21 @@ I2V_HEIGHT_NODE = "67"   # INTConstant "Height"
 I2V_LENGTH_NODE = "68"   # INTConstant "Length (in seconds)"
 I2V_PROMPT_NODE = "173"  # PrimitiveStringMultiline "Positive Prompt"
 
+# PowerLoraLoader-Node IDs
+LORA_NODE_T2I = "19"   # Power Lora Loader im T2I-Workflow
+LORA_NODE_I2I = "74"   # Power Lora Loader im I2I-Workflow
+
+# LoRA-Presets — privat, nicht in README/Docs
+# Format: keyword → Liste von {lora, strength, on}
+LORA_PRESETS: dict = {
+    "sierra": [
+        {"lora": "flux2.9B\\sierra_F2_9B.safetensors",  "strength": 1.0, "on": True},
+        {"lora": "flux2.9B\\sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True},
+    ],
+    # Weitere Presets hier einfügen, z.B.:
+    # "snofs": [{"lora": "flux2.9B\\sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True}],
+}
+
 
 def can_handle(query: str) -> bool:
     lower = query.lower()
@@ -109,6 +124,12 @@ def execute(query: str, context: dict = None) -> dict:
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     workflow = _inject_prompt(workflow, image_prompt)
+
+    # LoRA-Preset erkennen und injizieren (privat, kein Eintrag in Docs)
+    lora_preset = _detect_lora_preset(query)
+    if lora_preset:
+        workflow = _inject_loras(workflow, lora_preset, LORA_NODE_T2I)
+        print(f"🎨 LoRA-Preset '{lora_preset}' in T2I injiziert.")
 
     # An ComfyUI senden
     prompt_id = _queue_prompt(server_url, workflow)
@@ -192,6 +213,12 @@ def execute_i2i(query: str, input_image_path: str, context: dict = None) -> dict
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     workflow = _inject_i2i_inputs(workflow, image_prompt, server_filename)
+
+    # LoRA-Preset erkennen und injizieren (privat, kein Eintrag in Docs)
+    lora_preset = _detect_lora_preset(query)
+    if lora_preset:
+        workflow = _inject_loras(workflow, lora_preset, LORA_NODE_I2I)
+        print(f"🎨 LoRA-Preset '{lora_preset}' in I2I injiziert.")
 
     # Job an ComfyUI senden
     prompt_id = _queue_prompt(server_url, workflow)
@@ -300,6 +327,48 @@ def _inject_i2i_inputs(workflow: dict, prompt_text: str, server_image_filename: 
         wf[I2I_IMAGE_NODE] = image_node
         print(f"💉 I2I Bild '{server_image_filename}' in Node {I2I_IMAGE_NODE} injiziert.")
 
+    return wf
+
+
+def _detect_lora_preset(query: str) -> Optional[str]:
+    """Erkennt ein LoRA-Preset-Keyword in der Anfrage. Gibt den Preset-Namen zurück oder None."""
+    lower = query.lower()
+    for preset_name in LORA_PRESETS:
+        if preset_name in lower:
+            return preset_name
+    return None
+
+
+def _inject_loras(workflow: dict, preset_name: str, lora_node_id: str) -> dict:
+    """
+    Injiziert ein LoRA-Preset in den PowerLoraLoader eines Workflows.
+    Slot-Namen sind 'lora_1', 'lora_2', ... entsprechend dem rgthree-Format.
+    Ungenutzte Slots (> Anzahl der Presets) werden deaktiviert.
+    """
+    wf = copy.deepcopy(workflow)
+    loras = LORA_PRESETS.get(preset_name, [])
+    node = wf.get(lora_node_id, {})
+
+    if "inputs" not in node:
+        print(f"⚠️ LoRA-Node {lora_node_id} nicht gefunden oder kein 'inputs'-Feld.")
+        return wf
+
+    # Bis zu 5 Slots injizieren
+    for i in range(1, 6):
+        slot_key = f"lora_{i}"
+        if i <= len(loras):
+            entry = loras[i - 1]
+            node["inputs"][slot_key] = {
+                "on": entry.get("on", True),
+                "lora": entry["lora"],
+                "strength": entry.get("strength", 1.0)
+            }
+            print(f"💉 LoRA Slot {i}: {entry['lora']} (strength={entry.get('strength', 1.0)})")
+        elif slot_key in node["inputs"]:
+            # Slot deaktivieren wenn vorhanden aber kein LoRA zugewiesen
+            node["inputs"][slot_key]["on"] = False
+
+    wf[lora_node_id] = node
     return wf
 
 
