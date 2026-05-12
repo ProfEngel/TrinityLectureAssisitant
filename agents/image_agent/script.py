@@ -4,6 +4,10 @@ import requests
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
+    # Wenn 'lokal' oder 'server' oder 'sierra' vorkommt, soll ComfyUI-Agent übernehmen
+    if any(word in router_text for word in ["lokal", "server", "comfyui", "flux render", "sierra"]):
+        return False
+        
     return any(word in router_text for word in ["infografik", "grafik", "visualisier", "schaubild", "illustration"]) or \
          (any(word in router_text for word in ["bild", "zeichnung"]) and any(cmd in router_text for cmd in ["erstell", "mach", "generier", "zeig"]))
 

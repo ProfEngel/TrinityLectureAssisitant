@@ -17,7 +17,7 @@ TRIGGER_WORDS = [
     "lokales bild", "lokal generier", "lokal erstell",
     "auf meinem server", "auf dem server", "flux render",
     "comfyui", "flux bild", "flux erstell", "flux generier",
-    "render ein", "rendere", "flux2"
+    "render ein", "rendere", "flux2", "sierra", "snofs", "sns1.2"
 ]
 
 # Song-Trigger-Keywords
@@ -71,7 +71,13 @@ LORA_PRESETS: dict = {
 
 def can_handle(query: str) -> bool:
     lower = query.lower()
-    return any(word in lower for word in TRIGGER_WORDS)
+    # Direkte Keywords
+    if any(word in lower for word in TRIGGER_WORDS):
+        return True
+    # Kombination aus Bild + lokal
+    if ("bild" in lower or "generier" in lower or "erstell" in lower) and ("lokal" in lower or "server" in lower):
+        return True
+    return False
 
 
 def can_handle_song(query: str) -> bool:

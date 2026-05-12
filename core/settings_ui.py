@@ -215,7 +215,6 @@ class SettingsWindow(QMainWindow):
         QMessageBox.information(self, "Gespeichert", 
             "Einstellungen gespeichert.\nBitte starte Trinity neu, damit die Änderungen wirksam werden.")
 
-    def apply_stylesheet(self):
         self.setStyleSheet("""
             QMainWindow { background-color: #1e1e2e; }
             
@@ -230,9 +229,10 @@ class SettingsWindow(QMainWindow):
             QTabBar::tab { 
                 background: transparent; 
                 color: #939ab7; 
-                padding: 12px 20px; 
-                margin-right: 4px; 
+                padding: 12px 18px; 
+                margin-right: 2px; 
                 font-weight: 500;
+                font-size: 12px;
                 border-top-left-radius: 8px; 
                 border-top-right-radius: 8px; 
             }
@@ -245,24 +245,24 @@ class SettingsWindow(QMainWindow):
             QTabBar::tab:selected { 
                 background: #24273a; 
                 color: #8aadf4; 
-                border-bottom: None;
+                border-bottom: 2px solid #8aadf4;
             }
             
             QGroupBox { 
                 color: #8aadf4; 
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: bold; 
                 border: 1px solid #363a4f; 
                 border-radius: 10px; 
-                margin-top: 20px; 
-                padding-top: 20px; 
+                margin-top: 25px; 
+                padding-top: 25px; 
                 background: rgba(255, 255, 255, 0.02);
             }
             
             QGroupBox::title { 
                 subcontrol-origin: margin; 
                 left: 15px; 
-                padding: 0 8px; 
+                padding: 0 10px; 
                 color: #b7bdf8;
             }
             
@@ -273,7 +273,9 @@ class SettingsWindow(QMainWindow):
                 color: #cad3f5; 
                 border: 1px solid #363a4f; 
                 border-radius: 6px; 
-                padding: 8px; 
+                padding: 10px; 
+                min-height: 20px;
+                selection-background-color: #8aadf4;
             }
             
             QLineEdit:focus, QComboBox:focus { 
@@ -286,29 +288,30 @@ class SettingsWindow(QMainWindow):
                 color: #cad3f5; 
                 border: 1px solid #363a4f; 
                 border-radius: 8px; 
-                padding: 10px; 
+                padding: 12px; 
                 font-family: 'SF Mono', 'Menlo', monospace; 
-                font-size: 12px;
+                font-size: 13px;
             }
             
-            QCheckBox { color: #cad3f5; spacing: 8px; }
-            QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #363a4f; background: #1e1e2e; }
+            QCheckBox { color: #cad3f5; spacing: 10px; font-size: 13px; }
+            QCheckBox::indicator { width: 20px; height: 20px; border-radius: 5px; border: 1px solid #363a4f; background: #1e1e2e; }
             QCheckBox::indicator:checked { background: #8aadf4; border: 1px solid #8aadf4; image: none; }
             
-            QRadioButton { color: #cad3f5; spacing: 8px; padding: 4px; }
-            QRadioButton::indicator { width: 18px; height: 18px; border-radius: 10px; border: 1px solid #363a4f; background: #1e1e2e; }
-            QRadioButton::indicator:checked { background: #8aadf4; border: 4px solid #1e1e2e; }
+            QRadioButton { color: #cad3f5; spacing: 10px; padding: 6px; font-size: 13px; }
+            QRadioButton::indicator { width: 20px; height: 20px; border-radius: 11px; border: 1px solid #363a4f; background: #1e1e2e; }
+            QRadioButton::indicator:checked { background: #8aadf4; border: 5px solid #1e1e2e; }
             
             QPushButton { 
                 background: #363a4f; 
                 color: #cad3f5; 
                 border: 1px solid #494d64; 
                 border-radius: 8px; 
-                padding: 10px 20px; 
-                font-weight: 500;
+                padding: 12px 24px; 
+                font-weight: 600;
+                font-size: 13px;
             }
             
-            QPushButton:hover { background: #494d64; }
+            QPushButton:hover { background: #494d64; border-color: #8aadf4; }
             
             QPushButton#saveBtn { 
                 background: #8aadf4; 
@@ -320,17 +323,8 @@ class SettingsWindow(QMainWindow):
             QPushButton#saveBtn:hover { background: #b7bdf8; }
             
             QScrollArea { background: transparent; border: none; }
-            QScrollBar:vertical {
-                border: none;
-                background: #1e1e2e;
-                width: 10px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: #363a4f;
-                min-height: 20px;
-                border-radius: 5px;
-            }
+            QScrollBar:vertical { border: none; background: #1e1e2e; width: 10px; margin: 0px; }
+            QScrollBar::handle:vertical { background: #363a4f; min-height: 20px; border-radius: 5px; }
             QScrollBar::handle:vertical:hover { background: #494d64; }
         """)
 
@@ -547,6 +541,8 @@ class SettingsWindow(QMainWindow):
         def create_llm_box(title, key, radio_attr, url_attr, model_attr, key_attr):
             box = QGroupBox(title)
             form = QFormLayout()
+            form.setSpacing(12)
+            form.setLabelAlignment(Qt.AlignRight)
             
             radio = QRadioButton("Diesen Provider als aktiv markieren")
             radio.setChecked(active == key)
@@ -556,6 +552,7 @@ class SettingsWindow(QMainWindow):
             
             data = llm_conf.get(key, {})
             url_edit = QLineEdit(data.get("url", ""))
+            url_edit.setMinimumWidth(400)
             setattr(self, url_attr, url_edit)
             form.addRow("URL:", url_edit)
             
@@ -626,6 +623,8 @@ class SettingsWindow(QMainWindow):
 
         comfy_group = QGroupBox("ComfyUI Server (Lokale / Tailscale Generierung)")
         comfy_form = QFormLayout()
+        comfy_form.setSpacing(15)
+        comfy_form.setLabelAlignment(Qt.AlignRight)
 
         self.comfyui_cb = QCheckBox("ComfyUI aktivieren")
         self.comfyui_cb.setChecked(comfyui_conf.get("enabled", False))
@@ -633,7 +632,7 @@ class SettingsWindow(QMainWindow):
 
         self.comfyui_url_edit = QLineEdit(comfyui_conf.get("server_url", ""))
         self.comfyui_url_edit.setPlaceholderText("z.B. http://100.122.13.123:8188")
-        self.comfyui_url_edit.setMinimumWidth(350)
+        self.comfyui_url_edit.setMinimumWidth(450)
         comfy_form.addRow("Server URL:", self.comfyui_url_edit)
 
         # self.comfyui_workflow_edit = QLineEdit(comfyui_conf.get("default_workflow", "Flux2_Klein_T2I_API.json"))
@@ -641,18 +640,25 @@ class SettingsWindow(QMainWindow):
         # comfy_form.addRow("Standard-Workflow:", self.comfyui_workflow_edit)
 
         test_btn = QPushButton("🔗 Verbindung zum Server testen")
-        test_btn.setMinimumHeight(40)
+        test_btn.setMinimumHeight(45)
+        test_btn.setMinimumWidth(300)
         test_btn.clicked.connect(self._test_comfyui_connection)
-        comfy_form.addRow("", test_btn)
+        
+        # In Container packen für Zentrierung
+        btn_container = QHBoxLayout()
+        btn_container.addStretch()
+        btn_container.addWidget(test_btn)
+        btn_container.addStretch()
+        comfy_form.addRow(btn_container)
 
         comfy_hint = QLabel(
             "Trinity wählt Workflows automatisch basierend auf deiner Anfrage aus.\n"
             "Server erreichbar? → Test-Button nutzen.\n"
             "Trigger: 'lokales Bild', 'flux render', 'mach ein video', 'song schreiben' …"
         )
-        comfy_hint.setStyleSheet("color: #00bfff; font-size: 11px; margin-top: 10px;")
+        comfy_hint.setStyleSheet("color: #8aadf4; font-size: 12px; margin-top: 15px; font-weight: 500;")
         comfy_hint.setWordWrap(True)
-        comfy_form.addRow("", comfy_hint)
+        comfy_form.addRow(comfy_hint)
 
         comfy_group.setLayout(comfy_form)
         layout.addWidget(comfy_group)
