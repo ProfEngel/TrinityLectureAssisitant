@@ -889,9 +889,16 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
         sc = "--- FEHLER ---\nKonnte Bildabmessungen nicht auslesen.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
-    # 0.7x Auflösung, auf 32 gerundet
+    # 0.7x Auflösung, auf 32 gerundet (Standard)
     target_w, target_h = _calc_video_resolution(img_w, img_h, scale=0.7)
-    print(f"📐 Bild: {img_w}×{img_h} → Video: {target_w}×{target_h}")
+    
+    # Manuelle Auflösung aus Prompt priorisieren falls angegeben
+    manual_dims = _extract_dimensions(query)
+    if manual_dims:
+        target_w, target_h = manual_dims
+        print(f"📏 Manuelle Video-Auflösung erkannt: {target_w}x{target_h}")
+    else:
+        print(f"📐 Bild: {img_w}×{img_h} → Video: {target_w}×{target_h}")
 
     # Parameter via LLM extrahieren
     params = _extract_i2v_params(query, brain)
