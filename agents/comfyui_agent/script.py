@@ -119,11 +119,23 @@ def execute(query: str, context: dict = None) -> dict:
     image_prompt = _extract_prompt(query, brain)
     print(f"🎨 ComfyUI Prompt: '{image_prompt}'")
 
-    # Falls die Anfrage nach Musik/Lied klingt, leite an execute_t2a weiter
+    # 1. Musik-Check (T2A)
     if can_handle_song(query):
-        print("🎵 Musik-Trigger in execute() erkannt -> Umleitung zu execute_t2a")
+        print("🎵 Musik-Trigger erkannt -> Umleitung zu execute_t2a")
         return execute_t2a(query, context)
 
+    # 2. Bild/Video-Input Check (I2I / I2V)
+    input_image_path = context.get("image_path")
+    if input_image_path and os.path.exists(input_image_path):
+        is_video = any(word in query.lower() for word in VIDEO_TRIGGER_WORDS)
+        if is_video:
+            print(f"🎬 Video-Trigger erkannt -> Umleitung zu execute_i2v mit {input_image_path}")
+            return execute_i2v(query, input_image_path, context)
+        else:
+            print(f"🖼️ I2I-Trigger erkannt -> Umleitung zu execute_i2i mit {input_image_path}")
+            return execute_i2i(query, input_image_path, context)
+
+    # 3. Standard Text-to-Image (T2I)
     # Workflow laden und Prompt injizieren
     workflow_name = getattr(brain, "comfyui_workflow", "Flux2_Klein_T2I_API.json")
     workflow = _load_workflow(workflow_name)
