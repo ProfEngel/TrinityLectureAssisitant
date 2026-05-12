@@ -22,10 +22,7 @@ TRIGGER_WORDS = [
 
 # Song-Trigger-Keywords
 SONG_TRIGGER_WORDS = [
-    "song erstell", "song generier", "lied erstell", "lied generier",
-    "musik erstell", "musik generier", "komponier", "schreib einen song",
-    "mach einen song", "mach ein lied", "erzeug musik", "aceStep", "acestep",
-    "generier audio", "erzeug audio"
+    "song", "lied", "musik", "audio", "komponier", "acestep", "bpm", "lyrics"
 ]
 
 # Video-Trigger-Keywords (für Telegram-Foto-Caption)
@@ -121,6 +118,11 @@ def execute(query: str, context: dict = None) -> dict:
     # Bildprompt aus der Anfrage extrahieren
     image_prompt = _extract_prompt(query, brain)
     print(f"🎨 ComfyUI Prompt: '{image_prompt}'")
+
+    # Falls die Anfrage nach Musik/Lied klingt, leite an execute_t2a weiter
+    if can_handle_song(query):
+        print("🎵 Musik-Trigger in execute() erkannt -> Umleitung zu execute_t2a")
+        return execute_t2a(query, context)
 
     # Workflow laden und Prompt injizieren
     workflow_name = getattr(brain, "comfyui_workflow", "Flux2_Klein_T2I_API.json")
