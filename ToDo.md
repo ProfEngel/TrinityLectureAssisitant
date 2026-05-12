@@ -81,6 +81,11 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [x] **Simulation Engine Updates:**
   - [x] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
   - [x] Fehlende Simulationen (Bubble Sort, Neuronales Netz) implementiert und `skill.md` aktualisiert.
+- [x] **ComfyUI Media Integration (Local Generation):**
+  - [x] **T2I/I2I:** Lokale Bildgenerierung via Flux2 (9b klein) für Schaubilder und Bearbeitungen.
+  - [x] **T2A (Music):** Komplette Song-Generierung via AceStep 1.5 inkl. Stil/Lyrics-Extraktion.
+  - [x] **I2V (Video):** Erstellung von Kurzvideos aus Bildern via LTX 2.3 mit automatischer Skalierung.
+  - [x] **Telegram/UI Dispatch:** Nahtlose Integration in die Telegram-Bridge und UI-Payloads.
 
 ---
 

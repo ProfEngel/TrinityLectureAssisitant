@@ -12,8 +12,8 @@
 
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
-> **Aktuelles Release: v0.7.1 (Brand Assets & Proactive Updates)** 🧞‍♀️  
-> Dieses Update erweitert Trinity um proaktive Übungsaufgaben (Blaues Bubble), das Asset-Memory für Schaubilder, sowie offizielle hochauflösende Wallpaper und Logos für Desktop/Mobile. Details in den Release Notes.
+> **Aktuelles Release: v0.7.3 (Local Media Powerhouse - Image, Music & Video)** 🧞‍♀️  
+> Dieses Update integriert ComfyUI tief in Trinity. Sie kann nun lokal (via eigenem Server oder Workstation) fotorealistische Bilder, komplette Songs (inkl. Lyrics) und Kurzvideos generieren.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 
@@ -60,6 +60,7 @@ Trinitys Logik wurde vollständig in **unabhängige Agent-Skills** ausgelagert. 
 | **Heartbeat (Proaktiv)** | *Hintergrundprozess (alle 2 Min)* | Analysiert Sitzungs-Transkripte auf Fehler und sendet Warnungen via UI-Bubbles oder Telegram-Bridge. |
 | **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
 | **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus ohne explizites Trigger-Wort. |
+| **ComfyUI-Agent** | *„Trinity, flux render …"* / *„… schreib einen Song"* | Generiert lokal Bilder, Musik oder Videos (via LTX/AceStep) und zeigt/spielt sie ab. |
 | **Settings-Agent** | *„Trinity, öffne Einstellungen"* | Öffnet das Konfigurations-UI auf dem Desktop. |
 
 ---
@@ -73,7 +74,9 @@ Trinitys Logik wurde vollständig in **unabhängige Agent-Skills** ausgelagert. 
 | **TTS (Text → Stimme)** | macOS `say` (Stimme: Samantha) |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
-| **Bildgenerierung** | fal.ai `nano-banana-2` |
+| **Bildgenerierung** | fal.ai `nano-banana-2` (Cloud) oder ComfyUI `Flux.1/2` (Lokal) |
+| **Musikgenerierung** | ComfyUI `AceStep 1.5` (Lokal) |
+| **Videogenerierung** | ComfyUI `LTX 2.3` (Lokal) |
 | **Web-Recherche** | Tavily API |
 
 ---

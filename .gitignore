@@ -17,3 +17,6 @@ __pycache__/
 # OS specific
 .DS_Store
 graphify-out/
+
+# ComfyUI Media (Input-Bilder & generierte Outputs)
+agents/comfyui_agent/media/

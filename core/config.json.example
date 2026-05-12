@@ -26,5 +26,10 @@
   },
   "tts": {
     "voice": "Samantha"
+  },
+  "comfyui": {
+    "enabled": false,
+    "server_url": "http://YOUR_TAILSCALE_NODE:8188",
+    "default_workflow": "Flux2_Klein_T2I_API.json"
   }
 }

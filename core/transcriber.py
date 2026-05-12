@@ -219,6 +219,16 @@ class MorpheusEar:
                                     trigger_text = f"{self.agent_name}, {text}"
                                     self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
                                 
+                                elif message.get("photo"):
+                                    # 📸 Foto empfangen → I2I-Workflow auslösen
+                                    caption = message.get("caption", "").strip()
+                                    print(f"📸 Telegram Foto empfangen. Caption: '{caption}'")
+                                    threading.Thread(
+                                        target=self._handle_telegram_photo,
+                                        args=(message, caption),
+                                        daemon=True
+                                    ).start()
+
                                 elif voice:
                                     print("📥 Telegram Sprachnachricht empfangen. Lade herunter...")
                                     try:
@@ -254,7 +264,138 @@ class MorpheusEar:
                 pass
             time.sleep(2)
         
+
+    def _handle_telegram_photo(self, message: dict, caption: str):
+        """
+        Verarbeitet ein empfangenes Telegram-Foto:
+        1. Lädt das Bild herunter → media/input/
+        2. Ruft execute_i2i() im comfyui_agent auf
+        3. Ergebnis geht automatisch zurück an Telegram (innerhalb von execute_i2i)
+        """
+        import requests as req
+        tg_token = self.telegram_cfg.get("bot_token", "")
+        chat_id = self.telegram_cfg.get("chat_id", "")
+
+        try:
+            # Bestes (größtes) Foto aus der Liste nehmen
+            photos = message.get("photo", [])
+            if not photos:
+                return
+            best_photo = max(photos, key=lambda p: p.get("file_size", 0))
+            file_id = best_photo.get("file_id")
+
+            # Datei-Pfad vom Telegram-Server abfragen
+            file_info = req.get(
+                f"https://api.telegram.org/bot{tg_token}/getFile?file_id={file_id}",
+                timeout=10
+            ).json()
+            if not file_info.get("ok"):
+                print("⚠️ Konnte Telegram-Foto-Info nicht abrufen.")
+                return
+
+            file_path = file_info["result"]["file_path"]
+            file_ext = os.path.splitext(file_path)[1] or ".jpg"
+            img_data = req.get(
+                f"https://api.telegram.org/file/bot{tg_token}/{file_path}",
+                timeout=30
+            ).content
+
+            # Lokal in media/input/ speichern
+            comfyui_agent_dir = os.path.join(
+                PROJECT_DIR, "agents", "comfyui_agent", "media", "input"
+            )
+            os.makedirs(comfyui_agent_dir, exist_ok=True)
+            local_filename = f"tg_upload_{int(time.time())}{file_ext}"
+            local_path = os.path.join(comfyui_agent_dir, local_filename)
+            with open(local_path, "wb") as f:
+                f.write(img_data)
+            print(f"📥 Telegram-Foto gespeichert: {local_path}")
+
+            # Nutzer-Bestätigung senden
+            req.post(
+                f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                json={"chat_id": chat_id,
+                      "text": f"🖼️ Bild empfangen. Starte ComfyUI I2I...\nPrompt: '{caption or 'kein Prompt'}'"},
+                timeout=5
+            )
+
+            # comfyui_agent laden
+            import importlib.util
+            script_path = os.path.join(PROJECT_DIR, "agents", "comfyui_agent", "script.py")
+            spec = importlib.util.spec_from_file_location("comfyui_agent", script_path)
+            comfyui_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(comfyui_mod)
+
+            context = {
+                "brain": self.brain,
+                "from_telegram": True,
+                "telegram_cfg": self.telegram_cfg,
+            }
+
+            # Routing: Video-Keywords in Caption → I2V, sonst → I2I
+            is_video_request = (
+                hasattr(comfyui_mod, "can_handle_video") and
+                comfyui_mod.can_handle_video(caption or "")
+            )
+
+            if is_video_request:
+                # --- I2V: Image → Kurzvideo via LTX 2.3 ---
+                req.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={"chat_id": chat_id,
+                          "text": f"🎬 Bild empfangen. Starte LTX 2.3 I2V...\nPrompt: '{caption or 'kein Prompt'}'"},
+                    timeout=5
+                )
+                result = comfyui_mod.execute_i2v(
+                    query=caption or "smooth cinematic motion",
+                    input_image_path=local_path,
+                    context=context
+                )
+                log_mode = "I2V"
+                log_response = "Video generiert und zurückgesendet."
+            else:
+                # --- I2I: Image → Bild via Flux2 ---
+                req.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={"chat_id": chat_id,
+                          "text": f"🖼️ Bild empfangen. Starte ComfyUI I2I...\nPrompt: '{caption or 'kein Prompt'}'"},
+                    timeout=5
+                )
+                result = comfyui_mod.execute_i2i(
+                    query=caption or "transform this image",
+                    input_image_path=local_path,
+                    context=context
+                )
+                log_mode = "I2I"
+                log_response = "Bild generiert und zurückgesendet."
+
+            # Falls UI-Payload vorhanden, anzeigen
+            if result.get("has_payload") and result.get("html_payload"):
+                payload_path = os.path.join(CORE_DIR, "payload.html")
+                with open(payload_path, "w", encoding="utf-8") as f:
+                    f.write(result["html_payload"])
+                set_state("reporting")
+
+            # Log
+            t_stamp = time.strftime("%H:%M:%S")
+            with open(self.transcript_file, "a", encoding="utf-8") as f:
+                f.write(f"[{t_stamp}] [User (Telegram {log_mode})]: Foto hochgeladen, Prompt: '{caption}'\n")
+                f.write(f"[{t_stamp}] [Trinity (ComfyUI {log_mode})]: {log_response}\n")
+
+        except Exception as e:
+            print(f"⚠️ Fehler beim Verarbeiten des Telegram-Fotos: {e}")
+            try:
+                req.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": f"❌ Fehler bei der Verarbeitung: {e}"},
+                    timeout=5
+                )
+            except Exception:
+                pass
+
+
     def audio_callback(self, indata, frames, time, status):
+
         """Wird vom sounddevice Stream aufgerufen."""
         if status:
             print(f"Audio Error: {status}")
@@ -561,7 +702,12 @@ class MorpheusEar:
         # Abfrage ans Gehirn senden
         use_text_mode = getattr(self, 'text_mode', False) or silent_response
         print(f"🧠 {self.agent_name} denkt nach über: '{text[-60:]}...'")
-        antwort, has_payload = self.brain.ask(text, self.transcript_file, text_mode=use_text_mode, action_text=recent_text or text)
+        antwort, has_payload = self.brain.ask(
+            text, self.transcript_file,
+            text_mode=use_text_mode, action_text=recent_text or text,
+            from_telegram=from_telegram
+        )
+
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")
         
         # 🧠 Kontext-Gedächtnis: Trinitys eigene Antwort ins Transkript speichern!

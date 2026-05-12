@@ -52,12 +52,22 @@ class TrinityBrain:
             persona = config.get("persona", {})
             self.agent_name = persona.get("agent_name", "Trinity")
             
-            # Bild-Modelle
+            # Bild-Modelle (fal.ai)
             image = config.get("image", {})
             self.image_primary = image.get("primary_model", "fal-ai/nano-banana-2")
             self.image_fallback = image.get("fallback_model", "fal-ai/nano-banana-pro")
             
+            # ComfyUI-Server (lokaler Tailscale-Node)
+            comfyui = config.get("comfyui", {})
+            self.comfyui_enabled = comfyui.get("enabled", False)
+            self.comfyui_url = comfyui.get("server_url", "")
+            self.comfyui_workflow = comfyui.get("default_workflow", "Flux2_Klein_T2I_API.json")
+            
+            # Telegram-Config (für Skill-Context-Weitergabe)
+            self._telegram_cfg = config.get("telegram", {})
+            
             print("⚙️ Konfiguration geladen ✓")
+
         except Exception as e:
             print(f"⚠️ Fehler beim Laden der config.json: {e}")
 
@@ -133,7 +143,7 @@ class TrinityBrain:
         except FileNotFoundError:
             return "Noch kein Transkript vorhanden."
 
-    def ask(self, user_query, transcript_file, text_mode=False, action_text=None):
+    def ask(self, user_query, transcript_file, text_mode=False, action_text=None, from_telegram=False):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "http://localhost", # Required by OpenRouter
@@ -155,20 +165,46 @@ class TrinityBrain:
         lower_query = user_query.lower()
         
         # --- DYNAMIC SKILL DISPATCH ---
+        # --- COMFYUI SONG DISPATCH (T2A) ---
+        # Wird vor dem normalen Skill-Loop geprüft, da Song-Trigger spezifisch sind
         for skill in getattr(self, 'live_skills', []):
-            if skill.can_handle(router_text):
+            if hasattr(skill, 'can_handle_song') and skill.can_handle_song(router_text):
                 try:
-                    result = skill.execute(user_query, context={"brain": self})
+                    result = skill.execute_t2a(user_query, context={
+                        "brain": self,
+                        "from_telegram": from_telegram,
+                        "telegram_cfg": getattr(self, '_telegram_cfg', {}),
+                    })
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
                         with open(payload_path, "w", encoding="utf-8") as f:
                             f.write(result.get("html_payload", ""))
                         has_payload = True
-                    # search_context: Kontext vom Skill (Web, RAG, etc.) – nur einmal verwenden
                     search_context = result.get("search_context", search_context)
                 except Exception as e:
-                    print(f"⚠️ Fehler bei der Skill-Ausführung: {e}")
-                break
+                    print(f"⚠️ Fehler bei T2A-Skill: {e}")
+                break  # Kein weiterer Skill nötig
+
+        # --- DYNAMIC SKILL DISPATCH (T2I / I2I / alle anderen) ---
+        if not has_payload and not search_context:
+            for skill in getattr(self, 'live_skills', []):
+                if skill.can_handle(router_text):
+                    try:
+                        result = skill.execute(user_query, context={
+                            "brain": self,
+                            "from_telegram": from_telegram,
+                            "telegram_cfg": getattr(self, '_telegram_cfg', {}),
+                        })
+                        if result.get("has_payload"):
+                            payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
+                            with open(payload_path, "w", encoding="utf-8") as f:
+                                f.write(result.get("html_payload", ""))
+                            has_payload = True
+                        # search_context: Kontext vom Skill (Web, RAG, etc.) – nur einmal verwenden
+                        search_context = result.get("search_context", search_context)
+                    except Exception as e:
+                        print(f"⚠️ Fehler bei der Skill-Ausführung: {e}")
+                    break
 
         context_prompt = (
             f"{soul_prompt}\n\n"

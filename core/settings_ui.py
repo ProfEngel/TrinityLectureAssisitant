@@ -59,6 +59,11 @@ DEFAULT_CONFIG = {
         "enabled": False,
         "bot_token": "",
         "chat_id": ""
+    },
+    "comfyui": {
+        "enabled": False,
+        "server_url": "http://YOUR_TAILSCALE_NODE:8188",
+        "default_workflow": "Flux2_Klein_T2I_API.json"
     }
 }
 
@@ -161,6 +166,14 @@ class SettingsWindow(QMainWindow):
             self.config["telegram"]["enabled"] = self.telegram_cb.isChecked()
             self.config["telegram"]["bot_token"] = self.tg_token_edit.text()
             self.config["telegram"]["chat_id"] = self.tg_chatid_edit.text()
+
+        # ComfyUI
+        if "comfyui" not in self.config:
+            self.config["comfyui"] = {}
+        if hasattr(self, 'comfyui_cb'):
+            self.config["comfyui"]["enabled"] = self.comfyui_cb.isChecked()
+            self.config["comfyui"]["server_url"] = self.comfyui_url_edit.text().strip()
+            self.config["comfyui"]["default_workflow"] = self.comfyui_workflow_edit.text().strip()
             
         # Proactive Additions
         if hasattr(self, 'auto_rag_cb'):
@@ -473,8 +486,64 @@ class SettingsWindow(QMainWindow):
         
         img_group.setLayout(img_form)
         layout.addWidget(img_group)
+
+        # --- ComfyUI Server ---
+        comfyui_conf = self.config.get("comfyui", {})
+
+        comfy_group = QGroupBox("ComfyUI Server (Lokale / Tailscale Generierung)")
+        comfy_form = QFormLayout()
+
+        self.comfyui_cb = QCheckBox("ComfyUI aktivieren")
+        self.comfyui_cb.setChecked(comfyui_conf.get("enabled", False))
+        comfy_form.addRow(self.comfyui_cb)
+
+        self.comfyui_url_edit = QLineEdit(comfyui_conf.get("server_url", ""))
+        self.comfyui_url_edit.setPlaceholderText("z.B. http://100.122.13.123:8188")
+        comfy_form.addRow("Server URL:", self.comfyui_url_edit)
+
+        self.comfyui_workflow_edit = QLineEdit(comfyui_conf.get("default_workflow", "Flux2_Klein_T2I_API.json"))
+        self.comfyui_workflow_edit.setPlaceholderText("Flux2_Klein_T2I_API.json")
+        comfy_form.addRow("Standard-Workflow:", self.comfyui_workflow_edit)
+
+        test_btn = QPushButton("🔗 Verbindung testen")
+        test_btn.clicked.connect(self._test_comfyui_connection)
+        comfy_form.addRow("", test_btn)
+
+        comfy_hint = QLabel(
+            "Trigger: 'lokales Bild erstellen', 'flux render', 'auf meinem Server' …\n"
+            "Workflows liegen in: agents/comfyui_agent/workflows/\n"
+            "Generierte Bilder: agents/comfyui_agent/media/output/"
+        )
+        comfy_hint.setStyleSheet("color: #666; font-size: 11px;")
+        comfy_hint.setWordWrap(True)
+        comfy_form.addRow("", comfy_hint)
+
+        comfy_group.setLayout(comfy_form)
+        layout.addWidget(comfy_group)
+
         layout.addStretch()
         return widget
+
+    def _test_comfyui_connection(self):
+        """Pingt den ComfyUI-Server und zeigt eine Statusmeldung."""
+        url = self.comfyui_url_edit.text().strip().rstrip("/")
+        if not url:
+            QMessageBox.warning(self, "Kein URL", "Bitte zuerst eine Server-URL eintragen.")
+            return
+        try:
+            import requests
+            resp = requests.get(f"{url}/system_stats", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                python_ver = data.get("system", {}).get("python_version", "?")
+                QMessageBox.information(self, "✅ Verbunden",
+                    f"ComfyUI-Server erreichbar!\nPython: {python_ver}")
+            else:
+                QMessageBox.warning(self, "⚠️ Fehler",
+                    f"Server antwortet mit Status {resp.status_code}.")
+        except Exception as e:
+            QMessageBox.critical(self, "❌ Nicht erreichbar",
+                f"Konnte den Server nicht erreichen:\n{e}")
 
     # --- TAB: STT/TTS ---
     def _create_stt_tts_tab(self):
