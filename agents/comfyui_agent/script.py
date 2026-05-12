@@ -146,8 +146,13 @@ def execute(query: str, context: dict = None) -> dict:
         return execute_t2a(query, context)
 
     # 2. Bild/Video-Input Check (I2I / I2V)
-    # Nutze entweder das aktuell hochgeladene Bild ODER das letzte bekannte aus dem Gedächtnis
-    input_image_path = context.get("image_path") or getattr(brain, "last_media_path", None)
+    # Wenn der Nutzer explizit ein NEUES Bild will, ignorieren wir das Gedächtnis
+    is_new_request = any(word in query.lower() for word in ["neu", "anderes", "fresh", "frisch", "new"])
+    
+    # Aktueller Input (Upload) hat Vorrang vor Gedächtnis
+    input_image_path = context.get("image_path")
+    if not input_image_path and not is_new_request:
+        input_image_path = getattr(brain, "last_media_path", None)
     
     if input_image_path and os.path.exists(input_image_path):
         is_video = any(word in query.lower() for word in VIDEO_TRIGGER_WORDS)
@@ -155,6 +160,8 @@ def execute(query: str, context: dict = None) -> dict:
             print(f"🎬 Video-Trigger erkannt -> Nutze Bild {input_image_path}")
             return execute_i2v(query, input_image_path, context)
         else:
+            # Falls I2I getriggert wird, aber der Nutzer 'neu' sagt, überspringen wir das hier
+            # (passiert nur wenn input_image_path aus dem Gedächtnis kam)
             print(f"🖼️ I2I-Trigger erkannt -> Nutze Bild {input_image_path}")
             return execute_i2i(query, input_image_path, context)
 
