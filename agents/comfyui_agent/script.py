@@ -461,16 +461,26 @@ def _upload_image_to_comfyui(server_url: str, local_image_path: str) -> Optional
     """Lädt ein lokales Bild auf den ComfyUI-Server hoch. Gibt den Server-Dateinamen zurück."""
     try:
         filename = os.path.basename(local_image_path)
+
+        # Korrekte MIME-Type-Erkennung (nicht blind png annehmen)
+        ext = os.path.splitext(filename)[1].lower()
+        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".png": "image/png", ".webp": "image/webp"}
+        mime_type = mime_map.get(ext, "application/octet-stream")
+
         with open(local_image_path, "rb") as f:
             resp = requests.post(
-                f"{server_url}/api/upload/image",
-                files={"image": (filename, f, "image/png")},
+                f"{server_url}/upload/image",
+                files={"image": (filename, f, mime_type)},
                 data={"overwrite": "true"},
                 timeout=30
             )
         if resp.status_code == 200:
             data = resp.json()
-            server_name = data.get("name", filename)
+            # data.get() schützt NICHT vor null-Werten (nur vor fehlendem Key)
+            server_name = data.get("name") or filename
+            if not server_name:
+                server_name = filename
             print(f"📤 Bild auf ComfyUI hochgeladen: {server_name}")
             return server_name
         else:
@@ -923,13 +933,19 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
         sc = "--- FEHLER ---\nKonnte das Eingabebild nicht hochladen.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
+    print(f"📤 Server-Dateiname nach Upload: '{server_filename}'")
+
     # Workflow laden und injizieren
     workflow = _load_workflow(WORKFLOW_I2V)
     if not workflow:
         sc = f"--- FEHLER ---\nWorkflow '{WORKFLOW_I2V}' nicht gefunden.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
-    workflow = _inject_i2v_inputs(workflow, server_filename, target_w, target_h, params)
+    try:
+        workflow = _inject_i2v_inputs(workflow, server_filename, target_w, target_h, params)
+    except ValueError as e:
+        sc = f"--- FEHLER ---\n{e}\n\n"
+        return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     # Job senden
     prompt_id = _queue_prompt(server_url, workflow)
@@ -1076,6 +1092,12 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
     Auflösung, Frame-Anzahl und FPS bleiben unverändert (Workflow-Defaults
     funktionieren direkt in ComfyUI und werden nicht überschrieben).
     """
+    if not server_filename or not isinstance(server_filename, str):
+        raise ValueError(
+            f"I2V-Abort: server_filename ist ungültig ({server_filename!r}). "
+            "Bild-Upload wahrscheinlich fehlgeschlagen."
+        )
+
     wf = copy.deepcopy(workflow)
 
     # Node 45: LoadImage "First Frame" — Eingabebild setzen
@@ -1084,6 +1106,8 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
         img_node["inputs"]["image"] = server_filename
         wf[I2V_IMAGE_NODE] = img_node
         print(f"💉 I2V Bild '{server_filename}' → Node {I2V_IMAGE_NODE}")
+    else:
+        print(f"⚠️ I2V: Node {I2V_IMAGE_NODE} hat kein 'inputs'-Feld — Bild NICHT injiziert!")
 
     # Node 173: Positive Prompt — Bewegungsbeschreibung injizieren
     p_node = wf.get(I2V_PROMPT_NODE, {})
