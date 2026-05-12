@@ -662,7 +662,7 @@
   },
   "186": {
     "inputs": {
-      "expression": "a*b",
+      "expression": "int(a*b/8)*8+1",
       "a": [
         "68",
         0

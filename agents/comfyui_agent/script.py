@@ -83,9 +83,9 @@ def _extract_dimensions(query: str) -> Optional[tuple]:
         # Sicherheits-Check: Nicht zu klein, nicht zu groß
         w = max(256, min(2048, w))
         h = max(256, min(2048, h))
-        # Runden auf 32 (Zwingend erforderlich für LTX 2.3 und CUDA-Stabilität)
-        w = (w // 32) * 32
-        h = (h // 32) * 32
+        # Runden auf 64 (Zwingend, da der Workflow intern um 0.5 skaliert und LTX Vielfache von 32 braucht)
+        w = (w // 64) * 64
+        h = (h // 64) * 64
         return (w, h)
     return None
 
@@ -1008,9 +1008,9 @@ def _get_image_dimensions(image_path: str) -> tuple:
 
 
 def _calc_video_resolution(img_w: int, img_h: int, scale: float = 0.7) -> tuple:
-    """Berechnet die Zielauflösung: scale * Originalgröße, auf 32 gerundet, max 1536."""
-    w = round(img_w * scale / 32) * 32
-    h = round(img_h * scale / 32) * 32
+    """Berechnet die Zielauflösung: scale * Originalgröße, auf 64 gerundet, max 1536."""
+    w = round((img_w * scale) / 64) * 64
+    h = round((img_h * scale) / 64) * 64
     # Clamp: min 256, max 1536 (LTX-Limit)
     w = max(256, min(1536, w))
     h = max(256, min(1536, h))
