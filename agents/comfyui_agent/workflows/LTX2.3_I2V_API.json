@@ -412,7 +412,7 @@
   },
   "45": {
     "inputs": {
-      "image": "86c581b7-f376-4a2a-ac13-21057804d74b.png"
+      "image": "Flux2.Klein_9b_T2I_00008_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -421,7 +421,7 @@
   },
   "66": {
     "inputs": {
-      "value": 720
+      "value": 1280
     },
     "class_type": "INTConstant",
     "_meta": {
@@ -439,7 +439,7 @@
   },
   "68": {
     "inputs": {
-      "value": 15
+      "value": 7
     },
     "class_type": "INTConstant",
     "_meta": {
@@ -612,7 +612,7 @@
   },
   "173": {
     "inputs": {
-      "value": ""
+      "value": "cinematic video still, a friendly translucent ghost jumping rope, joyful expression, bubbling laughter, mouth open, jumping rope motion, ethereal glowing body, whimsical atmosphere, magical particles, soft lighting, high detail, 8k, fantasy style."
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -662,7 +662,7 @@
   },
   "186": {
     "inputs": {
-      "expression": "a",
+      "expression": "a*b",
       "a": [
         "68",
         0

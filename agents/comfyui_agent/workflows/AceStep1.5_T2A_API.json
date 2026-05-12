@@ -1,0 +1,167 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 938579533359635,
+      "steps": 50,
+      "cfg": 2,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "78",
+        0
+      ],
+      "positive": [
+        "94",
+        0
+      ],
+      "negative": [
+        "47",
+        0
+      ],
+      "latent_image": [
+        "98",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "18": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "47": {
+    "inputs": {
+      "conditioning": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "78": {
+    "inputs": {
+      "shift": 3.5,
+      "model": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "94": {
+    "inputs": {
+      "tags": "2. Ausprägung\nA German-language emotional indie rock / alternative pop song with calm, intimate verses and a wide, painfully open chorus. The production should begin in a restrained and organic way, led by gentle electric guitar, warm bass, reduced drums, and plenty of space around the vocal. The lead vocal should sound honest, vulnerable, and slightly rough, growing in intensity from controlled storytelling into a breaking emotional chorus.\n\nThe atmosphere should feel melancholic, reflective, and close without becoming cheesy. The emotional core should revolve around memory, absence, holding on to small details, and trying to continue living after a loss or separation. The chorus should feel broad and emotionally strong, but not overly dramatic, more like a truthful line that can no longer be held back.\n\nThe structure should be designed for 3 minutes: short intro, verse, pre-chorus, big chorus, second verse, pre-chorus, chorus, short bridge, final chorus, and a quiet outro. The instrumental should feel more organic than pop-glossy, with rising dynamics, subtle guitar layers, and a final emotional lift.\n",
+      "lyrics": "3. Lyrics\n[Intro]\nnoch ein wort\nnoch ein blick\nnoch nicht weg\nnoch nicht ich\n\n[Verse 1]\nDein Glas steht noch am Fensterbrett\nAls wärst du nur kurz raus und gleich zurück\nDer Staub legt sich auf jeden Satz\nDen ich nie gesagt hab in diesem Stück\n\nIm Flur hängt noch dein alter Mantel\nUnd ich geh vorbei, als wär nichts passiert\nDoch jede Faser hier im Zimmer\nHat sich deinen Namen einstudiert\n\n[Pre-Chorus]\nUnd ich halt mich an Sekunden fest\nDie längst kein Mensch mehr sehen kann\nAls würd ein leiser Rest von dir\nNoch irgendwo im Atem hangen\n\n[Chorus]\nIch steh noch zwischen deinen Spuren\nZwischen gestern und zu spät\nZwischen allem, was wir waren\nUnd dem, was hier allein besteht\n\nIch trag dich durch die leeren Stunden\nAuch wenn niemand davon weiß\nUnd was von dir in mir geblieben ist\nWird nicht still\nEs wird nur leise\n\n[Verse 2]\nDie Uhr geht weiter ohne Rücksicht\nAls wär das hier ein ganz normaler Tag\nDoch ich lern erst jetzt, wie laut Stille\nIn einem halben Herzen schlagen kann\n\nIch kenn inzwischen jede Ecke\nIn der dein Fehlen Schatten wirft\nUnd jedes Lächeln, das ich aufsetz\nFällt zusammen, wenn mich keiner hört\n\n[Pre-Chorus]\nUnd ich red mit dir in Gedanken\nAls wärst du irgendwo noch hier\nNur ein Stück zu weit gegangen\nNur ein Atemzug von mir\n\n[Chorus]\nIch steh noch zwischen deinen Spuren\nZwischen gestern und zu spät\nZwischen allem, was wir waren\nUnd dem, was hier allein besteht\n\nIch trag dich durch die leeren Stunden\nAuch wenn niemand davon weiß\nUnd was von dir in mir geblieben ist\nWird nicht still\nEs wird nur leise\n\n[Bridge]\nVielleicht ist Loslassen nur Lernen\nWie man weitergeht mit Gewicht\nVielleicht heißt Vermissen einfach\nDu fehlst\nUnd gehst doch nicht\n\n[Final Chorus]\nIch steh noch zwischen deinen Spuren\nZwischen gestern und zu spät\nZwischen allem, was wir waren\nUnd dem, was in mir weiterlebt\n\nIch trag dich durch die leeren Stunden\nBis der Morgen mich verzeiht\nUnd was von dir in mir geblieben ist\nWird nicht still\nEs wird nur leise\n\n[Outro]\nnoch ein wort\nnoch ein blick\nnoch nicht weg\nnoch nicht ich\n",
+      "seed": 938579533359635,
+      "bpm": 78,
+      "duration": 180,
+      "timesignature": "4",
+      "language": "de",
+      "keyscale": "E minor",
+      "generate_audio_codes": true,
+      "cfg_scale": 2,
+      "temperature": 0.85,
+      "top_p": 0.9,
+      "top_k": 0,
+      "min_p": 0,
+      "clip": [
+        "105",
+        0
+      ]
+    },
+    "class_type": "TextEncodeAceStepAudio1.5",
+    "_meta": {
+      "title": "TextEncodeAceStepAudio1.5"
+    }
+  },
+  "98": {
+    "inputs": {
+      "seconds": 180,
+      "batch_size": 1
+    },
+    "class_type": "EmptyAceStep1.5LatentAudio",
+    "_meta": {
+      "title": "Empty Ace Step 1.5 Latent Audio"
+    }
+  },
+  "104": {
+    "inputs": {
+      "unet_name": "acestep_v1.5_xl_turbo_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "105": {
+    "inputs": {
+      "clip_name1": "qwen_0.6b_ace15.safetensors",
+      "clip_name2": "qwen_1.7b_ace15.safetensors",
+      "type": "ace",
+      "device": "default"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "DualCLIPLoader"
+    }
+  },
+  "106": {
+    "inputs": {
+      "vae_name": "ace_1.5_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "107": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "quality": "V0",
+      "audioUI": "",
+      "audio": [
+        "109",
+        0
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "Save Audio (MP3)"
+    }
+  },
+  "109": {
+    "inputs": {
+      "value": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "UnloadAllModels",
+    "_meta": {
+      "title": "UnloadAllModels"
+    }
+  }
+}

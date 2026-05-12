@@ -35,7 +35,7 @@ VIDEO_TRIGGER_WORDS = [
 # Workflow-Mapping
 WORKFLOW_T2I = "Flux2_Klein_T2I_API.json"
 WORKFLOW_I2I = "Flux2_klein_I2I_API.json"
-WORKFLOW_T2A = "ME_AceStep1.5_T2A_API.json"
+WORKFLOW_T2A = "AceStep1.5_T2A_API.json"
 WORKFLOW_I2V = "LTX2.3_I2V_API.json"
 
 # Node-IDs pro Workflow
@@ -1071,51 +1071,32 @@ def _extract_i2v_params(query: str, brain) -> dict:
 
 def _inject_i2v_inputs(workflow: dict, server_filename: str,
                         width: int, height: int, params: dict) -> dict:
-    """Injiziert alle I2V-Parameter in den LTX-2.3-Workflow."""
+    """
+    Injiziert nur Eingabebild + Prompt in den LTX-2.3-Workflow.
+    Auflösung, Frame-Anzahl und FPS bleiben unverändert (Workflow-Defaults
+    funktionieren direkt in ComfyUI und werden nicht überschrieben).
+    """
     wf = copy.deepcopy(workflow)
 
-    # Node 45: LoadImage "First Frame"
+    # Node 45: LoadImage "First Frame" — Eingabebild setzen
     img_node = wf.get(I2V_IMAGE_NODE, {})
     if "inputs" in img_node:
         img_node["inputs"]["image"] = server_filename
         wf[I2V_IMAGE_NODE] = img_node
         print(f"💉 I2V Bild '{server_filename}' → Node {I2V_IMAGE_NODE}")
 
-    # Node 66: Width
-    w_node = wf.get(I2V_WIDTH_NODE, {})
-    if "inputs" in w_node:
-        w_node["inputs"]["value"] = width
-        wf[I2V_WIDTH_NODE] = w_node
-        print(f"💉 I2V Breite {width} → Node {I2V_WIDTH_NODE}")
-
-    # Node 67: Height
-    h_node = wf.get(I2V_HEIGHT_NODE, {})
-    if "inputs" in h_node:
-        h_node["inputs"]["value"] = height
-        wf[I2V_HEIGHT_NODE] = h_node
-        print(f"💉 I2V Höhe {height} → Node {I2V_HEIGHT_NODE}")
-
-    # Node 68: Frame-Anzahl (Python berechnet, LTX-konform)
-    # LTX braucht 32*k+1 Frames damit Chunker korrekt teilen kann
-    duration_s = int(params.get("duration", 7))
-    frames = _calc_ltx_frames(duration_s, fps=25)
-    l_node = wf.get(I2V_LENGTH_NODE, {})
-    if "inputs" in l_node:
-        l_node["inputs"]["value"] = frames
-        wf[I2V_LENGTH_NODE] = l_node
-        print(f"💉 I2V Dauer {duration_s}s → {frames} Frames → Node {I2V_LENGTH_NODE}")
-
-    # Node 173: Positive Prompt
+    # Node 173: Positive Prompt — Bewegungsbeschreibung injizieren
     p_node = wf.get(I2V_PROMPT_NODE, {})
     if "inputs" in p_node:
-        # Sicherstellen, dass es ein String ist und nicht None
         prompt_val = params.get("motion_prompt")
         if not prompt_val or not isinstance(prompt_val, str):
             prompt_val = "smooth cinematic movement, subtle ambient motion, high quality"
-        
         p_node["inputs"]["value"] = str(prompt_val)
         wf[I2V_PROMPT_NODE] = p_node
-        print(f"💉 I2V Prompt → Node {I2V_PROMPT_NODE}")
+        print(f"💉 I2V Prompt → Node {I2V_PROMPT_NODE}: '{prompt_val[:60]}'")
+
+    # Auflösung und Länge werden NICHT verändert — Workflow-Defaults bleiben erhalten
+    print(f"ℹ️  I2V: Größe + Dauer aus Workflow-JSON übernommen (kein Override).")
 
     return wf
 
