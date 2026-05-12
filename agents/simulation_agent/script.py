@@ -1,8 +1,16 @@
 import os
 
 def can_handle(query: str) -> bool:
+    import re
     router_text = query.lower()
-    return any(word in router_text for word in ["game of life", "simulation", "ameisen", "ant", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz", "training", "playground", "perceptron", "inferenz", "erkennung"])
+    # Keywords die oft Teil anderer Wörter sind (wie 'ant' in 'antwortet') schützen
+    keywords = ["game of life", "simulation", "ameisen", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz", "training", "playground", "perceptron", "inferenz", "erkennung"]
+    if any(word in router_text for word in keywords):
+        return True
+    # 'ant' separat mit Wortgrenzen prüfen
+    if re.search(r"\bant\b", router_text):
+        return True
+    return False
 
 def execute(query: str, context: dict = None) -> dict:
     lower_query = query.lower()

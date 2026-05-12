@@ -89,11 +89,12 @@ def _extract_dimensions(query: str) -> Optional[tuple]:
 
 def can_handle(query: str) -> bool:
     lower = query.lower()
-    # Direkte Keywords
-    if any(word in lower for word in TRIGGER_WORDS):
+    # Direkte Keywords (Bild & Video)
+    combined_triggers = TRIGGER_WORDS + VIDEO_TRIGGER_WORDS
+    if any(word in lower for word in combined_triggers):
         return True
-    # Kombination aus Bild + lokal
-    if ("bild" in lower or "generier" in lower or "erstell" in lower) and ("lokal" in lower or "server" in lower):
+    # Kombination aus Bild/Video + lokal
+    if ("bild" in lower or "video" in lower or "generier" in lower or "erstell" in lower or "animier" in lower) and ("lokal" in lower or "server" in lower):
         return True
     return False
 
