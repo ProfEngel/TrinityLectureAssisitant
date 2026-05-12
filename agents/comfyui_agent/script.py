@@ -912,8 +912,8 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
         sc = "--- FEHLER ---\nKonnte Bildabmessungen nicht auslesen.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
-    # 0.7x Auflösung, auf 32 gerundet (Standard)
-    target_w, target_h = _calc_video_resolution(img_w, img_h, scale=0.7)
+    # 1.0x Auflösung (Original), auf 32 gerundet
+    target_w, target_h = _calc_video_resolution(img_w, img_h, scale=1.0)
     
     # Manuelle Auflösung aus Prompt priorisieren falls angegeben
     manual_dims = _extract_dimensions(query)
@@ -921,11 +921,15 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
         target_w, target_h = manual_dims
         print(f"📏 Manuelle Video-Auflösung erkannt: {target_w}x{target_h}")
     else:
-        print(f"📐 Bild: {img_w}×{img_h} → Video: {target_w}×{target_h}")
+        print(f"📐 Bild: {img_w}×{img_h} → Video: {target_w}×{target_h} (1.0x)")
 
     # Parameter via LLM extrahieren
     params = _extract_i2v_params(query, brain)
-    print(f"🎬 I2V: '{params['motion_prompt'][:60]}', {params['duration']}s")
+    
+    # LTX-kompatible Dauer berechnen (8N+1 Frames bei 24 FPS)
+    params["duration_ltx"] = _calc_ltx_duration(params["duration"], fps=24.0)
+    
+    print(f"🎬 I2V: '{params['motion_prompt'][:60]}', {params['duration_ltx']:.3f}s (8N+1)")
 
     # Bild auf ComfyUI hochladen
     server_filename = _upload_image_to_comfyui(server_url, input_image_path)
@@ -1041,14 +1045,28 @@ def _calc_ltx_frames(duration_s: int, fps: int = 25) -> int:
     return frames
 
 
-def _calc_video_resolution(img_w: int, img_h: int, scale: float = 0.7) -> tuple:
-    """Berechnet die Zielauflösung: scale * Originalgröße, auf 64 gerundet, max 1536."""
-    w = round((img_w * scale) / 64) * 64
-    h = round((img_h * scale) / 64) * 64
-    # Clamp: min 256, max 1536 (LTX-Limit)
+def _calc_video_resolution(img_w: int, img_h: int, scale: float = 1.0) -> tuple:
+    """Berechnet die Zielauflösung: scale * Originalgröße, auf 32 gerundet, max 1536."""
+    w = round((img_w * scale) / 32) * 32
+    h = round((img_h * scale) / 32) * 32
+    # Clamp: min 256, max 1536 (LTX-Limit für Stabilität)
     w = max(256, min(1536, w))
     h = max(256, min(1536, h))
     return w, h
+
+
+def _calc_ltx_duration(target_sec: float, fps: float = 24.0) -> float:
+    """
+    Berechnet die exakte Sekundenzahl, die zu einer LTX-kompatiblen
+    Frame-Anzahl (8N + 1) führt.
+    Beispiel: 7s bei 24fps = 168 frames -> nächstes 8N+1 ist 169 -> 169/24 = 7.0416s
+    """
+    target_frames = round(target_sec * fps)
+    # Nächste Zahl der Form 8n + 1
+    valid_frames = round((target_frames - 1) / 8) * 8 + 1
+    # Sicherheits-Check: Falls wir unter 1 gelandet sind
+    if valid_frames < 1: valid_frames = 9 
+    return float(valid_frames) / fps
 
 
 def _extract_i2v_params(query: str, brain) -> dict:
@@ -1108,6 +1126,29 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
         print(f"💉 I2V Bild '{server_filename}' → Node {I2V_IMAGE_NODE}")
     else:
         print(f"⚠️ I2V: Node {I2V_IMAGE_NODE} hat kein 'inputs'-Feld — Bild NICHT injiziert!")
+
+    # Node 66: Width — Auflösung injizieren damit das Bild nicht "kleiner gemacht" wird
+    w_node = wf.get(I2V_WIDTH_NODE, {})
+    if "inputs" in w_node:
+        w_node["inputs"]["value"] = width
+        wf[I2V_WIDTH_NODE] = w_node
+        print(f"💉 I2V Breite {width} → Node {I2V_WIDTH_NODE}")
+
+    # Node 67: Height
+    h_node = wf.get(I2V_HEIGHT_NODE, {})
+    if "inputs" in h_node:
+        h_node["inputs"]["value"] = height
+        wf[I2V_HEIGHT_NODE] = h_node
+        print(f"💉 I2V Höhe {height} → Node {I2V_HEIGHT_NODE}")
+
+    # Node 68: Duration (Sekunden)
+    # Wir injizieren den berechneten Float-Wert für 8N+1 Frames
+    duration_val = params.get("duration_ltx", params.get("duration", 7.0))
+    l_node = wf.get(I2V_LENGTH_NODE, {})
+    if "inputs" in l_node:
+        l_node["inputs"]["value"] = duration_val
+        wf[I2V_LENGTH_NODE] = l_node
+        print(f"💉 I2V Dauer {duration_val:.4f}s → Node {I2V_LENGTH_NODE}")
 
     # Node 173: Positive Prompt — Bewegungsbeschreibung injizieren
     p_node = wf.get(I2V_PROMPT_NODE, {})
