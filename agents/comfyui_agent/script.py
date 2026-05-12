@@ -1007,6 +1007,24 @@ def _get_image_dimensions(image_path: str) -> tuple:
     return 0, 0
 
 
+def _calc_ltx_frames(duration_s: int, fps: int = 25) -> int:
+    """Berechnet die LTX-kompatible Frame-Anzahl.
+    
+    LTX 2.3 benötigt:
+    - frames = 8 * N + 1 (wegen Temporal VAE mit Faktor 8)
+    - latent_frames = (frames - 1) / 8  muss durch 4 teilbar sein (LTXVChunkFeedForward)
+    - => frames = 8 * (4 * k) + 1 = 32 * k + 1, k >= 1
+    """
+    # Zielframes als Annäherung
+    target = duration_s * fps
+    # Aufrunden auf nächste gültige Frames-Anzahl (32*k + 1)
+    k = max(1, (target - 1 + 31) // 32)  # ceil-Division
+    frames = 32 * k + 1
+    # Clamp auf vernünftigen Bereich (min 33 Frames, max 1025 ~= 41s bei 25fps)
+    frames = max(33, min(1025, frames))
+    return frames
+
+
 def _calc_video_resolution(img_w: int, img_h: int, scale: float = 0.7) -> tuple:
     """Berechnet die Zielauflösung: scale * Originalgröße, auf 64 gerundet, max 1536."""
     w = round((img_w * scale) / 64) * 64
@@ -1077,12 +1095,15 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
         wf[I2V_HEIGHT_NODE] = h_node
         print(f"💉 I2V Höhe {height} → Node {I2V_HEIGHT_NODE}")
 
-    # Node 68: Duration (Sekunden)
+    # Node 68: Frame-Anzahl (Python berechnet, LTX-konform)
+    # LTX braucht 32*k+1 Frames damit Chunker korrekt teilen kann
+    duration_s = int(params.get("duration", 7))
+    frames = _calc_ltx_frames(duration_s, fps=25)
     l_node = wf.get(I2V_LENGTH_NODE, {})
     if "inputs" in l_node:
-        l_node["inputs"]["value"] = params["duration"]
+        l_node["inputs"]["value"] = frames
         wf[I2V_LENGTH_NODE] = l_node
-        print(f"💉 I2V Dauer {params['duration']}s → Node {I2V_LENGTH_NODE}")
+        print(f"💉 I2V Dauer {duration_s}s → {frames} Frames → Node {I2V_LENGTH_NODE}")
 
     # Node 173: Positive Prompt
     p_node = wf.get(I2V_PROMPT_NODE, {})
