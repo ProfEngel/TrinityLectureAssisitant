@@ -311,6 +311,9 @@ class MorpheusEar:
                 f.write(img_data)
             print(f"📥 Telegram-Foto gespeichert: {local_path}")
 
+            # Im Brain merken für Folgeanweisungen
+            self.brain.last_media_path = local_path
+
             # Nutzer-Bestätigung senden
             req.post(
                 f"https://api.telegram.org/bot{tg_token}/sendMessage",

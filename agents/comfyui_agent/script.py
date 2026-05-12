@@ -40,10 +40,18 @@ WORKFLOW_I2V = "LTX2.3_I2V_API.json"
 
 # Node-IDs pro Workflow
 T2I_PROMPT_NODE = "14"   # CLIPTextEncode Positive Prompt
+T2I_WIDTH_NODE  = "9"    # PrimitiveInt "Width"
+T2I_HEIGHT_NODE = "10"   # PrimitiveInt "Height"
+
 I2I_PROMPT_NODE = "6"    # CLIPTextEncode Positive Prompt
 I2I_IMAGE_NODE  = "46"   # LoadImage
+I2I_MEGAPIXEL_NODE = "45" # ImageScaleToTotalPixels
+I2I_LATENT_NODE = "47"   # EmptyFlux2LatentImage (Dimensionen)
+I2I_SCHEDULER_NODE = "48" # Flux2Scheduler (Dimensionen)
+
 T2A_ENCODE_NODE = "94"   # TextEncodeAceStepAudio1.5
 T2A_LATENT_NODE = "98"   # EmptyAceStep1.5LatentAudio
+
 I2V_IMAGE_NODE  = "45"   # LoadImage "First Frame"
 I2V_WIDTH_NODE  = "66"   # INTConstant "Width"
 I2V_HEIGHT_NODE = "67"   # INTConstant "Height"
@@ -64,6 +72,19 @@ LORA_PRESETS: dict = {
     # Weitere Presets hier einfügen, z.B.:
     # "snofs": [{"lora": "flux2.9B\\sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True}],
 }
+
+
+def _extract_dimensions(query: str) -> Optional[tuple]:
+    """Sucht nach Mustern wie 1920x1080 oder 1024X768 in der Query."""
+    import re
+    match = re.search(r"(\d{3,4})\s*[xX]\s*(\d{3,4})", query)
+    if match:
+        w, h = int(match.group(1)), int(match.group(2))
+        # Sicherheits-Check: Nicht zu klein, nicht zu groß (max 2048 für Flux Klein)
+        w = max(256, min(2048, w))
+        h = max(256, min(2048, h))
+        return (w, h)
+    return None
 
 
 def can_handle(query: str) -> bool:
@@ -125,17 +146,22 @@ def execute(query: str, context: dict = None) -> dict:
         return execute_t2a(query, context)
 
     # 2. Bild/Video-Input Check (I2I / I2V)
-    input_image_path = context.get("image_path")
+    # Nutze entweder das aktuell hochgeladene Bild ODER das letzte bekannte aus dem Gedächtnis
+    input_image_path = context.get("image_path") or getattr(brain, "last_media_path", None)
+    
     if input_image_path and os.path.exists(input_image_path):
         is_video = any(word in query.lower() for word in VIDEO_TRIGGER_WORDS)
         if is_video:
-            print(f"🎬 Video-Trigger erkannt -> Umleitung zu execute_i2v mit {input_image_path}")
+            print(f"🎬 Video-Trigger erkannt -> Nutze Bild {input_image_path}")
             return execute_i2v(query, input_image_path, context)
         else:
-            print(f"🖼️ I2I-Trigger erkannt -> Umleitung zu execute_i2i mit {input_image_path}")
+            print(f"🖼️ I2I-Trigger erkannt -> Nutze Bild {input_image_path}")
             return execute_i2i(query, input_image_path, context)
 
     # 3. Standard Text-to-Image (T2I)
+    # Auflösung extrahieren (optional)
+    dims = _extract_dimensions(query)
+    
     # Workflow laden und Prompt injizieren
     workflow_name = getattr(brain, "comfyui_workflow", "Flux2_Klein_T2I_API.json")
     workflow = _load_workflow(workflow_name)
@@ -144,6 +170,13 @@ def execute(query: str, context: dict = None) -> dict:
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     workflow = _inject_prompt(workflow, image_prompt)
+    
+    # Dynamische Maße injizieren falls angegeben
+    if dims:
+        w, h = dims
+        if T2I_WIDTH_NODE in workflow: workflow[T2I_WIDTH_NODE]["inputs"]["value"] = w
+        if T2I_HEIGHT_NODE in workflow: workflow[T2I_HEIGHT_NODE]["inputs"]["value"] = h
+        print(f"📏 Dynamische Auflösung in T2I injiziert: {w}x{h}")
 
     # LoRA-Preset erkennen und injizieren (privat, kein Eintrag in Docs)
     lora_preset = _detect_lora_preset(query)
@@ -172,6 +205,9 @@ def execute(query: str, context: dict = None) -> dict:
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     print(f"✅ Bild lokal gespeichert: {local_path}")
+    
+    # Im Brain merken für Folgeanweisungen
+    brain.last_media_path = local_path
 
     # Telegram: Bild senden (wenn von Telegram angefordert ODER UI+Telegram aktiv)
     telegram_cfg = context.get("telegram_cfg", {})
@@ -233,6 +269,20 @@ def execute_i2i(query: str, input_image_path: str, context: dict = None) -> dict
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     workflow = _inject_i2i_inputs(workflow, image_prompt, server_filename)
+    
+    # Auflösung extrahieren und injizieren
+    dims = _extract_dimensions(query)
+    if dims:
+        w, h = dims
+        if I2I_LATENT_NODE in workflow:
+            workflow[I2I_LATENT_NODE]["inputs"]["width"] = w
+            workflow[I2I_LATENT_NODE]["inputs"]["height"] = h
+        if I2I_SCHEDULER_NODE in workflow:
+            workflow[I2I_SCHEDULER_NODE]["inputs"]["width"] = w
+            workflow[I2I_SCHEDULER_NODE]["inputs"]["height"] = h
+        if I2I_MEGAPIXEL_NODE in workflow:
+            workflow[I2I_MEGAPIXEL_NODE]["inputs"]["megapixels"] = round(w * h / 1000000.0, 2)
+        print(f"📏 Dynamische Auflösung in I2I injiziert: {w}x{h}")
 
     # LoRA-Preset erkennen und injizieren (privat, kein Eintrag in Docs)
     lora_preset = _detect_lora_preset(query)
@@ -259,6 +309,9 @@ def execute_i2i(query: str, input_image_path: str, context: dict = None) -> dict
         return {"has_payload": False, "html_payload": "", "search_context": sc}
 
     print(f"✅ I2I Bild gespeichert: {local_path}")
+    
+    # Im Brain merken für Folgeanweisungen
+    brain.last_media_path = local_path
 
     # Immer an Telegram senden (I2I kommt immer von Telegram)
     if telegram_cfg.get("enabled") and telegram_cfg.get("bot_token") and telegram_cfg.get("chat_id"):

@@ -15,6 +15,9 @@ class TrinityBrain:
         self.gen_images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "gen_images")
         os.makedirs(self.gen_images_dir, exist_ok=True)
         
+        # Gedächtnis für das letzte Bild (für I2I/I2V Folgeanweisungen)
+        self.last_media_path = None
+        
         self.load_config()
         
         self.live_skills = []
