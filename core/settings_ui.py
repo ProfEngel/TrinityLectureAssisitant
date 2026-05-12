@@ -217,11 +217,11 @@ class SettingsWindow(QMainWindow):
 
     def apply_stylesheet(self):
         self.setStyleSheet("""
-            QMainWindow { background-color: #1e1e2e; }
+            QMainWindow { background-color: #18181b; }
             
             QTabWidget::pane { 
-                border: 1px solid #363a4f; 
-                background: #24273a; 
+                border: 1px solid #3f3f46; 
+                background: #09090b; 
                 border-bottom-left-radius: 12px; 
                 border-bottom-right-radius: 12px;
                 border-top-right-radius: 12px;
@@ -229,7 +229,7 @@ class SettingsWindow(QMainWindow):
             
             QTabBar::tab { 
                 background: transparent; 
-                color: #939ab7; 
+                color: #a1a1aa; 
                 padding: 12px 18px; 
                 margin-right: 2px; 
                 font-weight: 500;
@@ -240,93 +240,93 @@ class SettingsWindow(QMainWindow):
             
             QTabBar::tab:hover {
                 background: rgba(255, 255, 255, 0.05);
-                color: #cad3f5;
+                color: #f4f4f5;
             }
             
             QTabBar::tab:selected { 
-                background: #24273a; 
-                color: #8aadf4; 
-                border-bottom: 2px solid #8aadf4;
+                background: #09090b; 
+                color: #d8b4fe; 
+                border-bottom: 2px solid #d8b4fe;
             }
             
             QGroupBox { 
-                color: #8aadf4; 
+                color: #d8b4fe; 
                 font-size: 14px;
                 font-weight: bold; 
-                border: 1px solid #363a4f; 
+                border: 1px solid #27272a; 
                 border-radius: 10px; 
                 margin-top: 25px; 
                 padding-top: 25px; 
-                background: rgba(255, 255, 255, 0.02);
+                background: rgba(255, 255, 255, 0.01);
             }
             
             QGroupBox::title { 
                 subcontrol-origin: margin; 
                 left: 15px; 
                 padding: 0 10px; 
-                color: #b7bdf8;
+                color: #fbcfe8;
             }
             
-            QLabel { color: #cad3f5; font-size: 13px; }
+            QLabel { color: #e4e4e7; font-size: 13px; }
             
             QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox { 
-                background: #1e1e2e; 
-                color: #cad3f5; 
-                border: 1px solid #363a4f; 
+                background: #18181b; 
+                color: #f4f4f5; 
+                border: 1px solid #3f3f46; 
                 border-radius: 6px; 
                 padding: 10px; 
                 min-height: 20px;
-                selection-background-color: #8aadf4;
+                selection-background-color: #d8b4fe;
             }
             
             QLineEdit:focus, QComboBox:focus { 
-                border-color: #8aadf4; 
-                background: #24273a;
+                border-color: #d8b4fe; 
+                background: #1c1c1f;
             }
             
             QTextEdit { 
-                background: #1e1e2e; 
-                color: #cad3f5; 
-                border: 1px solid #363a4f; 
+                background: #09090b; 
+                color: #f4f4f5; 
+                border: 1px solid #3f3f46; 
                 border-radius: 8px; 
                 padding: 12px; 
                 font-family: 'SF Mono', 'Menlo', monospace; 
                 font-size: 13px;
             }
             
-            QCheckBox { color: #cad3f5; spacing: 10px; font-size: 13px; }
-            QCheckBox::indicator { width: 20px; height: 20px; border-radius: 5px; border: 1px solid #363a4f; background: #1e1e2e; }
-            QCheckBox::indicator:checked { background: #8aadf4; border: 1px solid #8aadf4; image: none; }
+            QCheckBox { color: #e4e4e7; spacing: 10px; font-size: 13px; }
+            QCheckBox::indicator { width: 20px; height: 20px; border-radius: 5px; border: 1px solid #3f3f46; background: #18181b; }
+            QCheckBox::indicator:checked { background: #d8b4fe; border: 1px solid #d8b4fe; image: none; }
             
-            QRadioButton { color: #cad3f5; spacing: 10px; padding: 6px; font-size: 13px; }
-            QRadioButton::indicator { width: 20px; height: 20px; border-radius: 11px; border: 1px solid #363a4f; background: #1e1e2e; }
-            QRadioButton::indicator:checked { background: #8aadf4; border: 5px solid #1e1e2e; }
+            QRadioButton { color: #e4e4e7; spacing: 10px; padding: 6px; font-size: 13px; }
+            QRadioButton::indicator { width: 20px; height: 20px; border-radius: 11px; border: 1px solid #3f3f46; background: #18181b; }
+            QRadioButton::indicator:checked { background: #d8b4fe; border: 5px solid #18181b; }
             
             QPushButton { 
-                background: #363a4f; 
-                color: #cad3f5; 
-                border: 1px solid #494d64; 
+                background: #27272a; 
+                color: #f4f4f5; 
+                border: 1px solid #3f3f46; 
                 border-radius: 8px; 
                 padding: 12px 24px; 
                 font-weight: 600;
                 font-size: 13px;
             }
             
-            QPushButton:hover { background: #494d64; border-color: #8aadf4; }
+            QPushButton:hover { background: #3f3f46; border-color: #d8b4fe; }
             
             QPushButton#saveBtn { 
-                background: #8aadf4; 
-                color: #181926; 
+                background: #d8b4fe; 
+                color: #09090b; 
                 font-weight: bold; 
                 border: none;
             }
             
-            QPushButton#saveBtn:hover { background: #b7bdf8; }
+            QPushButton#saveBtn:hover { background: #fbcfe8; }
             
             QScrollArea { background: transparent; border: none; }
-            QScrollBar:vertical { border: none; background: #1e1e2e; width: 10px; margin: 0px; }
-            QScrollBar::handle:vertical { background: #363a4f; min-height: 20px; border-radius: 5px; }
-            QScrollBar::handle:vertical:hover { background: #494d64; }
+            QScrollBar:vertical { border: none; background: #09090b; width: 10px; margin: 0px; }
+            QScrollBar::handle:vertical { background: #27272a; min-height: 20px; border-radius: 5px; }
+            QScrollBar::handle:vertical:hover { background: #3f3f46; }
         """)
 
     def init_ui(self):
@@ -338,7 +338,7 @@ class SettingsWindow(QMainWindow):
         # Header
         header = QLabel("⚙️ Trinity Assistant – Einstellungen")
         header.setFont(QFont("", 18, QFont.Bold))
-        header.setStyleSheet("color: #00bfff; margin-bottom: 8px;")
+        header.setStyleSheet("color: #d8b4fe; margin-bottom: 8px;")
         main_layout.addWidget(header)
         
         # Tabs
