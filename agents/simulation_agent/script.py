@@ -2,14 +2,25 @@ import os
 
 def can_handle(query: str) -> bool:
     import re
-    router_text = query.lower()
-    # Keywords die oft Teil anderer Wörter sind (wie 'ant' in 'antwortet') schützen
-    keywords = ["game of life", "simulation", "ameisen", "raumzeit", "krümmung", "pong", "bienen", "bee", "piraten", "fischer", "spieltheorie", "sort", "neural", "netz", "training", "playground", "perceptron", "inferenz", "erkennung"]
-    if any(word in router_text for word in keywords):
+    lower = query.lower()
+    
+    # 1. Absolute Trigger: Diese lösen die Simulation IMMER aus
+    # (Sehr spezifische Begriffe oder expliziter Simulations-Wunsch)
+    core_sims = ["game of life", "simulation", "simulier", "visualisier", "pong", "raumzeit", "krümmung"]
+    if any(word in lower for word in core_sims):
         return True
-    # 'ant' separat mit Wortgrenzen prüfen
-    if re.search(r"\bant\b", router_text):
+    
+    # 2. Kontextuelle Trigger: Nur wenn das Thema UND ein Aktions-Verb vorkommen
+    topics = ["spieltheorie", "piraten", "fischer", "bienen", "bee", "sort", "neural", "netz", "training", "playground", "perceptron", "inferenz", "erkennung"]
+    action_keywords = ["zeig", "demo", "beispiel", "führ aus", "start", "open", "öffne", "visualisier"]
+    
+    if any(t in lower for t in topics) and any(a in lower for a in action_keywords):
         return True
+
+    # 3. 'ant' separat mit Wortgrenzen prüfen (nur wenn Simulation im Kontext steht)
+    if re.search(r"\bant\b", lower) and any(w in lower for w in ["sim", "visual", "zeig"]):
+        return True
+        
     return False
 
 def execute(query: str, context: dict = None) -> dict:
