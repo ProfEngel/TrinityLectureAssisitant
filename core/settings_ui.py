@@ -633,24 +633,17 @@ class SettingsWindow(QMainWindow):
 
         self.comfyui_url_edit = QLineEdit(comfyui_conf.get("server_url", ""))
         self.comfyui_url_edit.setPlaceholderText("z.B. http://100.122.13.123:8188")
-        self.comfyui_url_edit.setMinimumWidth(450)
-        comfy_form.addRow("Server URL:", self.comfyui_url_edit)
+        self.comfyui_url_edit.setMinimumWidth(380)
 
-        # self.comfyui_workflow_edit = QLineEdit(comfyui_conf.get("default_workflow", "Flux2_Klein_T2I_API.json"))
-        # self.comfyui_workflow_edit.setPlaceholderText("Flux2_Klein_T2I_API.json")
-        # comfy_form.addRow("Standard-Workflow:", self.comfyui_workflow_edit)
-
-        test_btn = QPushButton("🔗 Verbindung zum Server testen")
-        test_btn.setMinimumHeight(45)
-        test_btn.setMinimumWidth(300)
+        test_btn = QPushButton("🔗 Test")
+        test_btn.setMinimumHeight(40)
+        test_btn.setFixedWidth(120)
         test_btn.clicked.connect(self._test_comfyui_connection)
         
-        # In Container packen für Zentrierung
-        btn_container = QHBoxLayout()
-        btn_container.addStretch()
-        btn_container.addWidget(test_btn)
-        btn_container.addStretch()
-        comfy_form.addRow(btn_container)
+        url_layout = QHBoxLayout()
+        url_layout.addWidget(self.comfyui_url_edit)
+        url_layout.addWidget(test_btn)
+        comfy_form.addRow("Server URL:", url_layout)
 
         comfy_hint = QLabel(
             "Trinity wählt Workflows automatisch basierend auf deiner Anfrage aus.\n"
