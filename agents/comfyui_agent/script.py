@@ -237,6 +237,7 @@ def execute_i2i(query: str, input_image_path: str, context: dict = None) -> dict
         return {"has_payload": False, "html_payload": "", "search_context": ""}
 
     brain = context["brain"]
+    from_telegram = context.get("from_telegram", False)
     telegram_cfg = context.get("telegram_cfg", {})
 
     if not getattr(brain, "comfyui_enabled", False):
@@ -323,7 +324,7 @@ def execute_i2i(query: str, input_image_path: str, context: dict = None) -> dict
           f"Prompt: '{image_prompt}'. Das Ergebnis wurde an Telegram gesendet.\n\n")
 
     return {
-        "has_payload": True,
+        "has_payload": not from_telegram,
         "html_payload": html_payload,
         "search_context": sc
     }
@@ -868,6 +869,7 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
         return {"has_payload": False, "html_payload": "", "search_context": ""}
 
     brain = context["brain"]
+    from_telegram = context.get("from_telegram", False)
     telegram_cfg = context.get("telegram_cfg", {})
 
     if not getattr(brain, "comfyui_enabled", False):
@@ -953,7 +955,7 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
           f"Bestätige dem Nutzer kurz.\n\n")
 
     return {
-        "has_payload": True,
+        "has_payload": not from_telegram,
         "html_payload": html_payload,
         "search_context": sc
     }
