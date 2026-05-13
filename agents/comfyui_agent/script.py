@@ -66,11 +66,11 @@ LORA_NODE_I2I = "74"   # Power Lora Loader im I2I-Workflow
 # Format: keyword → Liste von {lora, strength, on}
 LORA_PRESETS: dict = {
     "sierra": [
-        {"lora": "flux2.9B\\sierra_F2_9B.safetensors",  "strength": 1.0, "on": True},
-        {"lora": "flux2.9B\\sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True},
+        {"lora": "flux2.9B/sierra_F2_9B.safetensors",  "strength": 1.0, "on": True},
+        {"lora": "flux2.9B/sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True},
     ],
     # Weitere Presets hier einfügen, z.B.:
-    # "snofs": [{"lora": "flux2.9B\\sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True}],
+    # "snofs": [{"lora": "flux2.9B/sns1.2_F2_9B.safetensors", "strength": 1.0, "on": True}],
 }
 
 

@@ -499,7 +499,7 @@
   },
   "109": {
     "inputs": {
-      "lora_name": "ltx2.3\\ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
+      "lora_name": "ltx2.3/ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
       "strength_model": 0.6,
       "model": [
         "108",

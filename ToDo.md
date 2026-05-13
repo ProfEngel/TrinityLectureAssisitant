@@ -2,6 +2,9 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.7.7] - 2026-05-13
+- [X] **Fix: Cross-Platform LoRA Paths**: Alle Backslashes in LoRA-Pfaden wurden durch Vorwärtsslashs ersetzt (Kompatibilität für Linux-Server).
+
 ## [v0.7.6] - 2026-05-13
 - [X] **Fix: LTX 2.3 Video Workflow**: Skript nutzt nun native Workflow-Defaults für Auflösung und Dauer.
 - [X] **Optimization: ComfyUI Input Injection**: Nur noch Prompt und Bild werden überschrieben, um Stabilität zu erhöhen.
