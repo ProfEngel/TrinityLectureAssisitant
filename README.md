@@ -12,7 +12,9 @@
 
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
-> **Aktuelles Release: v0.7.7 (Cross-Platform Path Fix)** 🧞‍♀️  
+> **Aktuelles Release:** 
+> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API.
+> - v0.7.7: Cross-Platform LoRA path fix. 🧞‍♀️  
 > Dieses Update behebt Pfad-Probleme bei LoRA-Adaptern auf Linux-Servern durch die Umstellung auf plattformübergreifende Vorwärtsslashs.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.

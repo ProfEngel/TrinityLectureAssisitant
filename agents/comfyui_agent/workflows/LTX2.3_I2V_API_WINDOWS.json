@@ -412,7 +412,7 @@
   },
   "45": {
     "inputs": {
-      "image": "Flux2.Klein_9b_T2I_00079_.png"
+      "image": "Flux2.Klein_9b_T2I_00012_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -612,7 +612,7 @@
   },
   "173": {
     "inputs": {
-      "value": "cinematic close-up shot of a cute beaver gnawing on a wooden log, wood chips flying, detailed fur texture, realistic eyes, forest background, soft natural sunlight filtering through trees, high detail, 8k, highly realistic, motion blur on the chewing action."
+      "value": "cinematic video still, the little tiger is roaring. soft lighting, high detail, 8k, fantasy style."
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {

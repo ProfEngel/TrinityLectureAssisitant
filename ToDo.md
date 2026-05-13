@@ -2,6 +2,9 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.7.8] - 2026-05-14
+- [X] **Feat: Verified Linux LTX 2.3 I2V Workflow**: API-Integration für I2V auf Linux-Systemen erfolgreich validiert.
+
 ## [v0.7.7] - 2026-05-13
 - [X] **Fix: Cross-Platform LoRA Paths**: Alle Backslashes in LoRA-Pfaden wurden durch Vorwärtsslashs ersetzt (Kompatibilität für Linux-Server).
 
