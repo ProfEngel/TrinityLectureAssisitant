@@ -12,8 +12,8 @@
 
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
-> **Aktuelles Release: v0.7.4 (Modern UI & Multi-LLM Power Update)** 🧞‍♀️  
-> Dieses Update bringt ein komplett neues Slate-Design für die Einstellungen, Unterstützung für drei LLM-Slots (zum schnellen Wechsel zwischen lokalen und remote Modellen) sowie eine aufgeräumte ComfyUI-Integration.
+> **Aktuelles Release: v0.7.5 (Deep Memory & Session Summarizer Update)** 🧞‍♀️  
+> Dieses Update aktiviert den Session-Summarizer-Agenten, ermöglicht die nachträgliche Zusammenfassung vergangener Sitzungen und verbessert die RAG-Indexierung für Sitzungsprotokolle.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
 

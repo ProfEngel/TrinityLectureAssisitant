@@ -87,7 +87,17 @@ def build_index():
     # 1.5. MDs (Summaries) aus memory/ finden
     md_files = []
     if os.path.exists(MEMORY_DIR):
-        md_files = [f for f in os.listdir(MEMORY_DIR) if f.lower().endswith('.md')]
+        # Scan root memory dir
+        for f in os.listdir(MEMORY_DIR):
+            if f.lower().endswith('.md'):
+                md_files.append(os.path.join(MEMORY_DIR, f))
+        
+        # Scan summaries sub-dir
+        summaries_dir = os.path.join(MEMORY_DIR, "summaries")
+        if os.path.exists(summaries_dir):
+            for f in os.listdir(summaries_dir):
+                if f.lower().endswith('.md'):
+                    md_files.append(os.path.join(summaries_dir, f))
 
     if not pdf_files and not md_files:
         print("❌ Keine PDFs im RAG-Ordner und keine MDs im memory-Ordner gefunden!")
@@ -108,8 +118,8 @@ def build_index():
         print(f"   → {len(pages)} Seiten, {total_chars:,} Zeichen, {len(chunks)} Chunks")
         
     # MDs verarbeiten
-    for fname in sorted(md_files):
-        path = os.path.join(MEMORY_DIR, fname)
+    for path in sorted(md_files):
+        fname = os.path.basename(path)
         source = fname.replace('.md', '')
         print(f"📝 Lese MD: {fname}...")
         pages = extract_text_from_md(path)

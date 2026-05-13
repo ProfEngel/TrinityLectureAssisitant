@@ -2,6 +2,12 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.7.5] - 2026-05-13
+- [X] **Feat: Session Summarizer Activation**: Agent ist nun voll funktionsfähig.
+- [X] **Feat: Deferred Summarization**: Unterstützung für "Zusammenfassung der letzten Session" (Büro-Workflow).
+- [X] **Feat: Editable UI Summary**: Zusammenfassungen im UI sind nun für Notizen editierbar.
+- [X] **Fix: RAG Indexing**: Sitzungsprotokolle in `memory/summaries/` werden nun zuverlässig indexiert.
+
 ## 0. Modularisierung & Skill-System (Architektur-Refactoring)
 
 Ziel: Umstellung von monolithischen Funktionen auf ein modulares Skill-System im `agents/`-Verzeichnis.
