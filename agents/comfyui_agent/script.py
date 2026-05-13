@@ -906,30 +906,22 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
     video_output_dir = os.path.join(MEDIA_OUTPUT_DIR, "video")
     os.makedirs(video_output_dir, exist_ok=True)
 
-    # Bildabmessungen lokal auslesen
-    img_w, img_h = _get_image_dimensions(input_image_path)
-    if img_w == 0 or img_h == 0:
-        sc = "--- FEHLER ---\nKonnte Bildabmessungen nicht auslesen.\n\n"
+    # Workflow laden
+    workflow = _load_workflow(WORKFLOW_I2V)
+    if not workflow:
+        sc = f"--- FEHLER ---\nWorkflow '{WORKFLOW_I2V}' nicht gefunden.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
-
-    # 1.0x Auflösung (Original), auf 32 gerundet
-    target_w, target_h = _calc_video_resolution(img_w, img_h, scale=1.0)
-    
-    # Manuelle Auflösung aus Prompt priorisieren falls angegeben
-    manual_dims = _extract_dimensions(query)
-    if manual_dims:
-        target_w, target_h = manual_dims
-        print(f"📏 Manuelle Video-Auflösung erkannt: {target_w}x{target_h}")
-    else:
-        print(f"📐 Bild: {img_w}×{img_h} → Video: {target_w}×{target_h} (1.0x)")
 
     # Parameter via LLM extrahieren
     params = _extract_i2v_params(query, brain)
-    
-    # LTX-kompatible Dauer berechnen (8N+1 Frames bei 24 FPS)
-    params["duration_ltx"] = _calc_ltx_duration(params["duration"], fps=24.0)
-    
-    print(f"🎬 I2V: '{params['motion_prompt'][:60]}', {params['duration_ltx']:.3f}s (8N+1)")
+
+    # Defaults aus dem Workflow lesen für Telegram & UI
+    target_w = int(workflow.get(I2V_WIDTH_NODE, {}).get("inputs", {}).get("value", 1280))
+    target_h = int(workflow.get(I2V_HEIGHT_NODE, {}).get("inputs", {}).get("value", 1280))
+    wf_length = int(workflow.get(I2V_LENGTH_NODE, {}).get("inputs", {}).get("value", 7))
+    params["duration"] = wf_length # überschreibe LLM-Wert mit Workflow-Wert für UI
+
+    print(f"🎬 I2V: '{params['motion_prompt'][:60]}', Dauer aus Workflow: {wf_length}s")
 
     # Bild auf ComfyUI hochladen
     server_filename = _upload_image_to_comfyui(server_url, input_image_path)
@@ -939,14 +931,8 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
 
     print(f"📤 Server-Dateiname nach Upload: '{server_filename}'")
 
-    # Workflow laden und injizieren
-    workflow = _load_workflow(WORKFLOW_I2V)
-    if not workflow:
-        sc = f"--- FEHLER ---\nWorkflow '{WORKFLOW_I2V}' nicht gefunden.\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": sc}
-
     try:
-        workflow = _inject_i2v_inputs(workflow, server_filename, target_w, target_h, params)
+        workflow = _inject_i2v_inputs(workflow, server_filename, params)
     except ValueError as e:
         sc = f"--- FEHLER ---\n{e}\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
@@ -1103,8 +1089,7 @@ def _extract_i2v_params(query: str, brain) -> dict:
     }
 
 
-def _inject_i2v_inputs(workflow: dict, server_filename: str,
-                        width: int, height: int, params: dict) -> dict:
+def _inject_i2v_inputs(workflow: dict, server_filename: str, params: dict) -> dict:
     """
     Injiziert nur Eingabebild + Prompt in den LTX-2.3-Workflow.
     Auflösung, Frame-Anzahl und FPS bleiben unverändert (Workflow-Defaults
@@ -1127,29 +1112,6 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
     else:
         print(f"⚠️ I2V: Node {I2V_IMAGE_NODE} hat kein 'inputs'-Feld — Bild NICHT injiziert!")
 
-    # Node 66: Width — Auflösung injizieren damit das Bild nicht "kleiner gemacht" wird
-    w_node = wf.get(I2V_WIDTH_NODE, {})
-    if "inputs" in w_node:
-        w_node["inputs"]["value"] = width
-        wf[I2V_WIDTH_NODE] = w_node
-        print(f"💉 I2V Breite {width} → Node {I2V_WIDTH_NODE}")
-
-    # Node 67: Height
-    h_node = wf.get(I2V_HEIGHT_NODE, {})
-    if "inputs" in h_node:
-        h_node["inputs"]["value"] = height
-        wf[I2V_HEIGHT_NODE] = h_node
-        print(f"💉 I2V Höhe {height} → Node {I2V_HEIGHT_NODE}")
-
-    # Node 68: Duration (Sekunden)
-    # Wir injizieren den berechneten Float-Wert für 8N+1 Frames
-    duration_val = params.get("duration_ltx", params.get("duration", 7.0))
-    l_node = wf.get(I2V_LENGTH_NODE, {})
-    if "inputs" in l_node:
-        l_node["inputs"]["value"] = duration_val
-        wf[I2V_LENGTH_NODE] = l_node
-        print(f"💉 I2V Dauer {duration_val:.4f}s → Node {I2V_LENGTH_NODE}")
-
     # Node 173: Positive Prompt — Bewegungsbeschreibung injizieren
     p_node = wf.get(I2V_PROMPT_NODE, {})
     if "inputs" in p_node:
@@ -1160,7 +1122,6 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str,
         wf[I2V_PROMPT_NODE] = p_node
         print(f"💉 I2V Prompt → Node {I2V_PROMPT_NODE}: '{prompt_val[:60]}'")
 
-    # Auflösung und Länge werden NICHT verändert — Workflow-Defaults bleiben erhalten
     print(f"ℹ️  I2V: Größe + Dauer aus Workflow-JSON übernommen (kein Override).")
 
     return wf

@@ -412,7 +412,7 @@
   },
   "45": {
     "inputs": {
-      "image": "Flux2.Klein_9b_T2I_00008_.png"
+      "image": "Flux2.Klein_9b_T2I_00012_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -612,7 +612,7 @@
   },
   "173": {
     "inputs": {
-      "value": "cinematic video still, a friendly translucent ghost jumping rope, joyful expression, bubbling laughter, mouth open, jumping rope motion, ethereal glowing body, whimsical atmosphere, magical particles, soft lighting, high detail, 8k, fantasy style."
+      "value": "cinematic video still, the little tiger is roaring. soft lighting, high detail, 8k, fantasy style."
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
