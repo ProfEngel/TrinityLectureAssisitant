@@ -13,12 +13,10 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API.
+> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API. (Next: v0.7.8.0.1 - New Versioning & Office Mode).
 > - v0.7.7: Cross-Platform LoRA path fix. 🧞‍♀️  
-> Dieses Update behebt Pfad-Probleme bei LoRA-Adaptern auf Linux-Servern durch die Umstellung auf plattformübergreifende Vorwärtsslashs.
 
 Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
-
 
 ---
 
@@ -36,34 +34,40 @@ Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizub
 *   **Proaktiver Begleiter (Telegram-DM):** Trinity analysiert deine Vorlesung live im Hintergrund. Fällt ihr ein logischer Fehler auf, zeigt sie im UI eine rote "Bubble". Arbeitest du im Vollbildmodus am Beamer? Kein Problem, die Telegram-Bridge sendet dir Trinitys Anmerkungen lautlos als Direktnachricht aufs Smartphone.
 *   **Deep Memory (RAG Automation):** Am Ende einer Vorlesung generiert Trinity ein Summary. Damit das Wissen nicht verloren geht, fügt sie diese Zusammenfassungen ab sofort automatisch in ihr Langzeitgedächtnis (RAG-Index) ein. So weiß sie nächste Woche noch genau, worüber gesprochen wurde.
 *   **Natürliche Interaktion:** Trinity hört aktiv zu und erkennt ihr Wake-Word egal ob am Anfang (*"Trinity, was ist..."*) oder am Ende (*"... findest du nicht auch, Trinity?"*) des Satzes. Sie nutzt den vollen Kontext davor und danach.
-*   **Fenster-Management:** Alle eingeblendeten Fenster sind frei verschiebbar und können per Mausklick geschlossen werden – ideal für Multi-Monitor-Setups im Hörsaal.
+*   **Duale Modi (Lecture vs. Office Mode):** Trinity passt ihr Verhalten dem Kontext an. Im **Lecture Mode** agiert sie als rhetorische Unterstützung, im **Office Mode** als produktiver Begleiter (Mails, Recherche, Unterlagen-Erstellung).
+*   **Fenster-Management:** Alle Fenster sind frei verschiebbar – ideal für Multi-Monitor-Setups.
 
 Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (RAG), dem World Wide Web und der visuellen Vermittlung im Hörsaal.
 
 ---
 
-## Bedienung & Modulares Skill-System (Die Agenten)
-
-Trinitys Logik wurde vollständig in **unabhängige Agent-Skills** ausgelagert. Hier die Mega-Features im Überblick:
-
-| Skill | Befehl / Trigger | Aktion |
-|---|---|---|
-| **Freie Konversation** | *„Trinity, [Frage]"* | Max. 1-2 Sätze Antwort (siehe `Soul.md`). Für mehr Infos: *„Erkläre ausführlich…"* |
-| **RAG-Agent** | *„Trinity, schlag im Skript nach …"* | RAG-Suche in den eigenen Vorlesungs-PDFs und automatischen Session-Summaries. |
-| **WebSearch-Agent** | *„Trinity, recherchiere …"* | Live Web-Suche via Tavily. |
-| **Image-Agent** | *„Trinity, erstelle ein Schaubild …"* | Bildgenerierung (einfache Infografiken) via fal.ai. |
-| **Maps-Agent** | *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI. |
-| **Timer-Agent** | *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI. |
-| **Stock-Agent** | *„Trinity, wie steht der Aktienkurs von Apple?"* | Live-Kurs und SVG-Chart im UI. |
-| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive, responsive Simulationen (Bienen, Piraten vs. Fischer, etc.). |
-| **Summary-Agent** | *„Trinity, Session beenden und zusammenfassen"* | Sitzungs-Zusammenfassung erstellen und automatisch ins Deep Memory indexieren. |
-| **PowerPoint-Agent** | *„Trinity, nächste Folie"* | Steuert PowerPoint nativ via AppleScript. |
-| **Souffleur-Skill** | *„Trinity, wiederhole das für das Plenum"* | Dynamisches Audio-Routing auf externe Lautsprecher für die Studierenden. |
-| **Heartbeat (Proaktiv)** | *Hintergrundprozess (alle 2 Min)* | Analysiert Sitzungs-Transkripte auf Fehler und sendet Warnungen via UI-Bubbles oder Telegram-Bridge. |
-| **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
-| **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus ohne explizites Trigger-Wort. |
-| **ComfyUI-Agent** | *„Trinity, flux render …"* / *„… schreib einen Song"* | Generiert lokal Bilder, Musik oder Videos (via LTX/AceStep) und zeigt/spielt sie ab. |
-| **Settings-Agent** | *„Trinity, öffne Einstellungen"* | Öffnet das Konfigurations-UI auf dem Desktop. |
+## 🚀 Das Agenten-System (Lecturer Companion)
+ 
+ Trinity (geplant als *Lecturer Companion*) ist vollständig in **unabhängige Agent-Skills** unterteilt:
+ 
+ | Agent | Modus | Kernfunktion |
+ |---|---|---|
+ | **Office Mode** | *Office* | **NEU:** Fokus auf Mail-Drafts, Kalender & produktiven Support. |
+ | **Lecture Mode** | *Lecture* | Fokus auf Plenum-Interaktion, Souffleur-Routing & Visuals. |
+ | **RAG-Agent** | *Beide* | Suche in Vorlesungs-PDFs, Mails & Session-Summaries. |
+ | **WebSearch-Agent** | *Beide* | Echtzeit-Websuche via Tavily. |
+ | **Image-Agent** | *Lecture* | Bildgenerierung (Infografiken/Skizzen) via fal.ai. |
+ | **Simulation-Agent** | *Lecture* | Interaktive Simulationen (Bienen, Sortierung, NNs). |
+ | **PowerPoint-Agent** | *Lecture* | Native Steuerung von MS PowerPoint via AppleScript. |
+ | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
+ | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
+ | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
+ 
+ ---
+ 
+ ## ✨ Highlights & Besonderheiten
+ 
+ *   **AirPod Souffleur:** Private Informationen direkt ins Ohr, Umschalten auf Plenum-Speaker auf Befehl.
+ *   **Proaktiver Heartbeat:** Analyse des Transkripts alle 2 Min. mit Warnungen vor logischen Fehlern.
+ *   **Document Intelligence:** Lokale Dateien (Thesen, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
+ *   **Dynamic Progress Ring:** Kreisförmige Fortschrittsanzeige (Orange: Reading, Rot: Analyzing) um den Avatar.
+ *   **User Telemetry:** Tracking der Zeit in Vorlesungen, Teams-Sitzungen und Mail-Bearbeitung (analog Bildschirmzeit).
+ *   **Local First & DSGVO:** Maximale Privatsphäre durch lokale Verarbeitung und gezieltes STT-Mikrofon.
 
 ---
 
@@ -108,303 +112,42 @@ Trinity_Assistant/
 
 ---
 
-## 🚀 Onboarding – Schritt für Schritt
+## 🚀 Onboarding & Installation
 
-> Keine Sorge, wenn du kein Technik-Profi bist. Diese Anleitung führt dich durch alles, was du brauchst.
+Trinity läuft lokal auf deinem Mac (Apple Silicon). Du brauchst ein KI-Sprachmodell (via OpenRouter oder lokal via LM Studio/Ollama) sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
 
----
-
-### Schritt 1: Was du brauchst (Übersicht)
-
-Trinity läuft lokal auf deinem Mac. Du brauchst drei Dinge:
-
-| Was | Wozu | Pflicht? |
-|---|---|---|
-| **Ein KI-Sprachmodell (LLM)** | Trinitys „Gehirn" – sie denkt damit | ✅ Ja |
-| **Tavily API-Key** | Damit Trinity live im Internet suchen kann | ⬜ Optional |
-| **fal.ai API-Key** | Damit Trinity Schaubilder erzeugen kann | ⬜ Optional |
-
----
-
-### Schritt 2: Das richtige LLM wählen
-
-Trinity braucht ein „Gehirn" – ein sogenanntes **Large Language Model (LLM)**. Das ist die KI, die deine Fragen versteht und antwortet. Du hast zwei Wege:
-
-#### 🌐 Weg A: OpenRouter (Empfohlen – ideal für ≤ 16 GB RAM)
-
-OpenRouter ist ein Online-Dienst, der dir Zugang zu leistungsstarken KI-Modellen gibt, **ohne dass du etwas lokal installieren musst**. Du zahlst nur für das, was du nutzt (oft wenige Cent pro Stunde Vorlesung).
-
-1. Gehe auf [openrouter.ai](https://openrouter.ai) und erstelle ein kostenloses Konto.
-2. Klicke oben rechts auf deinen Namen → **„API Keys"** → **„Create Key"**.
-3. Kopiere den Key (sieht aus wie `sk-or-v1-abc123...`). Du brauchst ihn gleich.
-4. **Welches Modell?** Wir empfehlen für den Einstieg:
-   - **`deepseek/deepseek-chat-v3-0324`** – sehr günstig, schnell, sehr gut auf Deutsch
-   - **`google/gemini-flash-1.5`** – ebenfalls günstig und schnell
-   - **`anthropic/claude-3.5-haiku`** – etwas teurer, aber sehr präzise
-
-> 💡 **Was kostet das?** Eine 90-minütige Vorlesung mit `deepseek-chat` kostet ca. 1–5 Cent.
-
-#### 💻 Weg B: Lokales LLM (Für Macs mit ≥ 16 GB RAM)
-
-Wenn du kein Geld ausgeben willst und einen leistungsstarken Mac (M2/M3/M4 mit ≥ 16 GB) hast, kannst du ein KI-Modell **komplett lokal** betreiben. Dein Gespräch verlässt dann deinen Computer nie.
-
-**Option B1: LM Studio** (Empfohlen für Einsteiger)
-1. Lade [LM Studio](https://lmstudio.ai) herunter und installiere es.
-2. Suche im Suchfeld nach `Qwen3` und lade das Modell `Qwen3-8B` (ca. 5 GB) herunter.
-3. Starte das Modell und klicke auf **„Local Server"** → **„Start Server"**.
-4. Die lokale URL lautet: `http://localhost:1234/v1/chat/completions`
-
-**Option B2: Ollama** (für Technik-Affinere)
-```bash
-brew install ollama
-ollama pull qwen3:8b
-ollama serve
-```
-
-> ⚠️ **Wichtig:** Bei weniger als 16 GB RAM läuft ein lokales Modell sehr langsam. In diesem Fall ist **Weg A (OpenRouter) die deutlich bessere Wahl**.
-
----
-
-### Schritt 3: Optionale API-Keys besorgen
-
-Diese Keys sind **nicht nötig zum Starten**, erweitern aber Trinitys Fähigkeiten erheblich.
-
-#### 🔍 Tavily (Web-Suche)
-Damit Trinity live Fakten recherchieren kann (z.B. *„Trinity, such die aktuellen KI-News"*).
-1. Gehe auf [tavily.com](https://tavily.com) → **"Get API Key"** (kostenloser Plan verfügbar).
-2. Kopiere deinen Key (sieht aus wie `tvly-abc123...`).
-
-#### 🎨 fal.ai (Schaubilder)
-Damit Trinity auf Zuruf Infografiken und Visualisierungen erzeugen kann.
-1. Gehe auf [fal.ai](https://fal.ai) → Registrieren → **Dashboard → API Keys → "Add key"**.
-2. Kopiere deinen Key (sieht aus wie `fal-key-abc123...`).
-
-#### 📱 Telegram-Bridge (Proaktive Benachrichtigungen)
-Damit Trinity dir bei Full-Screen-Präsentationen lautlos Warnungen und Ratschläge via Heartbeat-Souffleur aufs Handy pushen kann.
-1. Öffne die Telegram-App und suche nach **`@BotFather`** (dem offiziellen Bot mit blauem Haken).
-2. Schreibe ihm `/newbot` und folge den Anweisungen. Gib deinem Bot einen Namen (z.B. *Trinity_DeinName_Bot*).
-3. BotFather gibt dir am Ende einen **Bot-Token** (sieht etwa so aus: `123456789:ABCdefGHIjkl...`). Kopiere diesen für die Trinity-Einstellungen.
-4. **WICHTIG:** Suche deinen neuen Bot jetzt selbst in Telegram und klicke auf **Starten** (oder schreibe `/start`), damit er dir Nachrichten schicken darf.
-5. Um deine persönliche **Chat-ID** zu bekommen, suche in Telegram nach **`@userinfobot`** und starte ihn. Er antwortet dir direkt mit deiner ID (z.B. `123456789`). Trage auch diese in die Trinity-Einstellungen ein.
-
----
-
-### Schritt 4: Installation
-
-> **Was ist eine „Sandbox" (venv)?**  
-> Das Installationsskript erstellt eine sogenannte **virtuelle Umgebung** (englisch: *virtual environment* oder kurz *venv*). Das ist wie ein abgeschlossener Container auf deinem Computer. Alle Python-Pakete für Trinity werden nur dort installiert – sie verändern nichts an deinem restlichen System und können jederzeit durch einfaches Löschen des Ordners rückstandslos entfernt werden. Dein Mac bleibt sauber.
-
-**Öffne das Terminal** (Spotlight: `⌘ + Leertaste` → "Terminal" eingeben) und führe diesen Befehl aus:
+**Schnell-Installation:**
+Öffne das Terminal und führe diesen Befehl aus:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 ```
 
-Das Skript macht automatisch folgendes:
-- ✅ Lädt Trinity herunter
-- ✅ Erstellt die isolierte Sandbox (venv) in `~/Trinity_Assistant/`
-- ✅ Installiert alle nötigen Pakete darin (dauert ca. 2–5 Minuten)
-- ✅ Legt eine Datei **`Starte_Trinity.command`** auf deinem Desktop ab
-
-**Nach der Installation:** Doppelklick auf `Starte_Trinity.command` – Trinity startet. ✅
-
-> 📁 **Wo ist Trinity installiert?**  
-> Trinity liegt nach der Installation in deinem Benutzerordner unter:  
-> **`/Users/DEINNAME/Trinity_Assistant/`**  
-> (oder kurz: **`~/Trinity_Assistant/`**)  
->  
-> Die wichtigsten Unterordner auf einen Blick:  
-> | Ordner / Datei | Inhalt |  
-> |---|---|  
-> | `core/config.json` | Deine API-Keys & LLM-Einstellungen |  
-> | `core/Soul.md` | Trinitys Persönlichkeit (anpassbar) |  
-> | `core/User.md` | Dein Nutzerprofil (anpassbar) |  
-> | `RAG/` | Hier PDFs ablegen für die Wissensbasis |  
-> | `memory/` | Transkripte & Session-Zusammenfassungen |  
-> | `gen_images/` | Alle von Trinity erzeugten Schaubilder |  
-> | `agents/` | Die einzelnen Skills (erweiterbar) |
-
----
-
-### Schritt 5: Einrichten (API-Keys eintragen)
-
-Beim ersten Start siehst du das Trinity-Avatar-Icon auf deinem Bildschirm. Sage:
-
-> *„Trinity, öffne Einstellungen"*
-
-Ein Fenster öffnet sich. Trage dort ein:
-- Dein **LLM** (OpenRouter URL + Key, oder lokale LM-Studio-URL)
-- Optional: **Tavily Key** für Web-Suche
-- Optional: **fal.ai Key** für Bildgenerierung
-
-Speichern – fertig! 🎉
-
----
-
-### Manuelle Installation (Für Entwickler)
-
-```bash
-# Python 3.11 empfohlen
-pip install faster-whisper sounddevice numpy requests PySide6 \
-            sentence-transformers pyobjc-framework-Speech \
-            pyobjc-framework-AVFoundation
-
-# Starten
-python3 trinity_launcher.py
-```
-
----
-
-## 🔄 Updates – Konfigurationen bleiben erhalten
-
-> [!IMPORTANT]
-> Das Update-Skript bewahrt automatisch alle deine persönlichen Einstellungen. Du verlierst **keine** API-Keys, Persona-Dateien oder Transkripte.
-
-Wenn eine neue Version von Trinity erscheint, reicht es, denselben Installationsbefehl wie bei der Erstinstallation erneut auszuführen:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
-```
-
-Das Skript erkennt automatisch, dass Trinity bereits installiert ist, und geht in den **Update-Modus**. Es passiert folgendes:
-
-1. **Sichern:** Alle deine Dateien werden kurz in ein temporäres Backup kopiert:
-   - ✅ `core/config.json` – deine API-Keys & LLM-Einstellungen
-   - ✅ `core/Soul.md` – Trinitys Persönlichkeit (deine Anpassungen)
-   - ✅ `core/User.md` – dein Nutzerprofil
-   - ✅ `memory/` – alle bisherigen Sitzungs-Transkripte
-   - ✅ `RAG/` – deine hochgeladene Wissensbasis (PDFs & Index)
-   - ✅ `gen_images/` – alle erzeugten Schaubilder
-
-2. **Aktualisieren:** Die neue Trinity-Version wird heruntergeladen.
-
-3. **Wiederherstellen:** Alle gesicherten Dateien kommen automatisch zurück an ihren Platz.
-
-4. **Fertig:** Das temporäre Backup wird gelöscht. Nichts wurde dauerhaft verändert.
-
-> 💡 **Tipp:** Du musst nach einem Update **nichts neu einrichten**. Trinity startet direkt mit deinen bisherigen Einstellungen.
-
----
-
-## Bedienung & Modulares Skill-System
-
-Trinitys Logik wurde vollständig in **11 unabhängige Agent-Skills** (`agents/`) ausgelagert. Hier die wichtigsten Funktionen:
-
-| Skill | Befehl / Trigger | Aktion |
-|---|---|---|
-| **Freie Konversation** | *„Trinity, [Frage]"* | Max. 1-2 Sätze Antwort (siehe `Soul.md`). Für mehr Infos: *„Erkläre ausführlich…"* |
-| **RAG-Agent** | *„Trinity, schlag im Skript nach …"* | RAG-Suche in den eigenen Vorlesungs-PDFs. |
-| **WebSearch-Agent** | *„Trinity, recherchiere …"* | Live Web-Suche via Tavily. |
-| **Image-Agent** | *„Trinity, erstelle ein Schaubild …"* | Bildgenerierung (einfache Infografiken) via fal.ai. |
-| **Maps-Agent** | *„Trinity, zeig mir eine Karte von …"* | Google Maps im UI. |
-| **Timer-Agent** | *„Trinity, starte einen Timer für X Minuten"* | Countdown im UI. |
-| **Stock-Agent** | *„Trinity, wie steht der Aktienkurs von Apple?"* | Live-Kurs und SVG-Chart im UI. |
-| **Simulation-Agent** | *„Trinity, zeig Conway's Game of Life"* | Startet interaktive, responsive Simulationen (Bienen, Piraten vs. Fischer, etc.). |
-| **Summary-Agent** | *„Trinity, Big Picture"* | Sitzungs-Zusammenfassung erstellen. |
-| **PowerPoint-Agent** | *„Trinity, nächste Folie"* | Steuert PowerPoint nativ via AppleScript. |
-| **Focus-Agent** | *„Trinity, hör kurz weg"* / *„Weiter geht's"* | Stummschalten & Reaktivieren. |
-| **Review-Agent** | *„Trinity, Zusammenfassung der letzten Vorlesung"* | Liest das letzte Summary vor. |
-| **Chat Mode-Agent**| *„Trinity, lass uns quatschen"* | Wechselt in den natürlichen Konversationsmodus. |
-| **Souffleur-Skill** | *„Trinity, wiederhole das für das Plenum"* | Dynamisches Audio-Routing auf externe Lautsprecher für die Studierenden. |
-| **Heartbeat (Proaktiv)** | *Hintergrundprozess (alle 2 Min)* | Analysiert Sitzungs-Transkripte auf Fehler und zeigt Ampel-Bubbles im UI. |
-| **Settings-Agent** | *„Trinity, öffne Einstellungen"* | Öffnet das Konfigurations-UI auf dem Desktop. |
+Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
 
 ---
 
 ## 🔒 Datenschutz & DSGVO-Konformität
 
-Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert.
-Da die Spracheingabe **exklusiv über ein einzelnes Apple AirPod** erfolgt, ist der Aufnahmeradius des Mikrofons auf ca. 20 cm um den Dozenten beschränkt. **Es werden keine Stimmen, Zwischenrufe oder Fragen der Studierenden im Saal aufgezeichnet.** Alle lokalen Mitschnitte und Transkripte (`memory/`) enthalten somit ausschließlich die Stimme des Dozenten.
+Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da die Spracheingabe **exklusiv über ein einzelnes Apple AirPod** erfolgt, ist der Aufnahmeradius des Mikrofons auf ca. 20 cm um den Dozenten beschränkt. **Es werden keine Stimmen der Studierenden aufgezeichnet.**
 
 ---
 
-## Konfiguration (`core/config.json` & `core/Soul.md`)
-
-Trinity ist hochgradig anpassbar:
-1. **API Keys & LLM (`core/config.json`):** Trage hier deine Keys (OpenRouter, Fal.ai) und Modelle ein. Noch einfacher geht es über das UI: `python3 projects/Trinity_Assistant/core/settings_ui.py`.
-2. **Persönlichkeit (`core/Soul.md`):** Bestimmt Trinitys Verhalten. Hier ist fest verankert, dass sie nur extrem kurz antwortet (max. 1-2 Sätze), es sei denn, du forderst explizit eine längere Antwort an.
-
-**STT-Modell wechseln** (in `config.json`):
-- `tiny` → ~0.3s, schwächstes Deutsch
-- `small` → ~0.8s, gut ✅ **(Standard)**
-- `medium` → ~2s, besser für Akzente
-
----
-
-## Latenz-Tuning
-
-| Hebel | Einstellung | Effekt |
-|---|---|---|
-| `max_tokens` in brain.py | 250 (Standard) | Kürzer → schneller |
-| `chunk_duration` in config.json | 6s | Kleiner = reaktiver, aber mehr False-Triggers |
-| `silence_threshold` | 0.015 | Mikrofon-abhängig, ggf. anpassen |
-| LLM `thinking` | aus | Kein /think-Modus bei Qwen3 |
-
----
-
-## RAG – neue Wissensquellen hinzufügen
-
-Einfach PDF in `RAG/` legen → beim nächsten Start wird der Index automatisch neu gebaut.
-
-Manuell neu bauen:
-```bash
-python3 projects/Trinity_Assistant/RAG/build_index.py
-```
-
----
-
-## 🗺️ Roadmap & Nächste Schritte
-
-Trinity wird stetig weiterentwickelt. Die nächsten Meilensteine umfassen:
-
-### Phase 3: Proaktiver Agentic Companion (Mai 2026)
-*   **Heartbeat-System:** Kontinuierliche Analyse des Vorlesungsverlaufs (alle 2 Min.) auf Fehler oder alternative Perspektiven.
-*   **UI-Bubbles:** Interaktive Benachrichtigungs-Bubbles (Gelb/Rot/Grün) über dem Avatar für lautlose Hinweise.
-*   **System-Control:** Sprachsteuerung für Bildschirm-Setups (Mirror/Extended Mode) und Fenster-Management.
-*   **Telegram-Bridge:** Direkte Verbindung zum Smartphone für proaktive Impulse bei Single-Monitor-Setups.
-
-### Phase 4: Cognitive Evolution & Dreaming (Q3 2026)
-*   **Dreaming-Funktion:** Hintergrund-Verarbeitung und "Reflektion" über vergangene Sessions zur Vorbereitung neuer Inhalte.
-*   **Deep Memory:** Automatisierte RAG-Integration aller Session-Summaries für ein perfektes Langzeitgedächtnis.
-*   **Accent-Correction:** Intelligente Bereinigung von Transkriptionsfehlern (verursacht durch Dialekte/Akzente) während der Ruhephasen.
-*   **Native App:** Standalone macOS App & iPad-Begleit-App für den Hörsaal.
+#### 🗺️ Roadmap: Der Weg zu v1.0
+ 
+ *   **Office Mode Integration (Q2 2026):** Lokale Mail-Drafts, AppleScript-Anbindung für Teams/Kalender & Writing Sample RAG.
+ *   **Document Intelligence (Q2 2026):** Drag & Drop Support für Thesen und Excel-Auswertungen inkl. Korrektur-Agenten.
+ *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
+ *   **Cognitive Evolution (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion und Fallback-LLM Resilienz.
+ *   **Native App:** Transformation in eine Standalone macOS App.
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
-
----
-
-*Entwickelt von Mathias Engel, Zoe Engel und Eve · Trinity ist bereit.* 🧞‍♀️
 
 ---
 
 ## Lizenz 📜
 
 Dieses Projekt steht unter der **Apache License 2.0**.
-
-**Nutzungsrechte:**
-- ✅ **Private Nutzung**: Komplett kostenlos
-- ✅ **Bildungseinrichtungen**: Kostenlos für Forschung und Lehre
-- ✅ **Kommerzielle Nutzung**: Kostenlos
-
-Bei kommerziellem Einsatz bitten wir freundlich darum, über den [GitHub Sponsor](https://github.com/sponsors/ProfEngel)-Link den erbrachten Mehrwert zu würdigen!
-
-Die vollständigen Lizenzbedingungen befinden sich in der [LICENSE](LICENSE)-Datei.
-
----
-
-## Danksagungen 🙏
-
-Trinity wäre ohne diese exzellenten Open-Source-Projekte nicht möglich:
-
-**Core-Frameworks:**
-- [faster-whisper](https://github.com/guillaumekln/faster-whisper) – Schnelle, effiziente Spracherkennung (STT)
-- [LM Studio](https://lmstudio.ai) / [Ollama](https://ollama.com) – Flexible lokale LLM-Infrastruktur
-- [PySide6](https://doc.qt.io/qtforpython-6/) – Leistungsstarkes, natives macOS-UI
-- [sentence-transformers](https://www.sbert.net) – Hochwertige Embeddings für das RAG-System
-- [fal.ai](https://fal.ai) – Blitzschnelle KI-Bildgenerierung
-- [Tavily](https://tavily.com) – Zuverlässige Echtzeit-Web-Recherche
-
-**Danke an die gesamte Open-Source-Community!** 🎉
 
 ---
 
@@ -424,36 +167,24 @@ Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
 
 ---
 
-## Support 💬
-
-Hast du Fragen, Anregungen oder benötigst Unterstützung?
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/ProfEngel/TrinityLectureAssisitant/issues)
-- 💬 **Diskussionen**: [GitHub Discussions](https://github.com/ProfEngel/TrinityLectureAssisitant/discussions)
-- 🎓 **Akademische Zusammenarbeit**: [research@opentuneweaver.com](mailto:research@opentuneweaver.com)
-
----
-
-**Erstellt von Mathias Engel & Zoe Engel 2024–2025** – Lass uns Trinity gemeinsam noch besser machen! 💪
-
-_Made with ❤️ in Stuttgart / Nürtingen, Germany_
+_Made with ❤️ in Stuttgart / Nürtingen, Germany by Mathias Engel & Zoe Engel (2024–2025)_
+_Trinity ist bereit._ 🧞‍♀️
 
 ---
 
 ## Über das Projekt
 
-KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agentic-Skill-System und lokaler RAG-Wissensbasis.
-
-**Prof. Dr. Mathias Engel – ProfEngel**
-
-Ein privates Projekt – entwickelt von Mathias & Zoe Engel mit und für Eve. 🧞‍♀️
+KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agentic-Skill-System und lokaler RAG-Wissensbasis. Ein privates Forschungsprojekt mit und für Eve. 🧞‍♀️
 
 ---
 
-## 🤝 Offen für Beiträge
+## 🤝 Support & Beiträge
 
-Beiträge sind herzlich willkommen!  
-Wenn du Ideen, Verbesserungen oder Fehlerberichte hast, öffne gerne ein **Issue** oder einen **Pull Request**.
+Beiträge sind herzlich willkommen! Wenn du Ideen, Verbesserungen oder Fehlerberichte hast, öffne gerne ein **Issue** oder einen **Pull Request**.
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/ProfEngel/TrinityLectureAssisitant/issues)
+- 💬 **Diskussionen**: [GitHub Discussions](https://github.com/ProfEngel/TrinityLectureAssisitant/discussions)
+- 🎓 **Forschung**: [research@opentuneweaver.com](mailto:research@opentuneweaver.com)
 
 ## Star History
 
@@ -464,7 +195,3 @@ Wenn du Ideen, Verbesserungen oder Fehlerberichte hast, öffne gerne ein **Issue
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ProfEngel/TrinityLectureAssisitant&type=Date" />
   </picture>
 </a>
-
-### Topics
-
-`voice-assistant` `llm` `ai` `macos` `apple-silicon` `lecture-assistant` `rag` `speech-recognition` `tts` `pyside6` `agentic-ai` `educational-ai` `local-llm`

@@ -2,6 +2,10 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.7.8.0.1] - Next Update
+- [ ] **Release-Management Update**: Umstellung auf tieferes Versioning (0.x.x.x.x).
+- [ ] **Büro Modus (Base Phase)**: Initialisierung der Weiche zwischen "Vorlesung" und "Büro".
+
 ## [v0.7.8] - 2026-05-14
 - [X] **Feat: Verified Linux LTX 2.3 I2V Workflow**: API-Integration für I2V auf Linux-Systemen erfolgreich validiert.
 
@@ -58,7 +62,10 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [X] **Refined Angry Mode:** Sharp trapezoidal eyes, visor jitter/shake, and aggressive particles (sparks/fire).
   - [X] **State Persistence:** Automatic revert to idle after 5 seconds.
 - [X] **Interrupt-Handling:** Sofortiger Stopp der Sprachausgabe bei Unterbrechung (Wake-Word Terminate).
-- [X] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen (via Rolling-Chunk-Context implementiert).
+- [ ] **Dynamic Progress Indicators (Ring-UI):**
+  - [ ] Kreisförmige Fortschrittsanzeige um den Avatar.
+  - [ ] **Farbcodes:** Orange für Einlesen/Parsing (0-100%), Rot für Analyse/Denken.
+- [ ] **Kontext-Gedächtnis:** Kurzzeitgedächtnis für die letzten 5-10 Interaktionen (via Rolling-Chunk-Context implementiert).
 
 
 ## 4. Zukünftige Features & Ideen (Phase 3: Cognitive & System Evolution)
@@ -94,14 +101,46 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
 - [ ] **Onboarding & UX:**
   - [ ] Tutorial für Erstbenutzer erstellen.
+  - [ ] **Naming Refactoring:** Prüfung des Namens "Lecturer Companion" als Alternative/Zusatz zu Trinity.
+  - [ ] **Global Session Control:** Sessions direkt aus der UI beenden und neu starten, ohne den Prozess killen zu müssen.
+- [ ] **LLM Resilience:**
+  - [ ] Implementierung von Fallback-LLMs (z.B. Wechsel zu OpenRouter, wenn lokales Modell hakt).
+- [ ] **User Telemetry (Dashboard):**
+  - [ ] Tracking der Nutzung analog zu Apples Bildschirmzeit.
+  - [ ] Auswertung: Stunden/Minuten in Vorlesungen (Lecture Mode), Teams-Sitzungen, Email-Bearbeitung pro Woche.
+
 - [x] **Simulation Engine Updates:**
   - [x] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
   - [x] Fehlende Simulationen (Bubble Sort, Neuronales Netz) implementiert und `skill.md` aktualisiert.
 - [x] **ComfyUI Media Integration (Local Generation):**
   - [x] **T2I/I2I:** Lokale Bildgenerierung via Flux2 (9b klein) für Schaubilder und Bearbeitungen.
   - [x] **T2A (Music):** Komplette Song-Generierung via AceStep 1.5 inkl. Stil/Lyrics-Extraktion.
-  - [x] **I2V (Video):** Erstellung von Kurzvideos aus Bildern via LTX 2.3 mit automatischer Skalierung.
+  - [x] **I2V (Video):** Erstellung von Kurzvideos aus Bildern via LTX 2.3 mit automatischer Skalierung. (Note: Aktuell Probleme bei der Einbindung, Prio niedrig).
   - [x] **Telegram/UI Dispatch:** Nahtlose Integration in die Telegram-Bridge und UI-Payloads.
+
+## 5. Büro Modus (Office Companion)
+
+Ziel: Trinity als Support-System im Büro-Alltag (Umschaltbar via Sprachbefehl/Whisper).
+
+- [ ] **Modus-Weiche:** Manueller Wechsel zwischen "Vorlesung" (Lehre) und "Büro" (Support).
+  - **Vorlesung:** Fokus auf Plenum-Interaktion, Souffleur-Routing, Schaubilder.
+  - **Büro:** Fokus auf direkte Reaktion, keine langen "Vorträge", interaktive Klärung von Sachverhalten.
+- [ ] **Email-Assistent (Local Integration):**
+  - [ ] **Lese-Zugriff:** Auslesen lokaler Mails (macOS Mail App via AppleScript/Lokaler Scan).
+  - [ ] **Writing Sample RAG:** Analyse alter Mail-Antworten als Stil-Vorlage (Schreibprobe).
+  - [ ] **Drafting:** Erstellen von Mail-Entwürfen im eigenen Stil basierend auf RAG-Kontext.
+- [ ] **Lecture Prep Support:** Unterstützung beim Erarbeiten von Unterlagen für die Vorlesung.
+- [ ] **Office-Heartbeat (Proaktiv):**
+  - [ ] Intervall-Abruf von Mails, Kalender-Events und Teams-Nachrichten (Lokal/AppleScript).
+  - [ ] Benachrichtigung via UI-Bubbles oder Telegram.
+- [ ] **File-Drop & Document Intelligence:**
+  - [ ] **Drag & Drop UI:** Lokale Dateien (PDF, Word, Excel) einfach auf das Trinity-Icon "plumpsen" lassen.
+  - [ ] **Document Parsing:** Einlesen und Interpretieren von Thesen, Seminararbeiten und Excel-Auswertungen.
+  - [ ] **Specialized Agents (Begutachtung):** Dedizierte Agenten für die Korrektur/Begutachtung von Seminararbeiten.
+  - [ ] **Storage & Display:** Ergebnisse (Reviews/Notes) speichern und nach Abschluss im UI anzeigen.
+- [ ] **Deep Office RAG:**
+  - [ ] Eigenes RAG-System für das Mail-Postfach.
+  - [ ] Ordner-Integration: Automatischer Zugriff und Indexierung von "Lehre"- und "Thesen"-Ordnern.
 
 ---
 
