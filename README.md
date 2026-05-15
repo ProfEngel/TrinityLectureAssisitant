@@ -204,7 +204,7 @@ Beiträge sind herzlich willkommen! Wenn du Ideen, Verbesserungen oder Fehlerber
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/ProfEngel/TrinityLectureAssisitant/issues)
 - 💬 **Diskussionen**: [GitHub Discussions](https://github.com/ProfEngel/TrinityLectureAssisitant/discussions)
-- 🎓 **Forschung**: [research@trinity-assistant.com](mailto:research@trinity-assistant.com)
+- 🎓 **Forschung**: [mat.max.engel@gmail.com](mailto:mat.max.engel@gmail.com)
 
 ## Star History
 
