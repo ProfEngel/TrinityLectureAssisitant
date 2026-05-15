@@ -2,6 +2,12 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.8.0] - 2026-05-15
+- [X] **Rebranding: Academic Personal Concierge**: Vollständige Neuausrichtung weg vom "Assistenten" hin zum "Concierge".
+- [X] **UI Slogan Integration**: Dynamische Einblendung des Slogans im Avatar-UI.
+- [X] **Roadmap Expansion**: Integration von Trinity Mobile in die strategische Planung.
+- [X] **Positioning Document**: Erstellung und Integration von `warum_trinity.md` und neuen Infografiken.
+
 ## [v0.7.8.0.1] - Next Update
 
 - [ ] **Release-Management Update**: Umstellung auf tieferes Versioning (0.x.x.x.x).
