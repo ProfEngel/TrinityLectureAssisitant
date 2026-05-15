@@ -119,4 +119,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.setTrinityState === 'function') {
         window.setTrinityState('idle');
     }
+
+    // Slogan nach Verzögerung einblenden
+    const slogan = document.getElementById('slogan-text');
+    setTimeout(() => {
+        if (slogan) slogan.classList.add('visible');
+    }, 1500);
+
+    // Hover-Effekte für Slogan
+    trinity.addEventListener('mouseenter', () => {
+        if (slogan) slogan.classList.add('visible');
+    });
+    
+    // Optional: Slogan nach einiger Zeit im Idle wieder ausblenden (für extremen Minimalismus)
+    // setTimeout(() => {
+    //     if (slogan && body.classList.contains('idle')) slogan.classList.remove('visible');
+    // }, 10000);
 });

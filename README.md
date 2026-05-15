@@ -1,4 +1,4 @@
-# Trinity Assistant 🧞‍♀️
+# Trinity — Academic Personal Concierge 🧞‍♀️
 
 ![GitHub stars](https://img.shields.io/github/stars/ProfEngel/TrinityLectureAssisitant?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ProfEngel/TrinityLectureAssisitant?style=social)
@@ -13,23 +13,25 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API. (Next: v0.7.8.0.1 - New Versioning & Office Mode).
-> - v0.7.7: Cross-Platform LoRA path fix. 🧞‍♀️  
+> - v0.8.0: Academic Personal Concierge Rebrand & UI Slogan Integration. 🧞‍♀️
+> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API.
 
-Trinity ist eine KI-gestützte Vorlesungsassistentin für macOS (Apple Silicon). Sie hört passiv zu, erkennt ihr Trigger-Wort, antwortet per Stimme und kann Infografiken, Webrecherchen, Timer, Karten und Simulationen direkt im UI anzeigen.
+### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
+
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal (macOS / Apple Silicon), ist DSGVO-orientiert und modellagnostisch.
 
 ---
 
-![Trinity Big Picture](assets/trinity_big_picture.jpg)
+![Trinity Academic Personal Concierge](assets/infografik_quer.png)
 
 ## 💡 Warum dieses Projekt? (Die Vision)
 
-Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizubehalten und gleichzeitig spontane Informationen bereitzustellen. Trinity wurde entwickelt, um genau diese Lücke zu schließen:
+Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizubehalten und gleichzeitig spontane Informationen bereitzustellen oder im Büro die Flut an Dokumenten und Mails zu bewältigen. Trinity wurde entwickelt, um genau diese Lücke zu schließen:
 
 ![Trinity Vision](assets/trinity_vision.jpg)
 
-*   **Der Assistent an deiner Seite:** Stell dir vor, du könntest mitten in einer Übung einfach sagen: *"Trinity, setze einen Timer für 10 Minuten"*, ohne dein Tablet oder Laptop zu berühren.
-*   **Wissen on the fly:** Du möchtest einen neuen Blickwinkel auf eine Definition hören oder eine komplexe Metapher visualisieren? Trinity generiert (dank fal.ai) in Sekunden ein passendes **Schaubild oder Skizze**.
+*   **Dein persönliches Privatbüro:** Trinity unterstützt dich aktiv bei der Vorlesungsvorbereitung, Recherche und dem Dokumentenmanagement.
+*   **Wissen on the fly:** Du möchtest einen neuen Blickwinkel auf eine Definition hören oder eine komplexe Metapher visualisieren? Trinity generiert (dank fal.ai oder lokal via ComfyUI) in Sekunden ein passendes **Schaubild oder Skizze**.
 *   **Heartbeat-Souffleur (Audio-Routing):** Trinity fungiert als dein privater Souffleur auf dem AirPods. Hörst du eine Erklärung, die das Plenum (die Klasse) hören sollte, reicht ein *"Trinity, wiederhole das für alle"*, und sie wechselt automatisch die Audioausgabe auf die externen Lautsprecher.
 *   **Proaktiver Begleiter (Telegram-DM):** Trinity analysiert deine Vorlesung live im Hintergrund. Fällt ihr ein logischer Fehler auf, zeigt sie im UI eine rote "Bubble". Arbeitest du im Vollbildmodus am Beamer? Kein Problem, die Telegram-Bridge sendet dir Trinitys Anmerkungen lautlos als Direktnachricht aufs Smartphone.
 *   **Deep Memory (RAG Automation):** Am Ende einer Vorlesung generiert Trinity ein Summary. Damit das Wissen nicht verloren geht, fügt sie diese Zusammenfassungen ab sofort automatisch in ihr Langzeitgedächtnis (RAG-Index) ein. So weiß sie nächste Woche noch genau, worüber gesprochen wurde.
@@ -135,6 +137,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
 
 #### 🗺️ Roadmap: Der Weg zu v1.0
  
+ *   **Trinity Mobile (v0.8.0):** Companion-App für Single-Monitor-Setups, Tablet-Support und mobile Session-Synchronisation.
  *   **Office Mode Integration (Q2 2026):** Lokale Mail-Drafts, AppleScript-Anbindung für Teams/Kalender & Writing Sample RAG.
  *   **Document Intelligence (Q2 2026):** Drag & Drop Support für Thesen und Excel-Auswertungen inkl. Korrektur-Agenten.
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
@@ -156,10 +159,10 @@ Dieses Projekt steht unter der **Apache License 2.0**.
 Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
 
 ```bibtex
-@software{trinity2025,
-  title={Trinity: KI-gestützte Vorlesungsassistentin für macOS mit modularem Agentic-Skill-System},
+@software{trinity2026,
+  title={Trinity: Academic Personal Concierge for macOS with modular Agentic-Skill-System},
   author={Engel, Mathias and Engel, Zoe},
-  year={2025},
+  year={2026},
   note={Ein privates Forschungsprojekt von Mathias Engel, Zoe Engel und Eve},
   url={https://github.com/ProfEngel/TrinityLectureAssisitant}
 }

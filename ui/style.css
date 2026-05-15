@@ -100,16 +100,42 @@ body {
 
 /* Status-Text */
 #status-text {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 14px;
-    letter-spacing: 2px;
+    font-family: var(--font-family);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+    letter-spacing: 3px;
+    font-weight: 200;
+    text-transform: uppercase;
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
+}
+
+/* Slogan-Text (Academic Personal Concierge) */
+#slogan-text {
+    font-family: var(--font-family);
+    color: var(--core-color);
+    font-size: 9px;
+    letter-spacing: 1.5px;
     font-weight: 300;
     text-transform: uppercase;
-    margin-top: 20px;
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
     pointer-events: none;
-    transition: opacity 0.3s ease;
-    display: none; /* Text unter dem Avatar ausblenden */
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    opacity: 0;
+}
+
+#slogan-text.visible {
+    opacity: 0.6;
+    bottom: -25px;
 }
 
 /* Content Overlay (Full Screen) */
