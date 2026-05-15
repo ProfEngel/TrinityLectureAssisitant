@@ -181,13 +181,30 @@ KI-gestützte Vorlesungsassistentin mit passiver Spracherkennung, modularem Agen
 
 ---
 
+## 💖 Sponsorship & Support
+
+Trinity ist ein kostenloses Open-Source-Forschungsprojekt. Dennoch hat der Aufbau dieses **Academic Personal Concierge** bereits unzählige Stunden und erhebliche private Mittel (Hardware, Token, APIs) verschlungen. Wenn Trinity dir im Hörsaal oder Büro einen echten Mehrwert bietet (und z. B. teure Consulting-Optionen im Wert von 5.000 € – 10.000 € ersetzt), freuen wir uns über deine Unterstützung!
+
+Deine freiwilligen Beiträge helfen uns, die Entwicklung voranzutreiben und Trinity noch intelligenter zu machen.
+
+🎯 **Community Support**  
+Perfekt für alle, die unsere Mission unterstützen möchten:
+
+*   **☕ Kaffee für ProfEngel ($5):** Treibstoff für lange Coding-Nächte!
+*   **💻 Token-Sponsor ($30):** Hilf uns, die API-Kosten für Cloud-Modelle (OpenRouter, fal.ai) und Tests zu decken.
+*   **🚀 GPU Hour Sponsor ($110+):** Unterstütze uns beim Testen komplexer lokaler Modelle (LTX, Flux) auf Hochleistungssystemen.
+
+**[👉 Jetzt Sponsor werden](https://github.com/sponsors/ProfEngel)**
+
+---
+
 ## 🤝 Support & Beiträge
 
 Beiträge sind herzlich willkommen! Wenn du Ideen, Verbesserungen oder Fehlerberichte hast, öffne gerne ein **Issue** oder einen **Pull Request**.
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/ProfEngel/TrinityLectureAssisitant/issues)
 - 💬 **Diskussionen**: [GitHub Discussions](https://github.com/ProfEngel/TrinityLectureAssisitant/discussions)
-- 🎓 **Forschung**: [research@opentuneweaver.com](mailto:research@opentuneweaver.com)
+- 🎓 **Forschung**: [research@trinity-assistant.com](mailto:research@trinity-assistant.com)
 
 ## Star History
 
