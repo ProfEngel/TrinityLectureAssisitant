@@ -18,7 +18,7 @@
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal (macOS / Apple Silicon), ist DSGVO-orientiert und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal (macOS / Apple Silicon), ist DSGVO-konform und modellagnostisch.
 
 ---
 
