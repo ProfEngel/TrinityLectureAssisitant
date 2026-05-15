@@ -6,7 +6,7 @@ siehe auch hier:https://chatgpt.com/share/6a072bd1-f1cc-83eb-8ecc-94bb4edc69e4
 ## A. Grundidee / Positionierung
 
 **Highlights:**
-Trinity ist kein klassischer Chatbot, sondern ein lokaler, agentenfähiger Lecture- und Office-Companion. Die primäre Zielarchitektur ist  **Local First** , modellagnostisch und DSGVO-orientiert. Die Architektur ist in spezialisierte Agent-Skills gegliedert, z.B. RAG, WebSearch, Image, Simulation, PowerPoint, Summary, Document Intelligence und Office Mode. ([GitHub](https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/README.md "raw.githubusercontent.com"))
+Trinity ist kein klassischer Chatbot, sondern ein lokaler, agentenfähiger Lecture- und Office-Companion. Die primäre Zielarchitektur ist  **Local First** , modellagnostisch und DSGVO-konform. Die Architektur ist in spezialisierte Agent-Skills gegliedert, z.B. RAG, WebSearch, Image, Simulation, PowerPoint, Summary, Document Intelligence und Office Mode. ([GitHub](https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/README.md "raw.githubusercontent.com"))
 
 a. KI-gestützte Vorlesungsassistentin für macOS / Apple Silicon
 b. Lokaler Betrieb als primäre Zielarchitektur
@@ -18,7 +18,7 @@ g. Office Mode für Büro / produktive Arbeit
 h. Lokale RAG-Wissensbasis für Skripte, PDFs, Sessions und später Office-Daten
 i. Sprachschnittstelle über Mikrofon / AirPod
 j. UI für Visualisierungen, Karten, Timer, Simulationen, Dokumentanalysen und Hinweise
-k. DSGVO-orientierter Ansatz über gezieltes Dozenten-Audio statt Raumaufnahme
+k. DSGVO-konformer Ansatz über gezieltes Dozenten-Audio statt Raumaufnahme
 l. Erweiterbar durch neue Agent-Skills
 m. Nicht nur reaktiv, sondern perspektivisch proaktiv durch Heartbeat, Bubbles und Telegram
 
@@ -34,7 +34,7 @@ Trinity hört hier ausschließlich passiv mit. Es gibt noch keine Konversation, 
 a. Passive Spracherkennung über Dozenten-Mikrofon / AirPod
 b. Aufzeichnung des gesprochenen Vorlesungsverlaufs
 c. Erstellung eines Sitzungs-Transkripts im Hintergrund
-d. DSGVO-orientierter Betrieb über Dozenten-Audio statt Raumaufnahme
+d. DSGVO-konformer Betrieb über Dozenten-Audio statt Raumaufnahme
 e. Keine aktive Konversation mit Trinity
 f. Keine Unterbrechung des Vortrags durch Trinity
 g. Keine sichtbare oder hörbare Interaktion im Hörsaal
@@ -296,7 +296,7 @@ j. Lokale Bildgenerierung perspektivisch und teilweise bereits vorgesehen
 k. Lokale Musik- und Videogenerierung über ComfyUI
 l. Keine zwingende Übertragung sensibler Daten an externe Anbieter
 m. Geeignet für Lehr-, Forschungs- und Prüfungskontexte
-n. DSGVO-orientierter Hörsaalbetrieb über Dozenten-Mikrofon
+n. DSGVO-konformer Hörsaalbetrieb über Dozenten-Mikrofon
 o. Keine gezielte Aufzeichnung von Studierendenstimmen
 p. Kontrollierbare Datenhaltung
 q. Universitär anschlussfähige Datenschutzlogik
