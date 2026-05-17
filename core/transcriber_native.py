@@ -80,9 +80,14 @@ class NativeMorpheusEar(MorpheusEar):
         if not text:
             return
 
-        if result.isFinal() and text != self._last_final_text:
-            self._last_final_text = text
-            self.process_text(text)
+        if result.isFinal():
+            # Finales Ergebnis → in Transkript schreiben + Wake-Word prüfen
+            if text != self._last_final_text:
+                self._last_final_text = text
+                self.process_text(text)
+        else:
+            # Partial → nur im Terminal anzeigen für Live-Feedback
+            print(f"\r🎙️ {text}", end="", flush=True)
 
     def _start_recognition(self):
         self.recognizer = SFSpeechRecognizer.alloc().initWithLocale_(
@@ -93,7 +98,7 @@ class NativeMorpheusEar(MorpheusEar):
 
         self.audio_engine = AVAudioEngine.alloc().init()
         self.recognition_request = SFSpeechAudioBufferRecognitionRequest.alloc().init()
-        self.recognition_request.setShouldReportPartialResults_(False)
+        self.recognition_request.setShouldReportPartialResults_(True)
 
         input_node = self.audio_engine.inputNode()
         recording_format = input_node.outputFormatForBus_(0)
