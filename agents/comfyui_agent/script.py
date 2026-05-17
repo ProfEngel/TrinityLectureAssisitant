@@ -37,6 +37,7 @@ WORKFLOW_T2I = "Flux2_Klein_T2I_API.json"
 WORKFLOW_I2I = "Flux2_klein_I2I_API.json"
 WORKFLOW_T2A = "AceStep1.5_T2A_API.json"
 WORKFLOW_I2V = "LTX2.3_I2V_API.json"
+WORKFLOW_I2V_FALLBACKS = ["ME_LTX2.3_I2V_API.json"]
 
 # Node-IDs pro Workflow
 T2I_PROMPT_NODE = "14"   # CLIPTextEncode Positive Prompt
@@ -56,6 +57,8 @@ I2V_IMAGE_NODE  = "45"   # LoadImage "First Frame"
 I2V_WIDTH_NODE  = "66"   # INTConstant "Width"
 I2V_HEIGHT_NODE = "67"   # INTConstant "Height"
 I2V_LENGTH_NODE = "68"   # INTConstant "Length (in seconds)"
+I2V_FRAME_COUNT_NODE = "186" # MathExpression in UI, converted for API
+I2V_FPS_NODE = "89"      # PrimitiveFloat "FPS"
 I2V_PROMPT_NODE = "173"  # PrimitiveStringMultiline "Positive Prompt"
 
 # PowerLoraLoader-Node IDs
@@ -490,6 +493,56 @@ def _upload_image_to_comfyui(server_url: str, local_image_path: str) -> Optional
     return None
 
 
+def _normalize_lora_names_for_server(server_url: str, workflow: dict) -> dict:
+    """Passt LoRA-Dateinamen an die Namen an, die der ComfyUI-Server validiert."""
+    wf = copy.deepcopy(workflow)
+    try:
+        resp = requests.get(f"{server_url}/api/object_info/LoraLoaderModelOnly", timeout=10)
+        if resp.status_code != 200:
+            return wf
+        info = resp.json().get("LoraLoaderModelOnly", {})
+        allowed = info.get("input", {}).get("required", {}).get("lora_name", [[]])[0]
+        if not isinstance(allowed, list):
+            return wf
+
+        allowed_set = set(allowed)
+        by_normalized = {name.replace("\\", "/"): name for name in allowed}
+        by_basename = {os.path.basename(name.replace("\\", "/")): name for name in allowed}
+
+        for node_id, node in wf.items():
+            if node.get("class_type") != "LoraLoaderModelOnly":
+                continue
+            inputs = node.get("inputs", {})
+            current = inputs.get("lora_name")
+            if not current or current in allowed_set:
+                continue
+
+            normalized_current = current.replace("\\", "/")
+            replacement = (
+                by_normalized.get(normalized_current)
+                or by_basename.get(os.path.basename(normalized_current))
+            )
+            if replacement:
+                inputs["lora_name"] = replacement
+                print(f"💉 LoRA-Pfad Node {node_id} normalisiert: {replacement}")
+    except Exception as e:
+        print(f"⚠️ Konnte LoRA-Namen nicht gegen ComfyUI validieren: {e}")
+    return wf
+
+
+def _free_comfyui_memory(server_url: str) -> None:
+    """Bittet ComfyUI, vor schweren I2V-Laeufen alte Modelle/VRAM freizugeben."""
+    try:
+        requests.post(
+            f"{server_url}/api/free",
+            json={"unload_models": True, "free_memory": True},
+            timeout=10
+        )
+        print("🧹 ComfyUI Speicherfreigabe vor I2V angefordert.")
+    except Exception as e:
+        print(f"⚠️ ComfyUI Speicherfreigabe fehlgeschlagen: {e}")
+
+
 def _extract_i2i_prompt(query: str, brain) -> str:
     """Extrahiert den Bearbeitungs-Prompt aus der Nutzeranfrage für I2I."""
     result = brain.ask_llm([{
@@ -901,27 +954,14 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
     if not server_url or not _ping_server(server_url):
         sc = f"--- FEHLER ---\nComfyUI-Server nicht erreichbar: {server_url}\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": sc}
+    _free_comfyui_memory(server_url)
 
     os.makedirs(MEDIA_INPUT_DIR, exist_ok=True)
     video_output_dir = os.path.join(MEDIA_OUTPUT_DIR, "video")
     os.makedirs(video_output_dir, exist_ok=True)
 
-    # Workflow laden
-    workflow = _load_workflow(WORKFLOW_I2V)
-    if not workflow:
-        sc = f"--- FEHLER ---\nWorkflow '{WORKFLOW_I2V}' nicht gefunden.\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": sc}
-
     # Parameter via LLM extrahieren
-    params = _extract_i2v_params(query, brain)
-
-    # Defaults aus dem Workflow lesen für Telegram & UI
-    target_w = int(workflow.get(I2V_WIDTH_NODE, {}).get("inputs", {}).get("value", 1280))
-    target_h = int(workflow.get(I2V_HEIGHT_NODE, {}).get("inputs", {}).get("value", 1280))
-    wf_length = int(workflow.get(I2V_LENGTH_NODE, {}).get("inputs", {}).get("value", 7))
-    params["duration"] = wf_length # überschreibe LLM-Wert mit Workflow-Wert für UI
-
-    print(f"🎬 I2V: '{params['motion_prompt'][:60]}', Dauer aus Workflow: {wf_length}s")
+    base_params = _extract_i2v_params(query, brain)
 
     # Bild auf ComfyUI hochladen
     server_filename = _upload_image_to_comfyui(server_url, input_image_path)
@@ -931,33 +971,76 @@ def execute_i2v(query: str, input_image_path: str, context: dict = None) -> dict
 
     print(f"📤 Server-Dateiname nach Upload: '{server_filename}'")
 
-    try:
-        workflow = _inject_i2v_inputs(workflow, server_filename, params)
-    except ValueError as e:
-        sc = f"--- FEHLER ---\n{e}\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": sc}
+    workflow_names = [WORKFLOW_I2V]
+    workflow_names.extend(
+        name for name in WORKFLOW_I2V_FALLBACKS
+        if name and name not in workflow_names
+    )
+    attempt_errors = []
+    local_path = None
+    params = dict(base_params)
+    target_w, target_h = 1280, 1280
 
-    # Job senden
-    prompt_id = _queue_prompt(server_url, workflow)
-    if not prompt_id:
-        sc = "--- FEHLER ---\nKonnte den I2V-Workflow nicht senden.\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": sc}
+    for attempt_index, workflow_name in enumerate(workflow_names):
+        is_fallback = attempt_index > 0
+        if is_fallback:
+            print(f"🔁 I2V-Fallback wird versucht: {workflow_name}")
+            _free_comfyui_memory(server_url)
 
-    print(f"⏳ I2V Job queued (ID: {prompt_id}), ~{params['duration']}s Video...")
+        workflow = _load_workflow(workflow_name)
+        if not workflow:
+            attempt_errors.append(f"{workflow_name}: Workflow nicht gefunden")
+            continue
+        workflow = _normalize_lora_names_for_server(server_url, workflow)
 
-    # Auf Ergebnis warten (Video dauert viel länger als Bild)
-    timeout = max(300, params["duration"] * 25)
-    video_filename = _poll_for_video(server_url, prompt_id, timeout=timeout)
-    if not video_filename:
-        sc = "--- FEHLER ---\nVideo-Generierung fehlgeschlagen oder Timeout.\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": sc}
+        attempt_params = dict(base_params)
+        target_w = int(workflow.get(I2V_WIDTH_NODE, {}).get("inputs", {}).get("value", 1280))
+        target_h = int(workflow.get(I2V_HEIGHT_NODE, {}).get("inputs", {}).get("value", 1280))
+        wf_length = int(workflow.get(I2V_LENGTH_NODE, {}).get("inputs", {}).get("value", 7))
+        attempt_params["duration"] = wf_length
 
-    local_path = _download_video(server_url, video_filename, video_output_dir)
+        print(
+            f"🎬 I2V ({workflow_name}): '{attempt_params['motion_prompt'][:60]}', "
+            f"Dauer aus Workflow: {wf_length}s"
+        )
+
+        try:
+            workflow = _inject_i2v_inputs(workflow, server_filename, attempt_params)
+        except ValueError as e:
+            attempt_errors.append(f"{workflow_name}: {e}")
+            continue
+
+        prompt_id = _queue_prompt(server_url, workflow)
+        if not prompt_id:
+            attempt_errors.append(f"{workflow_name}: konnte Workflow nicht senden")
+            continue
+
+        print(f"⏳ I2V Job queued (ID: {prompt_id}), ~{attempt_params['duration']}s Video...")
+
+        timeout = max(1800, attempt_params["duration"] * 180)
+        video_info = _poll_for_video(server_url, prompt_id, timeout=timeout)
+        if not video_info:
+            attempt_errors.append(f"{workflow_name}: kein Video-Ergebnis")
+            continue
+
+        local_path = _download_video(server_url, video_info, video_output_dir)
+        if not local_path:
+            attempt_errors.append(f"{workflow_name}: Video-Download fehlgeschlagen")
+            continue
+
+        params = attempt_params
+        print(f"✅ Video gespeichert: {local_path}")
+        break
+
     if not local_path:
-        sc = "--- FEHLER ---\nKonnte das Video nicht herunterladen.\n\n"
+        details = "\n".join(f"- {error}" for error in attempt_errors)
+        sc = (
+            "--- FEHLER ---\n"
+            "Video-Generierung fehlgeschlagen. Es wurde zuerst der Standard-I2V-Workflow "
+            "versucht und danach nur bei Fehler der Fallback-Workflow.\n"
+            f"{details}\n\n"
+        )
         return {"has_payload": False, "html_payload": "", "search_context": sc}
-
-    print(f"✅ Video gespeichert: {local_path}")
 
     # Telegram: Video senden
     if telegram_cfg.get("enabled") and telegram_cfg.get("bot_token") and telegram_cfg.get("chat_id"):
@@ -1122,30 +1205,134 @@ def _inject_i2v_inputs(workflow: dict, server_filename: str, params: dict) -> di
         wf[I2V_PROMPT_NODE] = p_node
         print(f"💉 I2V Prompt → Node {I2V_PROMPT_NODE}: '{prompt_val[:60]}'")
 
+    # LTX/GGUF reagiert per API empfindlich auf lange Negativprompts; kurz halten.
+    neg_node = wf.get("174", {})
+    if "inputs" in neg_node:
+        neg_node["inputs"]["value"] = "low quality, blurry, artifacts"
+        wf["174"] = neg_node
+        print("💉 I2V Negative Prompt gekuerzt.")
+
+    clip_node = wf.get("192", {})
+    clip_inputs = clip_node.get("inputs", {})
+    if "device" in clip_inputs:
+        clip_inputs.pop("device", None)
+        wf["192"] = clip_node
+        print("💉 I2V veralteten CLIP-device Input entfernt.")
+
+    # KJNodes LTX2SamplingPreviewOverride nutzt UI/WebSocket-Preview-State.
+    # Headless API-Laeufe koennen dort mit last_node_id=None abstuerzen.
+    for guider_node_id in ("8", "36"):
+        guider_node = wf.get(guider_node_id, {})
+        inputs = guider_node.get("inputs", {})
+        if inputs.get("model") == ["172", 0]:
+            inputs["model"] = ["170", 0]
+            wf[guider_node_id] = guider_node
+            print(f"💉 I2V Preview Override fuer Node {guider_node_id} umgangen.")
+
+    # ComfyUI-Custom-Scripts markiert MathExpression als output_node. In API-Laeufen
+    # kann dadurch nur die Frame-Rechnung ausgefuehrt werden, waehrend VHS nie startet.
+    # Fuer die API ersetzen wir Node 186 durch eine normale INTConstant.
+    length = int(wf.get(I2V_LENGTH_NODE, {}).get("inputs", {}).get("value", 7))
+    fps = float(wf.get(I2V_FPS_NODE, {}).get("inputs", {}).get("value", 24))
+    frame_count = int(round(length * fps))
+    wf[I2V_FRAME_COUNT_NODE] = {
+        "inputs": {"value": frame_count},
+        "class_type": "INTConstant",
+        "_meta": {"title": "Frame Count (API-safe)"}
+    }
+    print(f"💉 I2V Frame Count Node {I2V_FRAME_COUNT_NODE}: {frame_count} Frames")
+
     print(f"ℹ️  I2V: Größe + Dauer aus Workflow-JSON übernommen (kein Override).")
 
     return wf
 
 
-def _poll_for_video(server_url: str, prompt_id: str, timeout: int = 300) -> Optional[str]:
-    """Pollt /api/history bis das Video fertig ist. VHS_VideoCombine speichert unter 'gifs'."""
+def _extract_comfy_error(history_entry: dict) -> Optional[str]:
+    """Extrahiert eine lesbare ComfyUI-Fehlermeldung aus einem History-Eintrag."""
+    status = history_entry.get("status", {})
+    if status.get("status_str") != "error":
+        return None
+
+    messages = status.get("messages", [])
+    for message in messages:
+        if not isinstance(message, (list, tuple)) or len(message) < 2:
+            continue
+        event, payload = message[0], message[1]
+        if event != "execution_error" or not isinstance(payload, dict):
+            continue
+        node_id = payload.get("node_id", "?")
+        node_type = payload.get("node_type") or payload.get("class_type") or "unknown"
+        exc_type = payload.get("exception_type", "Exception")
+        exc_msg = payload.get("exception_message", "")
+        return f"ComfyUI execution_error in Node {node_id} ({node_type}): {exc_type}: {exc_msg}"
+
+    return "ComfyUI meldet status_str=error, aber ohne execution_error-Details."
+
+
+def _first_output_file(node_output: dict, keys: tuple = ("gifs", "files", "videos")) -> Optional[dict]:
+    """Findet Datei-Metadaten in typischen ComfyUI/VHS-Output-Strukturen."""
+    for key in keys:
+        items = node_output.get(key, [])
+        if isinstance(items, dict):
+            items = [items]
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, str):
+                return {"filename": item, "subfolder": "", "type": "output"}
+            if isinstance(item, dict) and item.get("filename"):
+                return {
+                    "filename": item.get("filename"),
+                    "subfolder": item.get("subfolder", ""),
+                    "type": item.get("type", "output"),
+                }
+
+    if node_output.get("filename"):
+        return {
+            "filename": node_output.get("filename"),
+            "subfolder": node_output.get("subfolder", ""),
+            "type": node_output.get("type", "output"),
+        }
+
+    return None
+
+
+def _poll_for_video(server_url: str, prompt_id: str, timeout: int = 1800) -> Optional[dict]:
+    """Pollt /api/history bis das Video fertig ist und meldet ComfyUI-Fehler sofort."""
     deadline = time.time() + timeout
+    last_progress_log = 0
     while time.time() < deadline:
         try:
             resp = requests.get(f"{server_url}/api/history/{prompt_id}", timeout=10)
             if resp.status_code == 200:
                 history = resp.json()
                 if prompt_id in history:
-                    outputs = history[prompt_id].get("outputs", {})
+                    entry = history[prompt_id]
+                    comfy_error = _extract_comfy_error(entry)
+                    if comfy_error:
+                        print(f"❌ {comfy_error}")
+                        return None
+
+                    outputs = entry.get("outputs", {})
                     for node_id, node_output in outputs.items():
-                        # VHS_VideoCombine gibt unter 'gifs' oder 'files' aus
-                        for key in ("gifs", "files", "videos"):
-                            items = node_output.get(key, [])
-                            if items:
-                                filename = items[0].get("filename")
-                                if filename:
-                                    print(f"✅ I2V fertig: {filename}")
-                                    return filename
+                        video_info = _first_output_file(node_output)
+                        if video_info:
+                            filename = video_info["filename"]
+                            subfolder = video_info.get("subfolder", "")
+                            print(f"✅ I2V fertig: {subfolder + '/' if subfolder else ''}{filename}")
+                            return video_info
+
+                    status = entry.get("status", {})
+                    if status.get("completed"):
+                        output_nodes = ", ".join(outputs.keys()) or "keine"
+                        print(f"❌ I2V beendet ohne Video-Output. Ausgefuehrte Output-Nodes: {output_nodes}")
+                        return None
+
+            now = time.time()
+            if now - last_progress_log >= 30:
+                remaining = int(max(0, deadline - now))
+                print(f"⏳ I2V laeuft noch oder wartet in ComfyUI... verbleibendes Timeout: {remaining}s")
+                last_progress_log = now
         except Exception as e:
             print(f"⚠️ Video-Poll-Fehler: {e}")
         time.sleep(6)
@@ -1153,13 +1340,22 @@ def _poll_for_video(server_url: str, prompt_id: str, timeout: int = 300) -> Opti
     return None
 
 
-def _download_video(server_url: str, filename: str, output_dir: str) -> Optional[str]:
+def _download_video(server_url: str, video_info, output_dir: str) -> Optional[str]:
     """Lädt das fertige Video vom ComfyUI-Server herunter."""
     try:
-        # VHS speichert im video/ Unterordner
-        subfolder = "video" if "/" not in filename else ""
-        url = f"{server_url}/api/view?filename={filename}&subfolder={subfolder}&type=output"
-        resp = requests.get(url, timeout=120)
+        if isinstance(video_info, str):
+            filename = video_info
+            subfolder = "video" if "/" not in filename else ""
+            file_type = "output"
+        else:
+            filename = video_info.get("filename", "")
+            subfolder = video_info.get("subfolder", "")
+            file_type = video_info.get("type", "output")
+            if not subfolder and "/" not in filename:
+                subfolder = "video"
+
+        params = {"filename": filename, "subfolder": subfolder, "type": file_type}
+        resp = requests.get(f"{server_url}/api/view", params=params, timeout=120)
         if resp.status_code == 200:
             basename = os.path.basename(filename)
             local_name = f"video_{int(time.time())}_{basename}"

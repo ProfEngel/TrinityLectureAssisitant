@@ -30,7 +30,7 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "170",
+        "172",
         0
       ],
       "positive": [
@@ -325,7 +325,7 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "170",
+        "172",
         0
       ],
       "positive": [
@@ -412,7 +412,7 @@
   },
   "45": {
     "inputs": {
-      "image": "Flux2.Klein_9b_T2I_00079_.png"
+      "image": "6c7e0fc0-a833-489e-b400-04f4e2bbdb22.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -490,7 +490,7 @@
   },
   "108": {
     "inputs": {
-      "unet_name": "ltx-2.3-22b-distilled-Q4_K_M.gguf"
+      "unet_name": "ltx-2.3-22b-dev-Q5_K_M.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {
@@ -499,7 +499,7 @@
   },
   "109": {
     "inputs": {
-      "lora_name": "ltx2.3\\ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
+      "lora_name": "ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
       "strength_model": 0.6,
       "model": [
         "108",
@@ -612,7 +612,7 @@
   },
   "173": {
     "inputs": {
-      "value": "cinematic close-up shot of a cute beaver gnawing on a wooden log, wood chips flying, detailed fur texture, realistic eyes, forest background, soft natural sunlight filtering through trees, high detail, 8k, highly realistic, motion blur on the chewing action."
+      "value": "The sword is glimming. The woman is moving towards the wolves"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -662,11 +662,19 @@
   },
   "186": {
     "inputs": {
-      "value": 120
+      "expression": "a*b",
+      "a": [
+        "68",
+        0
+      ],
+      "b": [
+        "89",
+        0
+      ]
     },
-    "class_type": "INTConstant",
+    "class_type": "MathExpression|pysssss",
     "_meta": {
-      "title": "Frame Count (API-safe)"
+      "title": "Math Expression 🐍"
     }
   },
   "187": {
@@ -749,7 +757,8 @@
     "inputs": {
       "clip_name1": "gemma-3-12b-it-qat-UD-Q4_K_XL.gguf",
       "clip_name2": "ltx-2.3-22b-dev_embeddings_connectors.safetensors",
-      "type": "ltxv"
+      "type": "ltxv",
+      "device": "default"
     },
     "class_type": "DualClipLoaderGGUF",
     "_meta": {
