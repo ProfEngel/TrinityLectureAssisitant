@@ -64,8 +64,8 @@ class MorpheusEar:
         self.trigger_armed = False # Wartet auf Ende des Satzes nach Wake-Word
         
         # Neues Transkript für diese Sitzung anlegen
-        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-        self.transcript_file = os.path.join(MEMORY_DIR, f"Sitzung_{timestamp}.md")
+        timestamp = time.strftime("%d%b%Y_%H%M")
+        self.transcript_file = os.path.join(MEMORY_DIR, f"raw_session_{timestamp}.md")
         with open(self.transcript_file, "w") as f:
             f.write(f"# Trinity Session Log - {timestamp}\n\n")
             
@@ -96,6 +96,9 @@ class MorpheusEar:
             self.audio_routing = config.get("audio_routing", {})
             # Telegram Config
             self.telegram_cfg = config.get("telegram", {})
+            # System Config
+            self.system_cfg = config.get("system", {})
+            self.mode = self.system_cfg.get("mode", "office")
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -107,6 +110,8 @@ class MorpheusEar:
             self.proactive_cfg = {}
             self.audio_routing = {}
             self.telegram_cfg = {}
+            self.system_cfg = {}
+            self.mode = "office"
 
     def _heartbeat_loop(self):
         interval_min = self.proactive_cfg.get("interval_minutes", 2)
@@ -418,14 +423,21 @@ class MorpheusEar:
             threading.Thread(target=self._telegram_listener_loop, daemon=True).start()
         
         cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
+        
         # Wir lesen in kleineren Häppchen (0.5s), um stabiler zu sein
         block_size = int(SAMPLE_RATE * 0.5)
         blocks_per_chunk = int(self.chunk_duration / 0.5)
         
-        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=self.audio_callback, blocksize=block_size):
+        self.audio_stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=self.audio_callback, blocksize=block_size)
+        
+        if self.mode != "chat":
+            self.audio_stream.start()
             print(f"Trinity hört jetzt zu... (Model: {self.model_name}, Thresh: {self.silence_threshold})")
+        else:
+            print("💬 Chat-Modus aktiv: STT und Mikrofon bleiben deaktiviert. Höre nur auf UI (Flüstern) oder Telegram.")
             
-            audio_buffer = []
+        audio_buffer = []
+        try:
             while self.is_running:
                 # 1. Prüfe auf stille Text-Eingaben
                 if os.path.exists(cmd_file):
@@ -439,14 +451,23 @@ class MorpheusEar:
                                 is_silent = True
                                 cmd_text = cmd_text[7:]
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")
+                            # Log it to session
+                            t_stamp = time.strftime("%H:%M:%S")
+                            with open(self.transcript_file, "a", encoding="utf-8") as f:
+                                f.write(f"[{t_stamp}] [User (UI-Chat)]: {cmd_text}\n")
+                                
                             self.trigger_action(cmd_text, silent_response=is_silent)
                             continue 
                     except Exception as e:
                         print(f"FEHLER BEI TEXT-EINGABE: {e}")
 
                 # 2. Audio verarbeiten
+                if getattr(self, 'mode', 'office') == 'chat':
+                    time.sleep(0.2)
+                    continue
+                    
                 try:
-                    data = self.audio_queue.get(timeout=1)
+                    data = self.audio_queue.get(timeout=0.2)
                     audio_buffer.append(data)
                     
                     if len(audio_buffer) >= blocks_per_chunk:
@@ -469,7 +490,7 @@ class MorpheusEar:
                             elif not (self.speak_process and self.speak_process.poll() is None):
                                 set_state("idle")
                             continue
-
+                        
                         # Laut genug -> Transkribieren
                         set_state("listening")
                         
@@ -520,6 +541,10 @@ class MorpheusEar:
                             self.process_text(text)
                 except queue.Empty:
                     continue
+        finally:
+            if hasattr(self, 'audio_stream') and self.audio_stream:
+                self.audio_stream.stop()
+                self.audio_stream.close()
 
     def process_text(self, text):
         timestamp = time.strftime("%H:%M:%S")
@@ -619,22 +644,71 @@ class MorpheusEar:
         if self.speak_process and self.speak_process.returncode == 0:
             set_state("idle")
 
+    def switch_mode(self, new_mode):
+        old_mode = getattr(self, 'mode', 'office')
+        if old_mode == new_mode: return
+        
+        self.mode = new_mode
+        self.system_cfg["mode"] = new_mode
+        import json
+        with open(self.config_path, "w") as f:
+            with open(self.config_path, "r") as r:
+                config = json.load(r)
+            config["system"]["mode"] = new_mode
+            json.dump(config, f, indent=2)
+            
+        if old_mode == 'chat' and new_mode != 'chat':
+            if hasattr(self, 'audio_stream') and self.audio_stream:
+                self.audio_stream.start()
+                print("🎙️ Audio Stream gestartet.")
+        elif old_mode != 'chat' and new_mode == 'chat':
+            if hasattr(self, 'audio_stream') and self.audio_stream:
+                self.audio_stream.stop()
+                print("🛑 Audio Stream gestoppt.")
+
     def trigger_action(self, text, silent_response=False, recent_text=None, from_telegram=False):
+        if getattr(self, 'mode', 'office') == 'chat':
+            silent_response = True
+            
         print(f"!!! TRIGGER GEFUNDEN: {text[-60:]} !!!")
         lower_text = text.lower()
         # recent_text = die letzten 2-3 Chunks (für präzise Keyword-Erkennung)
         action_text = (recent_text or text).lower()
         
         # UI-Befehle direkt abfangen (ohne LLM)
+        # Modus-Wechsel
+        if any(w in lower_text for w in ["büromodus aktivieren", "wechsle in den büromodus", "office modus"]):
+            self.switch_mode("office")
+            msg = "Büromodus aktiviert. Ich höre wieder aktiv zu."
+            if not silent_response: subprocess.Popen(["say", msg])
+            else: threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
+            return
+            
+        if any(w in lower_text for w in ["vorlesungsmodus aktivieren", "wechsle in den vorlesungsmodus", "lecture modus"]):
+            self.switch_mode("lecture")
+            msg = "Vorlesungsmodus aktiviert. Ich lausche der Vorlesung."
+            if not silent_response: subprocess.Popen(["say", msg])
+            else: threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
+            return
+            
+        if any(w in lower_text for w in ["chatmodus aktivieren", "wechsle in den chatmodus", "chat modus"]):
+            self.switch_mode("chat")
+            msg = "Chatmodus aktiviert. Mikrofon wurde deaktiviert."
+            if not silent_response:
+                subprocess.Popen(["say", msg])
+            else:
+                threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
+            return
+
         if "mach dich unsichtbar" in lower_text or "versteck dich" in lower_text:
             set_state("invisible")
-            subprocess.Popen(["say", "Bin im Tarnmodus."])
+            if not silent_response: subprocess.Popen(["say", "Bin im Tarnmodus."])
             return
             
         if "mach dich sichtbar" in lower_text or "zeig dich" in lower_text:
             set_state("visible")
             set_state("idle")
-            subprocess.Popen(["say", "Bin wieder voll da, Partner."])
+            if not silent_response: subprocess.Popen(["say", "Bin wieder voll da, Partner."])
             return
             
         if "böse" in lower_text or "wütend" in lower_text or "sauer" in lower_text:

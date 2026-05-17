@@ -2,6 +2,11 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.8.1] - 2026-05-17
+- [X] **Trinity Chat-Mode:** Implementierung eines ressourcenschonenden, rein text-/UI-basierten Chat-Modus.
+- [X] **Dynamische Modus-Umschaltung:** Nahtloses Live-Wechseln zwischen Büro-, Vorlesungs- und Chat-Modus via Flüstern ("büromodus aktivieren") ohne App-Neustart.
+- [X] **Session Protokollierung:** Umstellung auf `raw_session_ddmmmyyyy_hhmm.md` und sauberes Logging aller UI-Chats.
+
 ## [v0.8.0] - 2026-05-15
 - [X] **Rebranding: Academic Personal Concierge**: Vollständige Neuausrichtung weg vom "Assistenten" hin zum "Concierge".
 - [X] **UI Slogan Integration**: Dynamische Einblendung des Slogans im Avatar-UI.

@@ -60,7 +60,8 @@ DEFAULT_CONFIG = {
         "auto_rag_indexing": False
     },
     "system": {
-        "show_terminal": False
+        "show_terminal": False,
+        "mode": "chat"
     },
     "audio_routing": {
         "private_device": "Standard",
@@ -173,6 +174,7 @@ class SettingsWindow(QMainWindow):
         if "system" not in self.config:
             self.config["system"] = {}
         self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
+        self.config["system"]["mode"] = getattr(self, 'mode_combo', QComboBox()).currentText()
         
         # Audio Routing
         if "audio_routing" not in self.config:
@@ -439,6 +441,17 @@ class SettingsWindow(QMainWindow):
         form = QFormLayout()
         
         system_conf = self.config.get("system", {})
+        
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["office", "lecture", "chat"])
+        self.mode_combo.setCurrentText(system_conf.get("mode", "office"))
+        form.addRow("Trinity Modus:", self.mode_combo)
+        
+        mode_hint = QLabel("<b>Office</b>: Standard (STT+TTS an).<br><b>Lecture</b>: Vorlesung optimiert.<br><b>Chat</b>: STT+TTS aus (nur Flüstern/Telegram).")
+        mode_hint.setStyleSheet("color: #888; font-size: 11px;")
+        mode_hint.setWordWrap(True)
+        form.addRow("", mode_hint)
+
         self.terminal_cb = QCheckBox("Terminal-Fenster im Hintergrund anzeigen (Log-Ausgabe)")
         self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
         form.addRow(self.terminal_cb)
