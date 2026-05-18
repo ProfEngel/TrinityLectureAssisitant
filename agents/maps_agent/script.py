@@ -2,9 +2,20 @@ import re
 
 def can_handle(query: str) -> bool:
     """
-    Prüft, ob die Anfrage einen Maps-Befehl enthält.
+    Prüft, ob die Anfrage einen Maps-Befehl enthält, blockiert aber bei Data Science Anfragen.
     """
     router_text = query.lower()
+    
+    # Blockiere Data-Science-Anfragen (diese gehören dem Sandbox-Agenten)
+    ds_keywords = [
+        "csv", "datensatz", "dataset", "pandas", "pyodide", "dataframe",
+        "python code", "plotly", "seaborn", "matplotlib", "heatmap", "heat map",
+        "cluster", "kmeans", "k-means", "regression", "klassifizier", "predict",
+        "vorhersage", "http://", "https://"
+    ]
+    if any(ds in router_text for ds in ds_keywords):
+        return False
+        
     return any(word in router_text for word in ["route", "karte", "navigiere", "maps"])
 
 def execute(query: str, context: dict = None) -> dict:
