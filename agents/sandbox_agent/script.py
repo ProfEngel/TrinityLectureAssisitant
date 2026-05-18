@@ -71,6 +71,7 @@ REGELN:
 - ACHTE UNBEDINGT auf fehlerfreie Python-Syntax! Jede Zeile muss valider Python-Code sein. Vermeide jegliche Tippfehler und halbe oder fehlerhafte Sätze bei Importen (wie z. B. 'from sklearn.compose | pipeline').
 - SPEZIALFALL Philadelphia Carto Live-API: Nur wenn der Nutzer explizit nach "Live-Daten" oder dem "Carto-Endpunkt" fragt, lautet die URL: https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+incidents_part1_part2+WHERE+point_x+IS+NOT+NULL+AND+point_y+IS+NOT+NULL+LIMIT+2000&format=csv (dort heißen die Koordinaten 'point_x' und 'point_y').
 - DYNAMISCHE SPALTENERKENNUNG FÜR KARTEN: Falls du Geodaten aus einer CSV/Tabelle visualisierst, ermittle die Breitengrad- (lat) und Längengrad-Spalten (lon) DYNAMISCH (z. B. indem du nach Spaltennamen wie 'lat', 'y', 'latitude', 'point_y' bzw. 'lon', 'x', 'longitude', 'point_x' suchst), anstatt feste Spaltennamen blind vorauszusetzen! So verhinderst du KeyErrors bei unterschiedlichen CSVs.
+- MAPBOX TOKEN VERMEIDEN: Verwende bei Plotly-Karten (density_mapbox/scatter_mapbox) NIEMALS die Styles 'dark', 'light', 'streets', 'satellite' oder 'outdoors', da diese einen Mapbox Access Token erfordern! Verwende STATTDESSEN IMMER kostenlose Styles wie 'open-street-map', 'carto-darkmatter' oder 'carto-positron', die ohne Token funktionieren.
 
 BEISPIEL-MUSTER für Datensatz-Download:
   import requests
