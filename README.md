@@ -163,6 +163,11 @@ Dieses Projekt steht unter der **Apache License 2.0**.
 
 ## Zitation & Forschung 📚
 
+Für das Projekt stehen wissenschaftliche Begleitpapiere (Whitepapers) bereit, die die architektonische Einzigartigkeit und Notwendigkeit des Trinity-Ansatzes im Detail analysieren:
+
+*   **[Whitepaper (Deutsch)](docs/trinitylectureassistant_18052026_de.pdf)** — *Trinity Academic Personal Concierge: Einzigartigkeit und Notwendigkeit eines lokalen agentischen KI-Privatbüros*
+*   **[Whitepaper (English)](docs/trinitylectureassistant_18052026_en.pdf)** — *Trinity Academic Personal Concierge: Uniqueness and Necessity of a Local Agentic AI Private Office*
+
 Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
 
 ```bibtex
