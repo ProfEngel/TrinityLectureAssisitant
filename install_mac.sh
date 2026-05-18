@@ -79,7 +79,7 @@ python3 -m venv venv
 echo "📦 Installiere Abhängigkeiten (das kann 2–5 Minuten dauern)..."
 export PYTHONIOENCODING=utf-8
 ./venv/bin/python3 -m pip install --upgrade pip -q
-./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech pyobjc-framework-AVFoundation -q
+./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech pyobjc-framework-AVFoundation beautifulsoup4 -q
 
 # 7. Desktop-Verknüpfung (Native macOS App) erstellen
 DESKTOP_DIR="$HOME/Desktop"

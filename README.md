@@ -60,6 +60,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
+ | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
  | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
