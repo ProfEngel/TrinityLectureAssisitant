@@ -76,6 +76,10 @@ REGELN:
   1. Konvertiere die Breitengrad- und Längengrad-Spalten vor dem Plotten IMMER explizit in Zahlen: `df[lat_col] = pd.to_numeric(df[lat_col], errors='coerce')` und droppe NaNs, da Plotly bei Strings stumm versagt!
   2. Für Heatmaps (`density_mapbox`): Erstelle IMMER eine Hilfsspalte mit Einsen (z.B. `df['intensity'] = 1`), übergib diese an `z='intensity'` und setze `radius` auf mindestens `15` bis `25`, da die Punkte sonst unsichtbar klein gezeichnet werden!
   3. Biete zusätzlich oder alternativ eine farbige `scatter_mapbox` an (coloriert nach Typ), da dies für den Nutzer oft noch deutlicher visualisiert.
+- WORDCLOUDS IN PLOTLY (OHNE EXTERNE PACKAGES): Da in Pyodide kein 'wordcloud'-Paket vorinstalliert ist, erstelle interaktive Wordclouds mit Plotly! Zähle dazu Wortfrequenzen (z.B. mit collections.Counter, filtere deutsche Stopwörter wie 'und', 'der', 'die', 'das', 'ist', 'für' heraus) und erstelle einen Plotly-Scatter-Plot (`px.scatter`), bei dem du x- und y-Koordinaten zufällig wählst (z.B. random.random() für jedes Wort), das Argument `text='word'` übergibst und die Punktgröße `size='count'` setzt. Blende Achsen und Grid aus (`fig.update_layout(xaxis_visible=False, yaxis_visible=False)`). Das erzeugt eine atemberaubende, interaktive Wordcloud mit Tooltips bei Hover!
+- SENTIMENT-ANALYSEN & EXCEL IN PYODIDE:
+  1. Excel-Dateien laden: Nutze `pd.read_excel(io.BytesIO(response.content), engine='openpyxl')`.
+  2. Sentiment-Analyse: Schreibe eine einfache, robuste deutsche Lexikon-basierte Analyse! Definiere kleine Sets positiver Wörter (z.B. gut, toll, super, klasse, erfolg, gewinn, sauber) und negativer Wörter (z.B. schlecht, skandal, betrug, krise, fehler, lüge, enttäuscht, abgas, manipulation) und berechne die Häufigkeiten für jeden Text. Visualisiere das Ergebnis als Plotly Pie Chart (Verteilung Positiv vs. Negativ vs. Neutral) oder als Liniendiagramm über die Zeit.
 
 BEISPIEL-MUSTER für Datensatz-Download:
   import requests
