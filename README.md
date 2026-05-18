@@ -81,7 +81,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 | Komponente | Technologie |
 |---|---|
 | **STT (Sprache → Text)** | `faster-whisper` · Modell: `small` · int8, CPU |
-| **LLM** | Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
+| **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
 | **TTS (Text → Stimme)** | macOS `say` (Stimme: Samantha) |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
