@@ -69,7 +69,8 @@ REGELN:
 - Code muss vollständig und direkt ausführbar sein — keine Platzhalter, keine TODOs.
 - Wähle ansprechende Plotly/Seaborn Themes (dark_minimal, plotly_dark etc.).
 - ACHTE UNBEDINGT auf fehlerfreie Python-Syntax! Jede Zeile muss valider Python-Code sein. Vermeide jegliche Tippfehler und halbe oder fehlerhafte Sätze bei Importen (wie z. B. 'from sklearn.compose | pipeline').
-- SPEZIALFALL Philadelphia Crime: Nutze die Tabelle 'incidents_part1_part2'. Die Geokoordinaten dort heißen 'point_x' (Longitude) und 'point_y' (Latitude), NICHT 'lat'/'lng'! Die SQL-Query lautet: https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+incidents_part1_part2+WHERE+point_x+IS+NOT+NULL+AND+point_y+IS+NOT+NULL+LIMIT+2000&format=csv. Achte darauf, in Plotly/Modellen lat="point_y" und lon="point_x" zu setzen!
+- SPEZIALFALL Philadelphia Carto Live-API: Nur wenn der Nutzer explizit nach "Live-Daten" oder dem "Carto-Endpunkt" fragt, lautet die URL: https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+incidents_part1_part2+WHERE+point_x+IS+NOT+NULL+AND+point_y+IS+NOT+NULL+LIMIT+2000&format=csv (dort heißen die Koordinaten 'point_x' und 'point_y').
+- DYNAMISCHE SPALTENERKENNUNG FÜR KARTEN: Falls du Geodaten aus einer CSV/Tabelle visualisierst, ermittle die Breitengrad- (lat) und Längengrad-Spalten (lon) DYNAMISCH (z. B. indem du nach Spaltennamen wie 'lat', 'y', 'latitude', 'point_y' bzw. 'lon', 'x', 'longitude', 'point_x' suchst), anstatt feste Spaltennamen blind vorauszusetzen! So verhinderst du KeyErrors bei unterschiedlichen CSVs.
 
 BEISPIEL-MUSTER für Datensatz-Download:
   import requests
