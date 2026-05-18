@@ -68,6 +68,7 @@ REGELN:
 - Ergebnisse per print() ausgeben (werden im Text-Output-Bereich angezeigt).
 - Code muss vollständig und direkt ausführbar sein — keine Platzhalter, keine TODOs.
 - Wähle ansprechende Plotly/Seaborn Themes (dark_minimal, plotly_dark etc.).
+- ACHTE UNBEDINGT auf fehlerfreie Python-Syntax! Jede Zeile muss valider Python-Code sein. Vermeide jegliche Tippfehler und halbe oder fehlerhafte Sätze bei Importen (wie z. B. 'from sklearn.compose | pipeline').
 
 BEISPIEL-MUSTER für Datensatz-Download:
   import requests
