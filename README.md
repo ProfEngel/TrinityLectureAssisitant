@@ -13,9 +13,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - v0.8.2: Secure Pyodide WASM Sandbox for Data-Science, math calculations, and interactive diagrams. 🧮
 > - v0.8.1: Trinity Chat-Mode & Dynamic Mode Switching. 💬
 > - v0.8.0: Academic Personal Concierge Rebrand & UI Slogan Integration. 🧞‍♀️
-> - v0.7.8: Verified Linux LTX 2.3 I2V Workflow API.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 

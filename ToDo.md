@@ -2,6 +2,12 @@
 
 Hier sind die geplanten Erweiterungen für Trinity:
 
+## [v0.8.2] - 2026-05-18
+- [X] **Secure Sandbox Environment (Isolierte Programmierung):** Aufbau einer 100% sicheren, isolierten Python-Programmierumgebung auf WebAssembly-Basis (Pyodide).
+- [X] **Data Science & ML Support:** Volle Integration von Numpy, Pandas, Matplotlib, Seaborn, SymPy, SciPy und Scikit-Learn in der Sandbox.
+- [X] **Bypass CORS in WebEngine:** Gezielte Aufhebung der CORS-Beschränkungen in PySide6 QWebEngineView zum Herunterladen beliebiger Online-Datensätze direkt im Sandbox-Kontext.
+- [X] **Visual-Output (Plotly & Matplotlib):** Unterstützung für interaktives Rendering von Plotly-Diagrammen und statischen Matplotlib-Visualisierungen.
+
 ## [v0.8.1] - 2026-05-17
 - [X] **Trinity Chat-Mode:** Implementierung eines ressourcenschonenden, rein text-/UI-basierten Chat-Modus.
 - [X] **Dynamische Modus-Umschaltung:** Nahtloses Live-Wechseln zwischen Büro-, Vorlesungs- und Chat-Modus via Flüstern ("büromodus aktivieren") ohne App-Neustart.
@@ -12,15 +18,6 @@ Hier sind die geplanten Erweiterungen für Trinity:
 - [X] **UI Slogan Integration**: Dynamische Einblendung des Slogans im Avatar-UI.
 - [X] **Roadmap Expansion**: Integration von Trinity Mobile in die strategische Planung.
 - [X] **Positioning Document**: Erstellung und Integration von `warum_trinity.md` und neuen Infografiken.
-
-## [v0.8.2] - Next Update
-
-- [ ] **Release-Management Update**: Umstellung auf tieferes Versioning (0.x.x.x.x).
-- [ ] **Büro Modus (Base Phase)**: Initialisierung der Weiche zwischen "Vorlesung" und "Büro".
-- [ ] **Headless-Betrieb & Terminal-Chat**: Headless-Modus (z.B. für Ubuntu) und direktes Chatten im Terminal per CLI-Aufruf `trinity` (analog zum Hermes Agent).
-- [ ] **Desktop App Packaging**: Verpackte, installierbare Anwendungen für Windows und macOS.
-- [ ] **Lifestyle- & Health-Agents**: Erweiterung auf nicht-akademische Agents (z.B. Protokollierung von Ernährungsverlauf, Fitness und Gesundheit).
-- [ ] **Variabler Heartbeat**: Heartbeat-Intervalle dynamisch anpassbar für verschiedene Modi (Chat, Büro, Headless).
 
 ## [v0.7.8] - 2026-05-14
 
@@ -129,9 +126,9 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 
   - [ ] "Trinity, zeig mir das auf beiden Bildschirmen" -> Toggle Mirror/Extended Mode.
   - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
-- [ ] **Secure Sandbox Environment (Isolierte Programmierung):**
-  - [ ] Bereitstellung einer sicheren Sandbox-Programmierumgebung für mathematische Berechnungen, Datenanalysen und Diagrammerstellung.
-  - [ ] Striktes Rechtemanagement: Vollständige Isolation, kein Zugriff auf das eigentliche Dateisystem oder Trinity-Kernkomponenten.
+- [X] **Secure Sandbox Environment (Isolierte Programmierung):**
+  - [X] Bereitstellung einer sicheren Sandbox-Programmierumgebung für mathematische Berechnungen, Datenanalysen und Diagrammerstellung.
+  - [X] Striktes Rechtemanagement: Vollständige Isolation, kein Zugriff auf das eigentliche Dateisystem oder Trinity-Kernkomponenten.
 - [ ] **Onboarding & UX:**
 
   - [ ] Tutorial für Erstbenutzer erstellen (geplant ab Q3 2026).
