@@ -8,12 +8,13 @@ def can_handle(query: str) -> bool:
     if any(word in router_text for word in ["lokal", "server", "comfyui", "flux render", "sierra"]):
         return False
         
-    # Wenn Anzeichen für Data Science / Pyodide / Berechnungen vorliegen, NICHT das Bild-Modell triggern
+    # Wenn Anzeichen für echte Datenverarbeitung / Pyodide / mathematische Berechnungen vorliegen,
+    # blockieren wir den Image-Agent, damit die Sandbox rechnet. Rein konzeptionelle Erklärungsbilder
+    # (z. B. "Schaubild zu einer Regression") bleiben weiterhin voll funktionsfähig!
     ds_keywords = [
-        "csv", "datensatz", "dataset", "pandas", "regression", "klassif", "sklearn", 
-        "scikit", "pyodide", "dataframe", "random forest", "svm", "knn", "automl", 
-        "mathematisch", "integral", "ableitung", "sympy", "numpy", "berechne", "berechn",
-        "bostonhousing", "schwertlilie", "datenanalyse"
+        "csv", "datensatz", "dataset", "pandas", "pyodide", "dataframe",
+        "python code", "führe aus", "berechne", "berechn", "integral", "ableitung", "sympy",
+        "http://", "https://"
     ]
     if any(ds in router_text for ds in ds_keywords):
         return False
