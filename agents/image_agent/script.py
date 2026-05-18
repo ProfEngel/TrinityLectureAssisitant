@@ -4,8 +4,18 @@ import requests
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    # Wenn 'lokal' oder 'server' oder 'sierra' vorkommt, soll ComfyUI-Agent übernehmen
+    # Wenn 'lokal' oder 'server' oder 'comfyui' oder 'flux render' oder 'sierra' vorkommt, soll ComfyUI-Agent übernehmen
     if any(word in router_text for word in ["lokal", "server", "comfyui", "flux render", "sierra"]):
+        return False
+        
+    # Wenn Anzeichen für Data Science / Pyodide / Berechnungen vorliegen, NICHT das Bild-Modell triggern
+    ds_keywords = [
+        "csv", "datensatz", "dataset", "pandas", "regression", "klassif", "sklearn", 
+        "scikit", "pyodide", "dataframe", "random forest", "svm", "knn", "automl", 
+        "mathematisch", "integral", "ableitung", "sympy", "numpy", "berechne", "berechn",
+        "bostonhousing", "schwertlilie", "datenanalyse"
+    ]
+    if any(ds in router_text for ds in ds_keywords):
         return False
         
     return any(word in router_text for word in ["infografik", "grafik", "visualisier", "schaubild", "illustration"]) or \
