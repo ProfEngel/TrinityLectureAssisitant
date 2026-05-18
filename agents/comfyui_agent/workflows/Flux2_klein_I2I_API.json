@@ -1,7 +1,7 @@
 {
   "6": {
     "inputs": {
-      "text": "",
+      "text": "The woman in the image is standing on a street talking to some people",
       "clip": [
         "74",
         1
@@ -105,7 +105,7 @@
   },
   "25": {
     "inputs": {
-      "noise_seed": 87409394751958
+      "noise_seed": 1091713684616654
     },
     "class_type": "RandomNoise",
     "_meta": {
@@ -114,7 +114,7 @@
   },
   "26": {
     "inputs": {
-      "guidance": 1.2,
+      "guidance": 1,
       "conditioning": [
         "6",
         0
@@ -160,7 +160,7 @@
   "45": {
     "inputs": {
       "upscale_method": "lanczos",
-      "megapixels": 1.6,
+      "megapixels": 1,
       "resolution_steps": 1,
       "image": [
         "46",
@@ -174,7 +174,7 @@
   },
   "46": {
     "inputs": {
-      "image": ""
+      "image": "Eve_FirstImage.PNG"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -183,8 +183,8 @@
   },
   "47": {
     "inputs": {
-      "width": 1280,
-      "height": 1280,
+      "width": 1536,
+      "height": 1536,
       "batch_size": 1
     },
     "class_type": "EmptyFlux2LatentImage",
@@ -194,9 +194,9 @@
   },
   "48": {
     "inputs": {
-      "steps": 10,
-      "width": 1280,
-      "height": 1280
+      "steps": 8,
+      "width": 1536,
+      "height": 1536
     },
     "class_type": "Flux2Scheduler",
     "_meta": {
@@ -243,17 +243,17 @@
       },
       "lora_1": {
         "on": false,
-        "lora": "",
+        "lora": "flux2.9B\\sns1.2_F2_9B.safetensors",
         "strength": 1
       },
       "lora_2": {
         "on": false,
-        "lora": "",
-        "strength": 1
+        "lora": "flux2.9B\\RealSkin_F2_9B.safetensors",
+        "strength": 0.2
       },
       "➕ Add Lora": "",
       "model": [
-        "73",
+        "75",
         0
       ],
       "clip": [
@@ -264,6 +264,29 @@
     "class_type": "Power Lora Loader (rgthree)",
     "_meta": {
       "title": "Power Lora Loader (rgthree)"
+    }
+  },
+  "75": {
+    "inputs": {
+      "preset": "HARD_LOCK",
+      "reference_index": 0,
+      "double_schedule": "0-3:mid=0.25; 4:mid=0.35; 5:mid=0.65; 6-7:mid=0.45",
+      "single_schedule": "0:mid=0.35; 1:mid=0.25; 2-10:mid=0.30; 11-19:mid=0.25; 20:mid=0.08; 21:mid=0.10; 22:mid=0.15; 23:mid=0.20",
+      "double_sim": 0.02,
+      "single_sim": 0.02,
+      "commit_margin": 0.035,
+      "commit_confirm": 2,
+      "commit_anchor": 0.5,
+      "mask_threshold": 0.25,
+      "debug": false,
+      "model": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "IdentityFeatureTransferV3",
+    "_meta": {
+      "title": "FLUX.2 Klein Identity Feature Transfer V3"
     }
   }
 }

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trinity Data Sandbox</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: rgba(22, 27, 34, 0.95);
+            --border: rgba(48, 54, 61, 0.8);
+            --accent: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #f0883e;
+            --accent-red: #f85149;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* ─── Header ─── */
+        #header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        #header h1 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--accent);
+            letter-spacing: 0.05em;
+        }
+        #status-badge {
+            margin-left: auto;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            background: rgba(48,54,61,0.8);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        #status-badge.loading { color: var(--accent-orange); border-color: var(--accent-orange); }
+        #status-badge.running { color: var(--accent); border-color: var(--accent); }
+        #status-badge.done    { color: var(--accent-green); border-color: var(--accent-green); }
+        #status-badge.error   { color: var(--accent-red); border-color: var(--accent-red); }
+
+        /* ─── Code Block ─── */
+        #code-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        #code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 14px;
+            background: rgba(48,54,61,0.4);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        #code-header span { font-family: 'Fira Code', monospace; }
+        #run-btn {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            border-radius: 5px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        #run-btn:hover { opacity: 0.85; }
+        #run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        #code-display {
+            padding: 14px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #adbac7;
+            white-space: pre-wrap;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        /* ─── Output ─── */
+        #output-container {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #output-container.visible { display: flex; }
+
+        .output-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .output-block-header {
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(48,54,61,0.4);
+            border-bottom: 1px solid var(--border);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        #text-output {
+            padding: 12px 14px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #adbac7;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #plot-output { width: 100%; min-height: 380px; }
+        #error-output {
+            padding: 12px 14px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            color: var(--accent-red);
+            white-space: pre-wrap;
+        }
+
+        /* ─── Loader ─── */
+        #loader {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        #loader.visible { display: flex; }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="var(--accent)">
+        <path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1ZM2 13V2h5v11H2Zm6 0V2h6v11H8Z"/>
+    </svg>
+    <h1>TRINITY · SECURE SANDBOX</h1>
+    <div id="status-badge">Initialisierung…</div>
+</div>
+
+<div id="code-container">
+    <div id="code-header">
+        <span>generated_script.py</span>
+        <button id="run-btn" disabled onclick="runCode()">▶ Ausführen</button>
+    </div>
+    <div id="code-display">Pyodide wird geladen…</div>
+</div>
+
+<div id="loader">
+    <div class="spinner"></div>
+    <span id="loader-text">Pakete werden geladen…</span>
+</div>
+
+<div id="output-container">
+    <div class="output-block" id="error-block" style="display:none; border-color: rgba(248,81,73,0.4);">
+        <div class="output-block-header" style="color: var(--accent-red);">⚠ Fehler</div>
+        <div id="error-output"></div>
+    </div>
+    <div class="output-block" id="text-block" style="display:none;">
+        <div class="output-block-header">📋 Ausgabe / Ergebnisse</div>
+        <div id="text-output"></div>
+    </div>
+    <div class="output-block" id="plot-block" style="display:none;">
+        <div class="output-block-header">📊 Visualisierung</div>
+        <div id="plot-output"></div>
+    </div>
+</div>
+
+<script>
+let pyodide = null;
+let pendingCode = null;
+
+// Bestimmt automatisch welche Pakete ein Skript braucht
+function detectPackages(code) {
+    const pkgMap = {
+        'numpy':      ['numpy', 'np.'],
+        'pandas':     ['pandas', 'pd.', 'DataFrame(', 'read_csv'],
+        'matplotlib': ['matplotlib', 'plt.'],
+        'scipy':      ['scipy', 'from scipy'],
+        'sympy':      ['sympy', 'from sympy', 'symbols(', 'integrate(', 'diff('],
+        'scikit-learn': ['sklearn', 'from sklearn'],
+        'seaborn':    ['seaborn', 'sns.'],
+    };
+    const needed = [];
+    for (const [pkg, triggers] of Object.entries(pkgMap)) {
+        if (triggers.some(t => code.includes(t))) needed.push(pkg);
+    }
+    return needed;
+}
+
+async function initPyodide() {
+    setStatus('loading', 'Pyodide lädt…');
+    try {
+        pyodide = await loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/"
+        });
+
+        // pyodide-http patcht requests → pyfetch (wichtig für Datensatz-Downloads)
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install('pyodide-http');
+        pyodide.runPython(`
+import pyodide_http
+pyodide_http.patch_all()
+        `);
+
+        // stdout/stderr umleiten
+        pyodide.runPython(`
+import sys, io
+_stdout_buffer = io.StringIO()
+sys.stdout = _stdout_buffer
+sys.stderr = _stdout_buffer
+        `);
+
+        setStatus('done', 'Bereit');
+        document.getElementById('run-btn').disabled = false;
+        document.getElementById('code-display').textContent = pendingCode
+            ? pendingCode
+            : "# Warte auf Code von Trinity…";
+
+        if (pendingCode) {
+            document.getElementById('run-btn').disabled = false;
+            // Auto-run wenn Code schon vorlag
+            setTimeout(runCode, 300);
+        }
+    } catch(e) {
+        setStatus('error', 'Initialisierungsfehler');
+        document.getElementById('code-display').textContent = '❌ ' + e.message;
+    }
+}
+
+// Wird von Trinity via window.injectCode() aufgerufen
+window.injectCode = function(code) {
+    pendingCode = code;
+    document.getElementById('code-display').textContent = code;
+    if (pyodide) {
+        document.getElementById('run-btn').disabled = false;
+        setTimeout(runCode, 300);
+    }
+};
+
+async function runCode() {
+    if (!pyodide || !pendingCode) return;
+
+    document.getElementById('run-btn').disabled = true;
+    document.getElementById('output-container').classList.remove('visible');
+    document.getElementById('error-block').style.display = 'none';
+    document.getElementById('text-block').style.display = 'none';
+    document.getElementById('plot-block').style.display = 'none';
+
+    // Pakete erkennen und laden
+    const pkgs = detectPackages(pendingCode);
+    if (pkgs.length > 0) {
+        showLoader(`Lade: ${pkgs.join(', ')}…`);
+        setStatus('loading', 'Pakete laden…');
+        try {
+            await pyodide.loadPackagesFromImports(pendingCode);
+            // seaborn + scipy via micropip (reine Python-Pakete)
+            const micropip = pyodide.pyimport("micropip");
+            const extras = [];
+            if (pendingCode.includes('seaborn')) extras.push('seaborn');
+            for (const p of extras) { try { await micropip.install(p); } catch(_) {} }
+        } catch(e) {
+            console.warn("Paket-Ladefehler:", e);
+        }
+        hideLoader();
+    }
+
+    setStatus('running', 'Läuft…');
+    showLoader('Code wird ausgeführt…');
+
+    // stdout-Buffer zurücksetzen
+    pyodide.runPython(`
+_stdout_buffer.truncate(0)
+_stdout_buffer.seek(0)
+    `);
+
+    // Plotly-Daten-Extraktion: Wir wrappen matplotlib.pyplot.show()
+    const wrappedCode = `
+import json as _json
+_plotly_json = None
+_mpl_png_b64 = None
+
+# Plotly-Patch: fig.show() → JSON-Export für Browser-Rendering
+try:
+    import plotly.io as _pio
+    _orig_show = _pio.show
+    def _patched_show(fig, *args, **kwargs):
+        global _plotly_json
+        _plotly_json = fig.to_json()
+    _pio.show = _patched_show
+    import plotly.graph_objects as _go
+    _orig_go_show = _go.Figure.show
+    def _go_patched_show(self, *args, **kwargs):
+        global _plotly_json
+        _plotly_json = self.to_json()
+    _go.Figure.show = _go_patched_show
+except ImportError:
+    pass
+
+# Matplotlib-Patch: plt.show() → Base64 PNG
+try:
+    import matplotlib
+    matplotlib.use('agg')
+    import matplotlib.pyplot as _plt_mod
+    _orig_plt_show = _plt_mod.show
+    def _mpl_show(*args, **kwargs):
+        global _mpl_png_b64
+        import io, base64
+        buf = io.BytesIO()
+        _plt_mod.savefig(buf, format='png', bbox_inches='tight',
+                         facecolor='#0d1117', edgecolor='none', dpi=140)
+        buf.seek(0)
+        _mpl_png_b64 = base64.b64encode(buf.read()).decode('utf-8')
+        _plt_mod.close('all')
+    _plt_mod.show = _mpl_show
+except ImportError:
+    pass
+
+${pendingCode}
+`;
+
+    try {
+        await pyodide.runPythonAsync(wrappedCode);
+
+        // stdout lesen
+        const stdout = pyodide.runPython("_stdout_buffer.getvalue()");
+        // Plotly JSON lesen
+        const plotlyJson = pyodide.runPython("_plotly_json if _plotly_json is not None else ''");
+        // Matplotlib PNG lesen
+        const mplB64 = pyodide.runPython("_mpl_png_b64 if _mpl_png_b64 is not None else ''");
+
+        hideLoader();
+        document.getElementById('output-container').classList.add('visible');
+
+        if (stdout.trim()) {
+            document.getElementById('text-output').textContent = stdout;
+            document.getElementById('text-block').style.display = 'block';
+        }
+
+        if (plotlyJson) {
+            const fig = JSON.parse(plotlyJson);
+            // Dark-Theme für Plotly
+            fig.layout = fig.layout || {};
+            fig.layout.paper_bgcolor = '#0d1117';
+            fig.layout.plot_bgcolor  = '#161b22';
+            fig.layout.font = { color: '#e6edf3', family: 'Inter, sans-serif' };
+            Plotly.newPlot('plot-output', fig.data, fig.layout, {responsive: true, displayModeBar: true});
+            document.getElementById('plot-block').style.display = 'block';
+        } else if (mplB64) {
+            document.getElementById('plot-output').innerHTML =
+                `<img src="data:image/png;base64,${mplB64}" style="width:100%;border-radius:6px;" />`;
+            document.getElementById('plot-block').style.display = 'block';
+        }
+
+        setStatus('done', 'Fertig ✓');
+    } catch(err) {
+        hideLoader();
+        document.getElementById('output-container').classList.add('visible');
+        document.getElementById('error-output').textContent = err.message;
+        document.getElementById('error-block').style.display = 'block';
+        setStatus('error', 'Fehler');
+    }
+
+    document.getElementById('run-btn').disabled = false;
+}
+
+function setStatus(cls, text) {
+    const badge = document.getElementById('status-badge');
+    badge.className = 'status-badge ' + cls;
+    badge.id = 'status-badge';
+    badge.textContent = text;
+}
+
+function showLoader(msg) {
+    const l = document.getElementById('loader');
+    document.getElementById('loader-text').textContent = msg;
+    l.classList.add('visible');
+}
+function hideLoader() {
+    document.getElementById('loader').classList.remove('visible');
+}
+
+// Start
+initPyodide();
+</script>
+</body>
+</html>

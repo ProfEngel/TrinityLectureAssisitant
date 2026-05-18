@@ -3,6 +3,7 @@ import os
 from PySide6.QtCore import Qt, QUrl, QTimer, QObject, QEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLineEdit, QVBoxLayout
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEngineSettings
 
 class ContentResizeFilter(QObject):
     """EventFilter der auf dem WebEngine-FocusProxy lauscht und Resize an den Rändern ermöglicht."""
@@ -106,6 +107,12 @@ class ContentWindow(QMainWindow):
         self.browser = QWebEngineView(self)
         self.browser.setAttribute(Qt.WA_TranslucentBackground)
         self.browser.page().setBackgroundColor(Qt.transparent)
+        
+        # Sandbox CORS Bypass für Pyodide Data-Science
+        settings = self.browser.settings()
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        
         self.setCentralWidget(self.browser)
 
         # Resize-Filter auf dem WebEngine-Proxy installieren
@@ -153,7 +160,25 @@ class ContentWindow(QMainWindow):
         # Größe auf Standard zurücksetzen
         self.resize(self.DEFAULT_W, self.DEFAULT_H)
 
-        # HTML Template mit Glass-Morphism
+        self.is_sticky = "<!-- KEEP_OPEN -->" in html_content
+
+        # ── FULLPAGE: Pyodide-Sandbox bekommt das gesamte Fenster ─────────────
+        if "<!-- FULLPAGE -->" in html_content:
+            # Entferne beide Marker, liefere rohe HTML-Seite direkt
+            clean_html = html_content.replace("<!-- KEEP_OPEN -->", "").replace("<!-- FULLPAGE -->", "").strip()
+            # Größeres Fenster für Data-Science-Inhalte
+            self.resize(900, 720)
+            base_url = QUrl.fromLocalFile(os.path.dirname(os.path.abspath(__file__)) + "/")
+            self.browser.setHtml(clean_html, base_url)
+            screen = QApplication.primaryScreen().geometry()
+            self.move(
+                (screen.width() - 900) // 2,
+                (screen.height() - 720) // 2,
+            )
+            self.show()
+            return
+
+        # ── STANDARD: Glass-Morphism-Template ─────────────────────────────────
         full_html = f"""
         <!DOCTYPE html>
         <html>
@@ -208,7 +233,6 @@ class ContentWindow(QMainWindow):
         </body>
         </html>
         """
-        self.is_sticky = "<!-- KEEP_OPEN -->" in html_content
         # Base-URL setzen, damit file:// Bilder geladen werden können
         base_url = QUrl.fromLocalFile(os.path.dirname(os.path.abspath(__file__)) + "/")
         self.browser.setHtml(full_html, base_url)
