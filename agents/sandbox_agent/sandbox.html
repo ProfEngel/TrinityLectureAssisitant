@@ -223,6 +223,7 @@ function detectPackages(code) {
         'sympy':      ['sympy', 'from sympy', 'symbols(', 'integrate(', 'diff('],
         'scikit-learn': ['sklearn', 'from sklearn'],
         'seaborn':    ['seaborn', 'sns.'],
+        'plotly':     ['plotly', 'px.', 'go.', 'import plotly'],
     };
     const needed = [];
     for (const [pkg, triggers] of Object.entries(pkgMap)) {
@@ -298,11 +299,15 @@ async function runCode() {
         setStatus('loading', 'Pakete laden…');
         try {
             await pyodide.loadPackagesFromImports(pendingCode);
-            // seaborn + scipy via micropip (reine Python-Pakete)
+            // seaborn + plotly via micropip (reine Python-Pakete)
             const micropip = pyodide.pyimport("micropip");
             const extras = [];
-            if (pendingCode.includes('seaborn')) extras.push('seaborn');
-            for (const p of extras) { try { await micropip.install(p); } catch(_) {} }
+            if (pkgs.includes('seaborn')) extras.push('seaborn');
+            if (pkgs.includes('plotly')) extras.push('plotly');
+            for (const p of extras) { 
+                showLoader(`Installiere ${p} via micropip…`);
+                try { await micropip.install(p); } catch(_) {} 
+            }
         } catch(e) {
             console.warn("Paket-Ladefehler:", e);
         }
