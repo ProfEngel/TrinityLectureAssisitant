@@ -59,6 +59,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **PowerPoint-Agent** | *Lecture* | Native Steuerung von MS PowerPoint via AppleScript. |
  | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
+ | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
@@ -68,6 +69,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  *   **AirPod Souffleur:** Private Informationen direkt ins Ohr, Umschalten auf Plenum-Speaker auf Befehl.
  *   **Proaktiver Heartbeat:** Analyse des Transkripts alle 2 Min. mit Warnungen vor logischen Fehlern.
  *   **Document Intelligence:** Lokale Dateien (Thesen, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
+ *   **Secure Sandbox Environment:** 100% einbruchsichere Python/WASM-Umgebung (Pyodide) für wissenschaftliche Berechnungen, sympy-Algebra und interaktive Plotly-Diagramme.
  *   **Dynamic Progress Ring:** Kreisförmige Fortschrittsanzeige (Orange: Reading, Rot: Analyzing) um den Avatar.
  *   **User Telemetry:** Tracking der Zeit in Vorlesungen, Teams-Sitzungen und Mail-Bearbeitung (analog Bildschirmzeit).
  *   **Local First & DSGVO:** Maximale Privatsphäre durch lokale Verarbeitung und gezieltes STT-Mikrofon.
@@ -86,6 +88,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 | **Bildgenerierung** | fal.ai `nano-banana-2` (Cloud) oder ComfyUI `Flux.1/2` (Lokal) |
 | **Musikgenerierung** | ComfyUI `AceStep 1.5` (Lokal) |
 | **Videogenerierung** | ComfyUI `LTX 2.3` (Lokal) |
+| **Python Sandbox** | Pyodide WebAssembly (lokal in QWebEngineView) |
 | **Web-Recherche** | Tavily API |
 
 ---
@@ -146,7 +149,6 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
  *   **Multi-OS & Cross-Platform Packaging (Q4 2026):** Fertige Apps für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
- *   **Secure Sandbox Environment (Q4 2026):** Isolierte Programmierumgebung für mathematische Berechnungen und Diagrammerstellung ohne Systemzugriff.
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
 
