@@ -142,8 +142,11 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **Office Mode Integration (Q2 2026):** Lokale Mail-Drafts, AppleScript-Anbindung für Teams/Kalender & Writing Sample RAG.
  *   **Document Intelligence (Q2 2026):** Drag & Drop Support für Thesen und Excel-Auswertungen inkl. Korrektur-Agenten.
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
- *   **Cognitive Evolution (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion und Fallback-LLM Resilienz.
- *   **Native App:** Transformation in eine Standalone macOS App.
+ *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
+ *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
+ *   **Multi-OS & Cross-Platform Packaging (Q4 2026):** Fertige Apps für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
+ *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
+ *   **Secure Sandbox Environment (Q4 2026):** Isolierte Programmierumgebung für mathematische Berechnungen und Diagrammerstellung ohne Systemzugriff.
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).
 

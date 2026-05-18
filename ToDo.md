@@ -13,10 +13,14 @@ Hier sind die geplanten Erweiterungen für Trinity:
 - [X] **Roadmap Expansion**: Integration von Trinity Mobile in die strategische Planung.
 - [X] **Positioning Document**: Erstellung und Integration von `warum_trinity.md` und neuen Infografiken.
 
-## [v0.7.8.0.1] - Next Update
+## [v0.8.2] - Next Update
 
 - [ ] **Release-Management Update**: Umstellung auf tieferes Versioning (0.x.x.x.x).
 - [ ] **Büro Modus (Base Phase)**: Initialisierung der Weiche zwischen "Vorlesung" und "Büro".
+- [ ] **Headless-Betrieb & Terminal-Chat**: Headless-Modus (z.B. für Ubuntu) und direktes Chatten im Terminal per CLI-Aufruf `trinity` (analog zum Hermes Agent).
+- [ ] **Desktop App Packaging**: Verpackte, installierbare Anwendungen für Windows und macOS.
+- [ ] **Lifestyle- & Health-Agents**: Erweiterung auf nicht-akademische Agents (z.B. Protokollierung von Ernährungsverlauf, Fitness und Gesundheit).
+- [ ] **Variabler Heartbeat**: Heartbeat-Intervalle dynamisch anpassbar für verschiedene Modi (Chat, Büro, Headless).
 
 ## [v0.7.8] - 2026-05-14
 
@@ -94,6 +98,7 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [X] Einblendung alternativer Perspektiven oder Ergänzungen.
   - [ ] **Repetitions-Check:** Abgleich mit RAG (vorherige Sessions), um Redundanzen aufzuzeigen.
   - [ ] **Proaktive Visuals:** Automatisches Zeigen von Schaubildern/Erklärungen auf dem Second Screen.
+  - [ ] **Variabler Heartbeat:** Taktzeiten dynamisch und variabel anpassen (z.B. im Chat-, Büro- oder Headless-Modus).
   - [X] **UI-Integration (Bubbles):**
     - [X] Anzeige kleiner Benachrichtigungs-Bubbles über dem Trinity-Icon:
 
@@ -111,18 +116,25 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [X] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
 - [X] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (inkl. Two-Way Listener für Text- und Sprachnachrichten).
 - [X] **Schaubilder-Gedächtnis (Asset-Memory):** Trinity behält den Überblick über generierte Schaubilder im Projektordner, kennt deren Inhalt/Kontext und kann diese auf Zuruf jederzeit erneut anzeigen.
-- [ ] **Dreaming-Funktion (Deep Reflection):**
+- [ ] **Dreaming-Funktion (Deep Reflection & Knowledge Synthesis):**
 
   - [ ] Hintergrund-Verarbeitung von Informationen in Ruhezeiten.
+  - [ ] **Wissens-Synthese:** Verarbeiten der Sessions zu komplexem Verständniswissen.
+    - [ ] Automatisches Tagging von Inhalten und Schlüsselkonzepten.
+    - [ ] Graphen-basierte Verlinkung verwandter Themen (Semantische Netze).
+    - [ ] Relevanz-Gewichtung (Wichtiges stärken, Unwichtiges mit der Zeit depriorisieren/vergessen).
   - [ ] **Akzent-Korrektur:** Intelligente Bereinigung von TTS-Fehlern (durch Akzent bedingt) im "Schlaf".
   - [ ] Aufbereitung von Inhalten für zukünftige Sessions.
 - [ ] **System- & Screen-Control:**
 
   - [ ] "Trinity, zeig mir das auf beiden Bildschirmen" -> Toggle Mirror/Extended Mode.
   - [ ] Verschieben von Trinity-Fenstern zwischen Desktops via Sprachbefehl.
+- [ ] **Secure Sandbox Environment (Isolierte Programmierung):**
+  - [ ] Bereitstellung einer sicheren Sandbox-Programmierumgebung für mathematische Berechnungen, Datenanalysen und Diagrammerstellung.
+  - [ ] Striktes Rechtemanagement: Vollständige Isolation, kein Zugriff auf das eigentliche Dateisystem oder Trinity-Kernkomponenten.
 - [ ] **Onboarding & UX:**
 
-  - [ ] Tutorial für Erstbenutzer erstellen.
+  - [ ] Tutorial für Erstbenutzer erstellen (geplant ab Q3 2026).
   - [ ] **Naming Refactoring:** Prüfung des Namens "Lecturer Companion" als Alternative/Zusatz zu Trinity.
   - [ ] **Global Session Control:** Sessions direkt aus der UI beenden und neu starten, ohne den Prozess killen zu müssen.
 - [ ] **LLM Resilience:**
@@ -132,6 +144,13 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 
   - [ ] Tracking der Nutzung analog zu Apples Bildschirmzeit.
   - [ ] Auswertung: Stunden/Minuten in Vorlesungen (Lecture Mode), Teams-Sitzungen, Email-Bearbeitung pro Woche.
+- [ ] **Headless Mode & CLI (Terminal-Chat):**
+  - [ ] Headless-Betrieb für Linux/Ubuntu-Server.
+  - [ ] Interaktiver Chat im Terminal über den CLI-Aufruf `trinity` (analog zum Hermes Agent).
+- [ ] **Cross-Platform Packaging (Multi-OS Fertig-Apps):**
+  - [ ] Fertige, installierbare App-Pakete für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
+- [ ] **Multi-Domain & Lifestyle Concierge (Erweiterung für Jeden):**
+  - [ ] Öffnung des Systems für Nicht-Lehrende. Trinity als persönlicher Concierge für jeden Lebensbereich (z.B. Ernährungsverläufe, Fitness, SmartHome-Steuerung etc. – wesentliche Basis-Agenten bereits vorhanden).
 - [X] **Simulation Engine Updates:**
 
   - [X] Bienensimulation erweitern: Einstellbare Parameter für mehrere Bienenstöcke, Blumen und Fressfeinde.
