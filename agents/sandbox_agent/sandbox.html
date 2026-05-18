@@ -224,6 +224,7 @@ function detectPackages(code) {
         'scikit-learn': ['sklearn', 'from sklearn'],
         'seaborn':    ['seaborn', 'sns.'],
         'plotly':     ['plotly', 'px.', 'go.', 'import plotly'],
+        'openpyxl':   ['openpyxl', 'read_excel', '.xlsx', 'pd.ExcelFile'],
     };
     const needed = [];
     for (const [pkg, triggers] of Object.entries(pkgMap)) {
@@ -304,6 +305,7 @@ async function runCode() {
             const extras = [];
             if (pkgs.includes('seaborn')) extras.push('seaborn');
             if (pkgs.includes('plotly')) extras.push('plotly');
+            if (pkgs.includes('openpyxl')) extras.push('openpyxl');
             for (const p of extras) { 
                 showLoader(`Installiere ${p} via micropip…`);
                 try { await micropip.install(p); } catch(_) {} 
@@ -402,12 +404,14 @@ ${pendingCode}
         }
 
         setStatus('done', 'Fertig ✓');
+        window.location.hash = "sandbox_done_" + Date.now();
     } catch(err) {
         hideLoader();
         document.getElementById('output-container').classList.add('visible');
         document.getElementById('error-output').textContent = err.message;
         document.getElementById('error-block').style.display = 'block';
         setStatus('error', 'Fehler');
+        window.location.hash = "sandbox_error_" + Date.now();
     }
 
     document.getElementById('run-btn').disabled = false;

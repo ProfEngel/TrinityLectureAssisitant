@@ -130,6 +130,14 @@ class ContentWindow(QMainWindow):
             self.hide_content()
             return
 
+        if fragment.startswith("sandbox_done_") or fragment.startswith("sandbox_error_"):
+            # Telegram-Flag checken
+            flag_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "from_telegram.txt")
+            if os.path.exists(flag_file):
+                # Screenshot-Aufnahme triggern (2.5 Sek warten, bis Animationen fertig sind)
+                QTimer.singleShot(2500, self._capture_and_send_to_telegram)
+            return
+
         if fragment.startswith("imgsize_"):
             try:
                 _, w, h = fragment.split("_")
@@ -155,6 +163,41 @@ class ContentWindow(QMainWindow):
             proxy.installEventFilter(self._resize_filter)
             proxy.setMouseTracking(True)
 
+    def _capture_and_send_to_telegram(self):
+        try:
+            # Screenshot vom WebEngine-Browser machen
+            pixmap = self.browser.grab()
+            screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "sandbox_screenshot.png")
+            pixmap.save(screenshot_path, "PNG")
+            
+            # Telegram Config aus config.json lesen
+            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                telegram_cfg = config.get("telegram", {})
+                if telegram_cfg.get("enabled") and telegram_cfg.get("bot_token") and telegram_cfg.get("chat_id"):
+                    token = telegram_cfg["bot_token"]
+                    chat_id = telegram_cfg["chat_id"]
+                    
+                    import requests
+                    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+                    caption = "📊 **Pyodide Sandbox Visualisierung**\nDie gewünschte Grafik wurde erfolgreich gerendert!"
+                    
+                    with open(screenshot_path, "rb") as photo_file:
+                        requests.post(url, data={
+                            "chat_id": chat_id,
+                            "caption": caption,
+                            "parse_mode": "Markdown"
+                        }, files={"photo": photo_file}, timeout=10)
+                    print("📱 Pyodide-Screenshot erfolgreich an Telegram gesendet.")
+            
+            # Telegram-Flag löschen
+            flag_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "from_telegram.txt")
+            if os.path.exists(flag_file):
+                os.remove(flag_file)
+        except Exception as e:
+            print(f"⚠️ Fehler beim Aufnehmen/Senden des Pyodide-Screenshots: {e}")
 
     def show_content(self, html_content, parent_pos):
         # Größe auf Standard zurücksetzen

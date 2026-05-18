@@ -51,6 +51,22 @@ def execute(query: str, context: dict) -> dict:
     if not brain:
         return {"has_payload": False, "search_context": ""}
 
+    # Telegram-Flag schreiben/löschen
+    from_telegram = context.get("from_telegram", False)
+    flag_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "core", "from_telegram.txt")
+    if from_telegram:
+        try:
+            with open(flag_file, "w") as f:
+                f.write("true")
+        except Exception as e:
+            print(f"⚠️ Fehler beim Schreiben des Telegram-Flags: {e}")
+    else:
+        if os.path.exists(flag_file):
+            try:
+                os.remove(flag_file)
+            except Exception:
+                pass
+
     print("🧮 Sandbox-Agent aktiv: generiere Pyodide-Code…")
 
     # ── 1. LLM: Python-Code generieren ───────────────────────────────────────
