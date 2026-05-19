@@ -118,7 +118,10 @@ class MorpheusEar:
         print(f"💓 Heartbeat aktiv (Intervall: {interval_min} Min).")
         while self.is_running:
             time.sleep(interval_min * 60)
-            if not self.is_running or not self.proactive_cfg.get("heartbeat_enabled", False):
+            # Abbrechen wenn gestoppt, Heartbeat deaktiviert oder Chat-Modus aktiv
+            if (not self.is_running
+                    or not self.proactive_cfg.get("heartbeat_enabled", False)
+                    or getattr(self, 'mode', 'office') == 'chat'):
                 break
                 
             try:
@@ -431,8 +434,8 @@ class MorpheusEar:
         self.is_running = True
         set_state("idle")
         
-        # Start Heartbeat Thread if enabled
-        if self.proactive_cfg.get("heartbeat_enabled", False):
+        # Start Heartbeat Thread only if enabled AND not in chat mode
+        if self.proactive_cfg.get("heartbeat_enabled", False) and self.mode != "chat":
             threading.Thread(target=self._heartbeat_loop, daemon=True).start()
             
         # Start Telegram Listener Thread if enabled

@@ -476,17 +476,49 @@ class TrinityWindow(QMainWindow):
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
 
+def _set_macos_dock_icon(icon_path: str) -> None:
+    """
+    Setzt das macOS Dock-Icon über die native NSApp-API.
+    Muss NACH QApplication(), aber VOR dem ersten show() aufgerufen werden.
+    Funktioniert nur auf macOS; auf anderen Plattformen ist es ein No-Op.
+    """
+    try:
+        from AppKit import NSApplication, NSImage  # type: ignore
+        ns_app = NSApplication.sharedApplication()
+        ns_image = NSImage.alloc().initWithContentsOfFile_(icon_path)
+        if ns_image:
+            ns_app.setApplicationIconImage_(ns_image)
+            print(f"✅ Dock-Icon gesetzt: {icon_path}")
+        else:
+            print(f"⚠️ Dock-Icon konnte nicht geladen werden: {icon_path}")
+    except Exception as e:
+        # AppKit nicht verfügbar (z.B. Linux/Windows) oder sonstiger Fehler
+        print(f"⚠️ Dock-Icon (native) nicht setzbar: {e}")
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    # Icon setzen
-    icon_path = os.path.join(os.path.dirname(__file__), "core", "icon.png")
-    if os.path.exists(icon_path):
+
+    # Icon-Pfade: erst core/icon.png, dann assets/icon.PNG als Fallback
+    _base = os.path.dirname(__file__)
+    _icon_candidates = [
+        os.path.join(_base, "core", "icon.png"),
+        os.path.join(_base, "assets", "icon.PNG"),
+        os.path.join(_base, "assets", "trinity_icon_new.png"),
+    ]
+    _icon_path = next((p for p in _icon_candidates if os.path.exists(p)), None)
+
+    if _icon_path:
         from PySide6.QtGui import QIcon
-        app.setWindowIcon(QIcon(icon_path))
-    
+        # 1. Qt-Fenster-Icon (Titelleiste / Taskbar)
+        app.setWindowIcon(QIcon(_icon_path))
+        # 2. Natives macOS Dock-Icon
+        _set_macos_dock_icon(_icon_path)
+    else:
+        print("⚠️ Kein Icon gefunden – Trinity startet ohne Icon.")
+
     # Trinity starten
     window = TrinityWindow()
     window.show()
-    
+
     sys.exit(app.exec())

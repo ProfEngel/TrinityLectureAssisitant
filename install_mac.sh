@@ -113,15 +113,34 @@ sed -i '' "s|INSTALL_DIR|$INSTALL_DIR|g" /tmp/trinity_app.applescript
 osacompile -o "$APP_PATH" /tmp/trinity_app.applescript
 rm /tmp/trinity_app.applescript
 
-echo "🖼️ Setze Trinity-Icon für die App (Native macOS API)..."
-/usr/bin/python3 -c "
-import Cocoa
-workspace = Cocoa.NSWorkspace.sharedWorkspace()
-image = Cocoa.NSImage.alloc().initWithContentsOfFile_('$INSTALL_DIR/core/icon.png')
-workspace.setIcon_forFile_options_(image, '$APP_PATH', 0)
-"
+echo "🖼️  Baue Trinity-Icon (.icns) und setze es im App-Bundle..."
+ICON_SRC="$INSTALL_DIR/core/icon.png"
+ICONSET_DIR="/tmp/TrinityIcon.iconset"
+ICNS_TARGET="$APP_PATH/Contents/Resources/applet.icns"
 
-touch "$APP_PATH"
+if [ -f "$ICON_SRC" ]; then
+    # Alle benötigten Größen erzeugen
+    rm -rf "$ICONSET_DIR" && mkdir -p "$ICONSET_DIR"
+    sips -z 16   16   "$ICON_SRC" --out "$ICONSET_DIR/icon_16x16.png"       &>/dev/null
+    sips -z 32   32   "$ICON_SRC" --out "$ICONSET_DIR/icon_16x16@2x.png"    &>/dev/null
+    sips -z 32   32   "$ICON_SRC" --out "$ICONSET_DIR/icon_32x32.png"       &>/dev/null
+    sips -z 64   64   "$ICON_SRC" --out "$ICONSET_DIR/icon_32x32@2x.png"    &>/dev/null
+    sips -z 128  128  "$ICON_SRC" --out "$ICONSET_DIR/icon_128x128.png"     &>/dev/null
+    sips -z 256  256  "$ICON_SRC" --out "$ICONSET_DIR/icon_128x128@2x.png"  &>/dev/null
+    sips -z 256  256  "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256.png"     &>/dev/null
+    sips -z 512  512  "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256@2x.png"  &>/dev/null
+    sips -z 512  512  "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512.png"     &>/dev/null
+    sips -z 1024 1024 "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512@2x.png" &>/dev/null
+    # .icns bauen und direkt ins Bundle kopieren
+    iconutil -c icns "$ICONSET_DIR" -o /tmp/trinity_icon.icns
+    cp /tmp/trinity_icon.icns "$ICNS_TARGET"
+    # Auch im Projekt-Assets ablegen für spätere Verwendung
+    cp /tmp/trinity_icon.icns "$INSTALL_DIR/assets/trinity_icon.icns"
+    rm -rf "$ICONSET_DIR" /tmp/trinity_icon.icns
+    echo "   ✅ Trinity-Icon (.icns) gesetzt."
+else
+    echo "   ⚠️  icon.png nicht gefunden – App-Icon bleibt Standard."
+fi
 
 echo ""
 echo "🎉 ${IS_UPDATE:+Update}${IS_UPDATE:-Installation} erfolgreich abgeschlossen!"

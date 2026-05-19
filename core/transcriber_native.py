@@ -154,8 +154,9 @@ class NativeMorpheusEar(MorpheusEar):
 
         cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
         
-        # Start Heartbeat Thread if enabled
-        if getattr(self, 'proactive_cfg', {}).get("heartbeat_enabled", False):
+        # Start Heartbeat Thread only if enabled AND not in chat mode
+        mode = getattr(self, 'mode', 'office')
+        if getattr(self, 'proactive_cfg', {}).get("heartbeat_enabled", False) and mode != "chat":
             threading.Thread(target=self._heartbeat_loop, daemon=True).start()
             
         # Start Telegram Listener Thread if enabled
