@@ -5,13 +5,17 @@ import datetime
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    triggers = [
-        "notiere", "mache eine notiz", "schreibe auf", 
-        "füge zur notiz", "erweitere die notiz", 
-        "lese die notiz", "zeig mir die notiz", 
-        "hake ab", "checkliste", "to-do", "todo", "abgehakt"
+    
+    strong_triggers = [
+        "notiere", "notiz", "checkliste", "to-do", "todo", "abgehakt"
     ]
-    return any(phrase in router_text for phrase in triggers)
+    if any(phrase in router_text for phrase in strong_triggers):
+        return True
+        
+    if "hake" in router_text and "ab" in router_text:
+        return True
+        
+    return False
 
 def execute(query: str, context: dict = None) -> dict:
     if not context or "brain" not in context:
