@@ -61,10 +61,10 @@ Regeln:
 5. Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt im folgenden Format (ohne Markdown Code-Blöcke oder extra Text drumherum):
 
 {{
-  "topic": "Name der Notiz",
-  "content": "Der komplette finale Markdown-Inhalt der Notiz",
-  "action": "Einer der Werte: CREATED, UPDATED, READ",
-  "spoken_confirmation": "Ein kurzer, natürlicher Bestätigungs-Satz für die Sprachausgabe (z.B. 'Ich habe die Aufgabe abgehakt.')"
+  "topic": "Name der Notiz (oder Leer bei LIST)",
+  "content": "Der komplette finale Markdown-Inhalt der Notiz (oder Leer bei LIST)",
+  "action": "Einer der Werte: CREATED, UPDATED, READ, LIST",
+  "spoken_confirmation": "Ein kurzer, natürlicher Bestätigungs-Satz für die Sprachausgabe (z.B. 'Ich habe die Aufgabe abgehakt.' oder 'Hier ist eine Übersicht deiner Notizen.')"
 }}
 
 Sprachbefehl des Users: "{query}"
@@ -87,6 +87,31 @@ Sprachbefehl des Users: "{query}"
         action = data.get("action", "UPDATED").upper()
         spoken_confirmation = data.get("spoken_confirmation", "Die Notiz wurde aktualisiert.")
         
+        if action == "LIST":
+            list_html = ""
+            for file in existing_files:
+                topic_name = file.replace('.md', '').replace('_', ' ')
+                list_html += f"<li style='margin-bottom: 8px;'>📄 <b>{topic_name}</b></li>"
+                
+            if not existing_files:
+                list_html = "<li>Keine Notizen gefunden.</li>"
+                
+            html_payload = f"""
+            <!-- KEEP_OPEN -->
+            <div style="background-color: #fdfd96; color: #333; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; max-width: 600px; margin: 20px auto;">
+                <h2 style="margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 10px; color: #333;">📚 Deine Notizen</h2>
+                <ul style="font-size: 16px; line-height: 1.6; list-style-type: none; padding-left: 0;">
+                    {list_html}
+                </ul>
+            </div>
+            """
+            
+            return {
+                "has_payload": True,
+                "html_payload": html_payload,
+                "search_context": f"--- Notizen Agent ---\n{spoken_confirmation}\n"
+            }
+            
         # Speichere die Datei (außer wenn nur gelesen wird)
         if action in ["CREATED", "UPDATED"] and content:
             filepath = os.path.join(notes_dir, f"{topic}.md")
