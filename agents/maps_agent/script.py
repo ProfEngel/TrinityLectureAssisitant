@@ -16,7 +16,7 @@ def can_handle(query: str) -> bool:
     if any(ds in router_text for ds in ds_keywords):
         return False
         
-    return any(word in router_text for word in ["route", "karte", "navigiere", "maps"])
+    return any(re.search(r'\b' + word + r'\b', router_text) for word in ["route", "karte", "navigiere", "maps"])
 
 def execute(query: str, context: dict = None) -> dict:
     """

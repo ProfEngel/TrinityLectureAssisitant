@@ -113,22 +113,14 @@ sed -i '' "s|INSTALL_DIR|$INSTALL_DIR|g" /tmp/trinity_app.applescript
 osacompile -o "$APP_PATH" /tmp/trinity_app.applescript
 rm /tmp/trinity_app.applescript
 
-echo "🖼️ Setze Trinity-Icon für die App..."
-# Native macOS .icns Kompilierung über sips und iconutil (Dock & Finder kompatibel)
-mkdir -p /tmp/trinity_icon.iconset
-sips -z 16 16     "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_16x16.png >/dev/null 2>&1
-sips -z 32 32     "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_16x16@2x.png >/dev/null 2>&1
-sips -z 32 32     "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_32x32.png >/dev/null 2>&1
-sips -z 64 64     "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_32x32@2x.png >/dev/null 2>&1
-sips -z 128 128   "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_128x128.png >/dev/null 2>&1
-sips -z 256 256   "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_128x128@2x.png >/dev/null 2>&1
-sips -z 256 256   "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_256x256.png >/dev/null 2>&1
-sips -z 512 512   "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_256x256@2x.png >/dev/null 2>&1
-sips -z 512 512   "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_512x512.png >/dev/null 2>&1
-sips -z 1024 1024 "$INSTALL_DIR/core/icon.png" --out /tmp/trinity_icon.iconset/icon_512x512@2x.png >/dev/null 2>&1
+echo "🖼️ Setze Trinity-Icon für die App (Native macOS API)..."
+/usr/bin/python3 -c "
+import Cocoa
+workspace = Cocoa.NSWorkspace.sharedWorkspace()
+image = Cocoa.NSImage.alloc().initWithContentsOfFile_('$INSTALL_DIR/core/icon.png')
+workspace.setIcon_forFile_options_(image, '$APP_PATH', 0)
+"
 
-iconutil -c icns /tmp/trinity_icon.iconset -o "$APP_PATH/Contents/Resources/applet.icns"
-rm -rf /tmp/trinity_icon.iconset
 touch "$APP_PATH"
 
 echo ""

@@ -18,7 +18,8 @@ def execute(query: str, context: dict = None) -> dict:
         return {"has_payload": False, "html_payload": "", "search_context": ""}
         
     brain = context["brain"]
-    notes_dir = os.path.join("memory", "notes")
+    # Path relative to brain.py, which is in core/
+    notes_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "memory", "notes")
     os.makedirs(notes_dir, exist_ok=True)
     
     print(f"📝 Notes Agent verarbeitet Anfrage...")
@@ -79,7 +80,7 @@ Sprachbefehl des Users: "{query}"
         data = json.loads(response_json)
         topic = data.get("topic", "Neue_Notiz").replace(" ", "_")
         content = data.get("content", "")
-        action = data.get("action", "UPDATED")
+        action = data.get("action", "UPDATED").upper()
         spoken_confirmation = data.get("spoken_confirmation", "Die Notiz wurde aktualisiert.")
         
         # Speichere die Datei (außer wenn nur gelesen wird)
