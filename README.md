@@ -1,4 +1,6 @@
 # Trinity — Academic Personal Concierge 🧞‍♀️
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20286707.svg)](https://doi.org/10.5281/zenodo.20286707)
+
 
 ![GitHub stars](https://img.shields.io/github/stars/ProfEngel/TrinityLectureAssisitant?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ProfEngel/TrinityLectureAssisitant?style=social)
