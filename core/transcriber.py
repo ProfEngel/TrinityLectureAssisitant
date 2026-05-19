@@ -218,7 +218,7 @@ class MorpheusEar:
                                     # Ins Session-Log schreiben
                                     t_stamp = time.strftime("%H:%M:%S")
                                     with open(self.transcript_file, "a", encoding="utf-8") as f:
-                                        f.write(f"[{t_stamp}] [User (via Telegram)]: {text}\\n")
+                                        f.write(f"[{t_stamp}] [User (via Telegram)]: {text}\n")
                                     
                                     # Trinity triggern, als wäre es gesprochen worden
                                     trigger_text = f"{self.agent_name}, {text}"
@@ -236,9 +236,10 @@ class MorpheusEar:
 
                                 elif voice:
                                     print("📥 Telegram Sprachnachricht empfangen. Lade herunter...")
+                                    tg_token = self.telegram_cfg['bot_token']
+                                    tg_chat = self.telegram_cfg['chat_id']
                                     try:
                                         file_id = voice.get("file_id")
-                                        tg_token = self.telegram_cfg['bot_token']
                                         file_info = requests.get(f"https://api.telegram.org/bot{tg_token}/getFile?file_id={file_id}").json()
                                         if file_info.get("ok"):
                                             file_path = file_info["result"]["file_path"]
@@ -255,16 +256,32 @@ class MorpheusEar:
                                             if voice_text:
                                                 print(f"📥 Telegram Sprachnachricht (transkribiert): {voice_text}")
                                                 
+                                                # Bestätigungs-Echo: User weiß, was transkribiert wurde
+                                                requests.post(
+                                                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                                                    json={"chat_id": tg_chat, "text": f"🎙️ Ich habe verstanden:\n_{voice_text}_", "parse_mode": "Markdown"},
+                                                    timeout=5
+                                                )
+                                                
                                                 # Ins Session-Log schreiben
                                                 t_stamp = time.strftime("%H:%M:%S")
                                                 with open(self.transcript_file, "a", encoding="utf-8") as f:
-                                                    f.write(f"[{t_stamp}] [User (via Telegram Voice)]: {voice_text}\\n")
+                                                    f.write(f"[{t_stamp}] [User (via Telegram Voice)]: {voice_text}\n")
                                                 
                                                 # Trinity triggern, als wäre es gesprochen worden
                                                 trigger_text = f"{self.agent_name}, {voice_text}"
                                                 self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
                                     except Exception as ex:
                                         print(f"⚠️ Fehler bei der Verarbeitung der Sprachnachricht: {ex}")
+                                        # Bug Fix: Fehler-Feedback an User senden
+                                        try:
+                                            requests.post(
+                                                f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                                                json={"chat_id": tg_chat, "text": f"❌ Sprachnachricht konnte nicht verarbeitet werden: {ex}"},
+                                                timeout=5
+                                            )
+                                        except Exception:
+                                            pass
             except Exception as e:
                 pass
             time.sleep(2)
