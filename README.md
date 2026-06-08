@@ -167,8 +167,8 @@ Dieses Projekt steht unter der **Apache License 2.0**.
 
 Für das Projekt stehen wissenschaftliche Begleitpapiere (Whitepapers) bereit, die die architektonische Einzigartigkeit und Notwendigkeit des Trinity-Ansatzes im Detail analysieren:
 
-*   **[Whitepaper (Deutsch)](docs/trinitylectureassistant_18052026_de.pdf)** — *Trinity Academic Personal Concierge: Einzigartigkeit und Notwendigkeit eines lokalen agentischen KI-Privatbüros*
-*   **[Whitepaper (English)](docs/trinitylectureassistant_18052026_en.pdf)** — *Trinity Academic Personal Concierge: Uniqueness and Necessity of a Local Agentic AI Private Office*
+*   **[Whitepaper (Deutsch)](docs/trinity_20052026_de.pdf)** — *TRINITY: Ein lokaler, agentischer Academic Personal Concierge für die KI-gestützte Hochschullehre und das akademische Dokumentenmanagement*
+*   **[Whitepaper (English)](docs/trinity_20052026_en.pdf)** — *TRINITY: A Local Agentic Academic Personal Concierge for AI-Assisted Higher Education and Academic Document Management*
 
 Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
 
