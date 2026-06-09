@@ -4,7 +4,6 @@ import requests
 import json
 import os
 import time
-from bs4 import BeautifulSoup
 
 def can_handle(query: str) -> bool:
     """
@@ -24,6 +23,18 @@ def execute(query: str, context: dict = None) -> dict:
     """
     if not context or "brain" not in context:
         return {"has_payload": False, "html_payload": "", "search_context": ""}
+
+    if not _has_beautifulsoup():
+        return {
+            "has_payload": False,
+            "html_payload": "",
+            "search_context": (
+                "--- Deep Research Agent ---\n"
+                "Für die Tiefenrecherche fehlt die Python-Abhängigkeit 'beautifulsoup4'. "
+                "Bitte installiere sie mit './venv/bin/python3 -m pip install beautifulsoup4' "
+                "oder führe 'install_mac.sh' erneut aus.\n"
+            ),
+        }
         
     brain = context["brain"]
     
@@ -192,6 +203,8 @@ def _search_ddg(query: str, max_results: int = 5) -> list:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     try:
+        from bs4 import BeautifulSoup
+
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code == 200:
             soup = BeautifulSoup(r.text, 'html.parser')
@@ -225,6 +238,8 @@ def _scrape_page(url: str) -> str:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     try:
+        from bs4 import BeautifulSoup
+
         r = requests.get(url, headers=headers, timeout=8)
         if r.status_code == 200:
             soup = BeautifulSoup(r.text, 'html.parser')
@@ -244,6 +259,14 @@ def _scrape_page(url: str) -> str:
     except Exception as e:
         print(f"⚠️ Scraping Fehler für '{url}': {e}")
     return ""
+
+def _has_beautifulsoup() -> bool:
+    try:
+        from bs4 import BeautifulSoup  # noqa: F401
+        return True
+    except ImportError:
+        print("⚠️ Deep Research Agent: beautifulsoup4 fehlt.")
+        return False
 
 def _render_report_to_html(topic: str, markdown: str, urls: list) -> str:
     """
