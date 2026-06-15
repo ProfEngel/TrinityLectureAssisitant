@@ -1008,25 +1008,47 @@ class MorpheusEar:
                     "payload_html": history_payload,
                 },
             )
-            if chat_request:
-                try:
-                    memory_store = MemoryStore()
-                    session_id = memory_store.ensure_session("classic", "Classic UI")
+            try:
+                memory_store = MemoryStore()
+                source = "telegram" if from_telegram else (
+                    (chat_request or {}).get("source") or "eyes"
+                )
+                session_titles = {
+                    "classic": "Classic UI",
+                    "telegram": "Telegram",
+                    "eyes": "Eyes UI",
+                }
+                session_id = memory_store.ensure_session(
+                    source,
+                    session_titles.get(source, "Trinity Runtime"),
+                )
+                user_text = (chat_request or {}).get("text") or text
+                request_id = (chat_request or {}).get("request_id")
+                if not chat_request:
                     memory_store.add_message(
                         session_id,
-                        "assistant",
-                        antwort,
-                        {"source": "classic", "request_id": chat_request.get("request_id")},
+                        "user",
+                        user_text,
+                        {"source": source, "from_telegram": from_telegram},
                     )
-                    memory_store.remember(
-                        f"User: {chat_request.get('text', '')}\nTrinity: {antwort}",
-                        source="classic-chat",
-                        session_id=session_id,
-                        weight=0.58,
-                        metadata={"request_id": chat_request.get("request_id")},
-                    )
-                except Exception as exc:
-                    print(f"⚠️ Memory-Speicherung fehlgeschlagen: {exc}")
+                memory_store.add_message(
+                    session_id,
+                    "assistant",
+                    antwort,
+                    {"source": source, "request_id": request_id},
+                )
+                memory_store.remember(
+                    f"User: {user_text}\nTrinity: {antwort}",
+                    source=f"{source}-chat",
+                    session_id=session_id,
+                    weight=0.58,
+                    metadata={
+                        "request_id": request_id,
+                        "from_telegram": from_telegram,
+                    },
+                )
+            except Exception as exc:
+                print(f"⚠️ Memory-Speicherung fehlgeschlagen: {exc}")
         
         # Antwort bereinigen
         sichere_antwort = re.sub(r'[*_#]', '', antwort)
