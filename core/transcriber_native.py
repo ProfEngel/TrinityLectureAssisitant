@@ -36,6 +36,7 @@ class NativeMorpheusEar(MorpheusEar):
 
         self.audio_queue = queue.Queue()
         self.is_running = False
+        self.uses_native_speech = True
         self.speak_process = None
         self.recent_chunks = []
         self.is_muted = False

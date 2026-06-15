@@ -1,6 +1,3 @@
-from faster_whisper import WhisperModel
-import sounddevice as sd
-import numpy as np
 import os
 os.environ["OMP_NUM_THREADS"] = "8"
 os.environ["KMP_BLOCKTIME"] = "1"
@@ -62,6 +59,9 @@ class MorpheusEar:
         self.audio_queue = queue.Queue()
         self.is_running = False
         self.speak_process = None
+        self.audio_stream = None
+        self._whisper = None
+        self._np = None
         self.recent_chunks = []  # Kontext-Ringpuffer (letzten N Chunks)
         self.is_muted = False  # Stumm-Modus: Trinity hört nicht zu
         self.trigger_armed = False # Wartet auf Ende des Satzes nach Wake-Word
@@ -71,11 +71,51 @@ class MorpheusEar:
         self.transcript_file = os.path.join(MEMORY_DIR, f"raw_session_{timestamp}.md")
         with open(self.transcript_file, "w") as f:
             f.write(f"# Trinity Session Log - {timestamp}\n\n")
-            
+
+    def _ensure_whisper(self):
+        if self._whisper is not None:
+            return self._whisper
+
         print(f"Lade Whisper Modell ({self.model_name}) via faster-whisper...")
-        # int8 = quantisiert, cpu = Apple Silicon kompatibel, download_root cached das Modell
-        self._whisper = WhisperModel(self.model_name, device="cpu", compute_type="int8", cpu_threads=8)
+        from faster_whisper import WhisperModel
+
+        self._whisper = WhisperModel(
+            self.model_name,
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=8,
+        )
         print("✅ Whisper Modell geladen.")
+        return self._whisper
+
+    def _start_audio_input(self):
+        if self.audio_stream is not None:
+            if not self.audio_stream.active:
+                self.audio_stream.start()
+            return
+
+        import numpy as np
+        import sounddevice as sd
+
+        self._np = np
+        self._ensure_whisper()
+        block_size = int(SAMPLE_RATE * 0.5)
+        self.audio_stream = sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            channels=1,
+            callback=self.audio_callback,
+            blocksize=block_size,
+        )
+        self.audio_stream.start()
+
+    def _stop_audio_input(self):
+        if self.audio_stream is None:
+            return
+        try:
+            if self.audio_stream.active:
+                self.audio_stream.stop()
+        except Exception as exc:
+            print(f"⚠️ Audioeingang konnte nicht sauber gestoppt werden: {exc}")
 
     def load_config(self):
         """Lädt STT-spezifische Settings aus der config.json."""
@@ -102,6 +142,10 @@ class MorpheusEar:
             # System Config
             self.system_cfg = config.get("system", {})
             self.mode = self.system_cfg.get("mode", "office")
+            self.speech_input_enabled = (
+                sys.platform != "win32"
+                or self.system_cfg.get("windows_speech_enabled", False)
+            )
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -115,6 +159,7 @@ class MorpheusEar:
             self.telegram_cfg = {}
             self.system_cfg = {}
             self.mode = "office"
+            self.speech_input_enabled = sys.platform != "win32"
 
     def _speak_quick(self, text, output_device="Standard"):
         """Start a short platform-native TTS message without blocking."""
@@ -276,7 +321,10 @@ class MorpheusEar:
                                                 tmp_file = temp_audio.name
                                                 
                                             print("🎙️ Transkribiere Telegram Sprachnachricht...")
-                                            segments, _ = self._whisper.transcribe(tmp_file, language="de")
+                                            segments, _ = self._ensure_whisper().transcribe(
+                                                tmp_file,
+                                                language="de",
+                                            )
                                             voice_text = " ".join([segment.text for segment in segments]).strip()
                                             
                                             if voice_text:
@@ -473,15 +521,23 @@ class MorpheusEar:
         
         cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
         
-        # Wir lesen in kleineren Häppchen (0.5s), um stabiler zu sein
-        block_size = int(SAMPLE_RATE * 0.5)
         blocks_per_chunk = int(self.chunk_duration / 0.5)
-        
-        self.audio_stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=self.audio_callback, blocksize=block_size)
-        
-        if self.mode != "chat":
-            self.audio_stream.start()
-            print(f"Trinity hört jetzt zu... (Model: {self.model_name}, Thresh: {self.silence_threshold})")
+
+        if self.mode != "chat" and self.speech_input_enabled:
+            try:
+                self._start_audio_input()
+                print(f"Trinity hört jetzt zu... (Model: {self.model_name}, Thresh: {self.silence_threshold})")
+            except Exception as exc:
+                print(
+                    "⚠️ Spracheingabe konnte nicht gestartet werden. "
+                    f"Trinity bleibt im Flüstermodus aktiv: {exc}"
+                )
+                self.mode = "chat"
+        elif self.mode != "chat":
+            print(
+                "💬 Windows-Spracheingabe ist deaktiviert. "
+                "Flüstern, LLM und Agenten bleiben vollständig verfügbar."
+            )
         else:
             print("💬 Chat-Modus aktiv: STT und Mikrofon bleiben deaktiviert. Höre nur auf UI (Flüstern) oder Telegram.")
             
@@ -520,11 +576,13 @@ class MorpheusEar:
                     audio_buffer.append(data)
                     
                     if len(audio_buffer) >= blocks_per_chunk:
-                        audio_data = np.concatenate(audio_buffer).flatten().astype(np.float32)
+                        audio_data = self._np.concatenate(audio_buffer).flatten().astype(
+                            self._np.float32
+                        )
                         audio_buffer = []
 
                         # VAD: Nur transkribieren wenn Lautstärke über Threshold
-                        rms = np.sqrt(np.mean(audio_data**2))
+                        rms = self._np.sqrt(self._np.mean(audio_data**2))
                         
                         # --- DIAGNOSE: Lautstärke-Anzeige im Terminal ---
                         if self.show_volume_meter:
@@ -591,8 +649,8 @@ class MorpheusEar:
                 except queue.Empty:
                     continue
         finally:
-            if hasattr(self, 'audio_stream') and self.audio_stream:
-                self.audio_stream.stop()
+            if self.audio_stream:
+                self._stop_audio_input()
                 self.audio_stream.close()
 
     def process_text(self, text):
@@ -696,15 +754,29 @@ class MorpheusEar:
         with open(self.config_path, "w") as f:
             config["system"]["mode"] = new_mode
             json.dump(config, f, indent=2)
-            
+
+        if getattr(self, "uses_native_speech", False):
+            return True
+
         if old_mode == 'chat' and new_mode != 'chat':
-            if hasattr(self, 'audio_stream') and self.audio_stream:
-                self.audio_stream.start()
+            if not self.speech_input_enabled:
+                print("ℹ️ Spracheingabe ist in den Einstellungen deaktiviert.")
+                return True
+            try:
+                self._start_audio_input()
                 print("🎙️ Audio Stream gestartet.")
+            except Exception as exc:
+                self.mode = "chat"
+                self.system_cfg["mode"] = "chat"
+                with open(self.config_path, "w") as f:
+                    config["system"]["mode"] = "chat"
+                    json.dump(config, f, indent=2)
+                print(f"⚠️ Audiomodus nicht verfügbar, Flüstermodus bleibt aktiv: {exc}")
+                return False
         elif old_mode != 'chat' and new_mode == 'chat':
-            if hasattr(self, 'audio_stream') and self.audio_stream:
-                self.audio_stream.stop()
-                print("🛑 Audio Stream gestoppt.")
+            self._stop_audio_input()
+            print("🛑 Audio Stream gestoppt.")
+        return True
 
     def trigger_action(self, text, silent_response=False, recent_text=None, from_telegram=False):
         if getattr(self, 'mode', 'office') == 'chat':
@@ -874,8 +946,12 @@ class MorpheusEar:
         set_state("idle")
 
 if __name__ == "__main__":
-    ear = MorpheusEar()
     try:
+        ear = MorpheusEar()
         ear.start()
     except KeyboardInterrupt:
         print("\nMorpheus geht schlafen.")
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise

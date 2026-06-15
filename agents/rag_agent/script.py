@@ -162,4 +162,5 @@ def execute(user_input: str, context: dict = None) -> dict:
     return {"has_payload": False, "search_context": ""}
 
 def init():
-    _load_rag_index()
+    # Keep startup lightweight. Index and embedding model are loaded on first RAG use.
+    pass

@@ -64,7 +64,8 @@ DEFAULT_CONFIG = {
     },
     "system": {
         "show_terminal": False,
-        "mode": "chat"
+        "mode": "chat",
+        "windows_speech_enabled": False
     },
     "audio_routing": {
         "private_device": "Standard",
@@ -179,6 +180,11 @@ class SettingsWindow(QMainWindow):
             self.config["system"] = {}
         self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
         self.config["system"]["mode"] = getattr(self, 'mode_combo', QComboBox()).currentText()
+        self.config["system"]["windows_speech_enabled"] = getattr(
+            self,
+            "windows_speech_cb",
+            QCheckBox(),
+        ).isChecked()
         
         # Audio Routing
         if "audio_routing" not in self.config:
@@ -459,6 +465,23 @@ class SettingsWindow(QMainWindow):
         self.terminal_cb = QCheckBox("Terminal-Fenster im Hintergrund anzeigen (Log-Ausgabe)")
         self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
         form.addRow(self.terminal_cb)
+
+        if platform.system() == "Windows":
+            self.windows_speech_cb = QCheckBox(
+                "Experimentelle Windows-Spracheingabe aktivieren"
+            )
+            self.windows_speech_cb.setChecked(
+                system_conf.get("windows_speech_enabled", False)
+            )
+            form.addRow(self.windows_speech_cb)
+
+            speech_hint = QLabel(
+                "Zunächst deaktiviert lassen und Trinity per Flüsterfeld testen. "
+                "Whisper wird erst geladen, wenn diese Option aktiv ist."
+            )
+            speech_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+            speech_hint.setWordWrap(True)
+            form.addRow("", speech_hint)
         
         platform_name = platform.system()
         hint = QLabel(
@@ -590,11 +613,80 @@ class SettingsWindow(QMainWindow):
         
         layout.addWidget(create_llm_box("📡 LLM 3: Alternative (z.B. Groq / Custom)", "remote_2", 
                                        "llm_radio_remote2", "remote2_url_edit", "remote2_model_edit", "remote2_key_edit"))
+
+        test_btn = QPushButton("🔗 Aktives LLM testen")
+        test_btn.setMinimumHeight(42)
+        test_btn.clicked.connect(self._test_llm_connection)
+        layout.addWidget(test_btn)
         
         layout.addStretch()
         scroll.setWidget(content)
         QVBoxLayout(widget).addWidget(scroll)
         return widget
+
+    def _test_llm_connection(self):
+        if self.llm_radio_local.isChecked():
+            url = self.local_url_edit.text().strip()
+            model = self.local_model_edit.text().strip()
+            api_key = self.local_key_edit.text().strip() or "lm-studio"
+        elif self.llm_radio_remote1.isChecked():
+            url = self.remote1_url_edit.text().strip()
+            model = self.remote1_model_edit.text().strip()
+            api_key = self.remote1_key_edit.text().strip()
+        else:
+            url = self.remote2_url_edit.text().strip()
+            model = self.remote2_model_edit.text().strip()
+            api_key = self.remote2_key_edit.text().strip()
+
+        if not url or not model:
+            QMessageBox.warning(
+                self,
+                "LLM-Konfiguration unvollständig",
+                "Bitte URL und Modell des aktiven Providers eintragen.",
+            )
+            return
+
+        try:
+            import requests
+
+            response = requests.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Trinity Assistant",
+                },
+                json={
+                    "model": model,
+                    "max_tokens": 48,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Antworte ausschließlich mit: Verbindung erfolgreich",
+                        }
+                    ],
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            message = response.json()["choices"][0]["message"]
+            answer = (
+                message.get("content")
+                or message.get("reasoning_content")
+                or "Verbindung erfolgreich"
+            ).strip()
+            QMessageBox.information(
+                self,
+                "LLM erreichbar",
+                f"Die API hat erfolgreich geantwortet:\n\n{answer[:300]}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                "LLM nicht erreichbar",
+                f"Die Verbindung ist fehlgeschlagen:\n\n{exc}",
+            )
 
     # --- TAB: APIs & Image ---
     def _create_api_tab(self):

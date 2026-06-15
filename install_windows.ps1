@@ -235,6 +235,7 @@ if ($isUpdate) {
     Copy-DirectoryContents "$InstallDir\memory" "$backupDir\memory"
     Copy-DirectoryContents "$InstallDir\RAG" "$backupDir\RAG"
     Copy-DirectoryContents "$InstallDir\gen_images" "$backupDir\gen_images"
+    Copy-DirectoryContents "$InstallDir\logs" "$backupDir\logs"
 
     Remove-Item $InstallDir -Recurse -Force
 }
@@ -267,6 +268,7 @@ if ($isUpdate) {
     Copy-DirectoryContents "$backupDir\memory" "$InstallDir\memory"
     Copy-DirectoryContents "$backupDir\RAG" "$InstallDir\RAG" @("build_index.py")
     Copy-DirectoryContents "$backupDir\gen_images" "$InstallDir\gen_images"
+    Copy-DirectoryContents "$backupDir\logs" "$InstallDir\logs"
     Remove-Item $backupDir -Recurse -Force
 }
 
@@ -336,6 +338,16 @@ foreach ($shortcutPath in @(
     $shortcut.Description = "Trinity Academic Personal Concierge"
     $shortcut.Save()
 }
+
+$diagnosticShortcut = $shell.CreateShortcut((Join-Path $desktop "Trinity Diagnose.lnk"))
+$diagnosticShortcut.TargetPath = $venvPython
+$diagnosticShortcut.Arguments = "`"$launcher`" --diagnostic"
+$diagnosticShortcut.WorkingDirectory = $InstallDir
+if (Test-Path $iconIco) {
+    $diagnosticShortcut.IconLocation = $iconIco
+}
+$diagnosticShortcut.Description = "Trinity mit sichtbarer Diagnoseausgabe"
+$diagnosticShortcut.Save()
 
 Write-Host ""
 Write-Host "Installation abgeschlossen."

@@ -78,6 +78,17 @@ cd $env:LOCALAPPDATA\Trinity
 - Rechtsklick auf Trinity öffnet die Einstellungen direkt.
 - Ziehen mit gedrückter linker Maustaste verschiebt Trinity.
 
+## Stabiler Ersttest
+
+1. In den Einstellungen unter `System` zunächst den Modus `chat` wählen.
+2. `Experimentelle Windows-Spracheingabe` deaktiviert lassen.
+3. Unter `LLM` den gewünschten Provider aktivieren und `Aktives LLM testen` wählen.
+4. Trinity neu starten und die erste Frage über das Flüsterfeld stellen.
+
+Whisper und der Mikrofoneingang werden unter Windows erst geladen, wenn die
+experimentelle Spracheingabe ausdrücklich aktiviert wurde. Ein Audiofehler beendet
+dadurch nicht mehr den Text- und LLM-Betrieb.
+
 ## Mikrofon prüfen
 
 Unter `Einstellungen > Datenschutz und Sicherheit > Mikrofon` müssen
@@ -106,6 +117,15 @@ Nur Python und SSL prüfen, ohne Trinity zu installieren:
 Falls keine geeignete Python-Installation gefunden wird, installiert der normale
 Installer automatisch die offizielle Python-3.11-Version über `winget`. Auf zentral
 verwalteten Rechnern kann dafür eine Freigabe der Administration erforderlich sein.
+
+Trinity schreibt dauerhaft Diagnoseprotokolle nach:
+
+```text
+%LOCALAPPDATA%\Trinity\logs
+```
+
+Die Desktop-Verknüpfung `Trinity Diagnose` startet Trinity zusätzlich mit sichtbarer
+Konsolenausgabe.
 
 Für sichtbare Logs Trinity manuell aus PowerShell starten:
 

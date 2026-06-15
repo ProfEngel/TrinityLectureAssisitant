@@ -266,7 +266,7 @@ class TrinityBrain:
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
-            response = requests.post(self.url, headers=headers, json=data)
+            response = requests.post(self.url, headers=headers, json=data, timeout=90)
             response.raise_for_status()
             
             result = response.json()
