@@ -84,15 +84,24 @@ import sys
 import venv
 
 if sys.version_info[:2] < (3, 9) or sys.version_info[:2] >= (3, 13):
-    raise RuntimeError(f"Python {sys.version.split()[0]} wird nicht unterstuetzt")
-if struct.calcsize("P") * 8 != 64:
-    raise RuntimeError("Trinity benoetigt 64-Bit-Python")
+    raise RuntimeError(f'Python {sys.version.split()[0]} wird nicht unterstuetzt')
+if struct.calcsize('P') * 8 != 64:
+    raise RuntimeError('Trinity benoetigt 64-Bit-Python')
 
-print(f"{sys.executable}|{sys.version.split()[0]}|{ssl.OPENSSL_VERSION}")
+print(f'{sys.executable}|{sys.version.split()[0]}|{ssl.OPENSSL_VERSION}')
 "@
 
-    $probeOutput = & $PythonCommand.Executable @($PythonCommand.Prefix) -c $probe 2>&1
-    $exitCode = $LASTEXITCODE
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5 wraps native stderr as ErrorRecord objects. Invalid
+        # candidates are expected here, so inspect their exit code without aborting.
+        $ErrorActionPreference = "Continue"
+        $probeOutput = & $PythonCommand.Executable @($PythonCommand.Prefix) -c $probe 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
 
     return @{
         IsValid = ($exitCode -eq 0)
