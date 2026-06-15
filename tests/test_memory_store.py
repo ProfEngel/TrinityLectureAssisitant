@@ -1,4 +1,5 @@
 import json
+import time
 
 from memory_store import MemoryStore, render_graph_html
 
@@ -59,3 +60,20 @@ def test_memory_store_imports_classic_chat_history(tmp_path):
 
     assert result["imported"] == 2
     assert store.status()["memories"] >= 2
+
+
+def test_dreaming_decays_old_memory_and_keeps_recent_memory_relevant(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    old_id = store.remember("Altes Detail", tags=["trinity"], weight=0.8)
+    recent_id = store.remember("Neues Detail", tags=["trinity"], weight=0.8)
+    old_created = time.time() - 90 * 86400
+    with store.connect() as db:
+        db.execute(
+            "UPDATE memories SET created_at = ?, updated_at = ? WHERE id = ?",
+            (old_created, old_created, old_id),
+        )
+
+    store.dream_tick()
+    memories = {item["id"]: item for item in store.search("", limit=10)}
+
+    assert memories[old_id]["weight"] < memories[recent_id]["weight"]

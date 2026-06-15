@@ -285,6 +285,16 @@ class MemoryStore:
                 results.append(item)
                 if len(results) >= limit:
                     break
+            if results:
+                now = _now()
+                db.executemany(
+                    """
+                    UPDATE memories
+                    SET weight = MIN(1.0, weight + 0.015), updated_at = ?
+                    WHERE id = ?
+                    """,
+                    [(now, item["id"]) for item in results],
+                )
             return results
 
     def context_for_prompt(self, query, limit=5):
@@ -462,6 +472,32 @@ class MemoryStore:
         now = _now()
         created = 0
         with self.connect() as db:
+            memories = db.execute(
+                "SELECT id, weight, created_at FROM memories WHERE superseded_by IS NULL"
+            ).fetchall()
+            for row in memories:
+                age_days = max(0.0, (now - float(row["created_at"])) / 86400)
+                if age_days < 2:
+                    factor = 0.998
+                    bonus = 0.018
+                elif age_days < 14:
+                    factor = 0.99
+                    bonus = 0.0
+                elif age_days < 60:
+                    factor = 0.975
+                    bonus = 0.0
+                else:
+                    factor = 0.95
+                    bonus = 0.0
+                next_weight = max(
+                    0.08,
+                    min(1.0, float(row["weight"]) * factor + bonus),
+                )
+                db.execute(
+                    "UPDATE memories SET weight = ?, updated_at = ? WHERE id = ?",
+                    (next_weight, now, row["id"]),
+                )
+
             tag_rows = db.execute(
                 """
                 SELECT tag, GROUP_CONCAT(memory_id) AS ids
