@@ -56,11 +56,12 @@ def test_codex_capability_is_detected_on_any_supported_host(monkeypatch):
 
 
 def test_codex_finder_checks_desktop_launcher_locations(monkeypatch):
+    expected = str(capabilities.Path("/opt/homebrew/bin/codex"))
     monkeypatch.setattr(capabilities.shutil, "which", lambda _name: None)
     monkeypatch.setattr(
         capabilities.Path,
         "is_file",
-        lambda path: str(path) == "/opt/homebrew/bin/codex",
+        lambda path: str(path) == expected,
     )
 
-    assert capabilities.find_codex_executable() == "/opt/homebrew/bin/codex"
+    assert capabilities.find_codex_executable() == expected
