@@ -36,6 +36,13 @@ trinity settings
 ```
 *(Hier trägst du OpenRouter-Keys, Fal.ai-Keys und das LLM-Modell ein).*
 
+### Anlagen im Classic-Chat
+
+Über **Anlage** oder per Drag-and-drop lassen sich Textdateien, PDFs und Bilder an
+eine Nachricht anhängen. Text und PDF-Inhalte werden als Kontext ausgewertet.
+Bilder werden bei einem bildfähigen LLM multimodal übergeben. Generierte Bilder,
+Audio, Videos und andere Agentenergebnisse bleiben im Chatverlauf sichtbar.
+
 ### 2. Persönlichkeit & Verhalten (`core/Soul.md`)
 In der Datei `core/Soul.md` ist der System-Prompt von Trinity hinterlegt. 
 - **Standard-Verhalten:** Trinity ist instruiert, **extrem kurz (max. 1-2 Sätze)** zu antworten, um in der Vorlesung nicht den Faden zu stören.

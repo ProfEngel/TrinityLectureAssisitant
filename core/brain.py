@@ -7,6 +7,7 @@ import re
 import time
 
 from platform_adapters import capability_message, detect_capabilities
+from chat_attachments import prepare_attachment_content
 
 
 class TrinityBrain:
@@ -179,7 +180,15 @@ class TrinityBrain:
         except FileNotFoundError:
             return "Noch kein Transkript vorhanden."
 
-    def ask(self, user_query, transcript_file, text_mode=False, action_text=None, from_telegram=False):
+    def ask(
+        self,
+        user_query,
+        transcript_file,
+        text_mode=False,
+        action_text=None,
+        from_telegram=False,
+        attachments=None,
+    ):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "http://localhost", # Required by OpenRouter
@@ -190,6 +199,10 @@ class TrinityBrain:
         transcript = self.read_transcript(transcript_file)
         soul_prompt = self.get_soul()
         user_prompt = self.get_user()
+        attachment_content = prepare_attachment_content(user_query, attachments or [])
+        primary_image_path = attachment_content["primary_image_path"]
+        if primary_image_path:
+            self.last_media_path = primary_image_path
         
         # Agentic Router
         search_context = ""
@@ -222,6 +235,8 @@ class TrinityBrain:
                         "from_telegram": from_telegram,
                         "telegram_cfg": getattr(self, '_telegram_cfg', {}),
                         "codex_cfg": getattr(self, '_codex_cfg', {}),
+                        "image_path": primary_image_path,
+                        "attachments": attachments or [],
                     })
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
@@ -244,6 +259,8 @@ class TrinityBrain:
                             "from_telegram": from_telegram,
                             "telegram_cfg": getattr(self, '_telegram_cfg', {}),
                             "codex_cfg": getattr(self, '_codex_cfg', {}),
+                            "image_path": primary_image_path,
+                            "attachments": attachments or [],
                         })
                         if result.get("has_payload"):
                             payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
@@ -278,13 +295,25 @@ class TrinityBrain:
             "max_tokens": 1500,   # Längere Antworten für ausführliche Erklärungen erlauben
             "messages": [
                 {"role": "system", "content": context_prompt},
-                {"role": "user", "content": user_query}
+                {"role": "user", "content": attachment_content["content"]}
             ]
         }
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
             response = requests.post(self.url, headers=headers, json=data, timeout=90)
+            if response.status_code >= 400 and primary_image_path:
+                print(
+                    "⚠️ Das aktive Modell hat die Bildeingabe abgelehnt. "
+                    "Wiederhole die Anfrage mit Dateikontext ohne Bilddaten."
+                )
+                data["messages"][-1]["content"] = attachment_content["fallback_text"]
+                response = requests.post(
+                    self.url,
+                    headers=headers,
+                    json=data,
+                    timeout=90,
+                )
             response.raise_for_status()
             
             result = response.json()
@@ -299,6 +328,7 @@ class TrinityBrain:
                 # Mit KEEP_OPEN, damit das Fenster offen bleibt, bis der User es explizit schließt
                 html_payload = f"""
                 <!-- KEEP_OPEN -->
+                <!-- TEXT_RESPONSE_PAYLOAD -->
                 <h2 style="margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;">Antwort</h2>
                 <div style="font-size: 16px; line-height: 1.5; opacity: 0.9;">
                     {formatted_answer}

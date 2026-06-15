@@ -22,7 +22,8 @@ from AVFoundation import AVAudioEngine
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
 from platform_adapters import create_tts_backend
-from transcriber import MEMORY_DIR, MorpheusEar, set_state
+from chat_protocol import append_chat_event, parse_command
+from transcriber import CHAT_HISTORY_FILE, MEMORY_DIR, MorpheusEar, set_state
 
 
 class NativeMorpheusEar(MorpheusEar):
@@ -182,12 +183,11 @@ class NativeMorpheusEar(MorpheusEar):
                 if os.path.exists(cmd_file):
                     try:
                         with open(cmd_file, "r", encoding="utf-8") as f:
-                            cmd_text = f.read().strip()
+                            request = parse_command(f.read())
                         os.remove(cmd_file)
+                        cmd_text = request["text"]
                         if cmd_text:
-                            is_silent = cmd_text.startswith("SILENT:")
-                            if is_silent:
-                                cmd_text = cmd_text[7:]
+                            is_silent = request.get("silent", False)
                                 
                             if getattr(self, 'mode', 'office') == 'chat':
                                 is_silent = True
@@ -198,8 +198,27 @@ class NativeMorpheusEar(MorpheusEar):
                             t_stamp = time.strftime("%H:%M:%S")
                             with open(self.transcript_file, "a", encoding="utf-8") as f:
                                 f.write(f"[{t_stamp}] [User (UI-Chat)]: {cmd_text}\n")
-                                
-                            self.trigger_action(cmd_text, silent_response=is_silent)
+
+                            if (
+                                request.get("source") == "classic"
+                                and not request.get("history_recorded")
+                            ):
+                                append_chat_event(
+                                    CHAT_HISTORY_FILE,
+                                    {
+                                        "request_id": request["request_id"],
+                                        "role": "user",
+                                        "source": "classic",
+                                        "text": cmd_text,
+                                        "attachments": request.get("attachments", []),
+                                    },
+                                )
+
+                            self.trigger_action(
+                                cmd_text,
+                                silent_response=is_silent,
+                                chat_request=request,
+                            )
                     except Exception as exc:
                         print(f"FEHLER BEI TEXT-EINGABE: {exc}")
                 self._run_loop_tick()

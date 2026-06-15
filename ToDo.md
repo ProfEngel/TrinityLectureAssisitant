@@ -115,6 +115,8 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [X] **Codex-Agent:** Freigegebene lokale Codex-Projekte per Sprache, Chat oder Telegram auslösen; direkte Rückgabe mit sicherer Sandbox und Entwurfsmodus.
 - [X] **Flexible Oberflächen:** Augen-UI, Classic-Desktop-App und Terminal-CLI frei kombinierbar; Terminal als sicherer Headless-Fallback.
 - [X] **Unified Classic UI:** Chat und Einstellungen in einer App mit direkter Navigation verbinden.
+- [X] **Multimodaler Classic-Chat:** Persistenter Chatverlauf mit Text-, PDF- und
+  Bildanlagen sowie eingebetteten Agenten- und Medienergebnissen.
 - [X] **Trinity Management CLI:** Globale Befehle `start`, `settings`, `onboarding` und `doctor` für Desktop und Headless bereitstellen.
 - [X] **Schaubilder-Gedächtnis (Asset-Memory):** Trinity behält den Überblick über generierte Schaubilder im Projektordner, kennt deren Inhalt/Kontext und kann diese auf Zuruf jederzeit erneut anzeigen.
 - [ ] **Dreaming-Funktion (Deep Reflection & Knowledge Synthesis):**

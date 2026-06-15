@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.10.3:** Classic-Chat mit Verlauf, Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen.
 > - **v0.10.2:** Gemeinsame Classic-/Settings-App sowie globale CLI mit Onboarding und Doctor.
 > - **v0.10.1:** Wählbare Augen-, Classic- und Terminal-Oberflächen für Desktop und Headless.
 > - **v0.10.0:** Gemeinsames Release für macOS und Windows 11 mit lokalem Codex-Agenten.
@@ -174,8 +175,11 @@ Unter **Einstellungen → System → Bedienoberflächen** lassen sich drei Oberf
 unabhängig kombinieren:
 
 - **Augen-UI:** schwebende Trinity für Vorlesung, Präsentation und schnelle Zurufe
-- **Classic-UI:** normale App mit Live-Mitschrift, Ergebnisbereich und Texteingabe;
-  das Zahnrad oben rechts öffnet die Einstellungen im selben Fenster
+- **Classic-UI:** normale App mit separater Live-Mitschrift und dauerhaftem
+  Chatverlauf. Texte, PDFs und Bilder können per Button oder Drag-and-drop an den
+  Prompt angehängt werden. Generierte Bilder, Audio-, Video- und Agentenergebnisse
+  bleiben direkt bei der jeweiligen Antwort sichtbar. Das Zahnrad oben rechts öffnet
+  die Einstellungen im selben Fenster.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
 
 Bestehende Installationen behalten standardmäßig die Augen-UI. Wenn Augen- und

@@ -12,6 +12,7 @@ if "requests" not in sys.modules:
         sys.modules["requests"] = types.ModuleType("requests")
 
 from core import transcriber
+from chat_protocol import build_chat_request, encode_chat_request
 
 
 def test_windows_config_disables_speech_input_by_default(tmp_path, monkeypatch):
@@ -182,3 +183,63 @@ def test_whisper_command_works_without_loading_audio(tmp_path, monkeypatch):
     assert received == [("Teste die LLM-Verbindung", True)]
     assert ear._whisper is None
     assert ear.audio_stream is None
+
+
+def test_structured_classic_command_reaches_runtime_with_attachments(
+    tmp_path,
+    monkeypatch,
+):
+    core_dir = tmp_path / "core"
+    memory_dir = tmp_path / "memory"
+    core_dir.mkdir()
+    memory_dir.mkdir()
+    request = build_chat_request(
+        "Analysiere das Bild",
+        [{"name": "bild.png", "path": "/tmp/bild.png", "kind": "image"}],
+        history_recorded=True,
+    )
+    (core_dir / "cmd.txt").write_text(
+        encode_chat_request(request),
+        encoding="utf-8",
+    )
+    received = []
+
+    class FakeBrain:
+        pass
+
+    class FakeTTS:
+        pass
+
+    def fake_load_config(ear):
+        ear.model_name = "small"
+        ear.silence_threshold = 0.015
+        ear.chunk_duration = 2
+        ear.show_volume_meter = False
+        ear.voice = "Standard"
+        ear.agent_name = "Trinity"
+        ear.trigger_variants = ["trinity"]
+        ear.proactive_cfg = {}
+        ear.audio_routing = {}
+        ear.telegram_cfg = {}
+        ear.system_cfg = {"mode": "chat"}
+        ear.mode = "chat"
+        ear.speech_input_enabled = False
+
+    def fake_trigger(ear, text, silent_response=False, **kwargs):
+        received.append((text, silent_response, kwargs["chat_request"]))
+        ear.is_running = False
+
+    monkeypatch.setattr(transcriber, "__file__", str(core_dir / "transcriber.py"))
+    monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
+    monkeypatch.setattr(transcriber, "CHAT_HISTORY_FILE", str(memory_dir / "chat.jsonl"))
+    monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
+    monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
+    monkeypatch.setattr(transcriber.MorpheusEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.MorpheusEar, "trigger_action", fake_trigger)
+
+    ear = transcriber.MorpheusEar()
+    ear.start()
+
+    assert received[0][0] == "Analysiere das Bild"
+    assert received[0][1] is True
+    assert received[0][2]["attachments"][0]["name"] == "bild.png"

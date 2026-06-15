@@ -330,10 +330,17 @@ class SettingsWindow(QMainWindow):
         main_layout.setContentsMargins(16, 16, 16, 16)
         
         # Header
+        header_row = QHBoxLayout()
         header = QLabel("Trinity Assistant – Einstellungen")
         header.setFont(QFont("", 18, QFont.Bold))
         header.setStyleSheet("color: #f4f4f5; margin-bottom: 8px;")
-        main_layout.addWidget(header)
+        header_row.addWidget(header)
+        header_row.addStretch()
+        if self.embedded:
+            header_back = QPushButton("Zurück zum Chat")
+            header_back.clicked.connect(self._return_to_chat)
+            header_row.addWidget(header_back)
+        main_layout.addLayout(header_row)
         
         # Tabs
         tabs = QTabWidget()
