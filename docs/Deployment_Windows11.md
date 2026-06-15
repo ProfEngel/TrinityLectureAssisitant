@@ -71,6 +71,13 @@ cd $env:LOCALAPPDATA\Trinity
 .\venv\Scripts\python.exe .\trinity_launcher.py
 ```
 
+## Schwebendes Trinity-Fenster
+
+- Linksklick auf Trinity öffnet das Flüsterfeld.
+- Eingabe mit `Enter` absenden.
+- Rechtsklick auf Trinity öffnet die Einstellungen direkt.
+- Ziehen mit gedrückter linker Maustaste verschiebt Trinity.
+
 ## Mikrofon prüfen
 
 Unter `Einstellungen > Datenschutz und Sicherheit > Mikrofon` müssen
