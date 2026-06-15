@@ -59,6 +59,7 @@ Der Installer:
 6. installiert gemeinsame und Windows-spezifische Abhängigkeiten
 7. erstellt Verknüpfungen auf dem Desktop und im Startmenü
 8. erstellt einen normalen Start, der die gewählten Oberflächen berücksichtigt
+9. installiert den globalen Befehl `trinity` im Benutzer-PATH
 
 Wurde das Skript als Datei aus dem Browser heruntergeladen, kann Windows vor der
 Ausführung warnen. Nach Prüfung der Quelle lässt sich die Markierung entfernen:
@@ -69,6 +70,14 @@ Unblock-File .\install_windows.ps1
 ```
 
 ## Manueller Start
+
+Nach der Installation eine neue PowerShell öffnen:
+
+```powershell
+trinity start
+```
+
+Die bisherige direkte Startmöglichkeit bleibt verfügbar:
 
 ```powershell
 cd $env:LOCALAPPDATA\Trinity
@@ -83,12 +92,28 @@ Classic-UI aktiv sind; Protokolle werden weiterhin in `logs` abgelegt.
 ## Bedienoberflächen
 
 - `Augen-UI`: schwebende Trinity für den Vorlesungsbetrieb
-- `Classic-UI`: normale App mit Live-Mitschrift, Ergebnissen und Texteingabe
+- `Classic-UI`: normale App mit Live-Mitschrift, Ergebnissen, Texteingabe und
+  eingebetteten Einstellungen über das Zahnrad oben rechts
 - `Terminal-CLI`: Mitschrift, Logs und Texteingabe im Terminal
 
 Mehrere Oberflächen können gleichzeitig laufen. Sind Augen- und Classic-UI beide
 deaktiviert, erzwingt Trinity die Terminal-CLI. So kann Trinity auch ohne grafische
 Desktopumgebung bedient werden.
+
+## CLI, Onboarding und Doctor
+
+```powershell
+trinity settings
+trinity onboarding
+trinity doctor
+trinity doctor --fix
+```
+
+`trinity settings` bearbeitet die wichtigsten Einstellungen interaktiv im Terminal.
+`trinity onboarding` führt durch die Ersteinrichtung. `trinity doctor` prüft unter
+anderem Python, SSL, Konfiguration, Oberflächen, LLM und Schreibrechte. `--fix` legt
+fehlende Standarddateien und Laufzeitordner an und aktiviert nötigenfalls den
+Terminal-Fallback.
 
 ## Schwebendes Trinity-Fenster
 

@@ -37,6 +37,24 @@ def _console_python_executable(executable=None, platform_name=None):
     return executable
 
 
+def _requested_surface(arguments=None):
+    arguments = list(arguments or sys.argv)
+    if "--surface" not in arguments:
+        return None
+    try:
+        return arguments[arguments.index("--surface") + 1]
+    except IndexError:
+        return None
+
+
+def _graphical_session_available(platform_name=None, environment=None):
+    host = platform_name or sys.platform
+    environment = environment or os.environ
+    if host in {"darwin", "win32"}:
+        return True
+    return bool(environment.get("DISPLAY") or environment.get("WAYLAND_DISPLAY"))
+
+
 def _terminate(process):
     if process is not None and process.poll() is None:
         process.terminate()
@@ -82,15 +100,20 @@ def launch_trinity():
     ear_script = os.path.join(base_dir, "core", "transcriber.py")
     config_file = os.path.join(base_dir, "core", "config.json")
     settings_script = os.path.join(base_dir, "core", "settings_ui.py")
+    cli_script = os.path.join(base_dir, "trinity_cli.py")
     logs_dir = os.path.join(base_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
 
     # 1.5 Prüfen ob config existiert (Erster Start)
     if not os.path.exists(config_file):
-        print("⚙️ Erstes Setup erkannt. Öffne Konfiguration...")
-        subprocess.run([sys.executable, settings_script])
+        print("Erstes Setup erkannt. Öffne Konfiguration...")
+        requested_surface = _requested_surface()
+        if requested_surface == "terminal" or not _graphical_session_available():
+            subprocess.run([sys.executable, cli_script, "onboarding"])
+        else:
+            subprocess.run([sys.executable, settings_script])
         if not os.path.exists(config_file):
-            print("❌ Konfiguration abgebrochen. Beende Trinity.")
+            print("Konfiguration abgebrochen. Beende Trinity.")
             sys.exit(1)
 
     diagnostic_mode = "--diagnostic" in sys.argv
@@ -100,6 +123,15 @@ def launch_trinity():
         force_terminal=diagnostic_mode,
         suppress_terminal=no_terminal,
     )
+    surface = _requested_surface()
+    surface_modes = {
+        "classic": {"eyes": False, "classic": True, "terminal": False},
+        "eyes": {"eyes": True, "classic": False, "terminal": False},
+        "terminal": {"eyes": False, "classic": False, "terminal": True},
+        "all": {"eyes": True, "classic": True, "terminal": True},
+    }
+    if surface in surface_modes:
+        ui_modes = surface_modes[surface]
     show_terminal = ui_modes["terminal"]
 
     with open(

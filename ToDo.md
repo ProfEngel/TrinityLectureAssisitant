@@ -114,6 +114,8 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [X] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (inkl. Two-Way Listener für Text- und Sprachnachrichten).
 - [X] **Codex-Agent:** Freigegebene lokale Codex-Projekte per Sprache, Chat oder Telegram auslösen; direkte Rückgabe mit sicherer Sandbox und Entwurfsmodus.
 - [X] **Flexible Oberflächen:** Augen-UI, Classic-Desktop-App und Terminal-CLI frei kombinierbar; Terminal als sicherer Headless-Fallback.
+- [X] **Unified Classic UI:** Chat und Einstellungen in einer App mit direkter Navigation verbinden.
+- [X] **Trinity Management CLI:** Globale Befehle `start`, `settings`, `onboarding` und `doctor` für Desktop und Headless bereitstellen.
 - [X] **Schaubilder-Gedächtnis (Asset-Memory):** Trinity behält den Überblick über generierte Schaubilder im Projektordner, kennt deren Inhalt/Kontext und kann diese auf Zuruf jederzeit erneut anzeigen.
 - [ ] **Dreaming-Funktion (Deep Reflection & Knowledge Synthesis):**
 
@@ -133,7 +135,8 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [X] Striktes Rechtemanagement: Vollständige Isolation, kein Zugriff auf das eigentliche Dateisystem oder Trinity-Kernkomponenten.
 - [ ] **Onboarding & UX:**
 
-  - [ ] Tutorial für Erstbenutzer erstellen (geplant ab Q3 2026).
+  - [X] Terminal-Onboarding und interaktive Settings-CLI.
+  - [ ] Grafisches Tutorial für Erstbenutzer erstellen.
   - [ ] **Naming Refactoring:** Prüfung des Namens "Lecturer Companion" als Alternative/Zusatz zu Trinity.
   - [ ] **Global Session Control:** Sessions direkt aus der UI beenden und neu starten, ohne den Prozess killen zu müssen.
 - [ ] **LLM Resilience:**
@@ -145,7 +148,8 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
   - [ ] Auswertung: Stunden/Minuten in Vorlesungen (Lecture Mode), Teams-Sitzungen, Email-Bearbeitung pro Woche.
 - [ ] **Headless Mode & CLI (Terminal-Chat):**
   - [ ] Headless-Betrieb für Linux/Ubuntu-Server.
-  - [ ] Interaktiver Chat im Terminal über den CLI-Aufruf `trinity` (analog zum Hermes Agent).
+  - [X] Globale Verwaltungs-CLI über den Aufruf `trinity`.
+  - [X] Interaktiver Terminal-Chat über `trinity start --surface terminal`.
 - [ ] **Cross-Platform Packaging (Multi-OS Fertig-Apps):**
   - [ ] Fertige, installierbare App-Pakete für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
 - [ ] **Multi-Domain & Lifestyle Concierge (Erweiterung für Jeden):**

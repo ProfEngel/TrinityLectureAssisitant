@@ -1,5 +1,4 @@
 import sys
-import json
 import os
 import platform
 from PySide6.QtCore import Qt
@@ -12,97 +11,19 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QButtonGroup)
 
 from platform_adapters import create_tts_backend, find_codex_executable
+from configuration import DEFAULT_CONFIG, load_config, save_config
 from ui_modes import resolve_ui_modes
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CONFIG = {
-    "llm": {
-        "active_slot": "local",
-        "local": {
-            "url": "http://localhost:1234/v1/chat/completions",
-            "model": "",
-            "api_key": "lm-studio"
-        },
-        "remote_1": {
-            "url": "https://openrouter.ai/api/v1/chat/completions",
-            "model": "",
-            "api_key": ""
-        },
-        "remote_2": {
-            "url": "https://openrouter.ai/api/v1/chat/completions",
-            "model": "",
-            "api_key": ""
-        }
-    },
-    "apis": {
-        "tavily": "",
-        "fal_ai": ""
-    },
-    "persona": {
-        "agent_name": "Trinity",
-        "trigger_variants": ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trenty", "trendy"]
-    },
-    "image": {
-        "primary_model": "fal-ai/nano-banana-2",
-        "fallback_model": "fal-ai/nano-banana-pro"
-    },
-    "stt": {
-        "model": "small",
-        "silence_threshold": 0.015,
-        "chunk_duration": 6,
-        "show_volume_meter": False
-    },
-    "tts": {
-        "voice": "Samantha"
-    },
-    "proactive": {
-        "heartbeat_enabled": False,
-        "bubbles_enabled": False,
-        "visuals_enabled": False,
-        "interval_minutes": 2,
-        "auto_rag_indexing": False
-    },
-    "system": {
-        "show_terminal": platform.system() == "Windows",
-        "eyes_ui_enabled": True,
-        "classic_ui_enabled": False,
-        "terminal_cli_enabled": platform.system() == "Windows",
-        "mode": "chat",
-        "windows_speech_enabled": False
-    },
-    "audio_routing": {
-        "private_device": "Standard",
-        "public_device": "Standard"
-    },
-    "telegram": {
-        "enabled": False,
-        "bot_token": "",
-        "chat_id": ""
-    },
-    "codex": {
-        "enabled": False,
-        "executable": "codex",
-        "default_project": "",
-        "projects": {},
-        "sandbox": "workspace-write",
-        "timeout_seconds": 900,
-        "max_output_chars": 3200,
-        "ephemeral": True,
-        "network_access": False
-    },
-    "comfyui": {
-        "enabled": False,
-        "server_url": "http://YOUR_TAILSCALE_NODE:8188",
-        "default_workflow": "Flux2_Klein_T2I_API.json"
-    }
-}
 
 
 class SettingsWindow(QMainWindow):
-    def __init__(self, config_path):
+    def __init__(self, config_path, embedded=False, on_return=None):
         super().__init__()
         self.config_path = config_path
+        self.embedded = embedded
+        self.on_return = on_return
         self.soul_path = os.path.join(CORE_DIR, "Soul.md")
         self.user_path = os.path.join(CORE_DIR, "User.md")
         self.tts_backend = create_tts_backend()
@@ -114,19 +35,7 @@ class SettingsWindow(QMainWindow):
         self.apply_stylesheet()
         
     def load_config(self):
-        try:
-            with open(self.config_path, "r") as f:
-                self.config = json.load(f)
-            # Fehlende Sektionen mit Defaults auffüllen
-            for key, val in DEFAULT_CONFIG.items():
-                if key not in self.config:
-                    self.config[key] = val
-                elif isinstance(val, dict):
-                    for k2, v2 in val.items():
-                        if k2 not in self.config[key]:
-                            self.config[key][k2] = v2
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.config = DEFAULT_CONFIG.copy()
+        self.config = load_config(self.config_path)
 
     def load_text_file(self, path):
         try:
@@ -276,8 +185,7 @@ class SettingsWindow(QMainWindow):
             self.config["proactive"]["auto_rag_indexing"] = self.auto_rag_cb.isChecked()
         
         # Config-Datei speichern
-        with open(self.config_path, "w") as f:
-            json.dump(self.config, f, indent=2)
+        save_config(self.config_path, self.config)
         
         # Soul.md speichern
         self.save_text_file(self.soul_path, self.soul_edit.toPlainText())
@@ -285,8 +193,21 @@ class SettingsWindow(QMainWindow):
         # User.md speichern
         self.save_text_file(self.user_path, self.user_edit.toPlainText())
         
-        QMessageBox.information(self, "Gespeichert", 
-            "Einstellungen gespeichert.\nBitte starte Trinity neu, damit die Änderungen wirksam werden.")
+        if self.embedded and self.on_return:
+            self.on_return(True)
+        else:
+            QMessageBox.information(
+                self,
+                "Gespeichert",
+                "Einstellungen gespeichert.\n"
+                "Bitte starte Trinity neu, damit die Änderungen wirksam werden.",
+            )
+
+    def _return_to_chat(self):
+        if self.embedded and self.on_return:
+            self.on_return(False)
+        else:
+            self.close()
 
     def apply_stylesheet(self):
         self.setStyleSheet("""
@@ -409,7 +330,7 @@ class SettingsWindow(QMainWindow):
         main_layout.setContentsMargins(16, 16, 16, 16)
         
         # Header
-        header = QLabel("⚙️ Trinity Assistant – Einstellungen")
+        header = QLabel("Trinity Assistant – Einstellungen")
         header.setFont(QFont("", 18, QFont.Bold))
         header.setStyleSheet("color: #f4f4f5; margin-bottom: 8px;")
         main_layout.addWidget(header)
@@ -430,10 +351,14 @@ class SettingsWindow(QMainWindow):
         
         # Buttons
         btn_layout = QHBoxLayout()
-        cancel_btn = QPushButton("Abbrechen")
-        cancel_btn.clicked.connect(self.close)
+        cancel_btn = QPushButton(
+            "Zurück zum Chat" if self.embedded else "Abbrechen"
+        )
+        cancel_btn.clicked.connect(self._return_to_chat)
         
-        save_btn = QPushButton("💾 Speichern")
+        save_btn = QPushButton(
+            "Speichern und zurück zum Chat" if self.embedded else "Speichern"
+        )
         save_btn.setObjectName("saveBtn")
         save_btn.clicked.connect(self.save_config)
         
