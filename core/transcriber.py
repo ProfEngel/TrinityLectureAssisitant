@@ -10,6 +10,7 @@ import sys
 import re
 import subprocess
 import threading
+import tempfile
 import warnings
 
 # Warnings unterdrücken (faster-whisper matmul + urllib3 SSL)
@@ -19,6 +20,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 # Damit der Import aus dem gleichen Verzeichnis funktioniert
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
+from platform_adapters import create_tts_backend
 
 # Konfiguration
 MODEL = "small"  # Schnell auf CPU: <1s Latenz. Für beste Qualität: 'large-v3-turbo'
@@ -55,6 +57,7 @@ class MorpheusEar:
         self.brain = TrinityBrain()
         self.config_path = os.path.join(CORE_DIR, "config.json")
         self.load_config()
+        self.tts_backend = create_tts_backend()
 
         self.audio_queue = queue.Queue()
         self.is_running = False
@@ -112,6 +115,23 @@ class MorpheusEar:
             self.telegram_cfg = {}
             self.system_cfg = {}
             self.mode = "office"
+
+    def _speak_quick(self, text, output_device="Standard"):
+        """Start a short platform-native TTS message without blocking."""
+        try:
+            return self.tts_backend.speak(
+                text,
+                voice=self.voice,
+                output_device=output_device,
+            )
+        except Exception as exc:
+            print(f"⚠️ Fehler bei Sprachausgabe: {exc}")
+            return None
+
+    def _speak_and_wait(self, text, output_device="Standard"):
+        process = self._speak_quick(text, output_device)
+        if process is not None:
+            process.wait()
 
     def _heartbeat_loop(self):
         interval_min = self.proactive_cfg.get("interval_minutes", 2)
@@ -241,6 +261,7 @@ class MorpheusEar:
                                     print("📥 Telegram Sprachnachricht empfangen. Lade herunter...")
                                     tg_token = self.telegram_cfg['bot_token']
                                     tg_chat = self.telegram_cfg['chat_id']
+                                    tmp_file = None
                                     try:
                                         file_id = voice.get("file_id")
                                         file_info = requests.get(f"https://api.telegram.org/bot{tg_token}/getFile?file_id={file_id}").json()
@@ -248,9 +269,11 @@ class MorpheusEar:
                                             file_path = file_info["result"]["file_path"]
                                             audio_url = f"https://api.telegram.org/file/bot{tg_token}/{file_path}"
                                             audio_data = requests.get(audio_url).content
-                                            tmp_file = "/tmp/tg_voice.oga"
-                                            with open(tmp_file, "wb") as f:
-                                                f.write(audio_data)
+                                            with tempfile.NamedTemporaryFile(
+                                                suffix=".oga", delete=False
+                                            ) as temp_audio:
+                                                temp_audio.write(audio_data)
+                                                tmp_file = temp_audio.name
                                                 
                                             print("🎙️ Transkribiere Telegram Sprachnachricht...")
                                             segments, _ = self._whisper.transcribe(tmp_file, language="de")
@@ -285,6 +308,12 @@ class MorpheusEar:
                                             )
                                         except Exception:
                                             pass
+                                    finally:
+                                        if tmp_file and os.path.exists(tmp_file):
+                                            try:
+                                                os.remove(tmp_file)
+                                            except OSError:
+                                                pass
             except Exception as e:
                 pass
             time.sleep(2)
@@ -590,7 +619,7 @@ class MorpheusEar:
                 self.is_muted = False
                 set_state("idle")
                 print(f"🎙️ {self.agent_name} hört wieder zu!")
-                subprocess.Popen(["say", "Ich bin wieder ganz Ohr."])
+                self._speak_quick("Ich bin wieder ganz Ohr.")
             return  # Im Stumm-Modus alles andere ignorieren
             
         # Trigger Check (Fuzzy)
@@ -643,20 +672,11 @@ class MorpheusEar:
         safe_text = text.replace('"', '').replace('$', '').replace('`', '')
         
         try:
-            cmd = ["say"]
-            if target_device != "Standard":
-                try:
-                    out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
-                    for line in out.strip().split("\n"):
-                        parts = line.strip().split(" ", 1)
-                        if len(parts) == 2 and parts[1] == target_device:
-                            cmd.extend(["-a", parts[0]])
-                            break
-                except Exception as ex:
-                    print("Warnung beim Auslesen der Audio-Geräte:", ex)
-            cmd.append(safe_text)
-            
-            self.speak_process = subprocess.Popen(cmd)
+            self.speak_process = self.tts_backend.speak(
+                safe_text,
+                voice=self.voice,
+                output_device=target_device,
+            )
             self.speak_process.wait()
         except Exception as e:
             print(f"⚠️ Fehler bei Sprachausgabe: {e}")
@@ -671,9 +691,9 @@ class MorpheusEar:
         self.mode = new_mode
         self.system_cfg["mode"] = new_mode
         import json
+        with open(self.config_path, "r") as r:
+            config = json.load(r)
         with open(self.config_path, "w") as f:
-            with open(self.config_path, "r") as r:
-                config = json.load(r)
             config["system"]["mode"] = new_mode
             json.dump(config, f, indent=2)
             
@@ -700,14 +720,14 @@ class MorpheusEar:
         if any(w in lower_text for w in ["büromodus aktivieren", "wechsle in den büromodus", "office modus"]):
             self.switch_mode("office")
             msg = "Büromodus aktiviert. Ich höre wieder aktiv zu."
-            if not silent_response: subprocess.Popen(["say", msg])
+            if not silent_response: self._speak_quick(msg)
             else: threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
             return
             
         if any(w in lower_text for w in ["vorlesungsmodus aktivieren", "wechsle in den vorlesungsmodus", "lecture modus"]):
             self.switch_mode("lecture")
             msg = "Vorlesungsmodus aktiviert. Ich lausche der Vorlesung."
-            if not silent_response: subprocess.Popen(["say", msg])
+            if not silent_response: self._speak_quick(msg)
             else: threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
             return
             
@@ -715,32 +735,32 @@ class MorpheusEar:
             self.switch_mode("chat")
             msg = "Chatmodus aktiviert. Mikrofon wurde deaktiviert."
             if not silent_response:
-                subprocess.Popen(["say", msg])
+                self._speak_quick(msg)
             else:
                 threading.Thread(target=self._silent_thread, args=(msg,), daemon=True).start()
             return
 
         if "mach dich unsichtbar" in lower_text or "versteck dich" in lower_text:
             set_state("invisible")
-            if not silent_response: subprocess.Popen(["say", "Bin im Tarnmodus."])
+            if not silent_response: self._speak_quick("Bin im Tarnmodus.")
             return
             
         if "mach dich sichtbar" in lower_text or "zeig dich" in lower_text:
             set_state("visible")
             set_state("idle")
-            if not silent_response: subprocess.Popen(["say", "Bin wieder voll da, Partner."])
+            if not silent_response: self._speak_quick("Bin wieder voll da, Partner.")
             return
             
         if "böse" in lower_text or "wütend" in lower_text or "sauer" in lower_text:
             set_state("angry")
-            subprocess.Popen(["say", "Vorsicht, Partner. Reize mich lieber nicht."])
+            self._speak_quick("Vorsicht, Partner. Reize mich lieber nicht.")
             # Revert nach 5 Sekunden
             threading.Timer(5.0, lambda: set_state("idle")).start()
             return
 
         if any(w in lower_text for w in ["lieb", "herz", "herzchen", "ich liebe", "süß", "knuddel", "küss", "bussi", "liebevoll", "herzlich", "hab dich lieb"]):
             set_state("love")
-            subprocess.Popen(["say", "Aww. Du machst mich verlegen, Partner."])
+            self._speak_quick("Aww. Du machst mich verlegen, Partner.")
             # Revert nach 5 Sekunden
             threading.Timer(5.0, lambda: set_state("idle")).start()
             return
@@ -748,19 +768,19 @@ class MorpheusEar:
         if "schließ" in lower_text and ("fenster" in lower_text or "timer" in lower_text or "anzeige" in lower_text):
             set_state("hide_window")
             if not silent_response:
-                subprocess.Popen(["say", "Wird geschlossen."])
+                self._speak_quick("Wird geschlossen.")
             return
             
         if "aktiviere text" in lower_text or "aktiviere untertitel" in lower_text or "schreib mit" in lower_text:
             self.text_mode = True
             if not silent_response:
-                subprocess.Popen(["say", "Textmodus aktiviert. Ich werde meine Antworten jetzt auch einblenden."])
+                self._speak_quick("Textmodus aktiviert. Ich werde meine Antworten jetzt auch einblenden.")
             return
             
         if "deaktiviere text" in lower_text or "deaktiviere untertitel" in lower_text or "schreib nicht mit" in lower_text:
             self.text_mode = False
             if not silent_response:
-                subprocess.Popen(["say", "Textmodus deaktiviert."])
+                self._speak_quick("Textmodus deaktiviert.")
             return
 
         # Einstellungen öffnen
@@ -768,7 +788,7 @@ class MorpheusEar:
             print("⚙️ Öffne Einstellungen...")
             subprocess.Popen([sys.executable, os.path.join(CORE_DIR, "settings_ui.py")])
             if not silent_response:
-                subprocess.Popen(["say", "Ich öffne die Einstellungen für dich."])
+                self._speak_quick("Ich öffne die Einstellungen für dich.")
             return
 
         # Stumm-Modus: Trinity hört auf zuzuhören
@@ -777,7 +797,7 @@ class MorpheusEar:
             set_state("sleeping")
             print("🔇 Trinity ist jetzt stumm. Sage 'Trinity, hör wieder zu' zum Reaktivieren.")
             if not silent_response:
-                subprocess.Popen(["say", "Alles klar, ich höre kurz weg. Sag einfach: Trinity, hör wieder zu."])
+                self._speak_quick("Alles klar, ich höre kurz weg. Sag einfach: Trinity, hör wieder zu.")
             return
             
         # Kontextbewusstes Feedback (non-blocking)
@@ -794,7 +814,11 @@ class MorpheusEar:
                 filler = random.choice(["Hm.", "Sekunde.", "Warte kurz.", ""])
             
             if filler:
-                threading.Thread(target=lambda: subprocess.Popen(["say", filler]).wait(), daemon=True).start()
+                threading.Thread(
+                    target=self._speak_and_wait,
+                    args=(filler,),
+                    daemon=True,
+                ).start()
         
         # Abfrage ans Gehirn senden
         use_text_mode = getattr(self, 'text_mode', False) or silent_response

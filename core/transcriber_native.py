@@ -7,7 +7,6 @@ behavior from transcriber.py. It intentionally does not load a Whisper model.
 """
 import os
 import queue
-import subprocess
 import sys
 import threading
 import time
@@ -22,6 +21,7 @@ from AVFoundation import AVAudioEngine
 
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
+from platform_adapters import create_tts_backend
 from transcriber import MEMORY_DIR, MorpheusEar, set_state
 
 
@@ -32,6 +32,7 @@ class NativeMorpheusEar(MorpheusEar):
         self.brain = TrinityBrain()
         self.config_path = os.path.join(os.path.dirname(__file__), "config.json")
         self.load_config()
+        self.tts_backend = create_tts_backend()
 
         self.audio_queue = queue.Queue()
         self.is_running = False
@@ -169,7 +170,7 @@ class NativeMorpheusEar(MorpheusEar):
         else:
             if not self._request_authorization():
                 print("❌ Keine Berechtigung für macOS-Spracherkennung.")
-                subprocess.Popen(["say", "Ich brauche Zugriff auf die Spracherkennung."])
+                self._speak_quick("Ich brauche Zugriff auf die Spracherkennung.")
                 return
 
             print("Trinity hört nativ via macOS SFSpeechRecognizer zu...")

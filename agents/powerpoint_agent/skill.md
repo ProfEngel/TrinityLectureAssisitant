@@ -1,7 +1,10 @@
 # Skill: PowerPoint Agent
 
 ## Beschreibung
-Steuert **Microsoft PowerPoint** nativ auf macOS via AppleScript (`osascript`). Ermöglicht die vollständige Hands-free-Kontrolle der Präsentation per Sprache.
+Steuert **Microsoft PowerPoint** nativ per Sprache:
+
+- macOS: AppleScript (`osascript`)
+- Windows 11: Microsoft PowerPoint COM Object Model (`pywin32`)
 
 ## Trigger-Wörter
 `nächste folie`, `nächstes bild`, `weiter`, `vorherige folie`, `zurück`, `präsentation starten`, `präsentation beenden`
@@ -16,8 +19,11 @@ Steuert **Microsoft PowerPoint** nativ auf macOS via AppleScript (`osascript`). 
 
 ## Voraussetzungen
 - Microsoft PowerPoint muss installiert und offen sein
-- macOS Systemzugang für `osascript`
+- macOS: Systemzugang für `osascript`
+- Windows 11: klassische Desktop-Version von Microsoft PowerPoint und `pywin32`
 
 ## Abhängigkeiten
-- `os`, `subprocess` (AppleScript-Ausführung)
+- `core/platform_adapters/powerpoint.py`
+- macOS: `osascript`
+- Windows 11: `pywin32`
 - Keine externen APIs nötig

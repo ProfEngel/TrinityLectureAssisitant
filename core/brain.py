@@ -6,6 +6,9 @@ import shutil
 import re
 import time
 
+from platform_adapters import capability_message, detect_capabilities
+
+
 class TrinityBrain:
     def __init__(self):
         # Konfiguration aus Datei laden
@@ -19,8 +22,10 @@ class TrinityBrain:
         self.last_media_path = None
         
         self.load_config()
-        
+
+        self.capabilities = detect_capabilities()
         self.live_skills = []
+        self.unavailable_skills = []
         self._load_live_skills()
 
         # Soul + User einmalig laden und cachen (nicht bei jedem Request neu lesen)
@@ -100,6 +105,16 @@ class TrinityBrain:
                     spec.loader.exec_module(module)
                     
                     if hasattr(module, "can_handle") and hasattr(module, "execute"):
+                        required = set(getattr(module, "REQUIRED_CAPABILITIES", set()))
+                        missing = required - self.capabilities
+                        if missing:
+                            self.unavailable_skills.append((module, missing))
+                            print(
+                                f"⏸️ Skill {item} deaktiviert "
+                                f"(fehlend: {', '.join(sorted(missing))})"
+                            )
+                            continue
+
                         self.live_skills.append(module)
                         print(f"🔌 Live-Skill geladen: {item}")
                         # Optionaler Init-Hook (z.B. für Index-Vorladung beim Start)
@@ -174,11 +189,21 @@ class TrinityBrain:
         # user_query = voller Kontext (alle 8 Chunks, für LLM-Verständnis)
         router_text = (action_text or user_query).lower()
         lower_query = user_query.lower()
+
+        for skill, missing in getattr(self, "unavailable_skills", []):
+            if skill.can_handle(router_text):
+                search_context = (
+                    "--- FUNKTION NICHT VERFÜGBAR ---\n"
+                    f"{capability_message(missing)}\n\n"
+                )
+                break
         
         # --- DYNAMIC SKILL DISPATCH ---
         # --- COMFYUI SONG DISPATCH (T2A) ---
         # Wird vor dem normalen Skill-Loop geprüft, da Song-Trigger spezifisch sind
         for skill in getattr(self, 'live_skills', []):
+            if search_context:
+                break
             if hasattr(skill, 'can_handle_song') and skill.can_handle_song(router_text):
                 try:
                     result = skill.execute_t2a(user_query, context={

@@ -13,6 +13,7 @@ gen_images/
 memory/
 __pycache__/
 *.pyc
+*.egg-info/
 
 # OS specific
 .DS_Store

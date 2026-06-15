@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from PySide6.QtCore import Qt, QUrl, QTimer, QObject, QEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLineEdit, QVBoxLayout
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -99,7 +100,8 @@ class ContentWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         self.resize(self.DEFAULT_W, self.DEFAULT_H)
         self.setMinimumSize(350, 300)
         self.is_sticky = False
@@ -296,7 +298,8 @@ class ChatWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         self.resize(300, 60)
         
         self.central_widget = QWidget(self)
@@ -381,7 +384,8 @@ class TrinityWindow(QMainWindow):
             Qt.Tool
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         
         # Web-Ansicht für das HTML-Widget
         self.browser = QWebEngineView(self)
@@ -397,7 +401,7 @@ class TrinityWindow(QMainWindow):
         screen = QApplication.primaryScreen().geometry()
         self.move(screen.width() - 200, screen.height() - 200)
 
-        # Sekundäres Fenster für Inhalte (ohne parent, damit es auf macOS eigenständig auf Top bleibt)
+        # Ohne parent bleibt das Inhaltsfenster plattformübergreifend eigenständig oben.
         self.content_window = ContentWindow(None)
         
         # Chat-Eingabe Fenster (ohne parent)
@@ -482,6 +486,9 @@ def _set_macos_dock_icon(icon_path: str) -> None:
     Muss NACH QApplication(), aber VOR dem ersten show() aufgerufen werden.
     Funktioniert nur auf macOS; auf anderen Plattformen ist es ein No-Op.
     """
+    if sys.platform != "darwin":
+        return
+
     try:
         from AppKit import NSApplication, NSImage  # type: ignore
         ns_app = NSApplication.sharedApplication()
@@ -492,7 +499,7 @@ def _set_macos_dock_icon(icon_path: str) -> None:
         else:
             print(f"⚠️ Dock-Icon konnte nicht geladen werden: {icon_path}")
     except Exception as e:
-        # AppKit nicht verfügbar (z.B. Linux/Windows) oder sonstiger Fehler
+        # AppKit nicht verfügbar oder sonstiger Fehler
         print(f"⚠️ Dock-Icon (native) nicht setzbar: {e}")
 
 

@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+from pathlib import Path
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
@@ -145,7 +146,7 @@ def _generate_image_fal(prompt, brain):
 def _build_image_payload(image_path, prompt):
     """Erzeugt das HTML für die Anzeige des generierten Bildes – Fenster passt sich an Bildgröße an."""
     if not image_path: return ""
-    file_url = f"file://{image_path}"
+    file_url = Path(image_path).resolve().as_uri()
     html = f"""
     <!-- KEEP_OPEN -->
     <!-- IMAGE_PAYLOAD -->

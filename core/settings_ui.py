@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import platform
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -9,6 +10,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextEdit, QTabWidget, QDoubleSpinBox, QSpinBox,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
                              QButtonGroup)
+
+from platform_adapters import create_tts_backend
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,6 +89,7 @@ class SettingsWindow(QMainWindow):
         self.config_path = config_path
         self.soul_path = os.path.join(CORE_DIR, "Soul.md")
         self.user_path = os.path.join(CORE_DIR, "User.md")
+        self.tts_backend = create_tts_backend()
         self.setWindowTitle("Trinity Assistant – Einstellungen")
         self.setMinimumSize(600, 700)
         
@@ -456,7 +460,11 @@ class SettingsWindow(QMainWindow):
         self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
         form.addRow(self.terminal_cb)
         
-        hint = QLabel("Wenn aktiv, öffnet die native macOS App beim Starten zusätzlich das Terminal, damit du Logs sehen kannst.\nBenötigt einen Neustart der App.")
+        platform_name = platform.system()
+        hint = QLabel(
+            f"Wenn aktiv, zeigt Trinity unter {platform_name} beim Start zusätzlich "
+            "die Log-Ausgabe.\nBenötigt einen Neustart der App."
+        )
         hint.setStyleSheet("color: #888; font-size: 11px;")
         hint.setWordWrap(True)
         form.addRow("", hint)
@@ -474,17 +482,9 @@ class SettingsWindow(QMainWindow):
         group = QGroupBox("Souffleur-Skill (Dynamisches Audio-Routing)")
         form = QFormLayout()
         
-        # Lese verfügbare Audio-Ausgänge (Mac-only)
-        devices = ["Standard"]
-        try:
-            import subprocess
-            out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
-            for line in out.strip().split("\n"):
-                parts = line.strip().split(" ", 1)
-                if len(parts) == 2:
-                    devices.append(parts[1])
-        except Exception as e:
-            print("Konnte Audio-Geräte nicht auslesen:", e)
+        devices = self.tts_backend.list_output_devices()
+        if not devices:
+            devices = ["Standard"]
             
         routing_conf = self.config.get("audio_routing", {})
         
@@ -736,9 +736,14 @@ class SettingsWindow(QMainWindow):
         tts_form = QFormLayout()
         
         self.tts_voice_edit = QLineEdit(self.config["tts"]["voice"])
-        tts_form.addRow("macOS Stimme:", self.tts_voice_edit)
-        
-        hint = QLabel("Verfügbare Stimmen: Samantha, Daniel, Anna, etc.\nPrüfe mit: say -v '?' im Terminal.")
+        tts_form.addRow(f"{platform.system()} Stimme:", self.tts_voice_edit)
+
+        voices = self.tts_backend.list_voices()
+        voice_examples = ", ".join(voices[:6]) if voices else "Systemstandard"
+        hint = QLabel(
+            f"TTS-Backend: {self.tts_backend.name}\n"
+            f"Verfügbare Stimmen: {voice_examples}"
+        )
         hint.setStyleSheet("color: #666; font-size: 11px;")
         hint.setWordWrap(True)
         tts_form.addRow("", hint)

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 rag_chunks = []
 rag_embeddings = None
@@ -59,7 +60,7 @@ def _load_rag_index():
         if os.path.exists(build_script):
             try:
                 result = subprocess.run(
-                    ["python3", build_script],
+                    [sys.executable, build_script],
                     capture_output=True, text=True, timeout=300
                 )
                 if result.returncode != 0:

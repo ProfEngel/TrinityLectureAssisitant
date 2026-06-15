@@ -15,13 +15,12 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - v0.8.2: Secure Pyodide WASM Sandbox for Data-Science, math calculations, and interactive diagrams. 🧮
-> - v0.8.1: Trinity Chat-Mode & Dynamic Mode Switching. 💬
-> - v0.8.0: Academic Personal Concierge Rebrand & UI Slogan Integration. 🧞‍♀️
+> - **v0.9.2:** Gesicherter, stabiler macOS-Stand vor Beginn der Windows-Portierung.
+> - **v0.10.0-dev:** Windows-11-Vorschau wird auf einer separaten Entwicklungsbranch aufgebaut.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal (macOS / Apple Silicon), ist DSGVO-konform und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal auf macOS; eine additive Windows-11-Version befindet sich in Entwicklung. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
 
 ---
 
@@ -58,7 +57,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **WebSearch-Agent** | *Beide* | Echtzeit-Websuche via Tavily. |
  | **Image-Agent** | *Lecture* | Bildgenerierung (Infografiken/Skizzen) via fal.ai. |
  | **Simulation-Agent** | *Lecture* | Interaktive Simulationen (Bienen, Sortierung, NNs). |
- | **PowerPoint-Agent** | *Lecture* | Native Steuerung von MS PowerPoint via AppleScript. |
+ | **PowerPoint-Agent** | *Lecture* | Native Steuerung via AppleScript (macOS) oder COM (Windows). |
  | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
@@ -85,7 +84,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 |---|---|
 | **STT (Sprache → Text)** | `faster-whisper` · Modell: `small` · int8, CPU |
 | **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
-| **TTS (Text → Stimme)** | macOS `say` (Stimme: Samantha) |
+| **TTS (Text → Stimme)** | macOS `say` oder Windows SAPI |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
 | **Bildgenerierung** | fal.ai `nano-banana-2` (Cloud) oder ComfyUI `Flux.1/2` (Lokal) |
@@ -123,14 +122,34 @@ Trinity_Assistant/
 
 ## 🚀 Onboarding & Installation
 
-Trinity läuft lokal auf deinem Mac (Apple Silicon). Du brauchst ein KI-Sprachmodell (via OpenRouter oder lokal via LM Studio/Ollama) sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
+Du brauchst ein KI-Sprachmodell via OpenRouter oder lokal via LM Studio/Ollama sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
 
-**Schnell-Installation:**
+### macOS
+
+Der stabile macOS-Funktionsumfang bleibt vollständig erhalten.
+
 Öffne das Terminal und führe diesen Befehl aus:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 ```
+
+### Windows 11 Vorschau
+
+Die Windows-Version verwendet Whisper für STT, Windows SAPI für TTS und COM für die
+PowerPoint-Steuerung. Apple Native STT bleibt macOS-exklusiv. Der Mail-Agent folgt
+später über Microsoft Graph, weil das neue Outlook keine COM-Automation unterstützt.
+
+PowerShell öffnen und ausführen:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
+```
+
+Die vollständige Anleitung und Funktionsmatrix stehen in
+[Deployment Windows 11](docs/Deployment_Windows11.md) und im
+[Windows-Portierungsplan](docs/WINDOWS11_PORTING_PLAN.md).
 
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
 
@@ -150,7 +169,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
  *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
- *   **Multi-OS & Cross-Platform Packaging (Q4 2026):** Fertige Apps für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
+ *   **Multi-OS & Cross-Platform Packaging:** Windows-11-Basisport in Entwicklung; anschließend signierte Pakete für macOS und Windows sowie später iOS, Android und Headless Ubuntu.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).

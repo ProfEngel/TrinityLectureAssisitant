@@ -3,6 +3,9 @@ import re
 import subprocess
 
 
+REQUIRED_CAPABILITIES = {"mail_automation"}
+
+
 TRIGGERS = [
     "mail",
     "mails",
