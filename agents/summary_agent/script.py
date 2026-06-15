@@ -1,4 +1,5 @@
 import os
+import sys
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
@@ -52,7 +53,7 @@ def execute(query: str, context: dict = None) -> dict:
                     print("🚀 Deep Memory: Starte RAG-Indexierung im Hintergrund...")
                     import subprocess
                     rag_script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "RAG", "build_index.py")
-                    subprocess.Popen(["python3", rag_script])
+                    subprocess.Popen([sys.executable, rag_script])
         except Exception as e:
             print(f"⚠️ Fehler beim Auto-RAG Trigger: {e}")
             

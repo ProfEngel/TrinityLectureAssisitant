@@ -11,8 +11,10 @@ RAG/*.pdf
 RAG/index/
 gen_images/
 memory/
+logs/
 __pycache__/
 *.pyc
+*.egg-info/
 
 # OS specific
 .DS_Store

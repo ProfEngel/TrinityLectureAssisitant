@@ -25,7 +25,6 @@ body {
     width: 60px;
     height: 60px;
     cursor: grab;
-    -webkit-app-region: drag;
     transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: float_cloud 4s ease-in-out infinite;
 }
@@ -436,4 +435,3 @@ body.love {
     50% { transform: scale(1.2); }
     100% { transform: scale(1); }
 }
-

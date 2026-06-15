@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trinity-assistant"
+version = "0.10.0"
+description = "Local-first academic personal concierge for macOS and Windows 11"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+license = {text = "Apache-2.0"}
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "faster-whisper>=1.1",
+    "markdown>=3.6",
+    "numpy>=1.26",
+    "Pillow>=10.3",
+    "PyMuPDF>=1.24",
+    "PySide6>=6.8",
+    "requests>=2.31",
+    "sentence-transformers>=3.0",
+    "sounddevice>=0.5",
+]
+
+[project.optional-dependencies]
+macos = [
+    "pyobjc-framework-AVFoundation>=10.3; platform_system == 'Darwin'",
+    "pyobjc-framework-Cocoa>=10.3; platform_system == 'Darwin'",
+    "pyobjc-framework-Speech>=10.3; platform_system == 'Darwin'",
+]
+windows = [
+    "pywin32>=306; platform_system == 'Windows'",
+]
+test = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

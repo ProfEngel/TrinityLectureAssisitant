@@ -1,5 +1,7 @@
 import sys
 import os
+import json
+import subprocess
 from PySide6.QtCore import Qt, QUrl, QTimer, QObject, QEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLineEdit, QVBoxLayout
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -99,7 +101,8 @@ class ContentWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         self.resize(self.DEFAULT_W, self.DEFAULT_H)
         self.setMinimumSize(350, 300)
         self.is_sticky = False
@@ -294,9 +297,13 @@ class ContentWindow(QMainWindow):
 class ChatWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        window_type = Qt.Tool if sys.platform == "darwin" else Qt.Window
+        self.setWindowFlags(
+            Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | window_type
+        )
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         self.resize(300, 60)
         
         self.central_widget = QWidget(self)
@@ -320,14 +327,35 @@ class ChatWindow(QMainWindow):
                 border: 1px solid rgba(0, 191, 255, 1.0);
             }
         """)
+        self.input_field.setFocusPolicy(Qt.StrongFocus)
         self.input_field.returnPressed.connect(self.send_message)
         self.layout.addWidget(self.input_field)
 
     def show_chat(self, parent_pos):
-        self.move(parent_pos.x() - 150, parent_pos.y() + 160)
-        self.show()
+        screen = QApplication.screenAt(parent_pos) or QApplication.primaryScreen()
+        available = screen.availableGeometry()
+        target_x = max(
+            available.left(),
+            min(parent_pos.x() - 150, available.right() - self.width()),
+        )
+        target_y = max(
+            available.top(),
+            min(parent_pos.y() + 140, available.bottom() - self.height()),
+        )
+        self.move(target_x, target_y)
+        self.showNormal()
+        self.raise_()
+
+        # On Windows a frameless top-level window needs activation after the native
+        # handle has been shown. The delayed second pass makes keyboard focus stable.
+        self._activate_input()
+        QTimer.singleShot(50, self._activate_input)
+
+    def _activate_input(self):
+        QApplication.setActiveWindow(self)
         self.activateWindow()
-        self.input_field.setFocus()
+        self.raise_()
+        self.input_field.setFocus(Qt.OtherFocusReason)
 
     def send_message(self):
         text = self.input_field.text().strip()
@@ -351,7 +379,10 @@ class WebEngineDragFilter(QObject):
                 self.dragging = True
                 self.drag_pos = event.globalPosition().toPoint() - self.window.frameGeometry().topLeft()
                 self.click_start = event.globalPosition().toPoint()
-                return False 
+                return True
+            if event.button() == Qt.RightButton:
+                self.window.open_settings()
+                return True
         elif event.type() == QEvent.Type.MouseMove:
             if self.dragging and self.drag_pos is not None:
                 self.window.move(event.globalPosition().toPoint() - self.drag_pos)
@@ -366,6 +397,8 @@ class WebEngineDragFilter(QObject):
                         self.window.show_bubble_content()
                     else:
                         self.window.chat_window.show_chat(self.window.pos())
+                    self.drag_pos = None
+                    return True
             self.drag_pos = None
         return False
 
@@ -381,7 +414,8 @@ class TrinityWindow(QMainWindow):
             Qt.Tool
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         
         # Web-Ansicht für das HTML-Widget
         self.browser = QWebEngineView(self)
@@ -397,7 +431,7 @@ class TrinityWindow(QMainWindow):
         screen = QApplication.primaryScreen().geometry()
         self.move(screen.width() - 200, screen.height() - 200)
 
-        # Sekundäres Fenster für Inhalte (ohne parent, damit es auf macOS eigenständig auf Top bleibt)
+        # Ohne parent bleibt das Inhaltsfenster plattformübergreifend eigenständig oben.
         self.content_window = ContentWindow(None)
         
         # Chat-Eingabe Fenster (ohne parent)
@@ -405,10 +439,12 @@ class TrinityWindow(QMainWindow):
 
         # Drag Filter installieren, um die HTML-Ebene zu überlisten
         self.drag_filter = WebEngineDragFilter(self)
-        if self.browser.focusProxy():
-            self.browser.focusProxy().installEventFilter(self.drag_filter)
-        else:
-            self.browser.installEventFilter(self.drag_filter)
+        self._input_filter_targets = set()
+        self.browser.installEventFilter(self.drag_filter)
+        self._input_filter_targets.add(id(self.browser))
+        self.browser.loadFinished.connect(self._install_input_filter)
+        QTimer.singleShot(0, self._install_input_filter)
+        QTimer.singleShot(250, self._install_input_filter)
 
         # Timer für State-Sync (Python IPC)
         self.state_file = os.path.join(os.path.dirname(__file__), "core", "state.txt")
@@ -416,6 +452,22 @@ class TrinityWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_state)
         self.timer.start(100) # alle 100ms prüfen
+
+    def _install_input_filter(self, *_args):
+        """Install the mouse filter after QtWebEngine created its native focus proxy."""
+        proxy = self.browser.focusProxy()
+        if proxy and id(proxy) not in self._input_filter_targets:
+            proxy.installEventFilter(self.drag_filter)
+            proxy.setMouseTracking(True)
+            self._input_filter_targets.add(id(proxy))
+
+    def open_settings(self):
+        settings_script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "core",
+            "settings_ui.py",
+        )
+        subprocess.Popen([sys.executable, settings_script])
 
     def check_state(self):
         try:
@@ -482,6 +534,9 @@ def _set_macos_dock_icon(icon_path: str) -> None:
     Muss NACH QApplication(), aber VOR dem ersten show() aufgerufen werden.
     Funktioniert nur auf macOS; auf anderen Plattformen ist es ein No-Op.
     """
+    if sys.platform != "darwin":
+        return
+
     try:
         from AppKit import NSApplication, NSImage  # type: ignore
         ns_app = NSApplication.sharedApplication()
@@ -492,7 +547,7 @@ def _set_macos_dock_icon(icon_path: str) -> None:
         else:
             print(f"⚠️ Dock-Icon konnte nicht geladen werden: {icon_path}")
     except Exception as e:
-        # AppKit nicht verfügbar (z.B. Linux/Windows) oder sonstiger Fehler
+        # AppKit nicht verfügbar oder sonstiger Fehler
         print(f"⚠️ Dock-Icon (native) nicht setzbar: {e}")
 
 

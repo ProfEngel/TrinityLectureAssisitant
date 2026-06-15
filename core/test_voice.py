@@ -1,15 +1,10 @@
-import subprocess
+from platform_adapters import create_tts_backend
 
 
 def speak(text):
-    """
-    Nutzt das native macOS 'say' Kommando.
-    Dies ist die schnellste und einfachste Methode für Siri-Stimmen auf dem Mac.
-    """
+    """Test the native TTS backend for the current operating system."""
     print(f"Morpheus sagt: {text}")
-    # -v 'Anna' (Deutsch), -v 'Siri' (falls konfiguriert)
-    # Wir nutzen den Standardwert des Systems.
-    subprocess.run(["say", text], check=False)
+    create_tts_backend().speak(text).wait()
 
 
 if __name__ == "__main__":

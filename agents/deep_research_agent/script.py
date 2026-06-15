@@ -31,8 +31,8 @@ def execute(query: str, context: dict = None) -> dict:
             "search_context": (
                 "--- Deep Research Agent ---\n"
                 "Für die Tiefenrecherche fehlt die Python-Abhängigkeit 'beautifulsoup4'. "
-                "Bitte installiere sie mit './venv/bin/python3 -m pip install beautifulsoup4' "
-                "oder führe 'install_mac.sh' erneut aus.\n"
+                "Bitte installiere sie in Trinitys virtueller Python-Umgebung mit "
+                "'python -m pip install beautifulsoup4' oder führe den Installer erneut aus.\n"
             ),
         }
         

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 rag_chunks = []
 rag_embeddings = None
@@ -59,7 +60,7 @@ def _load_rag_index():
         if os.path.exists(build_script):
             try:
                 result = subprocess.run(
-                    ["python3", build_script],
+                    [sys.executable, build_script],
                     capture_output=True, text=True, timeout=300
                 )
                 if result.returncode != 0:
@@ -161,4 +162,5 @@ def execute(user_input: str, context: dict = None) -> dict:
     return {"has_payload": False, "search_context": ""}
 
 def init():
-    _load_rag_index()
+    # Keep startup lightweight. Index and embedding model are loaded on first RAG use.
+    pass

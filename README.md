@@ -15,13 +15,12 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - v0.8.2: Secure Pyodide WASM Sandbox for Data-Science, math calculations, and interactive diagrams. 🧮
-> - v0.8.1: Trinity Chat-Mode & Dynamic Mode Switching. 💬
-> - v0.8.0: Academic Personal Concierge Rebrand & UI Slogan Integration. 🧞‍♀️
+> - **v0.10.0:** Gemeinsames Release für macOS und Windows 11 mit lokalem Codex-Agenten.
+> - **v0.9.2:** Weiterhin verfügbarer macOS-Basisstand vor der Windows-Portierung.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal (macOS / Apple Silicon), ist DSGVO-konform und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
 
 ---
 
@@ -58,11 +57,12 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **WebSearch-Agent** | *Beide* | Echtzeit-Websuche via Tavily. |
  | **Image-Agent** | *Lecture* | Bildgenerierung (Infografiken/Skizzen) via fal.ai. |
  | **Simulation-Agent** | *Lecture* | Interaktive Simulationen (Bienen, Sortierung, NNs). |
- | **PowerPoint-Agent** | *Lecture* | Native Steuerung von MS PowerPoint via AppleScript. |
+ | **PowerPoint-Agent** | *Lecture* | Native Steuerung via AppleScript (macOS) oder COM (Windows). |
  | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
+ | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
  | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
@@ -79,13 +79,13 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 
 ---
 
-## Tech-Stack (Stand April 2026)
+## Tech-Stack (Stand Juni 2026)
 
 | Komponente | Technologie |
 |---|---|
 | **STT (Sprache → Text)** | `faster-whisper` · Modell: `small` · int8, CPU |
 | **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
-| **TTS (Text → Stimme)** | macOS `say` (Stimme: Samantha) |
+| **TTS (Text → Stimme)** | macOS `say` oder Windows SAPI |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
 | **Bildgenerierung** | fal.ai `nano-banana-2` (Cloud) oder ComfyUI `Flux.1/2` (Lokal) |
@@ -123,16 +123,63 @@ Trinity_Assistant/
 
 ## 🚀 Onboarding & Installation
 
-Trinity läuft lokal auf deinem Mac (Apple Silicon). Du brauchst ein KI-Sprachmodell (via OpenRouter oder lokal via LM Studio/Ollama) sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
+Du brauchst ein KI-Sprachmodell via OpenRouter oder lokal via LM Studio/Ollama sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
 
-**Schnell-Installation:**
+### macOS
+
+Der stabile macOS-Funktionsumfang bleibt vollständig erhalten.
+
 Öffne das Terminal und führe diesen Befehl aus:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 ```
 
+### Windows 11
+
+Die Windows-Version verwendet optional Whisper für STT, Windows SAPI für TTS und COM
+für die PowerPoint-Steuerung. Apple Native STT bleibt macOS-exklusiv. Der Mail-Agent
+folgt später über Microsoft Graph, weil das neue Outlook keine COM-Automation
+unterstützt.
+
+PowerShell öffnen und ausführen:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
+```
+
+Der normale Windows-Start öffnet wie auf macOS ein sichtbares Terminal. Dort erscheinen
+Trinitys Mitschrift, Agentenaktivität und Fehlerdiagnose. Zusätzlich installiert Trinity
+eine Verknüpfung **„Trinity ohne Terminal“** für einen stillen Start.
+
+Die vollständige Anleitung und Funktionsmatrix stehen in
+[Deployment Windows 11](docs/Deployment_Windows11.md) und im
+[Windows-Portierungsplan](docs/WINDOWS11_PORTING_PLAN.md).
+
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
+
+### Codex als lokaler Ausführungsagent
+
+Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
+angemeldete Codex CLI übergeben. Codex arbeitet dabei ausschließlich in Projektordnern,
+die zuvor unter **Einstellungen → Codex** freigegeben wurden.
+
+Beispiel:
+
+> „Trinity, nutze Codex im Projekt Automatismen. Prüfe meine aktuellen Mails und
+> erstelle passende Antwortentwürfe.“
+
+Codex verwendet die Regeln und Skills des ausgewählten Projekts. Subagenten werden
+verwendet, wenn der Auftrag oder die Projektanweisungen sie ausdrücklich vorsehen.
+Fernausgelöste Läufe dürfen Entwürfe und lokale Dateien erstellen, aber nichts
+versenden, veröffentlichen, pushen oder deployen.
+
+Die technische Grundlage ist Codex'
+[nicht-interaktiver Modus](https://developers.openai.com/codex/noninteractive)
+mit einer auf das Projekt begrenzten Sandbox. Hinweise zur Ablage eigener Workflows
+stehen in der offiziellen Dokumentation zu
+[Codex Skills](https://developers.openai.com/codex/skills).
 
 ---
 
@@ -150,7 +197,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
  *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
- *   **Multi-OS & Cross-Platform Packaging (Q4 2026):** Fertige Apps für macOS, Windows 11, iOS, Android sowie Headless Ubuntu.
+ *   **Multi-OS & Cross-Platform Packaging:** macOS und Windows 11 werden unterstützt; als Nächstes folgen signierte Pakete sowie später iOS, Android und Headless Ubuntu.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).

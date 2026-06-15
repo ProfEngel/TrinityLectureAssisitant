@@ -3,6 +3,7 @@ import json
 import time
 import copy
 import requests
+from pathlib import Path
 from typing import Optional
 
 
@@ -637,7 +638,7 @@ def _build_image_payload(image_path: str, prompt: str) -> str:
     """Erzeugt das HTML für die Anzeige des generierten Bildes im Trinity-UI."""
     if not image_path:
         return ""
-    file_url = f"file://{image_path}"
+    file_url = Path(image_path).resolve().as_uri()
     return f"""
     <!-- KEEP_OPEN -->
     <!-- IMAGE_PAYLOAD -->
@@ -887,7 +888,7 @@ def _build_audio_payload(audio_path: str, title: str, params: dict) -> str:
     """Erzeugt einen HTML5-Audio-Player als Trinity-UI-Payload."""
     if not audio_path:
         return ""
-    file_url = f"file://{audio_path}"
+    file_url = Path(audio_path).resolve().as_uri()
     bpm = params.get("bpm", "?")
     duration = params.get("duration", "?")
     keyscale = params.get("keyscale", "?")
@@ -1398,7 +1399,7 @@ def _build_video_payload(video_path: str, params: dict, width: int, height: int)
     """Erzeugt einen HTML5-Video-Player als Trinity-UI-Payload."""
     if not video_path:
         return ""
-    file_url = f"file://{video_path}"
+    file_url = Path(video_path).resolve().as_uri()
     duration = params.get("duration", "?")
     motion = params.get("motion_prompt", "")[:80]
     aspect = f"{width}:{height}"

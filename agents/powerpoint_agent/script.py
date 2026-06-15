@@ -1,4 +1,25 @@
 import os
+import sys
+
+
+CORE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "core",
+)
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
+from platform_adapters.powerpoint import create_powerpoint_controller
+
+
+REQUIRED_CAPABILITIES = {"powerpoint_automation"}
+
+ACTION_TEXT = {
+    "start": "Präsentation gestartet.",
+    "stop": "Präsentation beendet.",
+    "previous": "Zurück zur vorherigen Folie.",
+    "next": "Zur nächsten Folie gewechselt.",
+}
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
@@ -9,30 +30,41 @@ def can_handle(query: str) -> bool:
 
 def execute(query: str, context: dict = None) -> dict:
     router_text = query.lower()
-    command = None
-    action_text = ""
+    action = None
 
     if "präsentation starten" in router_text:
-        command = 'tell application "Microsoft PowerPoint" to run slide show slide show settings of active presentation'
-        action_text = "Präsentation gestartet."
+        action = "start"
     elif "beenden" in router_text and ("präsentation" in router_text or "folie" in router_text):
-        command = 'tell application "Microsoft PowerPoint" to exit slide show slide show view of slide show window 1'
-        action_text = "Präsentation beendet."
+        action = "stop"
     elif "zurück" in router_text or "vorherige" in router_text:
-        command = 'tell application "Microsoft PowerPoint" to go to previous slide slide show view of slide show window 1'
-        action_text = "Zurück zur vorherigen Folie."
+        action = "previous"
     elif "weiter" in router_text or "nächste" in router_text:
-        command = 'tell application "Microsoft PowerPoint" to go to next slide slide show view of slide show window 1'
-        action_text = "Zur nächsten Folie gewechselt."
+        action = "next"
 
-    if command:
+    if action:
+        action_text = ACTION_TEXT[action]
         print(f"🎬 PowerPoint Action: {action_text}")
-        try:
-            os.system(f"osascript -e '{command}'")
-        except Exception as e:
-            print(f"⚠️ Fehler bei PowerPoint-Steuerung: {e}")
-        
-        search_context = f"--- AGENTIC ACTION ---\nDu hast soeben PowerPoint gesteuert: {action_text} Bestätige dies kurz.\n\n"
-        return {"has_payload": False, "html_payload": "", "search_context": search_context}
+        ok, error = create_powerpoint_controller().perform(action)
+        if not ok:
+            print(f"⚠️ Fehler bei PowerPoint-Steuerung: {error}")
+            return {
+                "has_payload": False,
+                "html_payload": "",
+                "search_context": (
+                    "--- POWERPOINT FEHLER ---\n"
+                    f"PowerPoint konnte nicht gesteuert werden: {error}\n\n"
+                ),
+            }
+
+        search_context = (
+            "--- AGENTIC ACTION ---\n"
+            f"Du hast soeben PowerPoint gesteuert: {action_text} "
+            "Bestätige dies kurz.\n\n"
+        )
+        return {
+            "has_payload": False,
+            "html_payload": "",
+            "search_context": search_context,
+        }
     
     return {"has_payload": False, "html_payload": "", "search_context": ""}

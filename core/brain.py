@@ -6,6 +6,9 @@ import shutil
 import re
 import time
 
+from platform_adapters import capability_message, detect_capabilities
+
+
 class TrinityBrain:
     def __init__(self):
         # Konfiguration aus Datei laden
@@ -19,8 +22,10 @@ class TrinityBrain:
         self.last_media_path = None
         
         self.load_config()
-        
+
+        self.capabilities = detect_capabilities()
         self.live_skills = []
+        self.unavailable_skills = []
         self._load_live_skills()
 
         # Soul + User einmalig laden und cachen (nicht bei jedem Request neu lesen)
@@ -76,6 +81,7 @@ class TrinityBrain:
             
             # Telegram-Config (für Skill-Context-Weitergabe)
             self._telegram_cfg = config.get("telegram", {})
+            self._codex_cfg = config.get("codex", {})
             
             print("⚙️ Konfiguration geladen ✓")
 
@@ -100,6 +106,16 @@ class TrinityBrain:
                     spec.loader.exec_module(module)
                     
                     if hasattr(module, "can_handle") and hasattr(module, "execute"):
+                        required = set(getattr(module, "REQUIRED_CAPABILITIES", set()))
+                        missing = required - self.capabilities
+                        if missing:
+                            self.unavailable_skills.append((module, missing))
+                            print(
+                                f"⏸️ Skill {item} deaktiviert "
+                                f"(fehlend: {', '.join(sorted(missing))})"
+                            )
+                            continue
+
                         self.live_skills.append(module)
                         print(f"🔌 Live-Skill geladen: {item}")
                         # Optionaler Init-Hook (z.B. für Index-Vorladung beim Start)
@@ -107,6 +123,15 @@ class TrinityBrain:
                             module.init()
                 except Exception as e:
                     print(f"⚠️ Fehler beim Laden des Skills {item}: {e}")
+
+        self.live_skills.sort(
+            key=lambda module: getattr(module, "PRIORITY", 0),
+            reverse=True,
+        )
+        self.unavailable_skills.sort(
+            key=lambda item: getattr(item[0], "PRIORITY", 0),
+            reverse=True,
+        )
 
     def ask_llm(self, messages):
         """Hilfsmethode für interne LLM-Aufrufe (z.B. Context Enrichment)."""
@@ -169,22 +194,34 @@ class TrinityBrain:
         # Agentic Router
         search_context = ""
         has_payload = False
+        direct_answer = ""
         
         # action_text = letzten 2-3 Chunks (für präzise Keyword-Erkennung)
         # user_query = voller Kontext (alle 8 Chunks, für LLM-Verständnis)
         router_text = (action_text or user_query).lower()
         lower_query = user_query.lower()
+
+        for skill, missing in getattr(self, "unavailable_skills", []):
+            if skill.can_handle(router_text):
+                search_context = (
+                    "--- FUNKTION NICHT VERFÜGBAR ---\n"
+                    f"{capability_message(missing)}\n\n"
+                )
+                break
         
         # --- DYNAMIC SKILL DISPATCH ---
         # --- COMFYUI SONG DISPATCH (T2A) ---
         # Wird vor dem normalen Skill-Loop geprüft, da Song-Trigger spezifisch sind
         for skill in getattr(self, 'live_skills', []):
+            if search_context:
+                break
             if hasattr(skill, 'can_handle_song') and skill.can_handle_song(router_text):
                 try:
                     result = skill.execute_t2a(user_query, context={
                         "brain": self,
                         "from_telegram": from_telegram,
                         "telegram_cfg": getattr(self, '_telegram_cfg', {}),
+                        "codex_cfg": getattr(self, '_codex_cfg', {}),
                     })
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
@@ -192,6 +229,7 @@ class TrinityBrain:
                             f.write(result.get("html_payload", ""))
                         has_payload = True
                     search_context = result.get("search_context", search_context)
+                    direct_answer = result.get("direct_answer", direct_answer)
                 except Exception as e:
                     print(f"⚠️ Fehler bei T2A-Skill: {e}")
                 break  # Kein weiterer Skill nötig
@@ -205,6 +243,7 @@ class TrinityBrain:
                             "brain": self,
                             "from_telegram": from_telegram,
                             "telegram_cfg": getattr(self, '_telegram_cfg', {}),
+                            "codex_cfg": getattr(self, '_codex_cfg', {}),
                         })
                         if result.get("has_payload"):
                             payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
@@ -213,9 +252,13 @@ class TrinityBrain:
                             has_payload = True
                         # search_context: Kontext vom Skill (Web, RAG, etc.) – nur einmal verwenden
                         search_context = result.get("search_context", search_context)
+                        direct_answer = result.get("direct_answer", direct_answer)
                     except Exception as e:
                         print(f"⚠️ Fehler bei der Skill-Ausführung: {e}")
                     break
+
+        if direct_answer:
+            return direct_answer, has_payload
 
         context_prompt = (
             f"{soul_prompt}\n\n"
@@ -241,7 +284,7 @@ class TrinityBrain:
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
-            response = requests.post(self.url, headers=headers, json=data)
+            response = requests.post(self.url, headers=headers, json=data, timeout=90)
             response.raise_for_status()
             
             result = response.json()

@@ -3,6 +3,11 @@
 ## Beschreibung
 Steuert die lokale macOS **Mail** App per AppleScript. Der Agent kann Mail öffnen, ungelesene Mails im Posteingang zusammenfassen, im Posteingang nach Absendern oder Betreff suchen und sichere Mail-Entwürfe erstellen.
 
+Unter Windows 11 wird der Agent derzeit bewusst deaktiviert und meldet den Grund
+transparent. Das neue Outlook unterstützt keine klassische COM-Automation; die
+Windows-Implementierung ist deshalb über Microsoft Graph mit delegierten
+Berechtigungen vorgesehen.
+
 Wichtig: Der Agent sendet keine Mails automatisch. Er öffnet Entwürfe sichtbar in Apple Mail, damit der Nutzer sie prüfen und selbst absenden kann.
 
 ## Trigger-Wörter

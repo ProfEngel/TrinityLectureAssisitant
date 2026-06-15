@@ -27,9 +27,27 @@
   "tts": {
     "voice": "Samantha"
   },
+  "system": {
+    "show_terminal": true,
+    "mode": "chat",
+    "windows_speech_enabled": false
+  },
   "comfyui": {
     "enabled": false,
     "server_url": "http://YOUR_TAILSCALE_NODE:8188",
     "default_workflow": "Flux2_Klein_T2I_API.json"
+  },
+  "codex": {
+    "enabled": false,
+    "executable": "codex",
+    "default_project": "Automatismen",
+    "projects": {
+      "Automatismen": "/FULL/PATH/TO/YOUR/AUTOMATION_PROJECT"
+    },
+    "sandbox": "workspace-write",
+    "timeout_seconds": 900,
+    "max_output_chars": 3200,
+    "ephemeral": true,
+    "network_access": false
   }
 }

@@ -1,0 +1,62 @@
+name: Cross-platform smoke tests
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-14
+          - windows-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test tools
+        run: python -m pip install pytest requests
+
+      - name: Compile Python sources
+        run: >-
+          python -m compileall -q core agents RAG trinity_launcher.py
+          trinity_native_launcher.py trinity_app.py trinity_chat.py
+
+      - name: Run unit tests
+        run: python -m pytest
+
+      - name: Validate macOS installer syntax
+        if: runner.os == 'macOS'
+        run: bash -n install_mac.sh
+
+      - name: Validate Windows installer syntax
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "install_windows.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List
+            exit 1
+          }
+
+      - name: Validate Windows Python and SSL detection
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: .\install_windows.ps1 -ValidateEnvironmentOnly -SkipPythonInstall

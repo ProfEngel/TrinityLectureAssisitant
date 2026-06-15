@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import platform
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -9,6 +10,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextEdit, QTabWidget, QDoubleSpinBox, QSpinBox,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
                              QButtonGroup)
+
+from platform_adapters import create_tts_backend, find_codex_executable
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -60,8 +63,9 @@ DEFAULT_CONFIG = {
         "auto_rag_indexing": False
     },
     "system": {
-        "show_terminal": False,
-        "mode": "chat"
+        "show_terminal": platform.system() == "Windows",
+        "mode": "chat",
+        "windows_speech_enabled": False
     },
     "audio_routing": {
         "private_device": "Standard",
@@ -71,6 +75,17 @@ DEFAULT_CONFIG = {
         "enabled": False,
         "bot_token": "",
         "chat_id": ""
+    },
+    "codex": {
+        "enabled": False,
+        "executable": "codex",
+        "default_project": "",
+        "projects": {},
+        "sandbox": "workspace-write",
+        "timeout_seconds": 900,
+        "max_output_chars": 3200,
+        "ephemeral": True,
+        "network_access": False
     },
     "comfyui": {
         "enabled": False,
@@ -86,6 +101,7 @@ class SettingsWindow(QMainWindow):
         self.config_path = config_path
         self.soul_path = os.path.join(CORE_DIR, "Soul.md")
         self.user_path = os.path.join(CORE_DIR, "User.md")
+        self.tts_backend = create_tts_backend()
         self.setWindowTitle("Trinity Assistant – Einstellungen")
         self.setMinimumSize(600, 700)
         
@@ -175,6 +191,11 @@ class SettingsWindow(QMainWindow):
             self.config["system"] = {}
         self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
         self.config["system"]["mode"] = getattr(self, 'mode_combo', QComboBox()).currentText()
+        self.config["system"]["windows_speech_enabled"] = getattr(
+            self,
+            "windows_speech_cb",
+            QCheckBox(),
+        ).isChecked()
         
         # Audio Routing
         if "audio_routing" not in self.config:
@@ -191,6 +212,43 @@ class SettingsWindow(QMainWindow):
             self.config["telegram"]["enabled"] = self.telegram_cb.isChecked()
             self.config["telegram"]["bot_token"] = self.tg_token_edit.text()
             self.config["telegram"]["chat_id"] = self.tg_chatid_edit.text()
+
+        # Codex
+        if "codex" not in self.config:
+            self.config["codex"] = {}
+        if hasattr(self, "codex_cb"):
+            projects = {}
+            for line in self.codex_projects_edit.toPlainText().splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
+                    continue
+                alias, path = stripped.split("=", 1)
+                alias = alias.strip()
+                path = path.strip()
+                if alias and path:
+                    projects[alias] = path
+
+            self.config["codex"]["enabled"] = self.codex_cb.isChecked()
+            self.config["codex"]["executable"] = (
+                self.codex_executable_edit.text().strip() or "codex"
+            )
+            self.config["codex"]["default_project"] = (
+                self.codex_default_project_edit.text().strip()
+            )
+            self.config["codex"]["projects"] = projects
+            self.config["codex"]["sandbox"] = self.codex_sandbox_combo.currentText()
+            self.config["codex"]["timeout_seconds"] = (
+                self.codex_timeout_spin.value()
+            )
+            self.config["codex"]["max_output_chars"] = (
+                self.codex_output_spin.value()
+            )
+            self.config["codex"]["ephemeral"] = (
+                self.codex_ephemeral_cb.isChecked()
+            )
+            self.config["codex"]["network_access"] = (
+                self.codex_network_cb.isChecked()
+            )
 
         # ComfyUI
         if "comfyui" not in self.config:
@@ -351,6 +409,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
+        tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
         tabs.addTab(self._create_system_tab(), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
@@ -432,6 +491,129 @@ class SettingsWindow(QMainWindow):
         layout.addStretch()
         return widget
 
+    # --- TAB: Codex ---
+    def _create_codex_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        group = QGroupBox("Lokaler Codex-Agent")
+        form = QFormLayout()
+        codex_conf = self.config.get("codex", {})
+
+        self.codex_cb = QCheckBox(
+            "Codex-Aufträge per Sprache, Chat und Telegram erlauben"
+        )
+        self.codex_cb.setChecked(codex_conf.get("enabled", False))
+        form.addRow(self.codex_cb)
+
+        detected = find_codex_executable()
+        status_text = (
+            f"Codex gefunden: {detected}"
+            if detected
+            else "Codex wurde im Systempfad noch nicht gefunden."
+        )
+        status = QLabel(status_text)
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+
+        self.codex_executable_edit = QLineEdit(
+            codex_conf.get("executable", "codex")
+        )
+        self.codex_executable_edit.setPlaceholderText(
+            "codex oder vollständiger Pfad zur Codex-Anwendung"
+        )
+        form.addRow("Programm:", self.codex_executable_edit)
+
+        projects = codex_conf.get("projects", {})
+        projects_text = ""
+        if isinstance(projects, dict):
+            projects_text = "\n".join(
+                f"{alias} = {path}" for alias, path in projects.items()
+            )
+        self.codex_projects_edit = QTextEdit()
+        self.codex_projects_edit.setPlainText(projects_text)
+        self.codex_projects_edit.setPlaceholderText(
+            "Automatismen = /vollständiger/Pfad/zum/Projekt\n"
+            "Lehre = C:\\Users\\Name\\Projekte\\Lehre"
+        )
+        self.codex_projects_edit.setMinimumHeight(130)
+        form.addRow("Freigegebene Projekte:", self.codex_projects_edit)
+
+        project_hint = QLabel(
+            "Eine Zeile pro Projekt: Name = vollständiger Ordnerpfad. "
+            "Telegram-Aufträge können ausschließlich diese Ordner verwenden."
+        )
+        project_hint.setWordWrap(True)
+        project_hint.setStyleSheet("color: #888; font-size: 11px;")
+        form.addRow("", project_hint)
+
+        self.codex_default_project_edit = QLineEdit(
+            codex_conf.get("default_project", "")
+        )
+        self.codex_default_project_edit.setPlaceholderText(
+            "z.B. Automatismen"
+        )
+        form.addRow("Standardprojekt:", self.codex_default_project_edit)
+
+        self.codex_sandbox_combo = QComboBox()
+        self.codex_sandbox_combo.addItems(["workspace-write", "read-only"])
+        sandbox = codex_conf.get("sandbox", "workspace-write")
+        if sandbox in {"workspace-write", "read-only"}:
+            self.codex_sandbox_combo.setCurrentText(sandbox)
+        form.addRow("Codex-Rechte:", self.codex_sandbox_combo)
+
+        self.codex_timeout_spin = QSpinBox()
+        self.codex_timeout_spin.setRange(30, 3600)
+        self.codex_timeout_spin.setSuffix(" Sekunden")
+        self.codex_timeout_spin.setValue(
+            int(codex_conf.get("timeout_seconds", 900))
+        )
+        form.addRow("Zeitlimit:", self.codex_timeout_spin)
+
+        self.codex_output_spin = QSpinBox()
+        self.codex_output_spin.setRange(500, 12000)
+        self.codex_output_spin.setSingleStep(500)
+        self.codex_output_spin.setSuffix(" Zeichen")
+        self.codex_output_spin.setValue(
+            int(codex_conf.get("max_output_chars", 3200))
+        )
+        form.addRow("Antwortlänge:", self.codex_output_spin)
+
+        self.codex_ephemeral_cb = QCheckBox(
+            "Codex-Läufe nicht als dauerhafte Sitzungen speichern"
+        )
+        self.codex_ephemeral_cb.setChecked(
+            codex_conf.get("ephemeral", True)
+        )
+        form.addRow(self.codex_ephemeral_cb)
+
+        self.codex_network_cb = QCheckBox(
+            "Von Codex gestarteten Programmen Netzwerkzugriff erlauben"
+        )
+        self.codex_network_cb.setChecked(
+            codex_conf.get("network_access", False)
+        )
+        form.addRow(self.codex_network_cb)
+
+        security_hint = QLabel(
+            "Empfohlen: workspace-write, Netzwerk aus. Codex darf in "
+            "fernausgelösten Läufen Entwürfe vorbereiten, aber nichts versenden, "
+            "veröffentlichen, pushen oder deployen."
+        )
+        security_hint.setWordWrap(True)
+        security_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", security_hint)
+
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
     # --- TAB: System ---
     def _create_system_tab(self):
         widget = QWidget()
@@ -452,11 +634,36 @@ class SettingsWindow(QMainWindow):
         mode_hint.setWordWrap(True)
         form.addRow("", mode_hint)
 
-        self.terminal_cb = QCheckBox("Terminal-Fenster im Hintergrund anzeigen (Log-Ausgabe)")
-        self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
+        self.terminal_cb = QCheckBox(
+            "Terminal-Fenster mit Mitschrift und Log-Ausgabe anzeigen"
+        )
+        self.terminal_cb.setChecked(
+            system_conf.get("show_terminal", platform.system() == "Windows")
+        )
         form.addRow(self.terminal_cb)
+
+        if platform.system() == "Windows":
+            self.windows_speech_cb = QCheckBox(
+                "Experimentelle Windows-Spracheingabe aktivieren"
+            )
+            self.windows_speech_cb.setChecked(
+                system_conf.get("windows_speech_enabled", False)
+            )
+            form.addRow(self.windows_speech_cb)
+
+            speech_hint = QLabel(
+                "Zunächst deaktiviert lassen und Trinity per Flüsterfeld testen. "
+                "Whisper wird erst geladen, wenn diese Option aktiv ist."
+            )
+            speech_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+            speech_hint.setWordWrap(True)
+            form.addRow("", speech_hint)
         
-        hint = QLabel("Wenn aktiv, öffnet die native macOS App beim Starten zusätzlich das Terminal, damit du Logs sehen kannst.\nBenötigt einen Neustart der App.")
+        platform_name = platform.system()
+        hint = QLabel(
+            f"Wenn aktiv, zeigt Trinity unter {platform_name} beim Start zusätzlich "
+            "die Log-Ausgabe.\nBenötigt einen Neustart der App."
+        )
         hint.setStyleSheet("color: #888; font-size: 11px;")
         hint.setWordWrap(True)
         form.addRow("", hint)
@@ -474,17 +681,9 @@ class SettingsWindow(QMainWindow):
         group = QGroupBox("Souffleur-Skill (Dynamisches Audio-Routing)")
         form = QFormLayout()
         
-        # Lese verfügbare Audio-Ausgänge (Mac-only)
-        devices = ["Standard"]
-        try:
-            import subprocess
-            out = subprocess.check_output(["say", "-a", "?"], stderr=subprocess.STDOUT).decode("utf-8")
-            for line in out.strip().split("\n"):
-                parts = line.strip().split(" ", 1)
-                if len(parts) == 2:
-                    devices.append(parts[1])
-        except Exception as e:
-            print("Konnte Audio-Geräte nicht auslesen:", e)
+        devices = self.tts_backend.list_output_devices()
+        if not devices:
+            devices = ["Standard"]
             
         routing_conf = self.config.get("audio_routing", {})
         
@@ -590,11 +789,80 @@ class SettingsWindow(QMainWindow):
         
         layout.addWidget(create_llm_box("📡 LLM 3: Alternative (z.B. Groq / Custom)", "remote_2", 
                                        "llm_radio_remote2", "remote2_url_edit", "remote2_model_edit", "remote2_key_edit"))
+
+        test_btn = QPushButton("🔗 Aktives LLM testen")
+        test_btn.setMinimumHeight(42)
+        test_btn.clicked.connect(self._test_llm_connection)
+        layout.addWidget(test_btn)
         
         layout.addStretch()
         scroll.setWidget(content)
         QVBoxLayout(widget).addWidget(scroll)
         return widget
+
+    def _test_llm_connection(self):
+        if self.llm_radio_local.isChecked():
+            url = self.local_url_edit.text().strip()
+            model = self.local_model_edit.text().strip()
+            api_key = self.local_key_edit.text().strip() or "lm-studio"
+        elif self.llm_radio_remote1.isChecked():
+            url = self.remote1_url_edit.text().strip()
+            model = self.remote1_model_edit.text().strip()
+            api_key = self.remote1_key_edit.text().strip()
+        else:
+            url = self.remote2_url_edit.text().strip()
+            model = self.remote2_model_edit.text().strip()
+            api_key = self.remote2_key_edit.text().strip()
+
+        if not url or not model:
+            QMessageBox.warning(
+                self,
+                "LLM-Konfiguration unvollständig",
+                "Bitte URL und Modell des aktiven Providers eintragen.",
+            )
+            return
+
+        try:
+            import requests
+
+            response = requests.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Trinity Assistant",
+                },
+                json={
+                    "model": model,
+                    "max_tokens": 48,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Antworte ausschließlich mit: Verbindung erfolgreich",
+                        }
+                    ],
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            message = response.json()["choices"][0]["message"]
+            answer = (
+                message.get("content")
+                or message.get("reasoning_content")
+                or "Verbindung erfolgreich"
+            ).strip()
+            QMessageBox.information(
+                self,
+                "LLM erreichbar",
+                f"Die API hat erfolgreich geantwortet:\n\n{answer[:300]}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                "LLM nicht erreichbar",
+                f"Die Verbindung ist fehlgeschlagen:\n\n{exc}",
+            )
 
     # --- TAB: APIs & Image ---
     def _create_api_tab(self):
@@ -736,9 +1004,14 @@ class SettingsWindow(QMainWindow):
         tts_form = QFormLayout()
         
         self.tts_voice_edit = QLineEdit(self.config["tts"]["voice"])
-        tts_form.addRow("macOS Stimme:", self.tts_voice_edit)
-        
-        hint = QLabel("Verfügbare Stimmen: Samantha, Daniel, Anna, etc.\nPrüfe mit: say -v '?' im Terminal.")
+        tts_form.addRow(f"{platform.system()} Stimme:", self.tts_voice_edit)
+
+        voices = self.tts_backend.list_voices()
+        voice_examples = ", ".join(voices[:6]) if voices else "Systemstandard"
+        hint = QLabel(
+            f"TTS-Backend: {self.tts_backend.name}\n"
+            f"Verfügbare Stimmen: {voice_examples}"
+        )
         hint.setStyleSheet("color: #666; font-size: 11px;")
         hint.setWordWrap(True)
         tts_form.addRow("", hint)
