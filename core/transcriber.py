@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 # Damit der Import aus dem gleichen Verzeichnis funktioniert
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
+from chat_protocol import append_chat_event, parse_command
 from platform_adapters import create_tts_backend
 
 # Konfiguration
@@ -27,6 +28,7 @@ TRIGGER_WORD = "Trinity"
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(CORE_DIR)
 MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
+CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
 os.makedirs(MEMORY_DIR, exist_ok=True)
 SILENCE_THRESHOLD = 0.05
 INITIAL_PROMPT = "Trinity, Spieltheorie, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
@@ -548,20 +550,37 @@ class MorpheusEar:
                 if os.path.exists(cmd_file):
                     try:
                         with open(cmd_file, "r", encoding="utf-8") as f:
-                            cmd_text = f.read().strip()
+                            request = parse_command(f.read())
                         os.remove(cmd_file)
+                        cmd_text = request["text"]
                         if cmd_text:
-                            is_silent = False
-                            if cmd_text.startswith("SILENT:"):
-                                is_silent = True
-                                cmd_text = cmd_text[7:]
+                            is_silent = request.get("silent", False)
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")
                             # Log it to session
                             t_stamp = time.strftime("%H:%M:%S")
                             with open(self.transcript_file, "a", encoding="utf-8") as f:
                                 f.write(f"[{t_stamp}] [User (UI-Chat)]: {cmd_text}\n")
-                                
-                            self.trigger_action(cmd_text, silent_response=is_silent)
+
+                            if (
+                                request.get("source") == "classic"
+                                and not request.get("history_recorded")
+                            ):
+                                append_chat_event(
+                                    CHAT_HISTORY_FILE,
+                                    {
+                                        "request_id": request["request_id"],
+                                        "role": "user",
+                                        "source": "classic",
+                                        "text": cmd_text,
+                                        "attachments": request.get("attachments", []),
+                                    },
+                                )
+
+                            self.trigger_action(
+                                cmd_text,
+                                silent_response=is_silent,
+                                chat_request=request,
+                            )
                             continue 
                     except Exception as e:
                         print(f"FEHLER BEI TEXT-EINGABE: {e}")
@@ -778,7 +797,14 @@ class MorpheusEar:
             print("🛑 Audio Stream gestoppt.")
         return True
 
-    def trigger_action(self, text, silent_response=False, recent_text=None, from_telegram=False):
+    def trigger_action(
+        self,
+        text,
+        silent_response=False,
+        recent_text=None,
+        from_telegram=False,
+        chat_request=None,
+    ):
         if getattr(self, 'mode', 'office') == 'chat':
             silent_response = True
             
@@ -898,7 +924,8 @@ class MorpheusEar:
         antwort, has_payload = self.brain.ask(
             text, self.transcript_file,
             text_mode=use_text_mode, action_text=recent_text or text,
-            from_telegram=from_telegram
+            from_telegram=from_telegram,
+            attachments=(chat_request or {}).get("attachments", []),
         )
 
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")
@@ -922,6 +949,33 @@ class MorpheusEar:
                     }, timeout=5)
                 except Exception as e:
                     print(f"⚠️ Fehler beim Senden der Telegram-Antwort: {e}")
+
+        payload_html = ""
+        if has_payload:
+            try:
+                with open(
+                    os.path.join(CORE_DIR, "payload.html"),
+                    "r",
+                    encoding="utf-8",
+                ) as payload_handle:
+                    payload_html = payload_handle.read()
+            except OSError:
+                pass
+        history_payload = payload_html
+        if chat_request and "<!-- TEXT_RESPONSE_PAYLOAD -->" in history_payload:
+            history_payload = ""
+
+        if chat_request or history_payload:
+            append_chat_event(
+                CHAT_HISTORY_FILE,
+                {
+                    "request_id": (chat_request or {}).get("request_id"),
+                    "role": "assistant",
+                    "source": (chat_request or {}).get("source", "runtime"),
+                    "text": antwort,
+                    "payload_html": history_payload,
+                },
+            )
         
         # Antwort bereinigen
         sichere_antwort = re.sub(r'[*_#]', '', antwort)

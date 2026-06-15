@@ -92,8 +92,9 @@ Classic-UI aktiv sind; Protokolle werden weiterhin in `logs` abgelegt.
 ## Bedienoberflächen
 
 - `Augen-UI`: schwebende Trinity für den Vorlesungsbetrieb
-- `Classic-UI`: normale App mit Live-Mitschrift, Ergebnissen, Texteingabe und
-  eingebetteten Einstellungen über das Zahnrad oben rechts
+- `Classic-UI`: normale App mit Live-Mitschrift, dauerhaftem Chatverlauf,
+  Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen. Das Zahnrad öffnet die
+  Einstellungen im selben Fenster; oben und unten führt ein Button zurück zum Chat.
 - `Terminal-CLI`: Mitschrift, Logs und Texteingabe im Terminal
 
 Mehrere Oberflächen können gleichzeitig laufen. Sind Augen- und Classic-UI beide
