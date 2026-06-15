@@ -2,7 +2,9 @@
 param(
     [string]$InstallDir = "$env:LOCALAPPDATA\Trinity",
     [string]$Repository = "https://github.com/ProfEngel/TrinityLectureAssisitant.git",
-    [string]$Branch = "main"
+    [string]$Branch = "codex/windows11-platform",
+    [switch]$SkipPythonInstall,
+    [switch]$ValidateEnvironmentOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,24 +14,155 @@ Write-Host "Trinity Assistant Installer for Windows 11"
 Write-Host "=========================================="
 Write-Host ""
 
-function Get-PythonCommand {
+function Get-PythonCandidates {
+    $candidates = [System.Collections.Generic.List[hashtable]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+
     $pyLauncher = Get-Command "py.exe" -ErrorAction SilentlyContinue
     if ($pyLauncher) {
-        return @{
-            Executable = $pyLauncher.Source
-            Prefix = @("-3.11")
+        foreach ($version in @("-3.11", "-3.12", "-3.10", "-3.9")) {
+            $key = "$($pyLauncher.Source)|$version"
+            if ($seen.Add($key)) {
+                $candidates.Add(@{
+                    Executable = $pyLauncher.Source
+                    Prefix = @($version)
+                    Description = "Python Launcher $version"
+                })
+            }
         }
     }
 
-    $python = Get-Command "python.exe" -ErrorAction SilentlyContinue
-    if ($python) {
-        return @{
-            Executable = $python.Source
-            Prefix = @()
+    foreach ($commandName in @("python.exe", "python3.exe")) {
+        $python = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($python -and $seen.Add($python.Source)) {
+            $candidates.Add(@{
+                Executable = $python.Source
+                Prefix = @()
+                Description = $python.Source
+            })
         }
     }
 
-    throw "Python 3.11 wurde nicht gefunden. Bitte Python von https://www.python.org/downloads/windows/ installieren und 'Add Python to PATH' aktivieren."
+    $knownRoots = @(
+        "$env:LOCALAPPDATA\Programs\Python",
+        "$env:ProgramFiles\Python",
+        "${env:ProgramFiles(x86)}\Python"
+    )
+    foreach ($root in $knownRoots) {
+        if (-not $root -or -not (Test-Path $root)) {
+            continue
+        }
+
+        Get-ChildItem $root -Filter "python.exe" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch "\\venv\\" } |
+            Sort-Object FullName -Descending |
+            ForEach-Object {
+                if ($seen.Add($_.FullName)) {
+                    $candidates.Add(@{
+                        Executable = $_.FullName
+                        Prefix = @()
+                        Description = $_.FullName
+                    })
+                }
+            }
+    }
+
+    return $candidates
+}
+
+function Test-PythonCommand {
+    param(
+        [hashtable]$PythonCommand
+    )
+
+    $probe = @"
+import ssl
+import struct
+import sys
+import venv
+
+if sys.version_info[:2] < (3, 9) or sys.version_info[:2] >= (3, 13):
+    raise RuntimeError(f"Python {sys.version.split()[0]} wird nicht unterstuetzt")
+if struct.calcsize("P") * 8 != 64:
+    raise RuntimeError("Trinity benoetigt 64-Bit-Python")
+
+print(f"{sys.executable}|{sys.version.split()[0]}|{ssl.OPENSSL_VERSION}")
+"@
+
+    $probeOutput = & $PythonCommand.Executable @($PythonCommand.Prefix) -c $probe 2>&1
+    $exitCode = $LASTEXITCODE
+
+    return @{
+        IsValid = ($exitCode -eq 0)
+        Details = (($probeOutput | ForEach-Object { "$_" }) -join "`n").Trim()
+    }
+}
+
+function Find-CompatiblePython {
+    $diagnostics = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($candidate in @(Get-PythonCandidates)) {
+        $result = Test-PythonCommand $candidate
+        if ($result.IsValid) {
+            Write-Host "Verwende $($candidate.Description): $($result.Details)"
+            return $candidate
+        }
+
+        if ($result.Details) {
+            $diagnostics.Add("$($candidate.Description): $($result.Details)")
+        }
+    }
+
+    if ($diagnostics.Count -gt 0) {
+        Write-Warning "Gefundene Python-Installationen sind nicht kompatibel oder besitzen kein funktionierendes SSL:"
+        $diagnostics | ForEach-Object { Write-Warning "  $_" }
+    }
+
+    return $null
+}
+
+function Install-CompatiblePython {
+    $winget = Get-Command "winget.exe" -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw "Kein kompatibles Python mit SSL gefunden. Bitte Python 3.11 (64 Bit) von https://www.python.org/downloads/windows/ installieren und den Installer erneut starten."
+    }
+
+    Write-Host "Installiere beziehungsweise repariere Python 3.11 mit Windows Package Manager ..."
+    & $winget.Source install `
+        --id Python.Python.3.11 `
+        --exact `
+        --source winget `
+        --scope user `
+        --silent `
+        --force `
+        --disable-interactivity `
+        --accept-package-agreements `
+        --accept-source-agreements
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python 3.11 konnte nicht automatisch installiert werden. Bitte Python 3.11 (64 Bit) von https://www.python.org/downloads/windows/ installieren."
+    }
+}
+
+function Get-PythonCommand {
+    $pythonCommand = Find-CompatiblePython
+    if ($pythonCommand) {
+        return $pythonCommand
+    }
+
+    if ($SkipPythonInstall) {
+        throw "Kein kompatibles Python mit SSL gefunden. Die automatische Python-Installation wurde deaktiviert."
+    }
+
+    Install-CompatiblePython
+    $pythonCommand = Find-CompatiblePython
+    if (-not $pythonCommand) {
+        throw "Python 3.11 wurde installiert, konnte aber noch nicht verwendet werden. Bitte PowerShell neu öffnen und den Installer erneut starten."
+    }
+
+    return $pythonCommand
 }
 
 function Invoke-Python {
@@ -73,6 +206,12 @@ function Copy-DirectoryContents {
 }
 
 $pythonCommand = Get-PythonCommand
+if ($ValidateEnvironmentOnly) {
+    Write-Host ""
+    Write-Host "Python- und SSL-Pruefung erfolgreich."
+    exit 0
+}
+
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $backupDir = "$InstallDir`_backup_$timestamp"
 $isUpdate = Test-Path $InstallDir
@@ -133,6 +272,15 @@ Write-Host "Erstelle virtuelle Python-Umgebung ..."
 Invoke-Python $pythonCommand @("-m", "venv", "$InstallDir\venv")
 
 $venvPython = "$InstallDir\venv\Scripts\python.exe"
+$venvResult = Test-PythonCommand @{
+    Executable = $venvPython
+    Prefix = @()
+    Description = $venvPython
+}
+if (-not $venvResult.IsValid) {
+    throw "Die virtuelle Python-Umgebung besitzt kein funktionierendes SSL: $($venvResult.Details)"
+}
+
 & $venvPython -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) {
     throw "pip konnte nicht aktualisiert werden."

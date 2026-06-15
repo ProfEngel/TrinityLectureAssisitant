@@ -55,3 +55,8 @@ jobs:
             $errors | Format-List
             exit 1
           }
+
+      - name: Validate Windows Python and SSL detection
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: .\install_windows.ps1 -ValidateEnvironmentOnly -SkipPythonInstall
