@@ -256,9 +256,8 @@ class TrinityTui:
             if memory_context:
                 handle.write(f"\n{memory_context}\n")
 
-        prompt = f"{memory_context}\n\n{text}" if memory_context else text
         answer, _has_payload = self._lazy_brain().ask(
-            prompt,
+            text,
             str(self.transcript_path),
             text_mode=True,
         )
@@ -298,4 +297,3 @@ def command_help():
 def run_tui(home, args=None):
     args = args or argparse.Namespace(session=None)
     return TrinityTui(home, session_id=getattr(args, "session", None)).run()
-
