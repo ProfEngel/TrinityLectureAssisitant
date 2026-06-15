@@ -12,6 +12,12 @@ Die erste Portierungsstufe ist mit Release `v0.10.0` umgesetzt:
 - `install_windows.ps1`
 - Smoke-Tests auf macOS und Windows
 
+Release `v0.10.1` ergänzt eine vom Kern getrennte Oberflächenwahl:
+
+- Augen-UI für Vorlesung und Präsentation
+- Classic-UI für den normalen Desktopbetrieb
+- Terminal-CLI als erzwungener Fallback und Grundlage für Ubuntu/Headless
+
 Noch offen sind Microsoft Graph für das neue Outlook, breite Windows-Hardwaretests,
 vollständiges Packaging und die Trennung von Programm- und Nutzerdaten.
 

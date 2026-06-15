@@ -19,6 +19,7 @@ zusätzlich als GitHub-Release `v0.9.2` gesichert und bleibt verfügbar.
 - Telegram-Bridge
 - optionaler Codex-Agent, wenn die Codex CLI auf dem Windows-Host installiert und
   angemeldet ist
+- wählbare Augen-UI, Classic-Desktopoberfläche und Terminal-CLI
 
 ## Noch nicht unterstützt
 
@@ -57,7 +58,7 @@ Der Installer:
 5. erstellt eine virtuelle Python-Umgebung
 6. installiert gemeinsame und Windows-spezifische Abhängigkeiten
 7. erstellt Verknüpfungen auf dem Desktop und im Startmenü
-8. aktiviert für den normalen Start ein sichtbares Terminal mit Mitschrift
+8. erstellt einen normalen Start, der die gewählten Oberflächen berücksichtigt
 
 Wurde das Skript als Datei aus dem Browser heruntergeladen, kann Windows vor der
 Ausführung warnen. Nach Prüfung der Quelle lässt sich die Markierung entfernen:
@@ -74,9 +75,20 @@ cd $env:LOCALAPPDATA\Trinity
 .\venv\Scripts\python.exe .\trinity_launcher.py
 ```
 
-Der normale Desktop- und Startmenüeintrag zeigt Trinitys Mitschrift und Laufstatus in
-einem Terminalfenster. Die Desktop-Verknüpfung `Trinity ohne Terminal` startet die
-gleiche Version ohne sichtbare Konsole; Protokolle werden weiterhin in `logs` abgelegt.
+Der normale Desktop- und Startmenüeintrag verwendet die unter
+`Einstellungen > System > Bedienoberflächen` gewählte Kombination. Die Desktop-
+Verknüpfung `Trinity ohne Terminal` unterdrückt die Konsole, sofern Augen- oder
+Classic-UI aktiv sind; Protokolle werden weiterhin in `logs` abgelegt.
+
+## Bedienoberflächen
+
+- `Augen-UI`: schwebende Trinity für den Vorlesungsbetrieb
+- `Classic-UI`: normale App mit Live-Mitschrift, Ergebnissen und Texteingabe
+- `Terminal-CLI`: Mitschrift, Logs und Texteingabe im Terminal
+
+Mehrere Oberflächen können gleichzeitig laufen. Sind Augen- und Classic-UI beide
+deaktiviert, erzwingt Trinity die Terminal-CLI. So kann Trinity auch ohne grafische
+Desktopumgebung bedient werden.
 
 ## Schwebendes Trinity-Fenster
 
@@ -131,7 +143,7 @@ Trinity schreibt dauerhaft Diagnoseprotokolle nach:
 %LOCALAPPDATA%\Trinity\logs
 ```
 
-Der normale Trinity-Eintrag startet bereits mit sichtbarer Konsolenausgabe.
+Ob eine Konsole sichtbar ist, bestimmt die Option `Terminal-CLI` in den Einstellungen.
 
 Für sichtbare Logs Trinity manuell aus PowerShell starten:
 

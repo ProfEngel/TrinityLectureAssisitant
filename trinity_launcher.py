@@ -5,15 +5,36 @@ import os
 from datetime import datetime
 from html import escape
 
+from core.ui_modes import resolve_ui_modes
 
-def _read_show_terminal(config_file):
+
+def _read_ui_modes(config_file, force_terminal=False, suppress_terminal=False):
     try:
         import json
         with open(config_file, "r", encoding="utf-8") as config_handle:
             config = json.load(config_handle)
-        return bool(config.get("system", {}).get("show_terminal", False))
+        system_config = config.get("system", {})
     except Exception:
-        return False
+        system_config = {}
+    return resolve_ui_modes(
+        system_config,
+        force_terminal=force_terminal,
+        suppress_terminal=suppress_terminal,
+    )
+
+
+def _read_show_terminal(config_file):
+    return _read_ui_modes(config_file)["terminal"]
+
+
+def _console_python_executable(executable=None, platform_name=None):
+    executable = executable or sys.executable
+    host = platform_name or sys.platform
+    if host == "win32" and os.path.basename(executable).casefold() == "pythonw.exe":
+        console_python = os.path.join(os.path.dirname(executable), "python.exe")
+        if os.path.isfile(console_python):
+            return console_python
+    return executable
 
 
 def _terminate(process):
@@ -55,7 +76,9 @@ def launch_trinity():
     
     # 1. Pfade definieren
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    ui_script = os.path.join(base_dir, "trinity_app.py")
+    eyes_ui_script = os.path.join(base_dir, "trinity_app.py")
+    classic_ui_script = os.path.join(base_dir, "trinity_classic.py")
+    console_script = os.path.join(base_dir, "trinity_console.py")
     ear_script = os.path.join(base_dir, "core", "transcriber.py")
     config_file = os.path.join(base_dir, "core", "config.json")
     settings_script = os.path.join(base_dir, "core", "settings_ui.py")
@@ -72,12 +95,12 @@ def launch_trinity():
 
     diagnostic_mode = "--diagnostic" in sys.argv
     no_terminal = "--no-terminal" in sys.argv
-    show_terminal = diagnostic_mode or (
-        not no_terminal and _read_show_terminal(config_file)
+    ui_modes = _read_ui_modes(
+        config_file,
+        force_terminal=diagnostic_mode,
+        suppress_terminal=no_terminal,
     )
-    runtime_creation_flags = 0
-    if sys.platform == "win32" and show_terminal and not diagnostic_mode:
-        runtime_creation_flags = subprocess.CREATE_NEW_CONSOLE
+    show_terminal = ui_modes["terminal"]
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -86,27 +109,61 @@ def launch_trinity():
     ) as runtime_log, open(
         os.path.join(logs_dir, "ui.log"), "a", encoding="utf-8"
     ) as ui_log:
-        _log_message(launcher_log, "Starte Trinity-Laufzeit.")
-        ear_process = subprocess.Popen(
-            [sys.executable, "-u", ear_script],
-            stdout=None if show_terminal else runtime_log,
-            stderr=None if show_terminal else subprocess.STDOUT,
-            creationflags=runtime_creation_flags,
+        _log_message(
+            launcher_log,
+            "Starte Trinity-Laufzeit mit Oberflächen: "
+            + ", ".join(name for name, enabled in ui_modes.items() if enabled),
         )
-        ui_process = subprocess.Popen(
-            [sys.executable, "-u", ui_script],
-            stdout=None if show_terminal else ui_log,
-            stderr=None if show_terminal else subprocess.STDOUT,
-            creationflags=0,
-        )
+        console_flags = 0
+        if sys.platform == "win32" and show_terminal:
+            console_flags = subprocess.CREATE_NEW_CONSOLE
+
+        if show_terminal:
+            ear_process = subprocess.Popen(
+                [
+                    _console_python_executable(),
+                    "-u",
+                    console_script,
+                    "--runtime",
+                    ear_script,
+                ],
+                creationflags=console_flags,
+            )
+        else:
+            ear_process = subprocess.Popen(
+                [sys.executable, "-u", ear_script],
+                stdout=runtime_log,
+                stderr=subprocess.STDOUT,
+                creationflags=0,
+            )
+
+        ui_processes = {}
+        if ui_modes["eyes"]:
+            ui_processes["Augen-UI"] = subprocess.Popen(
+                [sys.executable, "-u", eyes_ui_script],
+                stdout=None if show_terminal else ui_log,
+                stderr=None if show_terminal else subprocess.STDOUT,
+                creationflags=0,
+            )
+        if ui_modes["classic"]:
+            ui_processes["Classic-UI"] = subprocess.Popen(
+                [sys.executable, "-u", classic_ui_script],
+                stdout=None if show_terminal else ui_log,
+                stderr=None if show_terminal else subprocess.STDOUT,
+                creationflags=0,
+            )
 
         try:
             while True:
-                if ui_process.poll() is not None:
-                    _log_message(
-                        launcher_log,
-                        f"UI wurde mit Code {ui_process.returncode} beendet.",
-                    )
+                for name, process in list(ui_processes.items()):
+                    if process.poll() is not None:
+                        _log_message(
+                            launcher_log,
+                            f"{name} wurde mit Code {process.returncode} beendet.",
+                        )
+                        del ui_processes[name]
+
+                if (ui_modes["eyes"] or ui_modes["classic"]) and not ui_processes:
                     break
                 if ear_process is not None and ear_process.poll() is not None:
                     return_code = ear_process.returncode
@@ -116,13 +173,17 @@ def launch_trinity():
                         f"{return_code} beendet. Die Oberfläche bleibt "
                         "für Einstellungen und Diagnose geöffnet.",
                     )
-                    _show_runtime_error(base_dir, return_code)
+                    if return_code != 0 and ui_processes:
+                        _show_runtime_error(base_dir, return_code)
                     ear_process = None
+                    if return_code == 0 or not ui_processes:
+                        break
                 time.sleep(1)
         except KeyboardInterrupt:
             _log_message(launcher_log, "Trinity wurde manuell beendet.")
         finally:
-            _terminate(ui_process)
+            for process in ui_processes.values():
+                _terminate(process)
             _terminate(ear_process)
             _log_message(launcher_log, "Trinity ist schlafen gegangen.")
 

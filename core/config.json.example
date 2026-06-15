@@ -29,6 +29,9 @@
   },
   "system": {
     "show_terminal": true,
+    "eyes_ui_enabled": true,
+    "classic_ui_enabled": false,
+    "terminal_cli_enabled": true,
     "mode": "chat",
     "windows_speech_enabled": false
   },
