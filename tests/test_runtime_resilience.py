@@ -1,7 +1,16 @@
 import json
+import sys
+import types
 from pathlib import Path
 
 import trinity_launcher
+
+if "requests" not in sys.modules:
+    try:
+        import requests  # noqa: F401
+    except ModuleNotFoundError:
+        sys.modules["requests"] = types.ModuleType("requests")
+
 from core import transcriber
 
 
