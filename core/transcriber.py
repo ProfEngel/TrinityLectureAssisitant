@@ -18,6 +18,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
 from chat_protocol import append_chat_event, parse_command
+from memory_store import MemoryStore
 from platform_adapters import create_tts_backend
 
 # Konfiguration
@@ -976,6 +977,25 @@ class MorpheusEar:
                     "payload_html": history_payload,
                 },
             )
+            if chat_request:
+                try:
+                    memory_store = MemoryStore()
+                    session_id = memory_store.ensure_session("classic", "Classic UI")
+                    memory_store.add_message(
+                        session_id,
+                        "assistant",
+                        antwort,
+                        {"source": "classic", "request_id": chat_request.get("request_id")},
+                    )
+                    memory_store.remember(
+                        f"User: {chat_request.get('text', '')}\nTrinity: {antwort}",
+                        source="classic-chat",
+                        session_id=session_id,
+                        weight=0.58,
+                        metadata={"request_id": chat_request.get("request_id")},
+                    )
+                except Exception as exc:
+                    print(f"⚠️ Memory-Speicherung fehlgeschlagen: {exc}")
         
         # Antwort bereinigen
         sichere_antwort = re.sub(r'[*_#]', '', antwort)

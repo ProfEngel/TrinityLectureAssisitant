@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.0:** Trinity TUI mit Slash-Commands, Sessions, lokalem SQLite-Memory, Self-Bake/Dreaming und Memory-Graph in der ClassicUI.
 > - **v0.10.3:** Classic-Chat mit Verlauf, Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen.
 > - **v0.10.2:** Gemeinsame Classic-/Settings-App sowie globale CLI mit Onboarding und Doctor.
 > - **v0.10.1:** Wählbare Augen-, Classic- und Terminal-Oberflächen für Desktop und Headless.
@@ -105,6 +106,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 Trinity_Assistant/
 ├── trinity_launcher.py        ← System starten
 ├── trinity_cli.py             ← Globale CLI: Start, Settings, Onboarding, Doctor
+├── trinity_tui.py             ← Terminal-Chat mit Slash-Commands, Sessions und Memory
 ├── trinity_app.py             ← UI (Avatar + Content-Fenster)
 ├── trinity_classic.py         ← Klassische App mit Chat und Einstellungen
 ├── trinity_console.py         ← Terminal-CLI und Headless-Oberfläche
@@ -112,6 +114,7 @@ Trinity_Assistant/
 ├── README.md
 ├── core/
 │   ├── brain.py               ← KI-Logik, Agentic Router, RAG, Tools
+│   ├── memory_store.py        ← SQLite-Memory, Sessions, Tags, Self-Bake, Graph
 │   ├── configuration.py       ← Gemeinsame Konfiguration für GUI und CLI
 │   ├── doctor.py              ← Installations- und Konfigurationsdiagnose
 │   ├── transcriber.py         ← STT-Loop (faster-whisper, VAD, Trigger)
@@ -124,7 +127,7 @@ Trinity_Assistant/
 │   ├── index/                 ← Vorberechneter Embedding-Index
 │   └── build_index.py         ← Index manuell neu bauen
 ├── gen_images/                ← Generierte Schaubilder (PNG)
-└── memory/                    ← Sitzungs-Transkripte (Markdown)
+└── memory/                    ← Sitzungs-Transkripte, Chat-History und SQLite-Memory
 ```
 
 ---
@@ -199,6 +202,7 @@ trinity settings
 trinity onboarding
 trinity doctor
 trinity doctor --fix
+trinity tui
 ```
 
 `trinity settings` ist eine interaktive Einstellungsoberfläche für Headless-Systeme.
@@ -206,6 +210,43 @@ trinity doctor --fix
 SSL, Konfiguration, Oberflächen, LLM, Codex und beschreibbare Laufzeitordner. Mit
 `trinity start --surface classic|eyes|terminal|all` kann die Oberfläche für einen
 einzelnen Start überschrieben werden.
+
+### Trinity TUI, Sessions und Memory
+
+`trinity tui` startet eine Terminal-Chatoberfläche für Headless-Betrieb,
+Windows-Terminal, SSH oder spätere Linux-Setups. Die TUI nutzt dieselbe lokale
+Konfiguration wie die Desktop-App und speichert Sessions sowie Memory in
+`memory/trinity_memory.sqlite3`.
+
+Wichtige Slash-Commands:
+
+```text
+/help                         Hilfe anzeigen
+/models                       Provider-Slots und Modelle anzeigen
+/model <slot> [modell]        Provider-Slot wechseln, optional Modell setzen
+/session new [titel]          Neue Session starten
+/session list                 Sessions auflisten
+/session resume <id>          Session fortsetzen
+/context                      Älteren Verlauf als Memory verdichten
+/remember <text> --tags a,b   Wissen manuell speichern
+/memory status                Memory-Status anzeigen
+/memory search <text>         Memory durchsuchen
+/memory bake                  Classic-Chat importieren und self-baken
+/memory dream                 Tags gewichten und Links bilden
+/graph                        Graph-Kennzahlen anzeigen
+/exit                         Beenden
+```
+
+Die Memory-Architektur ist lokal und updatefest angelegt: Chat-Turns, manuell
+gespeicherte Erinnerungen, Tags, Gewichtungen und Graph-Links liegen im
+SQLite-Store unter `memory/`. Self-Bake verdichtet ungebakene Erinnerungen zu
+Summary-Memories. Dreaming verbindet Memories über gemeinsame Tags und stärkt
+vernetzte Inhalte.
+
+In der Classic-UI gibt es zusätzlich den Reiter **Memory Graph**. Dort können
+Classic-Chatverläufe importiert und verdichtet werden; die Graphansicht zeigt
+Memory-Knoten, Tag-Knoten und gewichtete Links. Trinity nutzt passende
+Memory-Treffer automatisch als zusätzlichen Kontext beim Antworten.
 
 ### Codex als lokaler Ausführungsagent
 

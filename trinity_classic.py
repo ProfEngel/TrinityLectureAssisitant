@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSplitter,
     QStackedWidget,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -40,6 +41,7 @@ from chat_protocol import (
     encode_chat_request,
     load_chat_events,
 )
+from memory_store import MemoryStore, render_graph_html
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -167,8 +169,10 @@ class ClassicWindow(QMainWindow):
         self._transcript_path = None
         self._transcript_signature = None
         self._chat_signature = None
+        self._memory_signature = None
         self._last_state = ""
         self.pending_attachments = []
+        self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
         self.setAcceptDrops(True)
 
         self.pages = QStackedWidget()
@@ -211,8 +215,12 @@ class ClassicWindow(QMainWindow):
         chat_layout = QVBoxLayout(chat_panel)
         chat_layout.setContentsMargins(0, 0, 0, 0)
         chat_layout.setSpacing(8)
-        chat_label = QLabel("Chat")
-        chat_label.setObjectName("section")
+        self.right_tabs = QTabWidget()
+
+        chat_tab = QWidget()
+        chat_tab_layout = QVBoxLayout(chat_tab)
+        chat_tab_layout.setContentsMargins(0, 0, 0, 0)
+        chat_tab_layout.setSpacing(8)
         self.chat_history = QWebEngineView()
         self.chat_history.page().setBackgroundColor(QColor("#09090b"))
         web_settings = self.chat_history.settings()
@@ -225,8 +233,42 @@ class ClassicWindow(QMainWindow):
             True,
         )
         self.chat_history.setHtml(_render_chat_html([]))
-        chat_layout.addWidget(chat_label)
-        chat_layout.addWidget(self.chat_history, 1)
+        chat_tab_layout.addWidget(self.chat_history, 1)
+
+        memory_tab = QWidget()
+        memory_layout = QVBoxLayout(memory_tab)
+        memory_layout.setContentsMargins(0, 0, 0, 0)
+        memory_layout.setSpacing(8)
+        memory_header = QHBoxLayout()
+        self.memory_status = QLabel("Memory bereit")
+        self.memory_status.setObjectName("section")
+        bake_button = QPushButton("Memory backen")
+        bake_button.setObjectName("subtle")
+        bake_button.clicked.connect(self.bake_memory)
+        refresh_memory_button = QPushButton("Graph aktualisieren")
+        refresh_memory_button.setObjectName("subtle")
+        refresh_memory_button.clicked.connect(self.refresh_memory_graph)
+        memory_header.addWidget(self.memory_status, 1)
+        memory_header.addWidget(bake_button)
+        memory_header.addWidget(refresh_memory_button)
+        self.memory_graph = QWebEngineView()
+        self.memory_graph.page().setBackgroundColor(QColor("#09090b"))
+        graph_settings = self.memory_graph.settings()
+        graph_settings.setAttribute(
+            QWebEngineSettings.LocalContentCanAccessRemoteUrls,
+            True,
+        )
+        graph_settings.setAttribute(
+            QWebEngineSettings.LocalContentCanAccessFileUrls,
+            True,
+        )
+        self.memory_graph.setHtml(render_graph_html({"nodes": [], "links": []}))
+        memory_layout.addLayout(memory_header)
+        memory_layout.addWidget(self.memory_graph, 1)
+
+        self.right_tabs.addTab(chat_tab, "Chat")
+        self.right_tabs.addTab(memory_tab, "Memory Graph")
+        chat_layout.addWidget(self.right_tabs, 1)
 
         splitter.addWidget(transcript_panel)
         splitter.addWidget(chat_panel)
@@ -308,12 +350,24 @@ class ClassicWindow(QMainWindow):
             QPushButton#subtle { padding: 7px 10px; color: #a1a1aa; }
             QPushButton#gear { font-size: 20px; padding: 0; }
             QSplitter::handle { background: #27272a; width: 2px; }
+            QTabWidget::pane {
+                border: 1px solid #27272a; border-radius: 10px;
+                top: -1px;
+            }
+            QTabBar::tab {
+                background: #121214; color: #a1a1aa;
+                border: 1px solid #27272a; border-bottom: none;
+                padding: 8px 14px; border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+            }
+            QTabBar::tab:selected { background: #18181b; color: #f4f4f5; }
         """)
 
     def refresh(self):
         self._refresh_state()
         self._refresh_transcript()
         self._refresh_chat_history()
+        self._refresh_memory_if_changed()
 
     def _refresh_state(self):
         state_path = os.path.join(CORE_DIR, "state.txt")
@@ -365,6 +419,39 @@ class ClassicWindow(QMainWindow):
         events = load_chat_events(path)
         base_url = QUrl.fromLocalFile(BASE_DIR + os.sep)
         self.chat_history.setHtml(_render_chat_html(events), base_url)
+
+    def _refresh_memory_if_changed(self):
+        path = os.path.join(MEMORY_DIR, "trinity_memory.sqlite3")
+        try:
+            signature = (os.path.getmtime(path), os.path.getsize(path))
+        except OSError:
+            signature = None
+        if signature == self._memory_signature:
+            return
+        self._memory_signature = signature
+        self.refresh_memory_graph()
+
+    def refresh_memory_graph(self):
+        status = self.memory_store.status()
+        graph = self.memory_store.graph_data()
+        self.memory_status.setText(
+            f"{status['memories']} Memories · {status['links']} Links · "
+            f"{status['unbaked']} unbaked"
+        )
+        base_url = QUrl.fromLocalFile(BASE_DIR + os.sep)
+        self.memory_graph.setHtml(render_graph_html(graph), base_url)
+
+    def bake_memory(self):
+        try:
+            result = self.memory_store.bake_chat_history(CHAT_HISTORY_FILE)
+            self.status.setText(
+                f"Memory gebacken: {result['imported']} importiert, "
+                f"{result['baked']} verdichtet"
+            )
+            self._memory_signature = None
+            self.refresh_memory_graph()
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Memory Bake fehlgeschlagen: {exc}")
 
     def choose_attachments(self):
         paths, _ = QFileDialog.getOpenFileNames(
@@ -452,6 +539,16 @@ class ClassicWindow(QMainWindow):
                 "attachments": self.pending_attachments,
             },
         )
+        try:
+            session_id = self.memory_store.ensure_session("classic", "Classic UI")
+            self.memory_store.add_message(
+                session_id,
+                "user",
+                text,
+                {"source": "classic", "request_id": request["request_id"]},
+            )
+        except Exception:
+            pass
         command_path = os.path.join(CORE_DIR, "cmd.txt")
         try:
             with open(command_path, "w", encoding="utf-8") as handle:

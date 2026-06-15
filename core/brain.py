@@ -8,6 +8,7 @@ import time
 
 from platform_adapters import capability_message, detect_capabilities
 from chat_attachments import prepare_attachment_content
+from memory_store import MemoryStore
 
 
 class TrinityBrain:
@@ -277,11 +278,18 @@ class TrinityBrain:
         if direct_answer:
             return direct_answer, has_payload
 
+        try:
+            memory_context = MemoryStore().context_for_prompt(user_query)
+        except Exception as exc:
+            print(f"⚠️ Memory-Kontext nicht verfügbar: {exc}")
+            memory_context = ""
+
         context_prompt = (
             f"{soul_prompt}\n\n"
             f"--- INFORMATIONEN ZUM NUTZER UND ZIELPUBLIKUM ---\n"
             f"{user_prompt}\n\n"
             f"{search_context}"
+            f"{memory_context}\n\n"
             f"--- AKTUELLES VORLESUNGS-TRANSKRIPT ---\n"
             f"Hier ist das aktuelle Transkript der Vorlesung inklusive Zeitstempel:\n"
             f"{transcript}\n\n"
