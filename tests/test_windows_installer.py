@@ -14,3 +14,5 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert "$shortcut.TargetPath = $pythonw" in script
     assert '$shortcut.Arguments = "`"$launcher`""' in script
     assert '--no-terminal' in script
+    assert "trinity.cmd" in script
+    assert "SetEnvironmentVariable(\"Path\"" in script

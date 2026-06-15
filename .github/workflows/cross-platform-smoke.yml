@@ -32,7 +32,7 @@ jobs:
         run: >-
           python -m compileall -q core agents RAG trinity_launcher.py
           trinity_native_launcher.py trinity_app.py trinity_classic.py
-          trinity_console.py trinity_chat.py
+          trinity_console.py trinity_chat.py trinity_cli.py
 
       - name: Run unit tests
         run: python -m pytest

@@ -309,6 +309,29 @@ finally {
     Pop-Location
 }
 
+$cliBin = "$InstallDir\bin"
+$cliWrapper = "$cliBin\trinity.cmd"
+New-Item -ItemType Directory -Path $cliBin -Force | Out-Null
+$cliContent = @"
+@echo off
+"$venvPython" "$InstallDir\trinity_cli.py" %*
+"@
+[System.IO.File]::WriteAllText(
+    $cliWrapper,
+    $cliContent,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+$pathEntries = @($userPath -split ";" | Where-Object { $_ })
+if ($cliBin -notin $pathEntries) {
+    $newUserPath = (@($pathEntries) + $cliBin) -join ";"
+    [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
+}
+if ($cliBin -notin ($env:Path -split ";")) {
+    $env:Path = "$env:Path;$cliBin"
+}
+
 $iconPng = "$InstallDir\core\icon.png"
 $iconIco = "$InstallDir\assets\trinity_icon.ico"
 if (Test-Path $iconPng) {
@@ -359,5 +382,6 @@ Write-Host "Installation abgeschlossen."
 Write-Host "Trinity liegt unter: $InstallDir"
 Write-Host "Trinity startet mit den in den Einstellungen gewählten Oberflächen."
 Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, sofern eine GUI aktiv ist."
+Write-Host "In einer neuen PowerShell steht außerdem der Befehl 'trinity' bereit."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

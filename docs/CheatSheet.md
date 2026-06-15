@@ -8,9 +8,18 @@ Dieses CheatSheet bietet dir eine schnelle Übersicht über alle Funktionen, Liv
 
 Der empfohlene Weg, um Trinity zu starten, ist über den Standard-Launcher (nutzt OpenAI Whisper für die Spracherkennung):
 ```bash
-python3 projects/Trinity_Assistant/trinity_launcher.py
+trinity start
 ```
 *(Hinweis: Der `trinity_native_launcher.py` ist aktuell experimentell und funktioniert in dieser Umgebung nicht zuverlässig).*
+
+Nützliche Verwaltungsbefehle:
+
+```bash
+trinity settings
+trinity onboarding
+trinity doctor
+trinity doctor --fix
+```
 
 ---
 
@@ -20,9 +29,10 @@ Trinity ist extrem anpassbar. Du hast die volle Kontrolle über ihre Persönlich
 
 ### 1. API-Keys & Modelle (`core/config.json`)
 Die technischen Einstellungen sind in der Datei `core/config.json` gespeichert.
-**Tipp:** Du kannst diese Datei am besten über das mitgelieferte UI ändern:
+**Tipp:** In der Classic-UI öffnet das Zahnrad oben rechts die Einstellungen im
+selben Fenster. Headless oder im Terminal verwendest du:
 ```bash
-python3 projects/Trinity_Assistant/core/settings_ui.py
+trinity settings
 ```
 *(Hier trägst du OpenRouter-Keys, Fal.ai-Keys und das LLM-Modell ein).*
 

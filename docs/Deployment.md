@@ -78,10 +78,24 @@ Trinity benötigt einige Dateien für den Start, die in der GitHub-Version als `
 ```
 
 ## 5. Start
-Wechsle in das Hauptverzeichnis deiner Ideaverse-Vault und starte den Launcher:
+Der Installer richtet den globalen Befehl `trinity` ein. Öffne danach ein neues
+Terminal und starte Trinity mit:
+
 ```bash
-python3 projects/Trinity_Assistant/trinity_launcher.py
+trinity start
 ```
+
+Weitere Verwaltungsbefehle:
+
+```bash
+trinity settings
+trinity onboarding
+trinity doctor
+trinity doctor --fix
+```
+
+Alternativ kann der Launcher weiterhin direkt mit Python gestartet werden. Der
+bisherige macOS-Funktionsumfang bleibt dadurch vollständig erhalten.
 
 ---
 *Viel Erfolg bei der ersten Sitzung!* 🧞‍♀️

@@ -104,6 +104,32 @@ def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
     assert resolved == str(python)
 
 
+def test_surface_argument_is_read_for_cli_start():
+    assert (
+        trinity_launcher._requested_surface(
+            ["trinity_launcher.py", "--surface", "classic"]
+        )
+        == "classic"
+    )
+
+
+def test_linux_headless_detection_uses_display_environment():
+    assert (
+        trinity_launcher._graphical_session_available(
+            platform_name="linux",
+            environment={},
+        )
+        is False
+    )
+    assert (
+        trinity_launcher._graphical_session_available(
+            platform_name="linux",
+            environment={"DISPLAY": ":0"},
+        )
+        is True
+    )
+
+
 def test_whisper_command_works_without_loading_audio(tmp_path, monkeypatch):
     core_dir = tmp_path / "core"
     memory_dir = tmp_path / "memory"

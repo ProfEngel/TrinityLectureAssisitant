@@ -79,7 +79,26 @@ python3 -m venv venv
 echo "📦 Installiere Abhängigkeiten (das kann 2–5 Minuten dauern)..."
 export PYTHONIOENCODING=utf-8
 ./venv/bin/python3 -m pip install --upgrade pip -q
-./venv/bin/python3 -m pip install --no-compile faster-whisper sounddevice numpy requests PySide6 sentence-transformers pyobjc-framework-Speech pyobjc-framework-AVFoundation beautifulsoup4 -q
+./venv/bin/python3 -m pip install --no-compile ".[macos]" -q
+
+# 6.5 Benutzerweiten CLI-Befehl installieren
+CLI_BIN="$HOME/.local/bin"
+CLI_PATH="$CLI_BIN/trinity"
+mkdir -p "$CLI_BIN"
+cat > "$CLI_PATH" << EOF
+#!/bin/sh
+exec "$INSTALL_DIR/venv/bin/python3" "$INSTALL_DIR/trinity_cli.py" "\$@"
+EOF
+chmod +x "$CLI_PATH"
+
+ZPROFILE="$HOME/.zprofile"
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+if [ ! -f "$ZPROFILE" ] || ! grep -Fq "$PATH_LINE" "$ZPROFILE"; then
+    echo "" >> "$ZPROFILE"
+    echo "# Trinity Assistant CLI" >> "$ZPROFILE"
+    echo "$PATH_LINE" >> "$ZPROFILE"
+fi
+export PATH="$CLI_BIN:$PATH"
 
 # 7. Desktop-Verknüpfung (Native macOS App) erstellen
 DESKTOP_DIR="$HOME/Desktop"
@@ -148,6 +167,7 @@ echo "============================================"
 echo "👉 Eine native App ('Trinity.app') liegt auf deinem Schreibtisch."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
+echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
 echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte)"

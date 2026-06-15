@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.10.2:** Gemeinsame Classic-/Settings-App sowie globale CLI mit Onboarding und Doctor.
 > - **v0.10.1:** Wählbare Augen-, Classic- und Terminal-Oberflächen für Desktop und Headless.
 > - **v0.10.0:** Gemeinsames Release für macOS und Windows 11 mit lokalem Codex-Agenten.
 > - **v0.9.2:** Weiterhin verfügbarer macOS-Basisstand vor der Windows-Portierung.
@@ -102,13 +103,16 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 ```
 Trinity_Assistant/
 ├── trinity_launcher.py        ← System starten
+├── trinity_cli.py             ← Globale CLI: Start, Settings, Onboarding, Doctor
 ├── trinity_app.py             ← UI (Avatar + Content-Fenster)
-├── trinity_classic.py         ← Klassische App-UI mit Live-Mitschrift
+├── trinity_classic.py         ← Klassische App mit Chat und Einstellungen
 ├── trinity_console.py         ← Terminal-CLI und Headless-Oberfläche
 ├── trinity-blueprint.md       ← Architektur-Konzept
 ├── README.md
 ├── core/
 │   ├── brain.py               ← KI-Logik, Agentic Router, RAG, Tools
+│   ├── configuration.py       ← Gemeinsame Konfiguration für GUI und CLI
+│   ├── doctor.py              ← Installations- und Konfigurationsdiagnose
 │   ├── transcriber.py         ← STT-Loop (faster-whisper, VAD, Trigger)
 │   ├── Soul.md                ← Persona & Systemrolle von Trinity
 │   ├── User.md                ← Kontext über den Nutzer (Mathias)
@@ -155,6 +159,8 @@ irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/in
 Der normale Windows-Start verwendet die in Trinity gewählte Kombination aus Augen-UI,
 Classic-UI und Terminal-CLI. Zusätzlich installiert Trinity eine Verknüpfung
 **„Trinity ohne Terminal“** für einen stillen Start mit grafischer Oberfläche.
+Nach der Installation steht in einem neuen Terminal außerdem der Befehl `trinity`
+zur Verfügung.
 
 Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im
@@ -168,13 +174,34 @@ Unter **Einstellungen → System → Bedienoberflächen** lassen sich drei Oberf
 unabhängig kombinieren:
 
 - **Augen-UI:** schwebende Trinity für Vorlesung, Präsentation und schnelle Zurufe
-- **Classic-UI:** normale App mit Live-Mitschrift, Ergebnisbereich und Texteingabe
+- **Classic-UI:** normale App mit Live-Mitschrift, Ergebnisbereich und Texteingabe;
+  das Zahnrad oben rechts öffnet die Einstellungen im selben Fenster
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
 
 Bestehende Installationen behalten standardmäßig die Augen-UI. Wenn Augen- und
 Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend die Terminal-CLI.
 Damit bleibt die Anwendung immer bedienbar und schafft zugleich die Grundlage für
 eine spätere Ubuntu-/Linux-Portierung.
+
+### Trinity im Terminal
+
+Die Installer für macOS und Windows 11 richten einen globalen `trinity`-Befehl ein.
+Nach der Installation beziehungsweise nach dem Öffnen eines neuen Terminals stehen
+folgende Befehle bereit:
+
+```text
+trinity start
+trinity settings
+trinity onboarding
+trinity doctor
+trinity doctor --fix
+```
+
+`trinity settings` ist eine interaktive Einstellungsoberfläche für Headless-Systeme.
+`trinity onboarding` führt durch die Ersteinrichtung. `trinity doctor` prüft Python,
+SSL, Konfiguration, Oberflächen, LLM, Codex und beschreibbare Laufzeitordner. Mit
+`trinity start --surface classic|eyes|terminal|all` kann die Oberfläche für einen
+einzelnen Start überschrieben werden.
 
 ### Codex als lokaler Ausführungsagent
 
@@ -213,7 +240,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **Document Intelligence (Q2 2026):** Drag & Drop Support für Thesen und Excel-Auswertungen inkl. Korrektur-Agenten.
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
- *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
+ *   **Erstbenutzer Onboarding:** Terminal-Onboarding ist ab v0.10.2 verfügbar; ein grafisches Einführungstutorial bleibt geplant.
  *   **Multi-OS & Cross-Platform Packaging:** macOS und Windows 11 werden unterstützt; als Nächstes folgen signierte Pakete sowie später iOS, Android und Headless Ubuntu.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 

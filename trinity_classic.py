@@ -3,7 +3,6 @@
 import glob
 import html
 import os
-import subprocess
 import sys
 
 from PySide6.QtCore import Qt, QTimer, QUrl
@@ -16,6 +15,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSplitter,
+    QStackedWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -27,6 +27,10 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CORE_DIR = os.path.join(BASE_DIR, "core")
 MEMORY_DIR = os.path.join(BASE_DIR, "memory")
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
+from settings_ui import SettingsWindow
 
 
 def _latest_transcript(memory_dir=MEMORY_DIR):
@@ -76,8 +80,9 @@ class ClassicWindow(QMainWindow):
         self._payload_signature = None
         self._last_state = ""
 
-        central = QWidget()
-        layout = QVBoxLayout(central)
+        self.pages = QStackedWidget()
+        self.chat_page = QWidget()
+        layout = QVBoxLayout(self.chat_page)
         layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(12)
 
@@ -86,8 +91,11 @@ class ClassicWindow(QMainWindow):
         title.setObjectName("title")
         self.status = QLabel("Bereit")
         self.status.setObjectName("status")
-        settings_button = QPushButton("Einstellungen")
-        settings_button.clicked.connect(self.open_settings)
+        settings_button = QPushButton("⚙")
+        settings_button.setObjectName("gear")
+        settings_button.setFixedSize(42, 38)
+        settings_button.setToolTip("Einstellungen öffnen")
+        settings_button.clicked.connect(self.show_settings)
         header.addWidget(title)
         header.addStretch()
         header.addWidget(self.status)
@@ -149,7 +157,14 @@ class ClassicWindow(QMainWindow):
         command_row.addWidget(send_button)
         layout.addLayout(command_row)
 
-        self.setCentralWidget(central)
+        self.settings_page = SettingsWindow(
+            os.path.join(CORE_DIR, "config.json"),
+            embedded=True,
+            on_return=self.return_to_chat,
+        )
+        self.pages.addWidget(self.chat_page)
+        self.pages.addWidget(self.settings_page)
+        self.setCentralWidget(self.pages)
         self._apply_style()
 
         self.timer = QTimer(self)
@@ -179,6 +194,7 @@ class ClassicWindow(QMainWindow):
             }
             QPushButton:hover { background: #27272a; }
             QPushButton#primary { background: #f4f4f5; color: #09090b; }
+            QPushButton#gear { font-size: 20px; padding: 0; }
             QSplitter::handle { background: #27272a; height: 2px; }
         """)
 
@@ -259,10 +275,14 @@ class ClassicWindow(QMainWindow):
                 )
             )
 
-    def open_settings(self):
-        subprocess.Popen(
-            [sys.executable, os.path.join(CORE_DIR, "settings_ui.py")]
-        )
+    def show_settings(self):
+        self.pages.setCurrentWidget(self.settings_page)
+
+    def return_to_chat(self, saved=False):
+        self.pages.setCurrentWidget(self.chat_page)
+        if saved:
+            self.status.setText("Einstellungen gespeichert")
+            self.command.setFocus(Qt.OtherFocusReason)
 
 
 def main():
