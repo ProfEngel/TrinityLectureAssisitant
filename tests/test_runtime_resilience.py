@@ -71,6 +71,62 @@ def test_windows_speech_can_be_enabled_explicitly(tmp_path, monkeypatch):
     assert ear.speech_input_enabled is True
 
 
+def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "stt": {
+                    "model": "small",
+                    "silence_threshold": 0.015,
+                    "chunk_duration": 2,
+                },
+                "tts": {"voice": "Old Voice"},
+                "system": {"mode": "office"},
+                "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    ear = object.__new__(transcriber.MorpheusEar)
+    ear.config_path = str(config_path)
+    ear.brain = type(
+        "Brain",
+        (),
+        {"reload_runtime_config": lambda self, force=False: True},
+    )()
+    monkeypatch.setattr(transcriber.sys, "platform", "darwin")
+    ear.audio_stream = None
+    ear.load_config()
+
+    config_path.write_text(
+        json.dumps(
+            {
+                "stt": {
+                    "model": "small",
+                    "silence_threshold": 0.015,
+                    "chunk_duration": 2,
+                },
+                "tts": {"voice": "New Voice"},
+                "system": {"mode": "chat"},
+                "telegram": {
+                    "enabled": True,
+                    "bot_token": "token",
+                    "chat_id": "123",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    ear._config_mtime = 0
+
+    assert ear.reload_config_if_changed() is True
+    assert ear.voice == "New Voice"
+    assert ear.mode == "chat"
+    assert ear.telegram_cfg["enabled"] is True
+
+
 def test_runtime_failure_creates_visible_diagnostic(tmp_path):
     core_dir = tmp_path / "core"
     core_dir.mkdir()

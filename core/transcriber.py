@@ -149,6 +149,7 @@ class MorpheusEar:
                 sys.platform != "win32"
                 or self.system_cfg.get("windows_speech_enabled", False)
             )
+            self._config_mtime = os.path.getmtime(self.config_path)
         except:
             self.model_name = MODEL
             self.silence_threshold = SILENCE_THRESHOLD
@@ -163,6 +164,33 @@ class MorpheusEar:
             self.system_cfg = {}
             self.mode = "office"
             self.speech_input_enabled = sys.platform != "win32"
+            self._config_mtime = None
+
+    def reload_config_if_changed(self):
+        """Apply saved runtime settings without forcing a full app restart."""
+        try:
+            current_mtime = os.path.getmtime(self.config_path)
+        except OSError:
+            return False
+        if current_mtime == getattr(self, "_config_mtime", None):
+            return False
+
+        old_mode = getattr(self, "mode", "office")
+        self.load_config()
+        if hasattr(self.brain, "reload_runtime_config"):
+            self.brain.reload_runtime_config(force=True)
+
+        new_mode = getattr(self, "mode", "office")
+        if old_mode != new_mode and not getattr(self, "uses_native_speech", False):
+            if new_mode == "chat":
+                self._stop_audio_input()
+            elif old_mode == "chat" and self.speech_input_enabled:
+                try:
+                    self._start_audio_input()
+                except Exception as exc:
+                    print(f"⚠️ Audio nach Settings-Änderung nicht verfügbar: {exc}")
+        print("🔄 Laufende Trinity-Settings neu geladen.")
+        return True
 
     def _speak_quick(self, text, output_device="Standard"):
         """Start a short platform-native TTS message without blocking."""
@@ -186,6 +214,7 @@ class MorpheusEar:
         print(f"💓 Heartbeat aktiv (Intervall: {interval_min} Min).")
         while self.is_running:
             time.sleep(interval_min * 60)
+            self.reload_config_if_changed()
             # Abbrechen wenn gestoppt, Heartbeat deaktiviert oder Chat-Modus aktiv
             if (not self.is_running
                     or not self.proactive_cfg.get("heartbeat_enabled", False)
@@ -265,6 +294,7 @@ class MorpheusEar:
         
         while self.is_running:
             try:
+                self.reload_config_if_changed()
                 url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/getUpdates"
                 params = {"offset": last_update_id, "timeout": 10}
                 resp = requests.get(url, params=params, timeout=15)
@@ -806,6 +836,7 @@ class MorpheusEar:
         from_telegram=False,
         chat_request=None,
     ):
+        self.reload_config_if_changed()
         if getattr(self, 'mode', 'office') == 'chat':
             silent_response = True
             

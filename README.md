@@ -211,6 +211,11 @@ SSL, Konfiguration, Oberflächen, LLM, Codex und beschreibbare Laufzeitordner. M
 `trinity start --surface classic|eyes|terminal|all` kann die Oberfläche für einen
 einzelnen Start überschrieben werden.
 
+Gespeicherte LLM-, Persona-, User-/Soul-, Telegram-, TTS- und Modus-Änderungen
+werden von laufenden Trinity-Anfragen automatisch neu geladen. Ein Neustart ist
+nur nötig, wenn die gestarteten Oberflächen selbst geändert werden, also etwa
+Augen-UI, Classic-UI oder Terminal-Prozess an-/ausgeschaltet werden.
+
 ### Trinity TUI, Sessions und Memory
 
 `trinity tui` startet eine Terminal-Chatoberfläche für Headless-Betrieb,
