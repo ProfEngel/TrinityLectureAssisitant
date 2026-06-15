@@ -106,6 +106,13 @@ Lädt das Summary der vergangenen Woche.
 - **Trigger:** *"Öffne Einstellungen"* oder *"Konfiguration öffnen"*
 - **Aktion:** Startet das UI für API-Keys und Modelle, ohne dass man das Terminal bemühen muss.
 
+### ⌨️ 13. Codex Agent (`codex_agent`)
+Übergibt komplexe Aufgaben an die lokal installierte Codex CLI.
+- **Trigger:** Das Wort *„Codex“* muss ausdrücklich genannt werden.
+- **Beispiel:** *„Trinity, nutze Codex im Projekt Automatismen und erstelle Entwürfe für meine aktuellen Mails.“*
+- **Aktion:** Startet Codex im freigegebenen Projekt, nutzt dessen Regeln und Skills und gibt den Abschlussbericht direkt an Trinity beziehungsweise Telegram zurück.
+- **Sicherheit:** Nur konfigurierte Projektordner; kein automatischer Versand, Push oder Deployment.
+
 ---
 
 ## 🛠️ Eigene Skills erstellen

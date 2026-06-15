@@ -15,12 +15,12 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - **v0.9.2:** Gesicherter, stabiler macOS-Stand vor Beginn der Windows-Portierung.
-> - **v0.10.0-dev:** Windows-11-Vorschau wird auf einer separaten Entwicklungsbranch aufgebaut.
+> - **v0.10.0:** Gemeinsames Release für macOS und Windows 11 mit lokalem Codex-Agenten.
+> - **v0.9.2:** Weiterhin verfügbarer macOS-Basisstand vor der Windows-Portierung.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft primär lokal auf macOS; eine additive Windows-11-Version befindet sich in Entwicklung. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
 
 ---
 
@@ -62,6 +62,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
+ | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
  | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
@@ -78,7 +79,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 
 ---
 
-## Tech-Stack (Stand April 2026)
+## Tech-Stack (Stand Juni 2026)
 
 | Komponente | Technologie |
 |---|---|
@@ -134,11 +135,12 @@ Der stabile macOS-Funktionsumfang bleibt vollständig erhalten.
 curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 ```
 
-### Windows 11 Vorschau
+### Windows 11
 
-Die Windows-Version verwendet Whisper für STT, Windows SAPI für TTS und COM für die
-PowerPoint-Steuerung. Apple Native STT bleibt macOS-exklusiv. Der Mail-Agent folgt
-später über Microsoft Graph, weil das neue Outlook keine COM-Automation unterstützt.
+Die Windows-Version verwendet optional Whisper für STT, Windows SAPI für TTS und COM
+für die PowerPoint-Steuerung. Apple Native STT bleibt macOS-exklusiv. Der Mail-Agent
+folgt später über Microsoft Graph, weil das neue Outlook keine COM-Automation
+unterstützt.
 
 PowerShell öffnen und ausführen:
 
@@ -147,11 +149,37 @@ Set-ExecutionPolicy -Scope Process Bypass
 irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
 ```
 
+Der normale Windows-Start öffnet wie auf macOS ein sichtbares Terminal. Dort erscheinen
+Trinitys Mitschrift, Agentenaktivität und Fehlerdiagnose. Zusätzlich installiert Trinity
+eine Verknüpfung **„Trinity ohne Terminal“** für einen stillen Start.
+
 Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im
 [Windows-Portierungsplan](docs/WINDOWS11_PORTING_PLAN.md).
 
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
+
+### Codex als lokaler Ausführungsagent
+
+Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
+angemeldete Codex CLI übergeben. Codex arbeitet dabei ausschließlich in Projektordnern,
+die zuvor unter **Einstellungen → Codex** freigegeben wurden.
+
+Beispiel:
+
+> „Trinity, nutze Codex im Projekt Automatismen. Prüfe meine aktuellen Mails und
+> erstelle passende Antwortentwürfe.“
+
+Codex verwendet die Regeln und Skills des ausgewählten Projekts. Subagenten werden
+verwendet, wenn der Auftrag oder die Projektanweisungen sie ausdrücklich vorsehen.
+Fernausgelöste Läufe dürfen Entwürfe und lokale Dateien erstellen, aber nichts
+versenden, veröffentlichen, pushen oder deployen.
+
+Die technische Grundlage ist Codex'
+[nicht-interaktiver Modus](https://developers.openai.com/codex/noninteractive)
+mit einer auf das Projekt begrenzten Sandbox. Hinweise zur Ablage eigener Workflows
+stehen in der offiziellen Dokumentation zu
+[Codex Skills](https://developers.openai.com/codex/skills).
 
 ---
 
@@ -169,7 +197,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
  *   **Erstbenutzer Onboarding (Q3 2026):** Interaktives Einführungstutorial für neue User.
- *   **Multi-OS & Cross-Platform Packaging:** Windows-11-Basisport in Entwicklung; anschließend signierte Pakete für macOS und Windows sowie später iOS, Android und Headless Ubuntu.
+ *   **Multi-OS & Cross-Platform Packaging:** macOS und Windows 11 werden unterstützt; als Nächstes folgen signierte Pakete sowie später iOS, Android und Headless Ubuntu.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).

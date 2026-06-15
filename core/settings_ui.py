@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
                              QButtonGroup)
 
-from platform_adapters import create_tts_backend
+from platform_adapters import create_tts_backend, find_codex_executable
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -63,7 +63,7 @@ DEFAULT_CONFIG = {
         "auto_rag_indexing": False
     },
     "system": {
-        "show_terminal": False,
+        "show_terminal": platform.system() == "Windows",
         "mode": "chat",
         "windows_speech_enabled": False
     },
@@ -75,6 +75,17 @@ DEFAULT_CONFIG = {
         "enabled": False,
         "bot_token": "",
         "chat_id": ""
+    },
+    "codex": {
+        "enabled": False,
+        "executable": "codex",
+        "default_project": "",
+        "projects": {},
+        "sandbox": "workspace-write",
+        "timeout_seconds": 900,
+        "max_output_chars": 3200,
+        "ephemeral": True,
+        "network_access": False
     },
     "comfyui": {
         "enabled": False,
@@ -201,6 +212,43 @@ class SettingsWindow(QMainWindow):
             self.config["telegram"]["enabled"] = self.telegram_cb.isChecked()
             self.config["telegram"]["bot_token"] = self.tg_token_edit.text()
             self.config["telegram"]["chat_id"] = self.tg_chatid_edit.text()
+
+        # Codex
+        if "codex" not in self.config:
+            self.config["codex"] = {}
+        if hasattr(self, "codex_cb"):
+            projects = {}
+            for line in self.codex_projects_edit.toPlainText().splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
+                    continue
+                alias, path = stripped.split("=", 1)
+                alias = alias.strip()
+                path = path.strip()
+                if alias and path:
+                    projects[alias] = path
+
+            self.config["codex"]["enabled"] = self.codex_cb.isChecked()
+            self.config["codex"]["executable"] = (
+                self.codex_executable_edit.text().strip() or "codex"
+            )
+            self.config["codex"]["default_project"] = (
+                self.codex_default_project_edit.text().strip()
+            )
+            self.config["codex"]["projects"] = projects
+            self.config["codex"]["sandbox"] = self.codex_sandbox_combo.currentText()
+            self.config["codex"]["timeout_seconds"] = (
+                self.codex_timeout_spin.value()
+            )
+            self.config["codex"]["max_output_chars"] = (
+                self.codex_output_spin.value()
+            )
+            self.config["codex"]["ephemeral"] = (
+                self.codex_ephemeral_cb.isChecked()
+            )
+            self.config["codex"]["network_access"] = (
+                self.codex_network_cb.isChecked()
+            )
 
         # ComfyUI
         if "comfyui" not in self.config:
@@ -361,6 +409,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
+        tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
         tabs.addTab(self._create_system_tab(), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
@@ -442,6 +491,129 @@ class SettingsWindow(QMainWindow):
         layout.addStretch()
         return widget
 
+    # --- TAB: Codex ---
+    def _create_codex_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        group = QGroupBox("Lokaler Codex-Agent")
+        form = QFormLayout()
+        codex_conf = self.config.get("codex", {})
+
+        self.codex_cb = QCheckBox(
+            "Codex-Aufträge per Sprache, Chat und Telegram erlauben"
+        )
+        self.codex_cb.setChecked(codex_conf.get("enabled", False))
+        form.addRow(self.codex_cb)
+
+        detected = find_codex_executable()
+        status_text = (
+            f"Codex gefunden: {detected}"
+            if detected
+            else "Codex wurde im Systempfad noch nicht gefunden."
+        )
+        status = QLabel(status_text)
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+
+        self.codex_executable_edit = QLineEdit(
+            codex_conf.get("executable", "codex")
+        )
+        self.codex_executable_edit.setPlaceholderText(
+            "codex oder vollständiger Pfad zur Codex-Anwendung"
+        )
+        form.addRow("Programm:", self.codex_executable_edit)
+
+        projects = codex_conf.get("projects", {})
+        projects_text = ""
+        if isinstance(projects, dict):
+            projects_text = "\n".join(
+                f"{alias} = {path}" for alias, path in projects.items()
+            )
+        self.codex_projects_edit = QTextEdit()
+        self.codex_projects_edit.setPlainText(projects_text)
+        self.codex_projects_edit.setPlaceholderText(
+            "Automatismen = /vollständiger/Pfad/zum/Projekt\n"
+            "Lehre = C:\\Users\\Name\\Projekte\\Lehre"
+        )
+        self.codex_projects_edit.setMinimumHeight(130)
+        form.addRow("Freigegebene Projekte:", self.codex_projects_edit)
+
+        project_hint = QLabel(
+            "Eine Zeile pro Projekt: Name = vollständiger Ordnerpfad. "
+            "Telegram-Aufträge können ausschließlich diese Ordner verwenden."
+        )
+        project_hint.setWordWrap(True)
+        project_hint.setStyleSheet("color: #888; font-size: 11px;")
+        form.addRow("", project_hint)
+
+        self.codex_default_project_edit = QLineEdit(
+            codex_conf.get("default_project", "")
+        )
+        self.codex_default_project_edit.setPlaceholderText(
+            "z.B. Automatismen"
+        )
+        form.addRow("Standardprojekt:", self.codex_default_project_edit)
+
+        self.codex_sandbox_combo = QComboBox()
+        self.codex_sandbox_combo.addItems(["workspace-write", "read-only"])
+        sandbox = codex_conf.get("sandbox", "workspace-write")
+        if sandbox in {"workspace-write", "read-only"}:
+            self.codex_sandbox_combo.setCurrentText(sandbox)
+        form.addRow("Codex-Rechte:", self.codex_sandbox_combo)
+
+        self.codex_timeout_spin = QSpinBox()
+        self.codex_timeout_spin.setRange(30, 3600)
+        self.codex_timeout_spin.setSuffix(" Sekunden")
+        self.codex_timeout_spin.setValue(
+            int(codex_conf.get("timeout_seconds", 900))
+        )
+        form.addRow("Zeitlimit:", self.codex_timeout_spin)
+
+        self.codex_output_spin = QSpinBox()
+        self.codex_output_spin.setRange(500, 12000)
+        self.codex_output_spin.setSingleStep(500)
+        self.codex_output_spin.setSuffix(" Zeichen")
+        self.codex_output_spin.setValue(
+            int(codex_conf.get("max_output_chars", 3200))
+        )
+        form.addRow("Antwortlänge:", self.codex_output_spin)
+
+        self.codex_ephemeral_cb = QCheckBox(
+            "Codex-Läufe nicht als dauerhafte Sitzungen speichern"
+        )
+        self.codex_ephemeral_cb.setChecked(
+            codex_conf.get("ephemeral", True)
+        )
+        form.addRow(self.codex_ephemeral_cb)
+
+        self.codex_network_cb = QCheckBox(
+            "Von Codex gestarteten Programmen Netzwerkzugriff erlauben"
+        )
+        self.codex_network_cb.setChecked(
+            codex_conf.get("network_access", False)
+        )
+        form.addRow(self.codex_network_cb)
+
+        security_hint = QLabel(
+            "Empfohlen: workspace-write, Netzwerk aus. Codex darf in "
+            "fernausgelösten Läufen Entwürfe vorbereiten, aber nichts versenden, "
+            "veröffentlichen, pushen oder deployen."
+        )
+        security_hint.setWordWrap(True)
+        security_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", security_hint)
+
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
     # --- TAB: System ---
     def _create_system_tab(self):
         widget = QWidget()
@@ -462,8 +634,12 @@ class SettingsWindow(QMainWindow):
         mode_hint.setWordWrap(True)
         form.addRow("", mode_hint)
 
-        self.terminal_cb = QCheckBox("Terminal-Fenster im Hintergrund anzeigen (Log-Ausgabe)")
-        self.terminal_cb.setChecked(system_conf.get("show_terminal", False))
+        self.terminal_cb = QCheckBox(
+            "Terminal-Fenster mit Mitschrift und Log-Ausgabe anzeigen"
+        )
+        self.terminal_cb.setChecked(
+            system_conf.get("show_terminal", platform.system() == "Windows")
+        )
         form.addRow(self.terminal_cb)
 
         if platform.system() == "Windows":

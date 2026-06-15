@@ -40,3 +40,27 @@ def test_windows_mail_message_explains_graph_requirement():
 
     assert "Microsoft-Graph" in message
     assert "klassisches Outlook" in message
+
+
+def test_codex_capability_is_detected_on_any_supported_host(monkeypatch):
+    monkeypatch.setattr(
+        capabilities.shutil,
+        "which",
+        lambda name: "/usr/local/bin/codex" if name == "codex" else None,
+    )
+    monkeypatch.setattr(capabilities, "_module_available", lambda _name: False)
+
+    detected = capabilities.detect_capabilities("Linux")
+
+    assert "codex_cli" in detected
+
+
+def test_codex_finder_checks_desktop_launcher_locations(monkeypatch):
+    monkeypatch.setattr(capabilities.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(
+        capabilities.Path,
+        "is_file",
+        lambda path: str(path) == "/opt/homebrew/bin/codex",
+    )
+
+    assert capabilities.find_codex_executable() == "/opt/homebrew/bin/codex"

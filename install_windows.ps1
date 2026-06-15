@@ -2,7 +2,7 @@
 param(
     [string]$InstallDir = "$env:LOCALAPPDATA\Trinity",
     [string]$Repository = "https://github.com/ProfEngel/TrinityLectureAssisitant.git",
-    [string]$Branch = "codex/windows11-platform",
+    [string]$Branch = "main",
     [switch]$SkipPythonInstall,
     [switch]$ValidateEnvironmentOnly
 )
@@ -329,29 +329,35 @@ foreach ($shortcutPath in @(
     (Join-Path $startMenu "Trinity.lnk")
 )) {
     $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $pythonw
-    $shortcut.Arguments = "`"$launcher`""
+    $shortcut.TargetPath = $venvPython
+    $shortcut.Arguments = "`"$launcher`" --diagnostic"
     $shortcut.WorkingDirectory = $InstallDir
     if (Test-Path $iconIco) {
         $shortcut.IconLocation = $iconIco
     }
-    $shortcut.Description = "Trinity Academic Personal Concierge"
+    $shortcut.Description = "Trinity mit sichtbarer Mitschrift und Laufstatus"
     $shortcut.Save()
 }
 
-$diagnosticShortcut = $shell.CreateShortcut((Join-Path $desktop "Trinity Diagnose.lnk"))
-$diagnosticShortcut.TargetPath = $venvPython
-$diagnosticShortcut.Arguments = "`"$launcher`" --diagnostic"
-$diagnosticShortcut.WorkingDirectory = $InstallDir
-if (Test-Path $iconIco) {
-    $diagnosticShortcut.IconLocation = $iconIco
+$legacyDiagnosticShortcut = Join-Path $desktop "Trinity Diagnose.lnk"
+if (Test-Path $legacyDiagnosticShortcut) {
+    Remove-Item $legacyDiagnosticShortcut -Force
 }
-$diagnosticShortcut.Description = "Trinity mit sichtbarer Diagnoseausgabe"
-$diagnosticShortcut.Save()
+
+$silentShortcut = $shell.CreateShortcut((Join-Path $desktop "Trinity ohne Terminal.lnk"))
+$silentShortcut.TargetPath = $pythonw
+$silentShortcut.Arguments = "`"$launcher`" --no-terminal"
+$silentShortcut.WorkingDirectory = $InstallDir
+if (Test-Path $iconIco) {
+    $silentShortcut.IconLocation = $iconIco
+}
+$silentShortcut.Description = "Trinity ohne sichtbares Terminal starten"
+$silentShortcut.Save()
 
 Write-Host ""
 Write-Host "Installation abgeschlossen."
 Write-Host "Trinity liegt unter: $InstallDir"
-Write-Host "Desktop- und Startmenü-Verknüpfung wurden erstellt."
+Write-Host "Trinity startet standardmäßig mit sichtbarer Mitschrift."
+Write-Host "Eine zusätzliche Desktop-Verknüpfung startet Trinity ohne Terminal."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

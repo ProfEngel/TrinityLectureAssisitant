@@ -2,7 +2,7 @@
 
 ## Umsetzungsstand
 
-Die erste Portierungsstufe ist in `v0.10.0-dev` umgesetzt:
+Die erste Portierungsstufe ist mit Release `v0.10.0` umgesetzt:
 
 - Plattformadapter und Capability-Erkennung
 - Windows SAPI für TTS

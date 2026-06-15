@@ -71,10 +71,13 @@ def launch_trinity():
             sys.exit(1)
 
     diagnostic_mode = "--diagnostic" in sys.argv
-    show_terminal = diagnostic_mode or _read_show_terminal(config_file)
-    creation_flags = 0
+    no_terminal = "--no-terminal" in sys.argv
+    show_terminal = diagnostic_mode or (
+        not no_terminal and _read_show_terminal(config_file)
+    )
+    runtime_creation_flags = 0
     if sys.platform == "win32" and show_terminal and not diagnostic_mode:
-        creation_flags = subprocess.CREATE_NEW_CONSOLE
+        runtime_creation_flags = subprocess.CREATE_NEW_CONSOLE
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -88,13 +91,13 @@ def launch_trinity():
             [sys.executable, "-u", ear_script],
             stdout=None if show_terminal else runtime_log,
             stderr=None if show_terminal else subprocess.STDOUT,
-            creationflags=creation_flags,
+            creationflags=runtime_creation_flags,
         )
         ui_process = subprocess.Popen(
             [sys.executable, "-u", ui_script],
             stdout=None if show_terminal else ui_log,
             stderr=None if show_terminal else subprocess.STDOUT,
-            creationflags=creation_flags,
+            creationflags=0,
         )
 
         try:

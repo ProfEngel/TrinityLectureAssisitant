@@ -2,8 +2,8 @@
 
 ## Status
 
-Die Windows-Version ist eine Entwicklungsvorschau. Der stabile macOS-Stand ist als
-GitHub-Release `v0.9.2` gesichert und bleibt unverändert verfügbar.
+Windows 11 wird ab Release `v0.10.0` unterstützt. Der frühere macOS-Basisstand ist
+zusätzlich als GitHub-Release `v0.9.2` gesichert und bleibt verfügbar.
 
 ## Unterstützt
 
@@ -17,6 +17,8 @@ GitHub-Release `v0.9.2` gesichert und bleibt unverändert verfügbar.
 - Pyodide Sandbox und JavaScript-Simulationen
 - Notizen, Timer, Summary und Heartbeat
 - Telegram-Bridge
+- optionaler Codex-Agent, wenn die Codex CLI auf dem Windows-Host installiert und
+  angemeldet ist
 
 ## Noch nicht unterstützt
 
@@ -43,7 +45,7 @@ PowerShell öffnen:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/codex/windows11-platform/install_windows.ps1 | iex
+irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
 ```
 
 Der Installer:
@@ -55,6 +57,7 @@ Der Installer:
 5. erstellt eine virtuelle Python-Umgebung
 6. installiert gemeinsame und Windows-spezifische Abhängigkeiten
 7. erstellt Verknüpfungen auf dem Desktop und im Startmenü
+8. aktiviert für den normalen Start ein sichtbares Terminal mit Mitschrift
 
 Wurde das Skript als Datei aus dem Browser heruntergeladen, kann Windows vor der
 Ausführung warnen. Nach Prüfung der Quelle lässt sich die Markierung entfernen:
@@ -70,6 +73,10 @@ Unblock-File .\install_windows.ps1
 cd $env:LOCALAPPDATA\Trinity
 .\venv\Scripts\python.exe .\trinity_launcher.py
 ```
+
+Der normale Desktop- und Startmenüeintrag zeigt Trinitys Mitschrift und Laufstatus in
+einem Terminalfenster. Die Desktop-Verknüpfung `Trinity ohne Terminal` startet die
+gleiche Version ohne sichtbare Konsole; Protokolle werden weiterhin in `logs` abgelegt.
 
 ## Schwebendes Trinity-Fenster
 
@@ -102,7 +109,7 @@ Diashow laufen.
 
 ## Mail
 
-Der Windows-Mail-Agent wird in dieser Vorschau deaktiviert und erklärt dies im Dialog.
+Der Windows-Mail-Agent ist derzeit deaktiviert und erklärt dies im Dialog.
 Eine spätere Version verwendet Microsoft Graph mit delegierten Minimalberechtigungen.
 Trinity wird weiterhin niemals automatisch eine Mail versenden.
 
@@ -124,8 +131,7 @@ Trinity schreibt dauerhaft Diagnoseprotokolle nach:
 %LOCALAPPDATA%\Trinity\logs
 ```
 
-Die Desktop-Verknüpfung `Trinity Diagnose` startet Trinity zusätzlich mit sichtbarer
-Konsolenausgabe.
+Der normale Trinity-Eintrag startet bereits mit sichtbarer Konsolenausgabe.
 
 Für sichtbare Logs Trinity manuell aus PowerShell starten:
 
@@ -134,5 +140,19 @@ cd $env:LOCALAPPDATA\Trinity
 .\venv\Scripts\python.exe .\trinity_launcher.py
 ```
 
-Der erste Start lädt das konfigurierte Whisper-Modell herunter. Das kann mehrere Minuten
-dauern.
+Wenn die experimentelle Windows-Spracheingabe aktiviert wird, lädt der erste Sprachstart
+das konfigurierte Whisper-Modell herunter. Das kann mehrere Minuten dauern.
+
+## Codex-Agent
+
+Voraussetzung ist eine installierte und angemeldete Codex CLI. Danach unter
+`Einstellungen > Codex`:
+
+1. Codex-Aufträge aktivieren.
+2. Freigegebene Projekte als `Name = vollständiger Ordnerpfad` eintragen.
+3. Optional ein Standardprojekt festlegen.
+4. Für den Einstieg `workspace-write`, Netzwerk aus und ephemere Läufe verwenden.
+
+Der Trigger muss ausdrücklich genannt werden, beispielsweise:
+
+> Trinity, nutze Codex im Projekt Lehre und prüfe die aktuellen Änderungen.
