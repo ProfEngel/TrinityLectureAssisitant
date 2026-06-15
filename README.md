@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.10.1:** Wählbare Augen-, Classic- und Terminal-Oberflächen für Desktop und Headless.
 > - **v0.10.0:** Gemeinsames Release für macOS und Windows 11 mit lokalem Codex-Agenten.
 > - **v0.9.2:** Weiterhin verfügbarer macOS-Basisstand vor der Windows-Portierung.
 
@@ -102,6 +103,8 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 Trinity_Assistant/
 ├── trinity_launcher.py        ← System starten
 ├── trinity_app.py             ← UI (Avatar + Content-Fenster)
+├── trinity_classic.py         ← Klassische App-UI mit Live-Mitschrift
+├── trinity_console.py         ← Terminal-CLI und Headless-Oberfläche
 ├── trinity-blueprint.md       ← Architektur-Konzept
 ├── README.md
 ├── core/
@@ -149,15 +152,29 @@ Set-ExecutionPolicy -Scope Process Bypass
 irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
 ```
 
-Der normale Windows-Start öffnet wie auf macOS ein sichtbares Terminal. Dort erscheinen
-Trinitys Mitschrift, Agentenaktivität und Fehlerdiagnose. Zusätzlich installiert Trinity
-eine Verknüpfung **„Trinity ohne Terminal“** für einen stillen Start.
+Der normale Windows-Start verwendet die in Trinity gewählte Kombination aus Augen-UI,
+Classic-UI und Terminal-CLI. Zusätzlich installiert Trinity eine Verknüpfung
+**„Trinity ohne Terminal“** für einen stillen Start mit grafischer Oberfläche.
 
 Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im
 [Windows-Portierungsplan](docs/WINDOWS11_PORTING_PLAN.md).
 
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
+
+### Wählbare Oberflächen
+
+Unter **Einstellungen → System → Bedienoberflächen** lassen sich drei Oberflächen
+unabhängig kombinieren:
+
+- **Augen-UI:** schwebende Trinity für Vorlesung, Präsentation und schnelle Zurufe
+- **Classic-UI:** normale App mit Live-Mitschrift, Ergebnisbereich und Texteingabe
+- **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
+
+Bestehende Installationen behalten standardmäßig die Augen-UI. Wenn Augen- und
+Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend die Terminal-CLI.
+Damit bleibt die Anwendung immer bedienbar und schafft zugleich die Grundlage für
+eine spätere Ubuntu-/Linux-Portierung.
 
 ### Codex als lokaler Ausführungsagent
 

@@ -113,6 +113,7 @@ Ziel: Automatisierte Aufbereitung der Sitzungsdaten nach Ende der Vorlesung.
 - [X] **RAG-Automatisierung:** Automatischer Import von Session-Summaries in die Wissensbasis (RAG), um das Langzeitgedächtnis zu stärken.
 - [X] **Telegram-Bridge:** Proaktive Ideen und "Geistesblitze" von Trinity direkt aufs Handy (inkl. Two-Way Listener für Text- und Sprachnachrichten).
 - [X] **Codex-Agent:** Freigegebene lokale Codex-Projekte per Sprache, Chat oder Telegram auslösen; direkte Rückgabe mit sicherer Sandbox und Entwurfsmodus.
+- [X] **Flexible Oberflächen:** Augen-UI, Classic-Desktop-App und Terminal-CLI frei kombinierbar; Terminal als sicherer Headless-Fallback.
 - [X] **Schaubilder-Gedächtnis (Asset-Memory):** Trinity behält den Überblick über generierte Schaubilder im Projektordner, kennt deren Inhalt/Kontext und kann diese auf Zuruf jederzeit erneut anzeigen.
 - [ ] **Dreaming-Funktion (Deep Reflection & Knowledge Synthesis):**
 

@@ -902,6 +902,8 @@ class MorpheusEar:
         )
 
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")
+        if antwort:
+            print(f"\n{self.agent_name}: {antwort}\n")
         
         # 🧠 Kontext-Gedächtnis: Trinitys eigene Antwort ins Transkript speichern!
         if antwort and len(antwort.strip()) > 0:

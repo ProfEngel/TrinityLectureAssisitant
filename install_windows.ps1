@@ -329,13 +329,13 @@ foreach ($shortcutPath in @(
     (Join-Path $startMenu "Trinity.lnk")
 )) {
     $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $venvPython
-    $shortcut.Arguments = "`"$launcher`" --diagnostic"
+    $shortcut.TargetPath = $pythonw
+    $shortcut.Arguments = "`"$launcher`""
     $shortcut.WorkingDirectory = $InstallDir
     if (Test-Path $iconIco) {
         $shortcut.IconLocation = $iconIco
     }
-    $shortcut.Description = "Trinity mit sichtbarer Mitschrift und Laufstatus"
+    $shortcut.Description = "Trinity mit den konfigurierten Oberflächen starten"
     $shortcut.Save()
 }
 
@@ -357,7 +357,7 @@ $silentShortcut.Save()
 Write-Host ""
 Write-Host "Installation abgeschlossen."
 Write-Host "Trinity liegt unter: $InstallDir"
-Write-Host "Trinity startet standardmäßig mit sichtbarer Mitschrift."
-Write-Host "Eine zusätzliche Desktop-Verknüpfung startet Trinity ohne Terminal."
+Write-Host "Trinity startet mit den in den Einstellungen gewählten Oberflächen."
+Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, sofern eine GUI aktiv ist."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

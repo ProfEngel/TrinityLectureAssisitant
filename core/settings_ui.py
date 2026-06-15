@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QButtonGroup)
 
 from platform_adapters import create_tts_backend, find_codex_executable
+from ui_modes import resolve_ui_modes
 
 
 CORE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -64,6 +65,9 @@ DEFAULT_CONFIG = {
     },
     "system": {
         "show_terminal": platform.system() == "Windows",
+        "eyes_ui_enabled": True,
+        "classic_ui_enabled": False,
+        "terminal_cli_enabled": platform.system() == "Windows",
         "mode": "chat",
         "windows_speech_enabled": False
     },
@@ -189,7 +193,16 @@ class SettingsWindow(QMainWindow):
         # System
         if "system" not in self.config:
             self.config["system"] = {}
-        self.config["system"]["show_terminal"] = getattr(self, 'terminal_cb', QCheckBox()).isChecked()
+        self._sync_ui_mode_controls()
+        eyes_enabled = getattr(self, "eyes_ui_cb", QCheckBox()).isChecked()
+        classic_enabled = getattr(self, "classic_ui_cb", QCheckBox()).isChecked()
+        terminal_enabled = getattr(self, "terminal_cb", QCheckBox()).isChecked()
+        if not eyes_enabled and not classic_enabled:
+            terminal_enabled = True
+        self.config["system"]["eyes_ui_enabled"] = eyes_enabled
+        self.config["system"]["classic_ui_enabled"] = classic_enabled
+        self.config["system"]["terminal_cli_enabled"] = terminal_enabled
+        self.config["system"]["show_terminal"] = terminal_enabled
         self.config["system"]["mode"] = getattr(self, 'mode_combo', QComboBox()).currentText()
         self.config["system"]["windows_speech_enabled"] = getattr(
             self,
@@ -623,6 +636,7 @@ class SettingsWindow(QMainWindow):
         form = QFormLayout()
         
         system_conf = self.config.get("system", {})
+        ui_modes = resolve_ui_modes(system_conf)
         
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["office", "lecture", "chat"])
@@ -634,13 +648,40 @@ class SettingsWindow(QMainWindow):
         mode_hint.setWordWrap(True)
         form.addRow("", mode_hint)
 
+        form.addRow(QLabel(" "))
+        ui_label = QLabel("Bedienoberflächen")
+        ui_label.setStyleSheet(
+            "color: #00bfff; font-weight: bold; font-size: 13px;"
+        )
+        form.addRow(ui_label)
+
+        self.eyes_ui_cb = QCheckBox(
+            "Augen-UI für Vorlesung und schwebende Bedienung"
+        )
+        self.eyes_ui_cb.setChecked(ui_modes["eyes"])
+        form.addRow(self.eyes_ui_cb)
+
+        self.classic_ui_cb = QCheckBox(
+            "Classic-UI mit Mitschrift, Ergebnissen und Texteingabe"
+        )
+        self.classic_ui_cb.setChecked(ui_modes["classic"])
+        form.addRow(self.classic_ui_cb)
+
         self.terminal_cb = QCheckBox(
-            "Terminal-Fenster mit Mitschrift und Log-Ausgabe anzeigen"
+            "Terminal-CLI mit Mitschrift, Log-Ausgabe und Texteingabe"
         )
-        self.terminal_cb.setChecked(
-            system_conf.get("show_terminal", platform.system() == "Windows")
-        )
+        self.terminal_cb.setChecked(ui_modes["terminal"])
         form.addRow(self.terminal_cb)
+
+        self.ui_mode_hint = QLabel()
+        self.ui_mode_hint.setWordWrap(True)
+        self.ui_mode_hint.setStyleSheet("color: #888; font-size: 11px;")
+        form.addRow("", self.ui_mode_hint)
+
+        self.eyes_ui_cb.stateChanged.connect(self._sync_ui_mode_controls)
+        self.classic_ui_cb.stateChanged.connect(self._sync_ui_mode_controls)
+        self.terminal_cb.stateChanged.connect(self._sync_ui_mode_controls)
+        self._sync_ui_mode_controls()
 
         if platform.system() == "Windows":
             self.windows_speech_cb = QCheckBox(
@@ -659,10 +700,10 @@ class SettingsWindow(QMainWindow):
             speech_hint.setWordWrap(True)
             form.addRow("", speech_hint)
         
-        platform_name = platform.system()
         hint = QLabel(
-            f"Wenn aktiv, zeigt Trinity unter {platform_name} beim Start zusätzlich "
-            "die Log-Ausgabe.\nBenötigt einen Neustart der App."
+            "Mehrere Oberflächen können gleichzeitig aktiv sein. Wenn Augen- und "
+            "Classic-UI ausgeschaltet sind, wird die Terminal-CLI automatisch "
+            "aktiviert. Änderungen benötigen einen Neustart der App."
         )
         hint.setStyleSheet("color: #888; font-size: 11px;")
         hint.setWordWrap(True)
@@ -672,6 +713,34 @@ class SettingsWindow(QMainWindow):
         layout.addWidget(group)
         layout.addStretch()
         return widget
+
+    def _sync_ui_mode_controls(self):
+        if not all(
+            hasattr(self, name)
+            for name in ("eyes_ui_cb", "classic_ui_cb", "terminal_cb")
+        ):
+            return
+
+        gui_enabled = (
+            self.eyes_ui_cb.isChecked() or self.classic_ui_cb.isChecked()
+        )
+        if not gui_enabled:
+            self.terminal_cb.blockSignals(True)
+            self.terminal_cb.setChecked(True)
+            self.terminal_cb.blockSignals(False)
+            self.terminal_cb.setEnabled(False)
+            message = (
+                "Headless-Modus aktiv: Ohne grafische Oberfläche bleibt die "
+                "Terminal-CLI zwingend eingeschaltet."
+            )
+        else:
+            self.terminal_cb.setEnabled(True)
+            message = (
+                "Mindestens eine Oberfläche muss aktiv bleiben. Augen und Classic "
+                "können gemeinsam verwendet werden."
+            )
+        if hasattr(self, "ui_mode_hint"):
+            self.ui_mode_hint.setText(message)
 
     # --- TAB: Audio-Routing (Souffleur) ---
     def _create_audio_tab(self):

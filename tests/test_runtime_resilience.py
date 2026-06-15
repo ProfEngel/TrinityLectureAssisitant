@@ -83,11 +83,25 @@ def test_runtime_failure_creates_visible_diagnostic(tmp_path):
     assert state == "reporting"
 
 
-def test_show_terminal_defaults_to_false_for_invalid_config(tmp_path):
+def test_invalid_config_keeps_a_graphical_ui_available(tmp_path):
     config_path = Path(tmp_path) / "config.json"
     config_path.write_text("{invalid", encoding="utf-8")
 
-    assert trinity_launcher._read_show_terminal(str(config_path)) is False
+    assert trinity_launcher._read_ui_modes(str(config_path))["eyes"] is True
+
+
+def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
+    pythonw = tmp_path / "pythonw.exe"
+    python = tmp_path / "python.exe"
+    pythonw.touch()
+    python.touch()
+
+    resolved = trinity_launcher._console_python_executable(
+        str(pythonw),
+        platform_name="win32",
+    )
+
+    assert resolved == str(python)
 
 
 def test_whisper_command_works_without_loading_audio(tmp_path, monkeypatch):
