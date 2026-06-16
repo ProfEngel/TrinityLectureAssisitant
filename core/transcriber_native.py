@@ -41,7 +41,9 @@ class NativeTrinityEar(TrinityEar):
         self.speak_process = None
         self.recent_chunks = []
         self.is_muted = False
+        self.trigger_armed = False
         self.text_mode = False
+        self._last_external_stt_text = ""
 
         timestamp = time.strftime("%d%b%Y_%H%M")
         self.transcript_file = os.path.join(MEMORY_DIR, f"raw_session_{timestamp}.md")
@@ -180,6 +182,8 @@ class NativeTrinityEar(TrinityEar):
 
         try:
             while self.is_running:
+                self._process_external_stt_feed()
+
                 if os.path.exists(cmd_file):
                     try:
                         with open(cmd_file, "r", encoding="utf-8") as f:
@@ -189,7 +193,10 @@ class NativeTrinityEar(TrinityEar):
                         if cmd_text:
                             is_silent = request.get("silent", False)
                                 
-                            if getattr(self, 'mode', 'office') == 'chat':
+                            if (
+                                getattr(self, 'mode', 'office') == 'chat'
+                                and not request.get("allow_tts", False)
+                            ):
                                 is_silent = True
                                 
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")

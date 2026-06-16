@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
+from external_stt_feed import append_external_stt_event
 
 
 DEFAULT_HOST = "127.0.0.1"
@@ -64,6 +65,7 @@ class TrinityBridge:
         self.upload_dir = self.memory_dir / "companion_uploads"
         self.history_path = self.memory_dir / "classic_chat_history.jsonl"
         self.command_path = self.core_dir / "cmd.txt"
+        self.stt_feed_path = self.core_dir / "ios_stt_feed.jsonl"
         self.payload_path = self.core_dir / "payload.html"
         self.token = token or ""
         self._lock = threading.Lock()
@@ -94,6 +96,8 @@ class TrinityBridge:
         request["source"] = "ios"
         request["session_id"] = str(payload.get("session_id", "")).strip()
         request["privacy_mode"] = str(payload.get("privacy_mode", "local")).strip() or "local"
+        request["silent"] = not bool(payload.get("speak", False))
+        request["allow_tts"] = bool(payload.get("speak", False))
 
         with self._lock:
             if self.command_path.exists():
@@ -113,6 +117,36 @@ class TrinityBridge:
             self.command_path.write_text(encode_chat_request(request), encoding="utf-8")
 
         return {"ok": True, "request_id": request["request_id"], "accepted_at": time.time()}
+
+    def send_stt(self, payload):
+        text = str(payload.get("text", "")).strip()
+        if not text:
+            raise ValueError("STT-Text darf nicht leer sein.")
+        is_final = bool(payload.get("is_final", False))
+        event = append_external_stt_event(
+            self.stt_feed_path,
+            {
+                "source": "ios-stt",
+                "text": text,
+                "is_final": is_final,
+                "speak": bool(payload.get("speak", False)),
+                "session_id": str(payload.get("session_id", "")).strip(),
+                "privacy_mode": str(payload.get("privacy_mode", "local")).strip() or "local",
+            },
+        )
+        if is_final:
+            append_chat_event(
+                self.history_path,
+                {
+                    "request_id": event["event_id"],
+                    "role": "transcript",
+                    "source": "ios-stt",
+                    "text": text,
+                    "session_id": event["session_id"],
+                    "privacy_mode": event["privacy_mode"],
+                },
+            )
+        return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
 
     def _save_attachments(self, attachments):
         saved = []
@@ -262,6 +296,8 @@ def make_handler(bridge):
             try:
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self)))
+                elif parsed.path == "/stt":
+                    _json_response(self, 200, bridge.send_stt(_read_json(self)))
                 else:
                     _json_response(self, 404, {"ok": False, "error": "not found"})
             except RuntimeError as exc:
