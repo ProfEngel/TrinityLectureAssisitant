@@ -67,16 +67,35 @@ def _log_message(log_handle, message):
     log_handle.flush()
 
 
-def _show_runtime_error(base_dir, return_code):
+def _tail_text(path, max_lines=80):
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            lines = handle.readlines()
+    except OSError:
+        return ""
+    return "".join(lines[-max_lines:]).strip()
+
+
+def _show_runtime_error(base_dir, return_code, runtime_log_path=None):
     payload_file = os.path.join(base_dir, "core", "payload.html")
     state_file = os.path.join(base_dir, "core", "state.txt")
     logs_path = escape(os.path.join(base_dir, "logs"))
+    runtime_tail = _tail_text(runtime_log_path or os.path.join(base_dir, "logs", "runtime.log"))
+    runtime_tail_html = ""
+    if runtime_tail:
+        runtime_tail_html = (
+            "<h3>Letzte Laufzeitmeldung</h3>"
+            "<pre style='white-space:pre-wrap;max-height:360px;overflow:auto;"
+            "background:rgba(0,0,0,0.28);padding:12px;border-radius:10px;'>"
+            f"{escape(runtime_tail)}</pre>"
+        )
     payload = f"""
     <!-- KEEP_OPEN -->
     <h2>Trinity-Kern wurde beendet</h2>
     <p>Die Oberfläche bleibt für Einstellungen und Diagnose geöffnet.</p>
     <p>Fehlercode: <code>{return_code}</code></p>
     <p>Protokolle: <code>{logs_path}</code></p>
+    {runtime_tail_html}
     <p>Unter Windows bitte zunächst den Chatmodus verwenden und die experimentelle
     Spracheingabe erst nach erfolgreichem LLM-Test aktivieren.</p>
     """
@@ -206,7 +225,7 @@ def launch_trinity():
                         "für Einstellungen und Diagnose geöffnet.",
                     )
                     if return_code != 0 and ui_processes:
-                        _show_runtime_error(base_dir, return_code)
+                        _show_runtime_error(base_dir, return_code, runtime_log.name)
                     ear_process = None
                     if return_code == 0 or not ui_processes:
                         break

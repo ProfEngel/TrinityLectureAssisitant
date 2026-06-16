@@ -130,13 +130,22 @@ def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
 def test_runtime_failure_creates_visible_diagnostic(tmp_path):
     core_dir = tmp_path / "core"
     core_dir.mkdir()
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    runtime_log = logs_dir / "runtime.log"
+    runtime_log.write_text("Traceback\nImportError: demo\n", encoding="utf-8")
 
-    trinity_launcher._show_runtime_error(str(tmp_path), -1073741819)
+    trinity_launcher._show_runtime_error(
+        str(tmp_path),
+        -1073741819,
+        str(runtime_log),
+    )
 
     payload = (core_dir / "payload.html").read_text(encoding="utf-8")
     state = (core_dir / "state.txt").read_text(encoding="utf-8")
     assert "Trinity-Kern wurde beendet" in payload
     assert "-1073741819" in payload
+    assert "ImportError: demo" in payload
     assert state == "reporting"
 
 
