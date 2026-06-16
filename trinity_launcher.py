@@ -8,6 +8,13 @@ from html import escape
 from core.ui_modes import resolve_ui_modes
 
 
+def _trinity_subprocess_env(environment=None):
+    env = dict(environment or os.environ)
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
+    return env
+
+
 def _read_ui_modes(config_file, force_terminal=False, suppress_terminal=False):
     try:
         import json
@@ -109,6 +116,12 @@ def _show_runtime_error(base_dir, return_code, runtime_log_path=None):
 
 
 def launch_trinity():
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     print("🧞‍♀️ Starte Trinity System...")
     
     # 1. Pfade definieren
@@ -128,9 +141,15 @@ def launch_trinity():
         print("Erstes Setup erkannt. Öffne Konfiguration...")
         requested_surface = _requested_surface()
         if requested_surface == "terminal" or not _graphical_session_available():
-            subprocess.run([sys.executable, cli_script, "onboarding"])
+            subprocess.run(
+                [sys.executable, cli_script, "onboarding"],
+                env=_trinity_subprocess_env(),
+            )
         else:
-            subprocess.run([sys.executable, settings_script])
+            subprocess.run(
+                [sys.executable, settings_script],
+                env=_trinity_subprocess_env(),
+            )
         if not os.path.exists(config_file):
             print("Konfiguration abgebrochen. Beende Trinity.")
             sys.exit(1)
@@ -152,6 +171,7 @@ def launch_trinity():
     if surface in surface_modes:
         ui_modes = surface_modes[surface]
     show_terminal = ui_modes["terminal"]
+    child_env = _trinity_subprocess_env()
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -179,6 +199,7 @@ def launch_trinity():
                     ear_script,
                 ],
                 creationflags=console_flags,
+                env=child_env,
             )
         else:
             ear_process = subprocess.Popen(
@@ -186,6 +207,7 @@ def launch_trinity():
                 stdout=runtime_log,
                 stderr=subprocess.STDOUT,
                 creationflags=0,
+                env=child_env,
             )
 
         ui_processes = {}
@@ -195,6 +217,7 @@ def launch_trinity():
                 stdout=None if show_terminal else ui_log,
                 stderr=None if show_terminal else subprocess.STDOUT,
                 creationflags=0,
+                env=child_env,
             )
         if ui_modes["classic"]:
             ui_processes["Classic-UI"] = subprocess.Popen(
@@ -202,6 +225,7 @@ def launch_trinity():
                 stdout=None if show_terminal else ui_log,
                 stderr=None if show_terminal else subprocess.STDOUT,
                 creationflags=0,
+                env=child_env,
             )
 
         try:

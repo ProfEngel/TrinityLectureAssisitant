@@ -170,6 +170,14 @@ def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
     assert resolved == str(python)
 
 
+def test_launcher_forces_utf8_for_child_processes():
+    env = trinity_launcher._trinity_subprocess_env({"PATH": "demo"})
+
+    assert env["PATH"] == "demo"
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert env["PYTHONUTF8"] == "1"
+
+
 def test_surface_argument_is_read_for_cli_start():
     assert (
         trinity_launcher._requested_surface(

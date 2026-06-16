@@ -47,7 +47,11 @@ def test_terminal_cli_writes_silent_commands_and_exits_cleanly(monkeypatch):
         except StopIteration as exc:
             raise EOFError from exc
 
-    monkeypatch.setattr(trinity_console.subprocess, "Popen", lambda _args: runtime)
+    monkeypatch.setattr(
+        trinity_console.subprocess,
+        "Popen",
+        lambda _args, **_kwargs: runtime,
+    )
     monkeypatch.setattr(builtins, "input", fake_input)
     monkeypatch.setattr(builtins, "open", lambda *_args, **_kwargs: capture)
 
@@ -56,3 +60,11 @@ def test_terminal_cli_writes_silent_commands_and_exits_cleanly(monkeypatch):
     assert capture.content == "SILENT:Status prüfen"
     assert runtime.terminated is True
     assert return_code == 0
+
+
+def test_console_runtime_uses_utf8_environment():
+    env = trinity_console._runtime_env({"PATH": "demo"})
+
+    assert env["PATH"] == "demo"
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert env["PYTHONUTF8"] == "1"
