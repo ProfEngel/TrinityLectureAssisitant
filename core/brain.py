@@ -8,6 +8,7 @@ import time
 
 from platform_adapters import capability_message, detect_capabilities
 from chat_attachments import prepare_attachment_content
+from memory_store import MemoryStore
 
 
 class TrinityBrain:
@@ -16,6 +17,7 @@ class TrinityBrain:
         self.config_path = os.path.join(os.path.dirname(__file__), "config.json")
         self.soul_path = os.path.join(os.path.dirname(__file__), "Soul.md")
         self.user_path = os.path.join(os.path.dirname(__file__), "User.md")
+        self._runtime_signature = {}
         self.gen_images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "gen_images")
         os.makedirs(self.gen_images_dir, exist_ok=True)
         
@@ -32,6 +34,7 @@ class TrinityBrain:
         # Soul + User einmalig laden und cachen (nicht bei jedem Request neu lesen)
         self._soul_cache = self.get_file_content(self.soul_path, "Du bist Trinity, ein KI-Assistent.")
         self._user_cache = self.get_file_content(self.user_path, "Der Nutzer ist Mat Max.")
+        self._remember_runtime_signature()
 
     def load_config(self):
         """Lädt die Konfiguration aus der config.json."""
@@ -89,6 +92,44 @@ class TrinityBrain:
         except Exception as e:
             print(f"⚠️ Fehler beim Laden der config.json: {e}")
 
+    def _file_signature(self, path):
+        try:
+            stat = os.stat(path)
+            return (stat.st_mtime, stat.st_size)
+        except OSError:
+            return None
+
+    def _current_runtime_signature(self):
+        return {
+            "config": self._file_signature(getattr(self, "config_path", "")),
+            "soul": self._file_signature(getattr(self, "soul_path", "")),
+            "user": self._file_signature(getattr(self, "user_path", "")),
+        }
+
+    def _remember_runtime_signature(self):
+        self._runtime_signature = self._current_runtime_signature()
+
+    def reload_runtime_config(self, force=False):
+        """Apply saved settings before the next answer without restarting Trinity."""
+        if not getattr(self, "config_path", None):
+            return False
+        current = self._current_runtime_signature()
+        if not force and current == getattr(self, "_runtime_signature", {}):
+            return False
+
+        self.load_config()
+        self._soul_cache = self.get_file_content(
+            self.soul_path,
+            "Du bist Trinity, ein KI-Assistent.",
+        )
+        self._user_cache = self.get_file_content(
+            self.user_path,
+            "Der Nutzer ist Mat Max.",
+        )
+        self._runtime_signature = current
+        print("🔄 Trinity-Konfiguration für neue Anfrage neu geladen.")
+        return True
+
     def _load_live_skills(self):
         """Lädt alle Live-Skills aus dem agents/ Ordner dynamisch beim Start."""
         import importlib.util
@@ -136,6 +177,7 @@ class TrinityBrain:
 
     def ask_llm(self, messages):
         """Hilfsmethode für interne LLM-Aufrufe (z.B. Context Enrichment)."""
+        self.reload_runtime_config()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "http://localhost",
@@ -189,6 +231,7 @@ class TrinityBrain:
         from_telegram=False,
         attachments=None,
     ):
+        self.reload_runtime_config()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "http://localhost", # Required by OpenRouter
@@ -277,11 +320,18 @@ class TrinityBrain:
         if direct_answer:
             return direct_answer, has_payload
 
+        try:
+            memory_context = MemoryStore().context_for_prompt(user_query)
+        except Exception as exc:
+            print(f"⚠️ Memory-Kontext nicht verfügbar: {exc}")
+            memory_context = ""
+
         context_prompt = (
             f"{soul_prompt}\n\n"
             f"--- INFORMATIONEN ZUM NUTZER UND ZIELPUBLIKUM ---\n"
             f"{user_prompt}\n\n"
             f"{search_context}"
+            f"{memory_context}\n\n"
             f"--- AKTUELLES VORLESUNGS-TRANSKRIPT ---\n"
             f"Hier ist das aktuelle Transkript der Vorlesung inklusive Zeitstempel:\n"
             f"{transcript}\n\n"

@@ -71,16 +71,81 @@ def test_windows_speech_can_be_enabled_explicitly(tmp_path, monkeypatch):
     assert ear.speech_input_enabled is True
 
 
+def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "stt": {
+                    "model": "small",
+                    "silence_threshold": 0.015,
+                    "chunk_duration": 2,
+                },
+                "tts": {"voice": "Old Voice"},
+                "system": {"mode": "office"},
+                "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    ear = object.__new__(transcriber.MorpheusEar)
+    ear.config_path = str(config_path)
+    ear.brain = type(
+        "Brain",
+        (),
+        {"reload_runtime_config": lambda self, force=False: True},
+    )()
+    monkeypatch.setattr(transcriber.sys, "platform", "darwin")
+    ear.audio_stream = None
+    ear.load_config()
+
+    config_path.write_text(
+        json.dumps(
+            {
+                "stt": {
+                    "model": "small",
+                    "silence_threshold": 0.015,
+                    "chunk_duration": 2,
+                },
+                "tts": {"voice": "New Voice"},
+                "system": {"mode": "chat"},
+                "telegram": {
+                    "enabled": True,
+                    "bot_token": "token",
+                    "chat_id": "123",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    ear._config_mtime = 0
+
+    assert ear.reload_config_if_changed() is True
+    assert ear.voice == "New Voice"
+    assert ear.mode == "chat"
+    assert ear.telegram_cfg["enabled"] is True
+
+
 def test_runtime_failure_creates_visible_diagnostic(tmp_path):
     core_dir = tmp_path / "core"
     core_dir.mkdir()
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    runtime_log = logs_dir / "runtime.log"
+    runtime_log.write_text("Traceback\nImportError: demo\n", encoding="utf-8")
 
-    trinity_launcher._show_runtime_error(str(tmp_path), -1073741819)
+    trinity_launcher._show_runtime_error(
+        str(tmp_path),
+        -1073741819,
+        str(runtime_log),
+    )
 
     payload = (core_dir / "payload.html").read_text(encoding="utf-8")
     state = (core_dir / "state.txt").read_text(encoding="utf-8")
     assert "Trinity-Kern wurde beendet" in payload
     assert "-1073741819" in payload
+    assert "ImportError: demo" in payload
     assert state == "reporting"
 
 
@@ -103,6 +168,14 @@ def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
     )
 
     assert resolved == str(python)
+
+
+def test_launcher_forces_utf8_for_child_processes():
+    env = trinity_launcher._trinity_subprocess_env({"PATH": "demo"})
+
+    assert env["PATH"] == "demo"
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert env["PYTHONUTF8"] == "1"
 
 
 def test_surface_argument_is_read_for_cli_start():

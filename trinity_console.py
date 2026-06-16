@@ -9,6 +9,13 @@ import threading
 import time
 
 
+def _runtime_env(environment=None):
+    env = dict(environment or os.environ)
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
+    return env
+
+
 def _read_commands(command_queue):
     while True:
         try:
@@ -21,7 +28,10 @@ def _read_commands(command_queue):
 def run_console(runtime_script):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     command_file = os.path.join(base_dir, "core", "cmd.txt")
-    runtime = subprocess.Popen([sys.executable, "-u", runtime_script])
+    runtime = subprocess.Popen(
+        [sys.executable, "-u", runtime_script],
+        env=_runtime_env(),
+    )
 
     print("Trinity Terminal CLI")
     print("====================")

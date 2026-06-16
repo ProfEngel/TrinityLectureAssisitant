@@ -22,7 +22,7 @@ def _modules():
 def test_cli_exposes_requested_commands():
     parser = trinity_cli.build_parser()
 
-    for command in ("start", "settings", "onboarding", "doctor"):
+    for command in ("start", "settings", "onboarding", "tui", "doctor"):
         parsed = parser.parse_args([command])
         assert parsed.command == command
 

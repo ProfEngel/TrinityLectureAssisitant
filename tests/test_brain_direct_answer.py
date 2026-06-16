@@ -1,4 +1,5 @@
 from core.brain import TrinityBrain
+import json
 
 
 class _DirectAnswerSkill:
@@ -98,3 +99,59 @@ def test_brain_sends_image_attachment_as_multimodal_content(tmp_path, monkeypatc
     assert answer == "Bild erkannt"
     assert user_content[1]["type"] == "image_url"
     assert brain.last_media_path == str(image)
+
+
+def test_brain_reload_runtime_config_updates_model_without_restart(tmp_path):
+    config_path = tmp_path / "config.json"
+    soul_path = tmp_path / "Soul.md"
+    user_path = tmp_path / "User.md"
+    soul_path.write_text("Soul eins", encoding="utf-8")
+    user_path.write_text("User eins", encoding="utf-8")
+    config_path.write_text(
+        json.dumps(
+            {
+                "llm": {
+                    "active_slot": "local",
+                    "local": {
+                        "url": "http://one",
+                        "model": "model-one",
+                        "api_key": "key-one",
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    brain = TrinityBrain.__new__(TrinityBrain)
+    brain.config_path = str(config_path)
+    brain.soul_path = str(soul_path)
+    brain.user_path = str(user_path)
+    brain._runtime_signature = {}
+    brain.load_config()
+    brain._soul_cache = brain.get_file_content(brain.soul_path)
+    brain._user_cache = brain.get_file_content(brain.user_path)
+    brain._remember_runtime_signature()
+
+    config_path.write_text(
+        json.dumps(
+            {
+                "llm": {
+                    "active_slot": "local",
+                    "local": {
+                        "url": "http://two",
+                        "model": "model-two",
+                        "api_key": "key-two",
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    soul_path.write_text("Soul zwei", encoding="utf-8")
+
+    assert brain.reload_runtime_config(force=True) is True
+    assert brain.url == "http://two"
+    assert brain.model == "model-two"
+    assert brain.api_key == "key-two"
+    assert brain.get_soul() == "Soul zwei"

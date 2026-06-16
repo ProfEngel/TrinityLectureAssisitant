@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.10.3"
+VERSION = "0.11.0"
 
 
 def find_trinity_home(explicit=None):
@@ -314,6 +314,12 @@ def run_start(home, args):
     return subprocess.call(command, cwd=str(home))
 
 
+def run_tui_command(home, args):
+    from trinity_tui import run_tui  # pylint: disable=import-outside-toplevel
+
+    return run_tui(home, args)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -347,6 +353,12 @@ def build_parser():
     )
 
     subparsers.add_parser("onboarding", help="Geführte Ersteinrichtung")
+    tui = subparsers.add_parser(
+        "tui",
+        help="Terminal-Chat mit Slash-Commands, Sessions und Memory",
+    )
+    tui.add_argument("--session", help="Vorhandene Session-ID fortsetzen")
+
     doctor = subparsers.add_parser("doctor", help="Installation prüfen")
     doctor.add_argument("--fix", action="store_true", help="Sichere Reparaturen anwenden")
     doctor.add_argument(
@@ -379,6 +391,8 @@ def main(argv=None):
             return run_settings(home, args)
         if args.command == "onboarding":
             return run_onboarding(home)
+        if args.command == "tui":
+            return run_tui_command(home, args)
         if args.command == "doctor":
             return run_doctor_command(home, args)
     except (OSError, ValueError) as exc:

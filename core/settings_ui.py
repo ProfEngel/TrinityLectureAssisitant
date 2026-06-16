@@ -200,7 +200,9 @@ class SettingsWindow(QMainWindow):
                 self,
                 "Gespeichert",
                 "Einstellungen gespeichert.\n"
-                "Bitte starte Trinity neu, damit die Änderungen wirksam werden.",
+                "Neue Anfragen übernehmen LLM-, Persona-, Telegram-, TTS- und "
+                "Modus-Änderungen automatisch. Nur geänderte Oberflächenstarts "
+                "(Augen-/Classic-/Terminal-Kombination) brauchen einen Neustart.",
             )
 
     def _return_to_chat(self):
