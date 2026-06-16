@@ -1,4 +1,5 @@
 import json
+import base64
 
 from trinity_bridge import TrinityBridge
 from chat_protocol import append_chat_event, parse_command
@@ -20,6 +21,58 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     assert request["source"] == "ios"
     assert request["session_id"] == "ios-1"
     assert request["privacy_mode"] == "local"
+
+
+def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    result = bridge.send_message(
+        {
+            "text": "Was siehst du?",
+            "attachments": [
+                {
+                    "name": "bild.png",
+                    "mime": "image/png",
+                    "data_base64": base64.b64encode(b"\x89PNG\r\n\x1a\nsmall").decode("ascii"),
+                },
+                {
+                    "name": "skript.pdf",
+                    "mime": "application/pdf",
+                    "data_base64": base64.b64encode(b"%PDF-1.4\n").decode("ascii"),
+                },
+            ],
+        }
+    )
+
+    assert result["ok"] is True
+    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    assert [item["kind"] for item in request["attachments"]] == ["image", "pdf"]
+    assert all(item["path"] for item in request["attachments"])
+
+
+def test_bridge_uses_default_prompt_for_attachment_only_message(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    bridge.send_message(
+        {
+            "attachments": [
+                {
+                    "name": "bild.png",
+                    "mime": "image/png",
+                    "data_base64": base64.b64encode(b"\x89PNG\r\n\x1a\nsmall").decode("ascii"),
+                }
+            ]
+        }
+    )
+
+    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    assert request["text"] == "Bitte analysiere die beigefügten Anlagen."
 
 
 def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
