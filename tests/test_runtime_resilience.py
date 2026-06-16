@@ -127,6 +127,30 @@ def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
     assert ear.telegram_cfg["enabled"] is True
 
 
+def test_love_questions_do_not_trigger_affection_mode():
+    assert (
+        transcriber.is_affection_directed_at_trinity(
+            "Erkläre mir was Liebe ist?",
+            "Trinity",
+        )
+        is False
+    )
+    assert (
+        transcriber.is_affection_directed_at_trinity(
+            "Und was ist Liebe für Lebende?",
+            "Trinity",
+        )
+        is False
+    )
+    assert (
+        transcriber.is_affection_directed_at_trinity(
+            "Trinity, ich liebe dich",
+            "Trinity",
+        )
+        is True
+    )
+
+
 def test_runtime_failure_creates_visible_diagnostic(tmp_path):
     core_dir = tmp_path / "core"
     core_dir.mkdir()
