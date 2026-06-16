@@ -20,7 +20,7 @@ body {
 }
 
 /* Der schwebende Avatar (kleiner und dezenter) */
-#morpheus-container {
+#trinity-container {
     position: relative;
     width: 60px;
     height: 60px;
@@ -29,11 +29,11 @@ body {
     animation: float_cloud 4s ease-in-out infinite;
 }
 
-#morpheus-container:active {
+#trinity-container:active {
     cursor: grabbing;
 }
 
-#morpheus-container:hover {
+#trinity-container:hover {
     transform: scale(1.1);
 }
 

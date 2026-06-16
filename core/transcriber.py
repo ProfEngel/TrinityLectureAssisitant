@@ -74,7 +74,7 @@ def set_state(state):
     except:
         pass
 
-class MorpheusEar:
+class TrinityEar:
     def __init__(self):
         # Konfiguration laden
         self.brain = TrinityBrain()
@@ -472,6 +472,45 @@ class MorpheusEar:
             # Im Brain merken für Folgeanweisungen
             self.brain.last_media_path = local_path
 
+            image_subtype = file_ext.lstrip(".").lower() or "jpeg"
+            if image_subtype == "jpg":
+                image_subtype = "jpeg"
+            attachment = {
+                "name": local_filename,
+                "path": local_path,
+                "kind": "image",
+                "mime": f"image/{image_subtype}",
+                "size": len(img_data),
+            }
+
+            if not self.brain._is_explicit_local_media_request(caption or ""):
+                req.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": "🖼️ Bild empfangen. Ich analysiere es mit dem aktiven Vision-Modell.",
+                    },
+                    timeout=5,
+                )
+                prompt = caption or "Bitte beschreibe und interpretiere das angehängte Bild."
+                antwort, _has_payload = self.brain.ask(
+                    prompt,
+                    self.transcript_file,
+                    text_mode=True,
+                    from_telegram=True,
+                    attachments=[attachment],
+                )
+                req.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": antwort or "Ich konnte das Bild nicht auswerten."},
+                    timeout=10,
+                )
+                t_stamp = time.strftime("%H:%M:%S")
+                with open(self.transcript_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{t_stamp}] [User (Telegram Bild)]: Foto hochgeladen, Prompt: '{caption}'\n")
+                    f.write(f"[{t_stamp}] [Trinity (Vision)]: {antwort}\n")
+                return
+
             # Nutzer-Bestätigung senden
             req.post(
                 f"https://api.telegram.org/bot{tg_token}/sendMessage",
@@ -610,6 +649,13 @@ class MorpheusEar:
                         if cmd_text:
                             is_silent = request.get("silent", False)
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")
+                            attachments = request.get("attachments", [])
+                            if attachments:
+                                summary = ", ".join(
+                                    f"{item.get('name', 'Anlage')}:{item.get('kind', 'file')}"
+                                    for item in attachments
+                                )
+                                print(f"📎 Anlagen zur Anfrage: {summary}")
                             # Log it to session
                             t_stamp = time.strftime("%H:%M:%S")
                             with open(self.transcript_file, "a", encoding="utf-8") as f:
@@ -1099,10 +1145,10 @@ class MorpheusEar:
 
 if __name__ == "__main__":
     try:
-        ear = MorpheusEar()
+        ear = TrinityEar()
         ear.start()
     except KeyboardInterrupt:
-        print("\nMorpheus geht schlafen.")
+        print("\nTrinity geht schlafen.")
     except Exception:
         import traceback
         traceback.print_exc()

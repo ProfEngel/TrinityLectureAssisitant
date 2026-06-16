@@ -2,7 +2,7 @@
 Native macOS STT loop for Trinity.
 
 This module uses Apple's Speech framework for transcription and reuses the
-existing MorpheusEar command handling, memory logging, LLM routing, and TTS
+existing TrinityEar command handling, memory logging, LLM routing, and TTS
 behavior from transcriber.py. It intentionally does not load a Whisper model.
 """
 import os
@@ -23,11 +23,11 @@ sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
 from platform_adapters import create_tts_backend
 from chat_protocol import append_chat_event, parse_command
-from transcriber import CHAT_HISTORY_FILE, MEMORY_DIR, MorpheusEar, set_state
+from transcriber import CHAT_HISTORY_FILE, MEMORY_DIR, TrinityEar, set_state
 
 
-class NativeMorpheusEar(MorpheusEar):
-    """MorpheusEar variant backed by macOS SFSpeechRecognizer."""
+class NativeTrinityEar(TrinityEar):
+    """TrinityEar variant backed by macOS SFSpeechRecognizer."""
 
     def __init__(self):
         self.brain = TrinityBrain()
@@ -193,6 +193,13 @@ class NativeMorpheusEar(MorpheusEar):
                                 is_silent = True
                                 
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")
+                            attachments = request.get("attachments", [])
+                            if attachments:
+                                summary = ", ".join(
+                                    f"{item.get('name', 'Anlage')}:{item.get('kind', 'file')}"
+                                    for item in attachments
+                                )
+                                print(f"📎 Anlagen zur Anfrage: {summary}")
                             
                             # Log it to session
                             t_stamp = time.strftime("%H:%M:%S")
@@ -227,8 +234,8 @@ class NativeMorpheusEar(MorpheusEar):
 
 
 if __name__ == "__main__":
-    ear = NativeMorpheusEar()
+    ear = NativeTrinityEar()
     try:
         ear.start()
     except KeyboardInterrupt:
-        print("\nMorpheus Native geht schlafen.")
+        print("\nTrinity Native geht schlafen.")
