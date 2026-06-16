@@ -153,7 +153,10 @@ def test_invalid_config_keeps_a_graphical_ui_available(tmp_path):
     config_path = Path(tmp_path) / "config.json"
     config_path.write_text("{invalid", encoding="utf-8")
 
-    assert trinity_launcher._read_ui_modes(str(config_path))["eyes"] is True
+    modes = trinity_launcher._read_ui_modes(str(config_path))
+
+    assert modes["classic"] is True
+    assert modes["eyes"] is False
 
 
 def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):

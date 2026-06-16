@@ -15,7 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
-> - **v0.11.1:** ClassicUI mit Reitern für Chat, Live-Mitschrift/Agentenlog und Memory Graph sowie Dark-/Light-Ansicht.
+> - **v0.11.1:** ClassicUI als Erststart-Standard mit Reitern für Chat, Live-Mitschrift/Agentenlog und Memory Graph sowie Dark-/Light-Ansicht.
 > - **v0.11.0:** Trinity TUI mit Slash-Commands, Sessions, lokalem SQLite-Memory, Self-Bake/Dreaming und Memory-Graph in der ClassicUI.
 > - **v0.10.3:** Classic-Chat mit Verlauf, Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen.
 > - **v0.10.2:** Gemeinsame Classic-/Settings-App sowie globale CLI mit Onboarding und Doctor.
@@ -190,10 +190,11 @@ unabhängig kombinieren:
   Ansicht kann zwischen Dark Mode und Hell Mode wechseln.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
 
-Bestehende Installationen behalten standardmäßig die Augen-UI. Wenn Augen- und
-Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend die Terminal-CLI.
-Damit bleibt die Anwendung immer bedienbar und schafft zugleich die Grundlage für
-eine spätere Ubuntu-/Linux-Portierung.
+Seit v0.11.1 startet eine frische Installation standardmäßig mit der Classic-UI.
+Bestehende Installationen behalten ihre gespeicherten Oberflächen-Einstellungen.
+Wenn Augen- und Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend
+die Terminal-CLI. Damit bleibt die Anwendung immer bedienbar und schafft zugleich
+die Grundlage für eine spätere Ubuntu-/Linux-Portierung.
 
 ### Trinity im Terminal
 

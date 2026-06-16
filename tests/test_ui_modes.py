@@ -1,12 +1,12 @@
 from core.ui_modes import resolve_ui_modes
 
 
-def test_existing_installations_keep_eyes_ui_as_default():
+def test_first_start_uses_classic_ui_as_default():
     modes = resolve_ui_modes({}, platform_name="Darwin")
 
     assert modes == {
-        "eyes": True,
-        "classic": False,
+        "eyes": False,
+        "classic": True,
         "terminal": False,
     }
 
