@@ -18,6 +18,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
 from chat_protocol import append_chat_event, parse_command
+from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
 from platform_adapters import create_tts_backend
 
@@ -91,6 +92,7 @@ class TrinityEar:
         self.recent_chunks = []  # Kontext-Ringpuffer (letzten N Chunks)
         self.is_muted = False  # Stumm-Modus: Trinity hört nicht zu
         self.trigger_armed = False # Wartet auf Ende des Satzes nach Wake-Word
+        self._last_external_stt_text = ""
         
         # Neues Transkript für diese Sitzung anlegen
         timestamp = time.strftime("%d%b%Y_%H%M")
@@ -639,6 +641,8 @@ class TrinityEar:
         audio_buffer = []
         try:
             while self.is_running:
+                self._process_external_stt_feed()
+
                 # 1. Prüfe auf stille Text-Eingaben
                 if os.path.exists(cmd_file):
                     try:
@@ -648,6 +652,11 @@ class TrinityEar:
                         cmd_text = request["text"]
                         if cmd_text:
                             is_silent = request.get("silent", False)
+                            if (
+                                getattr(self, 'mode', 'office') == 'chat'
+                                and not request.get("allow_tts", False)
+                            ):
+                                is_silent = True
                             print(f"!!! STILLE TEXT-EINGABE EMPFANGEN: {cmd_text} !!!")
                             attachments = request.get("attachments", [])
                             if attachments:
@@ -816,7 +825,37 @@ class TrinityEar:
             if not self.trigger_armed and not (self.speak_process and self.speak_process.poll() is None):
                 set_state("idle")
 
-    def fire_trigger(self):
+    def _process_external_stt_feed(self):
+        feed_file = os.path.join(CORE_DIR, "ios_stt_feed.jsonl")
+        for event in pop_external_stt_events(feed_file):
+            text = str(event.get("text") or "").strip()
+            if not text or text == self._last_external_stt_text:
+                continue
+            self._last_external_stt_text = text
+            is_final = bool(event.get("is_final", False))
+            speak = bool(event.get("speak", False))
+            marker = "final" if is_final else "live"
+            print(f"📱 iPhone-STT ({marker}): {text}")
+            if not is_final:
+                continue
+
+            if getattr(self, "mode", "office") == "chat":
+                request = {
+                    "request_id": event.get("event_id"),
+                    "source": "ios-stt",
+                    "text": text,
+                    "attachments": [],
+                    "silent": not speak,
+                    "history_recorded": True,
+                }
+                self.trigger_action(text, silent_response=not speak, chat_request=request)
+                continue
+
+            self.process_text(text)
+            if self.trigger_armed:
+                self.fire_trigger(silent_response=not speak)
+
+    def fire_trigger(self, silent_response=False):
         if not self.trigger_armed:
             return
         self.trigger_armed = False
@@ -832,7 +871,7 @@ class TrinityEar:
         full_context = " ".join(self.recent_chunks)
         # Aktuelle Anfrage = nur die letzten 3 Chunks (für Keyword-Erkennung im Router)
         recent_text = " ".join(self.recent_chunks[-3:])
-        self.trigger_action(full_context, recent_text=recent_text)
+        self.trigger_action(full_context, silent_response=silent_response, recent_text=recent_text)
         self.recent_chunks.clear()  # Reset nach Trigger
 
     def _speak_thread(self, text):

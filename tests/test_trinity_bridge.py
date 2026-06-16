@@ -3,6 +3,7 @@ import base64
 
 from trinity_bridge import TrinityBridge
 from chat_protocol import append_chat_event, parse_command
+from external_stt_feed import pop_external_stt_events
 
 
 def test_bridge_writes_ios_message_to_command_file(tmp_path):
@@ -21,6 +22,42 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     assert request["source"] == "ios"
     assert request["session_id"] == "ios-1"
     assert request["privacy_mode"] == "local"
+
+
+def test_bridge_can_allow_tts_for_ios_message(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    bridge.send_message({"text": "Sag das laut", "speak": True})
+
+    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    assert request["silent"] is False
+    assert request["allow_tts"] is True
+
+
+def test_bridge_writes_live_stt_feed(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    result = bridge.send_stt(
+        {
+            "text": "Trinity kannst du das erklaeren",
+            "is_final": True,
+            "speak": True,
+            "session_id": "ios-1",
+            "privacy_mode": "local",
+        }
+    )
+
+    assert result["ok"] is True
+    events = pop_external_stt_events(home / "core" / "ios_stt_feed.jsonl")
+    assert events[0]["text"] == "Trinity kannst du das erklaeren"
+    assert events[0]["is_final"] is True
+    assert events[0]["speak"] is True
 
 
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
