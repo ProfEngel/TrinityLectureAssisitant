@@ -445,10 +445,16 @@ class ClassicWindow(QMainWindow):
         else:
             self.theme_button.setText("Dunkel")
 
+    def _sync_settings_theme(self):
+        if hasattr(self, "settings_page"):
+            self.settings_page.config.setdefault("system", {})["classic_theme"] = self.theme
+            self.settings_page.apply_stylesheet()
+
     def toggle_theme(self):
         self.theme = "light" if self.theme == "dark" else "dark"
         self._save_theme()
         self._apply_style()
+        self._sync_settings_theme()
         self._update_theme_button()
         self._chat_signature = None
         self._memory_signature = None
@@ -720,6 +726,7 @@ class ClassicWindow(QMainWindow):
             self._refresh_chat_history()
 
     def show_settings(self):
+        self._sync_settings_theme()
         self.pages.setCurrentWidget(self.settings_page)
 
     def return_to_chat(self, saved=False):
