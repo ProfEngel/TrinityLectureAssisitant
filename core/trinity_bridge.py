@@ -3,22 +3,26 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import mimetypes
 import os
 import re
 import threading
 import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
+from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
-MAX_BODY_BYTES = 8 * 1024 * 1024
+MAX_BODY_BYTES = 50 * 1024 * 1024
+MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024
 MAX_EVENTS = 200
 
 
@@ -57,6 +61,7 @@ class TrinityBridge:
         self.home = Path(home).resolve()
         self.core_dir = self.home / "core"
         self.memory_dir = self.home / "memory"
+        self.upload_dir = self.memory_dir / "companion_uploads"
         self.history_path = self.memory_dir / "classic_chat_history.jsonl"
         self.command_path = self.core_dir / "cmd.txt"
         self.payload_path = self.core_dir / "payload.html"
@@ -79,10 +84,13 @@ class TrinityBridge:
 
     def send_message(self, payload):
         text = str(payload.get("text", "")).strip()
+        attachments = self._save_attachments(payload.get("attachments", []))
+        if not text and attachments:
+            text = "Bitte analysiere die beigefügten Anlagen."
         if not text:
-            raise ValueError("Text darf nicht leer sein.")
+            raise ValueError("Text oder Anlage darf nicht leer sein.")
 
-        request = build_chat_request(text, [], history_recorded=True)
+        request = build_chat_request(text, attachments, history_recorded=True)
         request["source"] = "ios"
         request["session_id"] = str(payload.get("session_id", "")).strip()
         request["privacy_mode"] = str(payload.get("privacy_mode", "local")).strip() or "local"
@@ -97,7 +105,7 @@ class TrinityBridge:
                     "role": "user",
                     "source": "ios",
                     "text": text,
-                    "attachments": [],
+                    "attachments": attachments,
                     "session_id": request["session_id"],
                     "privacy_mode": request["privacy_mode"],
                 },
@@ -105,6 +113,45 @@ class TrinityBridge:
             self.command_path.write_text(encode_chat_request(request), encoding="utf-8")
 
         return {"ok": True, "request_id": request["request_id"], "accepted_at": time.time()}
+
+    def _save_attachments(self, attachments):
+        saved = []
+        if not isinstance(attachments, list):
+            raise ValueError("attachments muss eine Liste sein.")
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
+        for item in attachments:
+            if not isinstance(item, dict):
+                continue
+            raw_name = str(item.get("name") or "anlage").strip()
+            name = Path(raw_name).name or "anlage"
+            mime = str(item.get("mime") or mimetypes.guess_type(name)[0] or "")
+            data_b64 = str(item.get("data_base64") or "")
+            if not data_b64:
+                continue
+            try:
+                data = base64.b64decode(data_b64, validate=True)
+            except ValueError as exc:
+                raise ValueError(f"Anlage `{name}` ist nicht gültig base64-kodiert.") from exc
+            if len(data) > MAX_ATTACHMENT_BYTES:
+                raise ValueError(
+                    f"Anlage `{name}` ist größer als {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB."
+                )
+            target = self.upload_dir / f"{uuid.uuid4().hex}_{name}"
+            target.write_bytes(data)
+            kind = item.get("kind") or attachment_kind(target)
+            if kind is None:
+                target.unlink(missing_ok=True)
+                raise ValueError(f"Nicht unterstützte Anlage: {name}")
+            saved.append(
+                {
+                    "name": name,
+                    "path": str(target),
+                    "kind": kind,
+                    "mime": mime or mimetypes.guess_type(name)[0] or "application/octet-stream",
+                    "size": len(data),
+                }
+            )
+        return saved
 
     def events_since(self, after=0.0, limit=MAX_EVENTS):
         events = []
