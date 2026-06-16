@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from html import escape
 
+from core.configuration import load_config
 from core.ui_modes import resolve_ui_modes
 
 
@@ -32,6 +33,13 @@ def _read_ui_modes(config_file, force_terminal=False, suppress_terminal=False):
 
 def _read_show_terminal(config_file):
     return _read_ui_modes(config_file)["terminal"]
+
+
+def _read_companion_config(config_file):
+    try:
+        return load_config(config_file).get("companion", {})
+    except Exception:
+        return {}
 
 
 def _console_python_executable(executable=None, platform_name=None):
@@ -130,6 +138,7 @@ def launch_trinity():
     classic_ui_script = os.path.join(base_dir, "trinity_classic.py")
     console_script = os.path.join(base_dir, "trinity_console.py")
     ear_script = os.path.join(base_dir, "core", "transcriber.py")
+    bridge_script = os.path.join(base_dir, "core", "trinity_bridge.py")
     config_file = os.path.join(base_dir, "core", "config.json")
     settings_script = os.path.join(base_dir, "core", "settings_ui.py")
     cli_script = os.path.join(base_dir, "trinity_cli.py")
@@ -172,6 +181,7 @@ def launch_trinity():
         ui_modes = surface_modes[surface]
     show_terminal = ui_modes["terminal"]
     child_env = _trinity_subprocess_env()
+    companion_config = _read_companion_config(config_file)
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -188,6 +198,36 @@ def launch_trinity():
         console_flags = 0
         if sys.platform == "win32" and show_terminal:
             console_flags = subprocess.CREATE_NEW_CONSOLE
+
+        bridge_process = None
+        if companion_config.get("enabled", False):
+            bridge_command = [
+                sys.executable,
+                "-u",
+                bridge_script,
+                "--home",
+                base_dir,
+                "--host",
+                str(companion_config.get("host") or "127.0.0.1"),
+                "--port",
+                str(companion_config.get("port") or 8765),
+            ]
+            token = str(companion_config.get("token") or "")
+            if token:
+                bridge_command.extend(["--token", token])
+            bridge_process = subprocess.Popen(
+                bridge_command,
+                stdout=None if show_terminal else runtime_log,
+                stderr=None if show_terminal else subprocess.STDOUT,
+                creationflags=0,
+                env=child_env,
+            )
+            _log_message(
+                launcher_log,
+                "Companion Bridge gestartet auf "
+                f"{companion_config.get('host') or '127.0.0.1'}:"
+                f"{companion_config.get('port') or 8765}",
+            )
 
         if show_terminal:
             ear_process = subprocess.Popen(
@@ -253,6 +293,12 @@ def launch_trinity():
                     ear_process = None
                     if return_code == 0 or not ui_processes:
                         break
+                if bridge_process is not None and bridge_process.poll() is not None:
+                    _log_message(
+                        launcher_log,
+                        f"Companion Bridge wurde mit Code {bridge_process.returncode} beendet.",
+                    )
+                    bridge_process = None
                 time.sleep(1)
         except KeyboardInterrupt:
             _log_message(launcher_log, "Trinity wurde manuell beendet.")
@@ -260,6 +306,7 @@ def launch_trinity():
             for process in ui_processes.values():
                 _terminate(process)
             _terminate(ear_process)
+            _terminate(bridge_process)
             _log_message(launcher_log, "Trinity ist schlafen gegangen.")
 
 if __name__ == "__main__":

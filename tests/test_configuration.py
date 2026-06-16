@@ -17,6 +17,8 @@ def test_missing_config_uses_independent_defaults(tmp_path):
     assert "changed" not in second["persona"]["trigger_variants"]
     assert first["system"]["eyes_ui_enabled"] is False
     assert first["system"]["classic_ui_enabled"] is True
+    assert first["companion"]["enabled"] is False
+    assert first["companion"]["port"] == 8765
 
 
 def test_config_round_trip_and_dotted_setting(tmp_path):

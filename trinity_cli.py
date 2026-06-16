@@ -320,6 +320,22 @@ def run_tui_command(home, args):
     return run_tui(home, args)
 
 
+def run_bridge_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from configuration import load_config  # pylint: disable=import-outside-toplevel
+    from trinity_bridge import run_bridge  # pylint: disable=import-outside-toplevel
+
+    companion = load_config(Path(home) / "core" / "config.json").get("companion", {})
+    host = args.host or companion.get("host") or "127.0.0.1"
+    port = args.port or companion.get("port") or 8765
+    token = args.token
+    if token is None:
+        token = companion.get("token", os.environ.get("TRINITY_BRIDGE_TOKEN", ""))
+    return run_bridge(home, host=host, port=port, token=token)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -366,6 +382,21 @@ def build_parser():
         action="store_true",
         help="Zusätzlich origin/main auf Aktualität prüfen",
     )
+    bridge = subparsers.add_parser(
+        "bridge",
+        help="HTTP-Bridge für Companion-Apps starten",
+    )
+    bridge.add_argument(
+        "--host",
+        default=None,
+        help="Bind-Adresse, z.B. 0.0.0.0 für Tailscale",
+    )
+    bridge.add_argument("--port", type=int, default=None, help="HTTP-Port")
+    bridge.add_argument(
+        "--token",
+        default=None,
+        help="Optionales Bearer-Token für Companion-Clients",
+    )
     return parser
 
 
@@ -395,6 +426,8 @@ def main(argv=None):
             return run_tui_command(home, args)
         if args.command == "doctor":
             return run_doctor_command(home, args)
+        if args.command == "bridge":
+            return run_bridge_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1
