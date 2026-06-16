@@ -12,8 +12,8 @@ def resolve_ui_modes(
     system_config = system_config or {}
     host = platform_name or platform.system()
 
-    eyes = bool(system_config.get("eyes_ui_enabled", True))
-    classic = bool(system_config.get("classic_ui_enabled", False))
+    eyes = bool(system_config.get("eyes_ui_enabled", False))
+    classic = bool(system_config.get("classic_ui_enabled", True))
     terminal = bool(
         system_config.get(
             "terminal_cli_enabled",

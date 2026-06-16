@@ -63,8 +63,8 @@ def default_config(platform_name=None):
         },
         "system": {
             "show_terminal": windows,
-            "eyes_ui_enabled": True,
-            "classic_ui_enabled": False,
+            "eyes_ui_enabled": False,
+            "classic_ui_enabled": True,
             "terminal_cli_enabled": windows,
             "mode": "chat",
             "windows_speech_enabled": False,

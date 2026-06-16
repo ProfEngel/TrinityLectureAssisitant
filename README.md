@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.1:** ClassicUI als Erststart-Standard mit Reitern für Chat, Live-Mitschrift/Agentenlog und Memory Graph sowie Dark-/Light-Ansicht.
 > - **v0.11.0:** Trinity TUI mit Slash-Commands, Sessions, lokalem SQLite-Memory, Self-Bake/Dreaming und Memory-Graph in der ClassicUI.
 > - **v0.10.3:** Classic-Chat mit Verlauf, Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen.
 > - **v0.10.2:** Gemeinsame Classic-/Settings-App sowie globale CLI mit Onboarding und Doctor.
@@ -179,16 +180,21 @@ unabhängig kombinieren:
 
 - **Augen-UI:** schwebende Trinity für Vorlesung, Präsentation und schnelle Zurufe
 - **Classic-UI:** normale App mit separater Live-Mitschrift und dauerhaftem
-  Chatverlauf. Texte, PDFs und Bilder können per Button oder Drag-and-drop an den
+  Chatverlauf. Die Ansicht ist in Reiter für **Chat**, **Live-Mitschrift** und
+  **Memory Graph** gegliedert. Die Live-Mitschrift zeigt zusätzlich den
+  Laufzeit-/Agentenlog, damit geladene Agenten, Skills und Tool-Ausgaben sichtbar
+  bleiben. Texte, PDFs und Bilder können per Button oder Drag-and-drop an den
   Prompt angehängt werden. Generierte Bilder, Audio-, Video- und Agentenergebnisse
-  bleiben direkt bei der jeweiligen Antwort sichtbar. Das Zahnrad oben rechts öffnet
-  die Einstellungen im selben Fenster.
+  bleiben direkt bei der jeweiligen Antwort sichtbar. Das Trinity-Logo erscheint
+  links oben, das Zahnrad öffnet die Einstellungen im selben Fenster, und die
+  Ansicht kann zwischen Dark Mode und Hell Mode wechseln.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
 
-Bestehende Installationen behalten standardmäßig die Augen-UI. Wenn Augen- und
-Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend die Terminal-CLI.
-Damit bleibt die Anwendung immer bedienbar und schafft zugleich die Grundlage für
-eine spätere Ubuntu-/Linux-Portierung.
+Seit v0.11.1 startet eine frische Installation standardmäßig mit der Classic-UI.
+Bestehende Installationen behalten ihre gespeicherten Oberflächen-Einstellungen.
+Wenn Augen- und Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend
+die Terminal-CLI. Damit bleibt die Anwendung immer bedienbar und schafft zugleich
+die Grundlage für eine spätere Ubuntu-/Linux-Portierung.
 
 ### Trinity im Terminal
 

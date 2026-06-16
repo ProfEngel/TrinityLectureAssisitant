@@ -2,13 +2,14 @@
 
 import glob
 import html
+import json
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QColor, QIcon, QKeyEvent, QTextCursor
+from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPixmap, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -16,7 +17,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
-    QSplitter,
     QStackedWidget,
     QTabWidget,
     QTextEdit,
@@ -46,6 +46,44 @@ from memory_store import MemoryStore, render_graph_html
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
 CHAT_UPLOAD_DIR = os.path.join(MEMORY_DIR, "chat_uploads")
+CONFIG_FILE = os.path.join(CORE_DIR, "config.json")
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+
+
+THEMES = {
+    "dark": {
+        "app_bg": "#09090b",
+        "panel_bg": "#121214",
+        "raised_bg": "#18181b",
+        "hover_bg": "#27272a",
+        "text": "#f4f4f5",
+        "muted": "#a1a1aa",
+        "border": "#27272a",
+        "strong_border": "#3f3f46",
+        "user_bg": "#1d2838",
+        "user_border": "#334155",
+        "primary_bg": "#f4f4f5",
+        "primary_text": "#09090b",
+        "link": "#38bdf8",
+        "selection": "#3f3f46",
+    },
+    "light": {
+        "app_bg": "#f8fafc",
+        "panel_bg": "#ffffff",
+        "raised_bg": "#eef2f7",
+        "hover_bg": "#e2e8f0",
+        "text": "#0f172a",
+        "muted": "#64748b",
+        "border": "#d7dde7",
+        "strong_border": "#cbd5e1",
+        "user_bg": "#e0f2fe",
+        "user_border": "#7dd3fc",
+        "primary_bg": "#0f172a",
+        "primary_text": "#ffffff",
+        "link": "#0369a1",
+        "selection": "#bfdbfe",
+    },
+}
 
 
 def _latest_transcript(memory_dir=MEMORY_DIR):
@@ -81,7 +119,50 @@ def _attachment_html(attachment):
     )
 
 
-def _render_chat_html(events):
+def _tail_file(path, max_lines=240):
+    try:
+        lines = Path(path).read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines()
+    except OSError:
+        return ""
+    return "\n".join(lines[-max_lines:])
+
+
+def _build_live_log_text(transcript_path, logs_dir=LOGS_DIR):
+    sections = []
+    if transcript_path:
+        try:
+            transcript = Path(transcript_path).read_text(
+                encoding="utf-8",
+                errors="replace",
+            ).strip()
+        except OSError:
+            transcript = ""
+        if transcript:
+            sections.append(f"## Live-Mitschrift\n\n{transcript}")
+
+    runtime = _tail_file(os.path.join(logs_dir, "runtime.log"))
+    if runtime:
+        sections.append(
+            "## Laufzeitlog / Agenten\n\n"
+            "Hier erscheinen geladene Agenten, aktivierte Skills, Tool-Ausgaben "
+            "und Fehlermeldungen aus dem Trinity-Kernprozess.\n\n"
+            f"{runtime}"
+        )
+
+    launcher = _tail_file(os.path.join(logs_dir, "launcher.log"), max_lines=80)
+    if launcher:
+        sections.append(f"## Launcher\n\n{launcher}")
+
+    return "\n\n---\n\n".join(sections) or (
+        "Noch keine Live-Mitschrift oder Laufzeitlogs vorhanden."
+    )
+
+
+def _render_chat_html(events, theme="dark"):
+    colors = THEMES.get(theme, THEMES["dark"])
     message_html = []
     for event in events:
         role = event.get("role", "assistant")
@@ -119,27 +200,27 @@ def _render_chat_html(events):
     content = "".join(message_html) or empty
     return f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
-html, body {{ background:#09090b; color:#f4f4f5; font-family:-apple-system,
+html, body {{ background:{colors["app_bg"]}; color:{colors["text"]}; font-family:-apple-system,
 BlinkMacSystemFont,"Segoe UI",sans-serif; margin:0; }}
 body {{ padding:18px; }}
-.empty {{ color:#71717a; text-align:center; padding:80px 20px; }}
+.empty {{ color:{colors["muted"]}; text-align:center; padding:80px 20px; }}
 .message {{ max-width:86%; margin:0 0 16px; padding:13px 15px;
-border:1px solid #27272a; border-radius:14px; background:#121214; }}
-.message.user {{ margin-left:auto; background:#1d2838; border-color:#334155; }}
+border:1px solid {colors["border"]}; border-radius:14px; background:{colors["panel_bg"]}; }}
+.message.user {{ margin-left:auto; background:{colors["user_bg"]}; border-color:{colors["user_border"]}; }}
 .message-meta {{ display:flex; justify-content:space-between; gap:20px;
-font-size:11px; font-weight:700; color:#a1a1aa; margin-bottom:8px; }}
+font-size:11px; font-weight:700; color:{colors["muted"]}; margin-bottom:8px; }}
 .message-text {{ white-space:normal; line-height:1.55; overflow-wrap:anywhere; }}
 .attachment {{ display:inline-flex; vertical-align:top; flex-direction:column;
 gap:4px; max-width:220px; margin:10px 8px 0 0; padding:9px;
-border:1px solid #3f3f46; border-radius:10px; background:#18181b; }}
-.attachment span {{ color:#a1a1aa; font-size:11px; }}
+border:1px solid {colors["strong_border"]}; border-radius:10px; background:{colors["raised_bg"]}; }}
+.attachment span {{ color:{colors["muted"]}; font-size:11px; }}
 .attachment-preview {{ width:200px; max-height:150px; object-fit:cover;
 border-radius:7px; margin-bottom:4px; }}
-.payload-card {{ margin-top:12px; border-top:1px solid #27272a; padding-top:12px; }}
-.payload-title {{ color:#a1a1aa; font-size:11px; font-weight:700; margin-bottom:8px; }}
-iframe {{ width:100%; min-height:360px; border:1px solid #27272a;
-border-radius:10px; background:#09090b; }}
-a {{ color:#38bdf8; }}
+.payload-card {{ margin-top:12px; border-top:1px solid {colors["border"]}; padding-top:12px; }}
+.payload-title {{ color:{colors["muted"]}; font-size:11px; font-weight:700; margin-bottom:8px; }}
+iframe {{ width:100%; min-height:360px; border:1px solid {colors["border"]};
+border-radius:10px; background:{colors["app_bg"]}; }}
+a {{ color:{colors["link"]}; }}
 </style></head><body>{content}<script>
 window.scrollTo(0, document.body.scrollHeight);
 </script></body></html>"""
@@ -173,6 +254,7 @@ class ClassicWindow(QMainWindow):
         self._last_state = ""
         self.pending_attachments = []
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
+        self.theme = self._load_theme()
         self.setAcceptDrops(True)
 
         self.pages = QStackedWidget()
@@ -182,58 +264,65 @@ class ClassicWindow(QMainWindow):
         layout.setSpacing(12)
 
         header = QHBoxLayout()
+        self.logo = QLabel()
+        self.logo.setObjectName("logo")
+        logo_path = self._logo_path()
+        if logo_path:
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                self.logo.setPixmap(
+                    pixmap.scaled(
+                        40,
+                        40,
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation,
+                    )
+                )
+        self.logo.setFixedSize(46, 42)
         title = QLabel("Trinity Assistant")
         title.setObjectName("title")
         self.status = QLabel("Bereit")
         self.status.setObjectName("status")
+        self.theme_button = QPushButton()
+        self.theme_button.setObjectName("theme")
+        self.theme_button.setFixedHeight(38)
+        self.theme_button.setToolTip("Zwischen Dark Mode und Hell Mode wechseln")
+        self.theme_button.clicked.connect(self.toggle_theme)
         settings_button = QPushButton("⚙")
         settings_button.setObjectName("gear")
         settings_button.setFixedSize(42, 38)
         settings_button.setToolTip("Einstellungen öffnen")
         settings_button.clicked.connect(self.show_settings)
+        header.addWidget(self.logo)
         header.addWidget(title)
         header.addStretch()
         header.addWidget(self.status)
+        header.addWidget(self.theme_button)
         header.addWidget(settings_button)
         layout.addLayout(header)
 
-        splitter = QSplitter(Qt.Horizontal)
-        transcript_panel = QWidget()
-        transcript_layout = QVBoxLayout(transcript_panel)
-        transcript_layout.setContentsMargins(0, 0, 0, 0)
-        transcript_layout.setSpacing(6)
-        transcript_label = QLabel("Live-Mitschrift")
-        transcript_label.setObjectName("section")
-        self.transcript = QTextEdit()
-        self.transcript.setObjectName("transcript")
-        self.transcript.setReadOnly(True)
-        self.transcript.setPlaceholderText("Die aktuelle Mitschrift erscheint hier.")
-        transcript_layout.addWidget(transcript_label)
-        transcript_layout.addWidget(self.transcript)
-
-        chat_panel = QWidget()
-        chat_layout = QVBoxLayout(chat_panel)
-        chat_layout.setContentsMargins(0, 0, 0, 0)
-        chat_layout.setSpacing(8)
-        self.right_tabs = QTabWidget()
+        self.main_tabs = QTabWidget()
 
         chat_tab = QWidget()
         chat_tab_layout = QVBoxLayout(chat_tab)
         chat_tab_layout.setContentsMargins(0, 0, 0, 0)
         chat_tab_layout.setSpacing(8)
         self.chat_history = QWebEngineView()
-        self.chat_history.page().setBackgroundColor(QColor("#09090b"))
-        web_settings = self.chat_history.settings()
-        web_settings.setAttribute(
-            QWebEngineSettings.LocalContentCanAccessRemoteUrls,
-            True,
-        )
-        web_settings.setAttribute(
-            QWebEngineSettings.LocalContentCanAccessFileUrls,
-            True,
-        )
-        self.chat_history.setHtml(_render_chat_html([]))
+        self._configure_web_view(self.chat_history)
+        self.chat_history.setHtml(_render_chat_html([], self.theme))
         chat_tab_layout.addWidget(self.chat_history, 1)
+
+        transcript_tab = QWidget()
+        transcript_layout = QVBoxLayout(transcript_tab)
+        transcript_layout.setContentsMargins(0, 0, 0, 0)
+        transcript_layout.setSpacing(8)
+        self.transcript = QTextEdit()
+        self.transcript.setObjectName("transcript")
+        self.transcript.setReadOnly(True)
+        self.transcript.setPlaceholderText(
+            "Live-Mitschrift, Agentenstarts und Laufzeitlog erscheinen hier."
+        )
+        transcript_layout.addWidget(self.transcript)
 
         memory_tab = QWidget()
         memory_layout = QVBoxLayout(memory_tab)
@@ -252,28 +341,17 @@ class ClassicWindow(QMainWindow):
         memory_header.addWidget(bake_button)
         memory_header.addWidget(refresh_memory_button)
         self.memory_graph = QWebEngineView()
-        self.memory_graph.page().setBackgroundColor(QColor("#09090b"))
-        graph_settings = self.memory_graph.settings()
-        graph_settings.setAttribute(
-            QWebEngineSettings.LocalContentCanAccessRemoteUrls,
-            True,
+        self._configure_web_view(self.memory_graph)
+        self.memory_graph.setHtml(
+            render_graph_html({"nodes": [], "links": []}, self.theme)
         )
-        graph_settings.setAttribute(
-            QWebEngineSettings.LocalContentCanAccessFileUrls,
-            True,
-        )
-        self.memory_graph.setHtml(render_graph_html({"nodes": [], "links": []}))
         memory_layout.addLayout(memory_header)
         memory_layout.addWidget(self.memory_graph, 1)
 
-        self.right_tabs.addTab(chat_tab, "Chat")
-        self.right_tabs.addTab(memory_tab, "Memory Graph")
-        chat_layout.addWidget(self.right_tabs, 1)
-
-        splitter.addWidget(transcript_panel)
-        splitter.addWidget(chat_panel)
-        splitter.setSizes([390, 710])
-        layout.addWidget(splitter, 1)
+        self.main_tabs.addTab(chat_tab, "Chat")
+        self.main_tabs.addTab(transcript_tab, "Live-Mitschrift")
+        self.main_tabs.addTab(memory_tab, "Memory Graph")
+        layout.addWidget(self.main_tabs, 1)
 
         attachment_row = QHBoxLayout()
         self.attachment_summary = QLabel("")
@@ -315,52 +393,113 @@ class ClassicWindow(QMainWindow):
         self.pages.addWidget(self.settings_page)
         self.setCentralWidget(self.pages)
         self._apply_style()
+        self._update_theme_button()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(400)
         self.refresh()
 
+    def _logo_path(self):
+        candidates = [
+            os.path.join(CORE_DIR, "icon.png"),
+            os.path.join(BASE_DIR, "assets", "trinity_icon_new.png"),
+            os.path.join(BASE_DIR, "assets", "icon.PNG"),
+        ]
+        return next((path for path in candidates if os.path.exists(path)), None)
+
+    def _configure_web_view(self, view):
+        view.page().setBackgroundColor(QColor(THEMES[self.theme]["app_bg"]))
+        settings = view.settings()
+        settings.setAttribute(
+            QWebEngineSettings.LocalContentCanAccessRemoteUrls,
+            True,
+        )
+        settings.setAttribute(
+            QWebEngineSettings.LocalContentCanAccessFileUrls,
+            True,
+        )
+
+    def _load_theme(self):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as handle:
+                config = json.load(handle)
+            theme = config.get("system", {}).get("classic_theme", "dark")
+        except (OSError, json.JSONDecodeError):
+            theme = "dark"
+        return theme if theme in THEMES else "dark"
+
+    def _save_theme(self):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as handle:
+                config = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            config = {}
+        config.setdefault("system", {})["classic_theme"] = self.theme
+        with open(CONFIG_FILE, "w", encoding="utf-8") as handle:
+            json.dump(config, handle, indent=2, ensure_ascii=False)
+
+    def _update_theme_button(self):
+        if self.theme == "dark":
+            self.theme_button.setText("Hell")
+        else:
+            self.theme_button.setText("Dunkel")
+
+    def toggle_theme(self):
+        self.theme = "light" if self.theme == "dark" else "dark"
+        self._save_theme()
+        self._apply_style()
+        self._update_theme_button()
+        self._chat_signature = None
+        self._memory_signature = None
+        self._refresh_chat_history()
+        self.refresh_memory_graph()
+
     def _apply_style(self):
-        self.setStyleSheet("""
-            QMainWindow, QWidget { background: #09090b; color: #e4e4e7; }
-            QLabel#title { font-size: 22px; font-weight: 650; }
-            QLabel#section { color: #a1a1aa; font-size: 12px; font-weight: 600; }
-            QLabel#status {
-                background: #18181b; border: 1px solid #27272a;
-                border-radius: 12px; padding: 6px 12px; color: #a1a1aa;
-            }
-            QTextEdit {
-                background: #121214; color: #f4f4f5;
-                border: 1px solid #27272a; border-radius: 8px;
-                padding: 10px; selection-background-color: #3f3f46;
-            }
-            QTextEdit#transcript { font-family: "SF Mono", Consolas, monospace; }
-            QLabel#attachments {
-                background: #18181b; border: 1px solid #3f3f46;
-                border-radius: 8px; padding: 8px 10px; color: #d4d4d8;
-            }
-            QPushButton {
-                background: #18181b; color: #e4e4e7;
-                border: 1px solid #3f3f46; border-radius: 8px;
+        colors = THEMES[self.theme]
+        for view in (getattr(self, "chat_history", None), getattr(self, "memory_graph", None)):
+            if view is not None:
+                view.page().setBackgroundColor(QColor(colors["app_bg"]))
+        self.setStyleSheet(f"""
+            QMainWindow, QWidget {{ background: {colors["app_bg"]}; color: {colors["text"]}; }}
+            QLabel#title {{ font-size: 22px; font-weight: 650; }}
+            QLabel#section {{ color: {colors["muted"]}; font-size: 12px; font-weight: 600; }}
+            QLabel#logo {{ background: transparent; }}
+            QLabel#status {{
+                background: {colors["raised_bg"]}; border: 1px solid {colors["border"]};
+                border-radius: 12px; padding: 6px 12px; color: {colors["muted"]};
+            }}
+            QTextEdit {{
+                background: {colors["panel_bg"]}; color: {colors["text"]};
+                border: 1px solid {colors["border"]}; border-radius: 8px;
+                padding: 10px; selection-background-color: {colors["selection"]};
+            }}
+            QTextEdit#transcript {{ font-family: "SF Mono", Consolas, monospace; }}
+            QLabel#attachments {{
+                background: {colors["raised_bg"]}; border: 1px solid {colors["strong_border"]};
+                border-radius: 8px; padding: 8px 10px; color: {colors["text"]};
+            }}
+            QPushButton {{
+                background: {colors["raised_bg"]}; color: {colors["text"]};
+                border: 1px solid {colors["strong_border"]}; border-radius: 8px;
                 padding: 9px 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: #27272a; }
-            QPushButton#primary { background: #f4f4f5; color: #09090b; }
-            QPushButton#subtle { padding: 7px 10px; color: #a1a1aa; }
-            QPushButton#gear { font-size: 20px; padding: 0; }
-            QSplitter::handle { background: #27272a; width: 2px; }
-            QTabWidget::pane {
-                border: 1px solid #27272a; border-radius: 10px;
+            }}
+            QPushButton:hover {{ background: {colors["hover_bg"]}; }}
+            QPushButton#primary {{ background: {colors["primary_bg"]}; color: {colors["primary_text"]}; }}
+            QPushButton#subtle {{ padding: 7px 10px; color: {colors["muted"]}; }}
+            QPushButton#gear {{ font-size: 20px; padding: 0; }}
+            QPushButton#theme {{ padding: 7px 13px; }}
+            QTabWidget::pane {{
+                border: 1px solid {colors["border"]}; border-radius: 10px;
                 top: -1px;
-            }
-            QTabBar::tab {
-                background: #121214; color: #a1a1aa;
-                border: 1px solid #27272a; border-bottom: none;
+            }}
+            QTabBar::tab {{
+                background: {colors["panel_bg"]}; color: {colors["muted"]};
+                border: 1px solid {colors["border"]}; border-bottom: none;
                 padding: 8px 14px; border-top-left-radius: 8px;
                 border-top-right-radius: 8px;
-            }
-            QTabBar::tab:selected { background: #18181b; color: #f4f4f5; }
+            }}
+            QTabBar::tab:selected {{ background: {colors["raised_bg"]}; color: {colors["text"]}; }}
         """)
 
     def refresh(self):
@@ -390,20 +529,28 @@ class ClassicWindow(QMainWindow):
 
     def _refresh_transcript(self):
         path = _latest_transcript()
-        if not path:
-            return
+        signature_parts = []
         try:
-            signature = (path, os.path.getmtime(path), os.path.getsize(path))
+            if path:
+                signature_parts.append((path, os.path.getmtime(path), os.path.getsize(path)))
+            for log_name in ("runtime.log", "launcher.log"):
+                log_path = os.path.join(LOGS_DIR, log_name)
+                if os.path.exists(log_path):
+                    signature_parts.append(
+                        (
+                            log_path,
+                            os.path.getmtime(log_path),
+                            os.path.getsize(log_path),
+                        )
+                    )
         except OSError:
             return
+        signature = tuple(signature_parts)
         if signature == self._transcript_signature:
-            return
-        try:
-            content = open(path, encoding="utf-8", errors="replace").read()
-        except OSError:
             return
         self._transcript_path = path
         self._transcript_signature = signature
+        content = _build_live_log_text(path)
         self.transcript.setPlainText(content)
         self.transcript.moveCursor(QTextCursor.End)
 
@@ -418,7 +565,7 @@ class ClassicWindow(QMainWindow):
         self._chat_signature = signature
         events = load_chat_events(path)
         base_url = QUrl.fromLocalFile(BASE_DIR + os.sep)
-        self.chat_history.setHtml(_render_chat_html(events), base_url)
+        self.chat_history.setHtml(_render_chat_html(events, self.theme), base_url)
 
     def _refresh_memory_if_changed(self):
         path = os.path.join(MEMORY_DIR, "trinity_memory.sqlite3")
@@ -439,7 +586,7 @@ class ClassicWindow(QMainWindow):
             f"{status['unbaked']} unbaked"
         )
         base_url = QUrl.fromLocalFile(BASE_DIR + os.sep)
-        self.memory_graph.setHtml(render_graph_html(graph), base_url)
+        self.memory_graph.setHtml(render_graph_html(graph, self.theme), base_url)
 
     def bake_memory(self):
         try:
