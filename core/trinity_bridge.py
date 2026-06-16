@@ -139,7 +139,7 @@ class TrinityBridge:
                 self.history_path,
                 {
                     "request_id": event["event_id"],
-                    "role": "transcript",
+                    "role": "user",
                     "source": "ios-stt",
                     "text": text,
                     "session_id": event["session_id"],

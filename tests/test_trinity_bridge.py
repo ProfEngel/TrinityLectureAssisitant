@@ -2,7 +2,7 @@ import json
 import base64
 
 from trinity_bridge import TrinityBridge
-from chat_protocol import append_chat_event, parse_command
+from chat_protocol import append_chat_event, load_chat_events, parse_command
 from external_stt_feed import pop_external_stt_events
 
 
@@ -58,6 +58,11 @@ def test_bridge_writes_live_stt_feed(tmp_path):
     assert events[0]["text"] == "Trinity kannst du das erklaeren"
     assert events[0]["is_final"] is True
     assert events[0]["speak"] is True
+
+    history = load_chat_events(home / "memory" / "classic_chat_history.jsonl")
+    assert history[0]["role"] == "user"
+    assert history[0]["source"] == "ios-stt"
+    assert history[0]["text"] == "Trinity kannst du das erklaeren"
 
 
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
