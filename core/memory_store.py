@@ -643,27 +643,50 @@ class MemoryStore:
         return {"nodes": nodes, "links": links[:220]}
 
 
-def render_graph_html(graph):
+def render_graph_html(graph, theme="dark"):
     """Render a small dependency-free graph view for ClassicUI and CLI export."""
     nodes = graph.get("nodes") or []
     links = graph.get("links") or []
     payload = json.dumps({"nodes": nodes, "links": links}, ensure_ascii=False)
+    palettes = {
+        "dark": {
+            "bg": "#09090b",
+            "text": "#f4f4f5",
+            "muted": "#a1a1aa",
+            "panel": "#121214",
+            "border": "#27272a",
+            "radial_a": "#18181b",
+            "radial_b": "#09090b",
+            "stroke_shadow": "#09090b",
+        },
+        "light": {
+            "bg": "#f8fafc",
+            "text": "#0f172a",
+            "muted": "#64748b",
+            "panel": "#ffffff",
+            "border": "#d7dde7",
+            "radial_a": "#ffffff",
+            "radial_b": "#e2e8f0",
+            "stroke_shadow": "#f8fafc",
+        },
+    }
+    colors = palettes.get(theme, palettes["dark"])
     return f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-html, body {{ margin:0; background:#09090b; color:#f4f4f5; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }}
+html, body {{ margin:0; background:{colors["bg"]}; color:{colors["text"]}; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }}
 body {{ padding:18px; }}
-.empty {{ color:#71717a; text-align:center; padding:80px 20px; }}
-svg {{ width:100%; height:520px; border:1px solid #27272a; border-radius:16px; background:radial-gradient(circle at 50% 40%, #18181b, #09090b 70%); }}
-line {{ stroke:#a1a1aa; }}
+.empty {{ color:{colors["muted"]}; text-align:center; padding:80px 20px; }}
+svg {{ width:100%; height:520px; border:1px solid {colors["border"]}; border-radius:16px; background:radial-gradient(circle at 50% 40%, {colors["radial_a"]}, {colors["radial_b"]} 70%); }}
+line {{ stroke:{colors["muted"]}; }}
 circle {{ fill:#38bdf8; stroke:#e4e4e7; stroke-width:1.2; }}
 .node-memory circle {{ fill:#a78bfa; }}
 .node-entity circle {{ fill:#22c55e; }}
-text {{ fill:#d4d4d8; font-size:11px; paint-order:stroke; stroke:#09090b; stroke-width:3px; }}
-.meta {{ display:flex; gap:10px; margin-bottom:12px; color:#a1a1aa; font-size:12px; }}
-.pill {{ border:1px solid #27272a; border-radius:999px; padding:6px 10px; background:#121214; }}
+text {{ fill:{colors["text"]}; font-size:11px; paint-order:stroke; stroke:{colors["stroke_shadow"]}; stroke-width:3px; }}
+.meta {{ display:flex; gap:10px; margin-bottom:12px; color:{colors["muted"]}; font-size:12px; }}
+.pill {{ border:1px solid {colors["border"]}; border-radius:999px; padding:6px 10px; background:{colors["panel"]}; }}
 </style>
 </head>
 <body>

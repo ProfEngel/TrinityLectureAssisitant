@@ -27,6 +27,7 @@ def test_memory_store_remembers_searches_bakes_and_graphs(tmp_path):
     assert graph["nodes"]
     assert graph["links"]
     assert "Memory-Knoten" in render_graph_html(graph)
+    assert "#f8fafc" in render_graph_html(graph, "light")
 
 
 def test_memory_store_imports_classic_chat_history(tmp_path):
