@@ -32,7 +32,7 @@ def test_windows_config_disables_speech_input_by_default(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    ear = object.__new__(transcriber.MorpheusEar)
+    ear = object.__new__(transcriber.TrinityEar)
     ear.config_path = str(config_path)
     monkeypatch.setattr(transcriber.sys, "platform", "win32")
 
@@ -62,7 +62,7 @@ def test_windows_speech_can_be_enabled_explicitly(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    ear = object.__new__(transcriber.MorpheusEar)
+    ear = object.__new__(transcriber.TrinityEar)
     ear.config_path = str(config_path)
     monkeypatch.setattr(transcriber.sys, "platform", "win32")
 
@@ -89,7 +89,7 @@ def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    ear = object.__new__(transcriber.MorpheusEar)
+    ear = object.__new__(transcriber.TrinityEar)
     ear.config_path = str(config_path)
     ear.brain = type(
         "Brain",
@@ -274,10 +274,10 @@ def test_whisper_command_works_without_loading_audio(tmp_path, monkeypatch):
     monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
     monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
     monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
-    monkeypatch.setattr(transcriber.MorpheusEar, "load_config", fake_load_config)
-    monkeypatch.setattr(transcriber.MorpheusEar, "trigger_action", fake_trigger)
+    monkeypatch.setattr(transcriber.TrinityEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.TrinityEar, "trigger_action", fake_trigger)
 
-    ear = transcriber.MorpheusEar()
+    ear = transcriber.TrinityEar()
     ear.start()
 
     assert received == [("Teste die LLM-Verbindung", True)]
@@ -334,10 +334,10 @@ def test_structured_classic_command_reaches_runtime_with_attachments(
     monkeypatch.setattr(transcriber, "CHAT_HISTORY_FILE", str(memory_dir / "chat.jsonl"))
     monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
     monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
-    monkeypatch.setattr(transcriber.MorpheusEar, "load_config", fake_load_config)
-    monkeypatch.setattr(transcriber.MorpheusEar, "trigger_action", fake_trigger)
+    monkeypatch.setattr(transcriber.TrinityEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.TrinityEar, "trigger_action", fake_trigger)
 
-    ear = transcriber.MorpheusEar()
+    ear = transcriber.TrinityEar()
     ear.start()
 
     assert received[0][0] == "Analysiere das Bild"

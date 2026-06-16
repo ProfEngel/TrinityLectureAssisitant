@@ -10,8 +10,8 @@ def simulate_trigger():
 
     with open(transcript_file, "r") as f:
         lines = f.readlines()
-        if any("Morpheus" in line for line in lines):
-            print("!!! TRIGGER ERKANNT: Morpheus wurde gerufen !!!")
+        if any("Trinity" in line for line in lines):
+            print("!!! TRIGGER ERKANNT: Trinity wurde gerufen !!!")
             # Hier würde der OpenClaw Call erfolgen
             return True
     return False

@@ -206,6 +206,50 @@ class TrinityBrain:
         except FileNotFoundError:
             return fallback
 
+    def _is_explicit_local_media_request(self, router_text):
+        """Route image uploads to ComfyUI only when the user explicitly asks for it."""
+        text = (router_text or "").lower()
+        local_markers = [
+            "comfyui",
+            "flux",
+            "lokal",
+            "lokales bild",
+            "lokal generier",
+            "lokal erstell",
+            "auf meinem server",
+            "auf dem server",
+            "render ein",
+            "rendere",
+        ]
+        edit_markers = [
+            "bearbeit",
+            "änder",
+            "aender",
+            "anpass",
+            "modifizier",
+            "verwandle",
+            "transform",
+            "nimm dieses bild",
+            "aus diesem bild",
+            "mach daraus",
+            "erstelle lokal",
+            "generiere lokal",
+            "lokal bild",
+        ]
+        video_markers = ["video", "kurzvideo", "animier", "animation", "i2v", "bewegung"]
+        has_local_marker = any(marker in text for marker in local_markers)
+        has_edit_marker = any(marker in text for marker in edit_markers + video_markers)
+        return has_local_marker and has_edit_marker
+
+    def _skill_allowed_for_image_upload(self, skill, router_text):
+        """Avoid hijacking normal image understanding with generation agents."""
+        module_name = getattr(skill, "__name__", "")
+        if module_name.endswith("comfyui_agent") or "comfyui_agent" in module_name:
+            return self._is_explicit_local_media_request(router_text)
+        if module_name.endswith("image_agent") or "image_agent" in module_name:
+            return False
+        return True
+
 
     def get_soul(self):
         return self._soul_cache
@@ -246,6 +290,13 @@ class TrinityBrain:
         primary_image_path = attachment_content["primary_image_path"]
         if primary_image_path:
             self.last_media_path = primary_image_path
+        if attachments:
+            kinds = ", ".join(
+                str(item.get("kind") or "file") for item in attachments
+            )
+            print(f"📎 Anlagen empfangen: {len(attachments)} ({kinds})")
+        if primary_image_path:
+            print(f"🖼️ Bildanlage für Vision-Modell vorbereitet: {primary_image_path}")
         
         # Agentic Router
         search_context = ""
@@ -295,6 +346,12 @@ class TrinityBrain:
         # --- DYNAMIC SKILL DISPATCH (T2I / I2I / alle anderen) ---
         if not has_payload and not search_context:
             for skill in getattr(self, 'live_skills', []):
+                if primary_image_path and not self._skill_allowed_for_image_upload(skill, router_text):
+                    print(
+                        f"🖼️ Überspringe {getattr(skill, '__name__', 'Skill')} "
+                        "für normale Bildanalyse."
+                    )
+                    continue
                 if skill.can_handle(router_text):
                     try:
                         result = skill.execute(user_query, context={

@@ -1,5 +1,5 @@
 const body = document.body;
-const trinity = document.getElementById('morpheus-container'); // Die ID im HTML lassen wir vorerst gleich
+const trinity = document.getElementById('trinity-container');
 const overlay = document.getElementById('content-overlay');
 const closeBtn = document.getElementById('close-btn');
 const statusText = document.getElementById('status-text');
