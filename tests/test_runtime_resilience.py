@@ -183,6 +183,29 @@ def test_invalid_config_keeps_a_graphical_ui_available(tmp_path):
     assert modes["eyes"] is False
 
 
+def test_launcher_reads_companion_bridge_config(tmp_path):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "companion": {
+                    "enabled": True,
+                    "host": "0.0.0.0",
+                    "port": 8765,
+                    "token": "secret",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    companion = trinity_launcher._read_companion_config(str(config_path))
+
+    assert companion["enabled"] is True
+    assert companion["host"] == "0.0.0.0"
+    assert companion["token"] == "secret"
+
+
 def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
     pythonw = tmp_path / "pythonw.exe"
     python = tmp_path / "python.exe"

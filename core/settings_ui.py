@@ -135,6 +135,17 @@ class SettingsWindow(QMainWindow):
             self.config["telegram"]["bot_token"] = self.tg_token_edit.text()
             self.config["telegram"]["chat_id"] = self.tg_chatid_edit.text()
 
+        # Companion Bridge
+        if "companion" not in self.config:
+            self.config["companion"] = {}
+        if hasattr(self, "companion_cb"):
+            self.config["companion"]["enabled"] = self.companion_cb.isChecked()
+            self.config["companion"]["host"] = (
+                self.companion_host_edit.text().strip() or "127.0.0.1"
+            )
+            self.config["companion"]["port"] = self.companion_port_spin.value()
+            self.config["companion"]["token"] = self.companion_token_edit.text()
+
         # Codex
         if "codex" not in self.config:
             self.config["codex"] = {}
@@ -202,7 +213,8 @@ class SettingsWindow(QMainWindow):
                 "Einstellungen gespeichert.\n"
                 "Neue Anfragen übernehmen LLM-, Persona-, Telegram-, TTS- und "
                 "Modus-Änderungen automatisch. Nur geänderte Oberflächenstarts "
-                "(Augen-/Classic-/Terminal-Kombination) brauchen einen Neustart.",
+                "(Augen-/Classic-/Terminal-Kombination) und die Companion Bridge "
+                "brauchen einen Neustart.",
             )
 
     def _return_to_chat(self):
@@ -676,8 +688,101 @@ class SettingsWindow(QMainWindow):
         
         group.setLayout(form)
         layout.addWidget(group)
+
+        companion_conf = self.config.get("companion", {})
+        companion_group = QGroupBox("Companion Bridge (iPhone / iPad / Smart Glass)")
+        companion_form = QFormLayout()
+        companion_form.setSpacing(14)
+
+        self.companion_cb = QCheckBox(
+            "Bridge beim Trinity-Start öffnen"
+        )
+        self.companion_cb.setChecked(companion_conf.get("enabled", False))
+        companion_form.addRow(self.companion_cb)
+
+        self.companion_host_edit = QLineEdit(
+            str(companion_conf.get("host", "127.0.0.1"))
+        )
+        self.companion_host_edit.setPlaceholderText(
+            "127.0.0.1 nur lokal, 0.0.0.0 für Tailscale"
+        )
+        companion_form.addRow("Host:", self.companion_host_edit)
+
+        self.companion_port_spin = QSpinBox()
+        self.companion_port_spin.setRange(1024, 65535)
+        try:
+            companion_port = int(companion_conf.get("port", 8765) or 8765)
+        except (TypeError, ValueError):
+            companion_port = 8765
+        self.companion_port_spin.setValue(companion_port)
+        companion_form.addRow("Port:", self.companion_port_spin)
+
+        self.companion_token_edit = QLineEdit(
+            str(companion_conf.get("token", ""))
+        )
+        self.companion_token_edit.setEchoMode(QLineEdit.Password)
+        self.companion_token_edit.setPlaceholderText(
+            "Optional, aber für Tailscale empfohlen"
+        )
+        companion_form.addRow("Bearer Token:", self.companion_token_edit)
+
+        companion_test_btn = QPushButton("🔗 Bridge testen")
+        companion_test_btn.clicked.connect(self._test_companion_bridge)
+        companion_form.addRow("", companion_test_btn)
+
+        companion_hint = QLabel(
+            "Für iPhone/iPad über Tailscale: Host auf 0.0.0.0 setzen, "
+            "Port z.B. 8765. In der Companion-App dann "
+            "http://TAILSCALE-IP:8765 und denselben Bearer Token eintragen. "
+            "Änderungen brauchen einen Neustart von Trinity."
+        )
+        companion_hint.setStyleSheet("color: #888; font-size: 11px;")
+        companion_hint.setWordWrap(True)
+        companion_form.addRow("", companion_hint)
+
+        companion_group.setLayout(companion_form)
+        layout.addWidget(companion_group)
         layout.addStretch()
         return widget
+
+    def _test_companion_bridge(self):
+        host = self.companion_host_edit.text().strip() or "127.0.0.1"
+        port = self.companion_port_spin.value()
+        probe_host = "127.0.0.1" if host == "0.0.0.0" else host
+        url = f"http://{probe_host}:{port}/health"
+        headers = {}
+        token = self.companion_token_edit.text().strip()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        try:
+            import requests
+
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200 and response.json().get("ok"):
+                QMessageBox.information(
+                    self,
+                    "✅ Verbunden",
+                    f"Companion Bridge erreichbar:\n{url}",
+                )
+            elif response.status_code == 401:
+                QMessageBox.warning(
+                    self,
+                    "⚠️ Token falsch",
+                    "Die Bridge ist erreichbar, lehnt aber den Bearer Token ab.",
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "⚠️ Antwort nicht OK",
+                    f"Bridge antwortet mit Status {response.status_code}.",
+                )
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "Nicht erreichbar",
+                "Die Bridge läuft vermutlich noch nicht. Speichern, Trinity neu "
+                f"starten und erneut testen.\n\n{exc}",
+            )
 
     def _sync_ui_mode_controls(self):
         if not all(

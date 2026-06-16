@@ -211,6 +211,7 @@ trinity onboarding
 trinity doctor
 trinity doctor --fix
 trinity tui
+trinity bridge
 ```
 
 `trinity settings` ist eine interaktive Einstellungsoberfläche für Headless-Systeme.
@@ -219,10 +220,37 @@ SSL, Konfiguration, Oberflächen, LLM, Codex und beschreibbare Laufzeitordner. M
 `trinity start --surface classic|eyes|terminal|all` kann die Oberfläche für einen
 einzelnen Start überschrieben werden.
 
+`trinity bridge` startet die HTTP-Bridge für die optionale iPhone/iPad
+Companion-App. Host, Port und Bearer Token können auch grafisch unter
+**Einstellungen → System → Companion Bridge** gesetzt werden.
+
 Gespeicherte LLM-, Persona-, User-/Soul-, Telegram-, TTS- und Modus-Änderungen
 werden von laufenden Trinity-Anfragen automatisch neu geladen. Ein Neustart ist
 nur nötig, wenn die gestarteten Oberflächen selbst geändert werden, also etwa
-Augen-UI, Classic-UI oder Terminal-Prozess an-/ausgeschaltet werden.
+Augen-UI, Classic-UI, Terminal-Prozess oder Companion Bridge an-/ausgeschaltet
+werden.
+
+### Companion Bridge über Tailscale
+
+Die Companion Bridge ist für private Tailnet-Nutzung gedacht. Für iPhone/iPad:
+
+1. Tailscale auf Desktop-Rechner und iPhone/iPad installieren und anmelden.
+2. In Trinity **Einstellungen → System → Companion Bridge** öffnen.
+3. **Bridge beim Trinity-Start öffnen** aktivieren.
+4. Host auf `0.0.0.0` setzen, Port z.B. `8765`.
+5. Einen Bearer Token setzen, z.B. einen langen zufälligen Satz.
+6. Trinity neu starten.
+7. In der Companion-App `http://TAILSCALE-IP:8765` und denselben Token eintragen.
+
+Bei Tailscale muss normalerweise kein Router-Port ins Internet geöffnet werden.
+Auf macOS oder Windows kann aber die lokale Firewall beim ersten Start fragen,
+ob Python/Trinity eingehende Verbindungen erlauben darf. Das sollte für private
+Netzwerke bzw. Tailscale erlaubt werden. Ohne Tailscale sollte die Bridge nicht
+öffentlich ins Internet exponiert werden.
+
+Der Bearer Token ist ein einfacher Zugriffsschutz: Die App sendet
+`Authorization: Bearer <token>`, und die Bridge lehnt fremde Clients ab. Für rein
+lokale Tests kann der Token leer bleiben; für Tailscale-Betrieb ist er empfohlen.
 
 ### Trinity TUI, Sessions und Memory
 

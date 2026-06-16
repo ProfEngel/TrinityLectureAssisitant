@@ -22,7 +22,7 @@ def _modules():
 def test_cli_exposes_requested_commands():
     parser = trinity_cli.build_parser()
 
-    for command in ("start", "settings", "onboarding", "tui", "doctor"):
+    for command in ("start", "settings", "onboarding", "tui", "doctor", "bridge"):
         parsed = parser.parse_args([command])
         assert parsed.command == command
 
@@ -80,3 +80,49 @@ def test_start_passes_temporary_surface_to_launcher(tmp_path, monkeypatch):
     assert result == 0
     assert captured["command"][-2:] == ["--surface", "terminal"]
     assert captured["cwd"] == str(tmp_path)
+
+
+def test_bridge_uses_saved_companion_settings(tmp_path, monkeypatch):
+    import trinity_bridge
+
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "trinity_launcher.py").touch()
+    save_config(
+        home / "core" / "config.json",
+        {
+            "companion": {
+                "enabled": True,
+                "host": "0.0.0.0",
+                "port": 9999,
+                "token": "secret",
+            }
+        },
+    )
+    captured = {}
+
+    def fake_run_bridge(home_arg, host, port, token):
+        captured.update(
+            {
+                "home": home_arg,
+                "host": host,
+                "port": port,
+                "token": token,
+            }
+        )
+        return 0
+
+    monkeypatch.setattr(trinity_bridge, "run_bridge", fake_run_bridge)
+
+    result = trinity_cli.run_bridge_command(
+        home,
+        SimpleNamespace(host=None, port=None, token=None),
+    )
+
+    assert result == 0
+    assert captured == {
+        "home": home,
+        "host": "0.0.0.0",
+        "port": 9999,
+        "token": "secret",
+    }

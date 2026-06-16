@@ -90,6 +90,12 @@ def default_config(platform_name=None):
             "server_url": "http://YOUR_TAILSCALE_NODE:8188",
             "default_workflow": "Flux2_Klein_T2I_API.json",
         },
+        "companion": {
+            "enabled": False,
+            "host": "127.0.0.1",
+            "port": 8765,
+            "token": "",
+        },
     }
 
 
