@@ -43,6 +43,29 @@ def has_trigger(text, variants=None):
     check_list = variants or TRIGGER_VARIANTS
     return any(v in lower for v in check_list)
 
+
+def is_affection_directed_at_trinity(text, agent_name=TRIGGER_WORD):
+    """Only treat explicit affection toward Trinity as UI love mode."""
+    lower = text.lower()
+    agent = str(agent_name or TRIGGER_WORD).lower()
+    direct_patterns = [
+        "ich liebe dich",
+        "ich hab dich lieb",
+        "hab dich lieb",
+        f"liebe dich {agent}",
+        f"{agent} ich liebe dich",
+        f"{agent}, ich liebe dich",
+        f"{agent} hab dich lieb",
+        f"{agent}, hab dich lieb",
+        "du bist süß",
+        "du bist lieb",
+        "du bist liebevoll",
+        "du bist herzlich",
+        "küss dich",
+        "bussi für dich",
+    ]
+    return any(pattern in lower for pattern in direct_patterns)
+
 def set_state(state):
     state_file = os.path.join(CORE_DIR, "state.txt")
     try:
@@ -888,7 +911,7 @@ class MorpheusEar:
             threading.Timer(5.0, lambda: set_state("idle")).start()
             return
 
-        if any(w in lower_text for w in ["lieb", "herz", "herzchen", "ich liebe", "süß", "knuddel", "küss", "bussi", "liebevoll", "herzlich", "hab dich lieb"]):
+        if is_affection_directed_at_trinity(lower_text, self.agent_name):
             set_state("love")
             self._speak_quick("Aww. Du machst mich verlegen, Partner.")
             # Revert nach 5 Sekunden
