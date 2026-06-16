@@ -15,6 +15,8 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.3:** Hellmodus der Einstellungen überarbeitet: helle Eingabefelder, passende Kontraste und Live-Synchronisierung mit der ClassicUI.
+> - **v0.11.2:** Präziser Trinity-Trigger, damit normale Fragen zu Liebe nicht fälschlich den persönlichen Trigger-Modus auslösen.
 > - **v0.11.1:** ClassicUI als Erststart-Standard mit Reitern für Chat, Live-Mitschrift/Agentenlog und Memory Graph sowie Dark-/Light-Ansicht.
 > - **v0.11.0:** Trinity TUI mit Slash-Commands, Sessions, lokalem SQLite-Memory, Self-Bake/Dreaming und Memory-Graph in der ClassicUI.
 > - **v0.10.3:** Classic-Chat mit Verlauf, Text-/PDF-/Bildanlagen und eingebetteten Medienergebnissen.

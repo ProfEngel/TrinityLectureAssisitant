@@ -212,117 +212,148 @@ class SettingsWindow(QMainWindow):
             self.close()
 
     def apply_stylesheet(self):
-        self.setStyleSheet("""
-            QMainWindow { background-color: #09090b; }
+        theme = self.config.get("system", {}).get("classic_theme", "dark")
+        light = theme == "light"
+        colors = {
+            "app_bg": "#f8fafc" if light else "#09090b",
+            "panel_bg": "#ffffff" if light else "#121214",
+            "field_bg": "#ffffff" if light else "#09090b",
+            "field_focus": "#f1f5f9" if light else "#121214",
+            "raised_bg": "#eef2f7" if light else "#18181b",
+            "hover_bg": "#e2e8f0" if light else "#27272a",
+            "text": "#0f172a" if light else "#f4f4f5",
+            "muted": "#475569" if light else "#d4d4d8",
+            "faint": "#64748b" if light else "#71717a",
+            "border": "#d7dde7" if light else "#27272a",
+            "strong_border": "#cbd5e1" if light else "#3f3f46",
+            "primary_bg": "#0f172a" if light else "#f4f4f5",
+            "primary_text": "#ffffff" if light else "#09090b",
+            "selection": "#bfdbfe" if light else "#3f3f46",
+            "warning": "#b45309" if light else "#d29922",
+            "info": "#0369a1" if light else "#8aadf4",
+        }
+        hover_rgba = "rgba(15, 23, 42, 0.06)" if light else "rgba(255, 255, 255, 0.05)"
+        group_rgba = "rgba(15, 23, 42, 0.02)" if light else "rgba(255, 255, 255, 0.01)"
+        self.setStyleSheet(f"""
+            QMainWindow {{ background-color: {colors["app_bg"]}; }}
             
-            QTabWidget::pane { 
-                border: 1px solid #27272a; 
-                background: #121214; 
+            QTabWidget::pane {{ 
+                border: 1px solid {colors["border"]}; 
+                background: {colors["panel_bg"]}; 
                 border-bottom-left-radius: 12px; 
                 border-bottom-right-radius: 12px;
                 border-top-right-radius: 12px;
-            }
+            }}
             
-            QTabBar::tab { 
+            QTabBar::tab {{ 
                 background: transparent; 
-                color: #71717a; 
+                color: {colors["faint"]}; 
                 padding: 12px 18px; 
                 margin-right: 2px; 
                 font-weight: 500;
                 font-size: 12px;
                 border-top-left-radius: 8px; 
                 border-top-right-radius: 8px; 
-            }
+            }}
             
-            QTabBar::tab:hover {
-                background: rgba(255, 255, 255, 0.05);
-                color: #e4e4e7;
-            }
+            QTabBar::tab:hover {{
+                background: {hover_rgba};
+                color: {colors["text"]};
+            }}
             
-            QTabBar::tab:selected { 
-                background: #121214; 
-                color: #f4f4f5; 
-                border-bottom: 2px solid #f4f4f5;
-            }
+            QTabBar::tab:selected {{ 
+                background: {colors["panel_bg"]}; 
+                color: {colors["text"]}; 
+                border-bottom: 2px solid {colors["text"]};
+            }}
             
-            QGroupBox { 
-                color: #e4e4e7; 
+            QGroupBox {{ 
+                color: {colors["text"]}; 
                 font-size: 14px;
                 font-weight: bold; 
-                border: 1px solid #27272a; 
+                border: 1px solid {colors["border"]}; 
                 border-radius: 10px; 
                 margin-top: 25px; 
                 padding-top: 25px; 
-                background: rgba(255, 255, 255, 0.01);
-            }
+                background: {group_rgba};
+            }}
             
-            QGroupBox::title { 
+            QGroupBox::title {{ 
                 subcontrol-origin: margin; 
                 left: 15px; 
                 padding: 0 10px; 
-                color: #f4f4f5;
-            }
+                color: {colors["text"]};
+            }}
             
-            QLabel { color: #d4d4d8; font-size: 13px; }
+            QLabel {{ color: {colors["muted"]}; font-size: 13px; }}
+            QLabel#settingsTitle {{ color: {colors["text"]}; margin-bottom: 8px; }}
             
-            QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox { 
-                background: #09090b; 
-                color: #f4f4f5; 
-                border: 1px solid #27272a; 
+            QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox {{ 
+                background: {colors["field_bg"]}; 
+                color: {colors["text"]}; 
+                border: 1px solid {colors["border"]}; 
                 border-radius: 6px; 
                 padding: 10px; 
                 min-height: 20px;
-                selection-background-color: #3f3f46;
-            }
+                selection-background-color: {colors["selection"]};
+            }}
             
-            QLineEdit:focus, QComboBox:focus { 
-                border-color: #71717a; 
-                background: #121214;
-            }
+            QLineEdit:focus, QComboBox:focus, QTextEdit:focus {{ 
+                border-color: {colors["faint"]}; 
+                background: {colors["field_focus"]};
+            }}
             
-            QTextEdit { 
-                background: #09090b; 
-                color: #f4f4f5; 
-                border: 1px solid #27272a; 
+            QComboBox QAbstractItemView {{
+                background: {colors["field_bg"]};
+                color: {colors["text"]};
+                selection-background-color: {colors["selection"]};
+                border: 1px solid {colors["border"]};
+            }}
+            
+            QTextEdit {{ 
+                background: {colors["field_bg"]}; 
+                color: {colors["text"]}; 
+                border: 1px solid {colors["border"]}; 
                 border-radius: 8px; 
                 padding: 12px; 
                 font-family: 'SF Mono', 'Menlo', monospace; 
                 font-size: 13px;
-            }
+                selection-background-color: {colors["selection"]};
+            }}
             
-            QCheckBox { color: #d4d4d8; spacing: 10px; font-size: 13px; }
-            QCheckBox::indicator { width: 20px; height: 20px; border-radius: 5px; border: 1px solid #3f3f46; background: #09090b; }
-            QCheckBox::indicator:checked { background: #f4f4f5; border: 1px solid #f4f4f5; image: none; }
+            QCheckBox {{ color: {colors["muted"]}; spacing: 10px; font-size: 13px; }}
+            QCheckBox::indicator {{ width: 20px; height: 20px; border-radius: 5px; border: 1px solid {colors["strong_border"]}; background: {colors["field_bg"]}; }}
+            QCheckBox::indicator:checked {{ background: {colors["primary_bg"]}; border: 1px solid {colors["primary_bg"]}; image: none; }}
             
-            QRadioButton { color: #d4d4d8; spacing: 10px; padding: 6px; font-size: 13px; }
-            QRadioButton::indicator { width: 20px; height: 20px; border-radius: 11px; border: 1px solid #3f3f46; background: #09090b; }
-            QRadioButton::indicator:checked { background: #f4f4f5; border: 5px solid #09090b; }
+            QRadioButton {{ color: {colors["muted"]}; spacing: 10px; padding: 6px; font-size: 13px; }}
+            QRadioButton::indicator {{ width: 20px; height: 20px; border-radius: 11px; border: 1px solid {colors["strong_border"]}; background: {colors["field_bg"]}; }}
+            QRadioButton::indicator:checked {{ background: {colors["primary_bg"]}; border: 5px solid {colors["field_bg"]}; }}
             
-            QPushButton { 
-                background: #18181b; 
-                color: #e4e4e7; 
-                border: 1px solid #27272a; 
+            QPushButton {{ 
+                background: {colors["raised_bg"]}; 
+                color: {colors["text"]}; 
+                border: 1px solid {colors["border"]}; 
                 border-radius: 8px; 
                 padding: 12px 24px; 
                 font-weight: 600;
                 font-size: 13px;
-            }
+            }}
             
-            QPushButton:hover { background: #27272a; border-color: #71717a; }
+            QPushButton:hover {{ background: {colors["hover_bg"]}; border-color: {colors["faint"]}; }}
             
-            QPushButton#saveBtn { 
-                background: #f4f4f5; 
-                color: #09090b; 
+            QPushButton#saveBtn {{ 
+                background: {colors["primary_bg"]}; 
+                color: {colors["primary_text"]}; 
                 font-weight: bold; 
                 border: none;
-            }
+            }}
             
-            QPushButton#saveBtn:hover { background: #ffffff; }
+            QPushButton#saveBtn:hover {{ background: {colors["text"]}; color: {colors["app_bg"]}; }}
             
-            QScrollArea { background: transparent; border: none; }
-            QScrollBar:vertical { border: none; background: #09090b; width: 10px; margin: 0px; }
-            QScrollBar::handle:vertical { background: #18181b; min-height: 20px; border-radius: 5px; }
-            QScrollBar::handle:vertical:hover { background: #27272a; }
+            QScrollArea {{ background: transparent; border: none; }}
+            QScrollBar:vertical {{ border: none; background: {colors["app_bg"]}; width: 10px; margin: 0px; }}
+            QScrollBar::handle:vertical {{ background: {colors["raised_bg"]}; min-height: 20px; border-radius: 5px; }}
+            QScrollBar::handle:vertical:hover {{ background: {colors["hover_bg"]}; }}
         """)
 
     def init_ui(self):
@@ -334,8 +365,8 @@ class SettingsWindow(QMainWindow):
         # Header
         header_row = QHBoxLayout()
         header = QLabel("Trinity Assistant – Einstellungen")
+        header.setObjectName("settingsTitle")
         header.setFont(QFont("", 18, QFont.Bold))
-        header.setStyleSheet("color: #f4f4f5; margin-bottom: 8px;")
         header_row.addWidget(header)
         header_row.addStretch()
         if self.embedded:
