@@ -86,6 +86,7 @@ class TrinityBrain:
             # Telegram-Config (für Skill-Context-Weitergabe)
             self._telegram_cfg = config.get("telegram", {})
             self._codex_cfg = config.get("codex", {})
+            self._opencode_cfg = config.get("opencode", {})
             
             print("⚙️ Konfiguration geladen ✓")
 
@@ -329,6 +330,7 @@ class TrinityBrain:
                         "from_telegram": from_telegram,
                         "telegram_cfg": getattr(self, '_telegram_cfg', {}),
                         "codex_cfg": getattr(self, '_codex_cfg', {}),
+                        "opencode_cfg": getattr(self, '_opencode_cfg', {}),
                         "image_path": primary_image_path,
                         "attachments": attachments or [],
                     })
@@ -359,6 +361,7 @@ class TrinityBrain:
                             "from_telegram": from_telegram,
                             "telegram_cfg": getattr(self, '_telegram_cfg', {}),
                             "codex_cfg": getattr(self, '_codex_cfg', {}),
+                            "opencode_cfg": getattr(self, '_opencode_cfg', {}),
                             "image_path": primary_image_path,
                             "attachments": attachments or [],
                         })

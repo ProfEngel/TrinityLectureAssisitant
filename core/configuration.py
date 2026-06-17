@@ -85,6 +85,16 @@ def default_config(platform_name=None):
             "ephemeral": True,
             "network_access": False,
         },
+        "opencode": {
+            "enabled": False,
+            "executable": "opencode",
+            "default_project": "",
+            "projects": {},
+            "agent": "build",
+            "model": "",
+            "timeout_seconds": 900,
+            "max_output_chars": 3200,
+        },
         "comfyui": {
             "enabled": False,
             "server_url": "http://YOUR_TAILSCALE_NODE:8188",

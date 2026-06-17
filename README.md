@@ -70,6 +70,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
  | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
+ | **OpenCode-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale OpenCode-Projekte und Automationspipelines. |
  | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
@@ -310,6 +311,26 @@ Die technische Grundlage ist Codex'
 mit einer auf das Projekt begrenzten Sandbox. Hinweise zur Ablage eigener Workflows
 stehen in der offiziellen Dokumentation zu
 [Codex Skills](https://developers.openai.com/codex/skills).
+
+### OpenCode als lokales Subagententeam
+
+Trinity kann alternativ Aufgaben an eine lokal installierte OpenCode CLI übergeben.
+Der Agent nutzt `opencode run` im freigegebenen Projektordner und eignet sich für
+Automationspipelines, die bereits in OpenCode-Projekten liegen, z.B. Mail-Entwürfe,
+PDF-/Excel-Workflows oder projektinterne Subagenten.
+
+Einrichtung: **Einstellungen → OpenCode** öffnen, Agent aktivieren, optional den
+Programmpfad setzen und mindestens ein Projekt als `Name = /vollständiger/Pfad`
+freigeben. Optional können `agent` und `model` gesetzt werden, z.B. `build`,
+`plan` oder ein provider-spezifisches Modell.
+
+Beispiel:
+
+> „Trinity, nutze OpenCode im Projekt Automatismen. Prüfe meine Mails und erstelle
+> passende Entwürfe.“
+
+Fernausgelöste OpenCode-Läufe sollen Entwürfe und lokale Dateien vorbereiten, aber
+nichts versenden, löschen, veröffentlichen oder deployen.
 
 ---
 

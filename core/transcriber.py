@@ -854,11 +854,23 @@ class TrinityEar:
                 self.trigger_action(text, silent_response=not speak, chat_request=request)
                 continue
 
+            request = None
+            if str(event.get("source") or "") == "ios-stt":
+                request = {
+                    "request_id": event.get("event_id"),
+                    "source": "ios-stt",
+                    "text": text,
+                    "attachments": [],
+                    "silent": not speak,
+                    "history_recorded": True,
+                    "session_id": event.get("session_id", ""),
+                    "privacy_mode": event.get("privacy_mode", "local"),
+                }
             self.process_text(text)
             if self.trigger_armed:
-                self.fire_trigger(silent_response=not speak)
+                self.fire_trigger(silent_response=not speak, chat_request=request)
 
-    def fire_trigger(self, silent_response=False):
+    def fire_trigger(self, silent_response=False, chat_request=None):
         if not self.trigger_armed:
             return
         self.trigger_armed = False
@@ -874,7 +886,12 @@ class TrinityEar:
         full_context = " ".join(self.recent_chunks)
         # Aktuelle Anfrage = nur die letzten 3 Chunks (für Keyword-Erkennung im Router)
         recent_text = " ".join(self.recent_chunks[-3:])
-        self.trigger_action(full_context, silent_response=silent_response, recent_text=recent_text)
+        self.trigger_action(
+            full_context,
+            silent_response=silent_response,
+            recent_text=recent_text,
+            chat_request=chat_request,
+        )
         self.recent_chunks.clear()  # Reset nach Trigger
 
     def _speak_thread(self, text):

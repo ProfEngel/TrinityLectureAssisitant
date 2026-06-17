@@ -425,4 +425,65 @@ def test_ios_stt_trigger_word_works_in_chat_mode(tmp_path, monkeypatch):
     assert received
     assert "Trinity erklär mir Spieltheorie" in received[0][0]
     assert received[0][1] is True
-    assert received[0][3] is None
+    assert received[0][3]["source"] == "ios-stt"
+
+
+def test_ios_stt_trigger_word_creates_bridge_request_in_lecture_mode(tmp_path, monkeypatch):
+    core_dir = tmp_path / "core"
+    memory_dir = tmp_path / "memory"
+    core_dir.mkdir()
+    memory_dir.mkdir()
+    append_external_stt_event(
+        core_dir / "ios_stt_feed.jsonl",
+        {
+            "source": "ios-stt",
+            "text": "Trinity erklär mir Spieltheorie",
+            "is_final": True,
+            "speak": False,
+            "session_id": "ios-session",
+            "privacy_mode": "local",
+        },
+    )
+    received = []
+
+    class FakeBrain:
+        pass
+
+    class FakeTTS:
+        pass
+
+    def fake_load_config(ear):
+        ear.model_name = "small"
+        ear.silence_threshold = 0.015
+        ear.chunk_duration = 2
+        ear.show_volume_meter = False
+        ear.voice = "Standard"
+        ear.agent_name = "Trinity"
+        ear.trigger_variants = ["trinity"]
+        ear.proactive_cfg = {}
+        ear.audio_routing = {}
+        ear.telegram_cfg = {}
+        ear.system_cfg = {"mode": "lecture"}
+        ear.mode = "lecture"
+        ear.speech_input_enabled = False
+
+    def fake_trigger(ear, text, silent_response=False, recent_text=None, **kwargs):
+        received.append((text, silent_response, recent_text, kwargs.get("chat_request")))
+        ear.is_running = False
+
+    monkeypatch.setattr(transcriber, "__file__", str(core_dir / "transcriber.py"))
+    monkeypatch.setattr(transcriber, "CORE_DIR", str(core_dir))
+    monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
+    monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
+    monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
+    monkeypatch.setattr(transcriber.TrinityEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.TrinityEar, "trigger_action", fake_trigger)
+
+    ear = transcriber.TrinityEar()
+    ear.start()
+
+    assert received
+    assert "Trinity erklär mir Spieltheorie" in received[0][0]
+    assert received[0][1] is True
+    assert received[0][3]["source"] == "ios-stt"
+    assert received[0][3]["session_id"] == "ios-session"

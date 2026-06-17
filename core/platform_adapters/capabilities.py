@@ -9,6 +9,7 @@ from typing import Iterable, Optional, Set
 CAPABILITY_LABELS = {
     "mail_automation": "lokale Mail-Automation",
     "codex_cli": "lokale Codex CLI",
+    "opencode_cli": "lokale OpenCode CLI",
     "native_macos_speech": "native macOS-Spracherkennung",
     "powerpoint_automation": "PowerPoint-Automation",
     "speech_input": "Whisper-Spracherkennung",
@@ -23,6 +24,8 @@ def detect_capabilities(system: Optional[str] = None) -> Set[str]:
 
     if find_codex_executable():
         capabilities.add("codex_cli")
+    if find_opencode_executable():
+        capabilities.add("opencode_cli")
 
     if _module_available("faster_whisper") and _module_available("sounddevice"):
         capabilities.add("speech_input")
@@ -96,6 +99,43 @@ def find_codex_executable() -> Optional[str]:
             [
                 Path(local_appdata) / "npm" / "codex.cmd",
                 Path(local_appdata) / "Programs" / "Codex" / "codex.exe",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def find_opencode_executable() -> Optional[str]:
+    """Locate OpenCode on macOS and Windows desktop-style installations."""
+    for name in ("opencode", "opencode.exe", "opencode.cmd"):
+        found = shutil.which(name)
+        if found:
+            return found
+
+    candidates = [
+        Path("/opt/homebrew/bin/opencode"),
+        Path("/usr/local/bin/opencode"),
+        Path.home() / ".local" / "bin" / "opencode",
+    ]
+
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.extend(
+            [
+                Path(appdata) / "npm" / "opencode.cmd",
+                Path(appdata) / "npm" / "opencode.exe",
+            ]
+        )
+
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        candidates.extend(
+            [
+                Path(local_appdata) / "npm" / "opencode.cmd",
+                Path(local_appdata) / "Programs" / "OpenCode" / "opencode.exe",
             ]
         )
 

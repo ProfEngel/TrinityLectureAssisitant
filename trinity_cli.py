@@ -145,7 +145,8 @@ def interactive_settings(home, input_fn=input, secret_fn=getpass.getpass):
         print(f"2  Betriebsmodus ({system.get('mode', 'chat')})")
         print(f"3  LLM-Provider ({config.get('llm', {}).get('active_slot', 'local')})")
         print("4  Codex")
-        print("5  Telegram")
+        print("5  OpenCode")
+        print("6  Telegram")
         print("s  Speichern und beenden")
         print("q  Verwerfen")
         choice = input_fn("Auswahl: ").strip().casefold()
@@ -178,6 +179,27 @@ def interactive_settings(home, input_fn=input, secret_fn=getpass.getpass):
                 input_fn,
             )
         elif choice == "5":
+            opencode = config.setdefault("opencode", {})
+            opencode["enabled"] = (
+                _prompt_choice(
+                    "OpenCode aktivieren",
+                    ("nein", "ja"),
+                    "ja" if opencode.get("enabled") else "nein",
+                    input_fn,
+                )
+                == "ja"
+            )
+            opencode["executable"] = _prompt(
+                "OpenCode-Programm",
+                opencode.get("executable", "opencode"),
+                input_fn,
+            )
+            opencode["agent"] = _prompt(
+                "OpenCode-Agent",
+                opencode.get("agent", "build"),
+                input_fn,
+            )
+        elif choice == "6":
             telegram = config.setdefault("telegram", {})
             telegram["enabled"] = (
                 _prompt_choice(
@@ -254,6 +276,10 @@ def _sanitized_summary(config):
         "codex": {
             "enabled": config.get("codex", {}).get("enabled", False),
             "projects": sorted(config.get("codex", {}).get("projects", {})),
+        },
+        "opencode": {
+            "enabled": config.get("opencode", {}).get("enabled", False),
+            "projects": sorted(config.get("opencode", {}).get("projects", {})),
         },
         "telegram": {
             "enabled": config.get("telegram", {}).get("enabled", False),

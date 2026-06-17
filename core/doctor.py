@@ -178,6 +178,22 @@ def run_doctor(trinity_home, fix=False, online=False):
             )
         )
 
+    opencode = config.get("opencode", {})
+    if opencode.get("enabled"):
+        executable = opencode.get("executable", "opencode")
+        found = Path(executable).is_file() if os.path.dirname(executable) else None
+        if found is None:
+            from shutil import which
+
+            found = which(executable)
+        results.append(
+            _result(
+                "OK" if found else "WARN",
+                "OpenCode",
+                str(found) if found else "OpenCode CLI wurde nicht gefunden.",
+            )
+        )
+
     for directory in ("memory", "logs"):
         path = home / directory
         try:

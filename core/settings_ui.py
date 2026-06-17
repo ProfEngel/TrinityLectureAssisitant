@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
                              QButtonGroup)
 
-from platform_adapters import create_tts_backend, find_codex_executable
+from platform_adapters import create_tts_backend, find_codex_executable, find_opencode_executable
 from configuration import DEFAULT_CONFIG, load_config, save_config
 from ui_modes import resolve_ui_modes
 
@@ -181,6 +181,38 @@ class SettingsWindow(QMainWindow):
             )
             self.config["codex"]["network_access"] = (
                 self.codex_network_cb.isChecked()
+            )
+
+        # OpenCode
+        if "opencode" not in self.config:
+            self.config["opencode"] = {}
+        if hasattr(self, "opencode_cb"):
+            projects = {}
+            for line in self.opencode_projects_edit.toPlainText().splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
+                    continue
+                alias, path = stripped.split("=", 1)
+                alias = alias.strip()
+                path = path.strip()
+                if alias and path:
+                    projects[alias] = path
+
+            self.config["opencode"]["enabled"] = self.opencode_cb.isChecked()
+            self.config["opencode"]["executable"] = (
+                self.opencode_executable_edit.text().strip() or "opencode"
+            )
+            self.config["opencode"]["default_project"] = (
+                self.opencode_default_project_edit.text().strip()
+            )
+            self.config["opencode"]["projects"] = projects
+            self.config["opencode"]["agent"] = self.opencode_agent_edit.text().strip()
+            self.config["opencode"]["model"] = self.opencode_model_edit.text().strip()
+            self.config["opencode"]["timeout_seconds"] = (
+                self.opencode_timeout_spin.value()
+            )
+            self.config["opencode"]["max_output_chars"] = (
+                self.opencode_output_spin.value()
             )
 
         # ComfyUI
@@ -396,6 +428,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
+        tabs.addTab(self._create_opencode_tab(), "🛠️ OpenCode")
         tabs.addTab(self._create_system_tab(), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
@@ -594,6 +627,116 @@ class SettingsWindow(QMainWindow):
             "Empfohlen: workspace-write, Netzwerk aus. Codex darf in "
             "fernausgelösten Läufen Entwürfe vorbereiten, aber nichts versenden, "
             "veröffentlichen, pushen oder deployen."
+        )
+        security_hint.setWordWrap(True)
+        security_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", security_hint)
+
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
+    # --- TAB: OpenCode ---
+    def _create_opencode_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        group = QGroupBox("Lokaler OpenCode-Agent")
+        form = QFormLayout()
+        opencode_conf = self.config.get("opencode", {})
+
+        self.opencode_cb = QCheckBox(
+            "OpenCode-Aufträge per Sprache, Chat, Telegram und Companion erlauben"
+        )
+        self.opencode_cb.setChecked(opencode_conf.get("enabled", False))
+        form.addRow(self.opencode_cb)
+
+        detected = find_opencode_executable()
+        status_text = (
+            f"OpenCode gefunden: {detected}"
+            if detected
+            else "OpenCode wurde im Systempfad noch nicht gefunden."
+        )
+        status = QLabel(status_text)
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+
+        self.opencode_executable_edit = QLineEdit(
+            opencode_conf.get("executable", "opencode")
+        )
+        self.opencode_executable_edit.setPlaceholderText(
+            "opencode oder vollständiger Pfad zur OpenCode-Anwendung"
+        )
+        form.addRow("Programm:", self.opencode_executable_edit)
+
+        projects = opencode_conf.get("projects", {})
+        projects_text = ""
+        if isinstance(projects, dict):
+            projects_text = "\n".join(
+                f"{alias} = {path}" for alias, path in projects.items()
+            )
+        self.opencode_projects_edit = QTextEdit()
+        self.opencode_projects_edit.setPlainText(projects_text)
+        self.opencode_projects_edit.setPlaceholderText(
+            "Automatismen = /vollständiger/Pfad/zum/Projekt\n"
+            "Mail = C:\\Users\\Name\\Projekte\\MailAutomationen"
+        )
+        self.opencode_projects_edit.setMinimumHeight(130)
+        form.addRow("Freigegebene Projekte:", self.opencode_projects_edit)
+
+        project_hint = QLabel(
+            "Eine Zeile pro Projekt: Name = vollständiger Ordnerpfad. "
+            "OpenCode läuft ausschließlich in diesen Ordnern."
+        )
+        project_hint.setWordWrap(True)
+        project_hint.setStyleSheet("color: #888; font-size: 11px;")
+        form.addRow("", project_hint)
+
+        self.opencode_default_project_edit = QLineEdit(
+            opencode_conf.get("default_project", "")
+        )
+        self.opencode_default_project_edit.setPlaceholderText(
+            "z.B. Automatismen"
+        )
+        form.addRow("Standardprojekt:", self.opencode_default_project_edit)
+
+        self.opencode_agent_edit = QLineEdit(opencode_conf.get("agent", "build"))
+        self.opencode_agent_edit.setPlaceholderText("z.B. build oder plan")
+        form.addRow("OpenCode-Agent:", self.opencode_agent_edit)
+
+        self.opencode_model_edit = QLineEdit(opencode_conf.get("model", ""))
+        self.opencode_model_edit.setPlaceholderText(
+            "optional, z.B. provider/model"
+        )
+        form.addRow("Modell:", self.opencode_model_edit)
+
+        self.opencode_timeout_spin = QSpinBox()
+        self.opencode_timeout_spin.setRange(30, 7200)
+        self.opencode_timeout_spin.setSuffix(" Sekunden")
+        self.opencode_timeout_spin.setValue(
+            int(opencode_conf.get("timeout_seconds", 900))
+        )
+        form.addRow("Zeitlimit:", self.opencode_timeout_spin)
+
+        self.opencode_output_spin = QSpinBox()
+        self.opencode_output_spin.setRange(500, 12000)
+        self.opencode_output_spin.setSingleStep(500)
+        self.opencode_output_spin.setSuffix(" Zeichen")
+        self.opencode_output_spin.setValue(
+            int(opencode_conf.get("max_output_chars", 3200))
+        )
+        form.addRow("Antwortlänge:", self.opencode_output_spin)
+
+        security_hint = QLabel(
+            "OpenCode nutzt `opencode run` im jeweiligen Projektordner. "
+            "Fernausgelöste Läufe sollen Entwürfe vorbereiten, aber nichts "
+            "versenden, löschen, veröffentlichen oder deployen."
         )
         security_hint.setWordWrap(True)
         security_hint.setStyleSheet("color: #d29922; font-size: 11px;")

@@ -58,5 +58,17 @@
     "max_output_chars": 3200,
     "ephemeral": true,
     "network_access": false
+  },
+  "opencode": {
+    "enabled": false,
+    "executable": "opencode",
+    "default_project": "Automatismen",
+    "projects": {
+      "Automatismen": "/FULL/PATH/TO/YOUR/AUTOMATION_PROJECT"
+    },
+    "agent": "build",
+    "model": "",
+    "timeout_seconds": 900,
+    "max_output_chars": 3200
   }
 }
