@@ -85,6 +85,7 @@ class TrinityBridge:
     def media_roots(self):
         return [
             self.home / "gen_images",
+            self.core_dir,
             self.home / "agents" / "comfyui_agent" / "media",
             self.home / "memory",
         ]

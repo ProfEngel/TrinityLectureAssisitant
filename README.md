@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.7:** Companion-Bridge liefert nun auch Agenten-Widgets aus `core/` aus, damit Python-/Pyodide-Sandbox, Diagramme, Timer und Simulationen in der iPhone/iPad-Companion als Overlay/Presenter-Ergebnis angezeigt werden können.
 > - **v0.11.6:** macOS-Starter-App zeigt das Trinity-Symbol nun zuverlässig bereits im Finder/Desktop, nicht erst nach dem Start.
 > - **v0.11.5:** Companion-Medienabruf stabilisiert: generierte Bilder, Audio- und Videoergebnisse werden über die Desktop-Bridge plattformneutral von macOS und Windows 11 an iPhone/iPad ausgeliefert.
 > - **v0.11.4:** Companion-STT-Finalisierung korrigiert: iPhone-Live-STT und finaler Trigger werden sauber getrennt, damit gesprochene Wake-Word-Anfragen Trinity zuverlässig erreichen.
@@ -278,9 +279,13 @@ Aktueller Stand:
   Dateiauswahl per Dreifachtippen.
 - **Chat und Live-Mitschrift:** Neben der Alltagsansicht gibt es eine Chatansicht
   und eine Live-/Debugansicht für Mitschrift, Bridge-Status und Diagnose.
-- **Anlagen und Medien:** Texte, PDFs und Bilder können an Trinity gesendet
-  werden. Medienergebnisse aus Trinity, etwa Bilder, Audio oder Video, werden in
-  der Companion-App als Vollansicht angezeigt.
+- **Anlagen, Medien und Agentenergebnisse:** Texte, PDFs und Bilder können an
+  Trinity gesendet werden. Medienergebnisse aus Trinity, etwa Bilder, Audio oder
+  Video, werden in der Companion-App als Vollansicht angezeigt. Seit v0.11.7
+  liefert die Desktop-Bridge außerdem lokale `core/`-Resultate wie
+  Pyodide-/Python-Sandbox-Ausgaben, Plotly-Diagramme, Timer und Simulationen an
+  die Companion-App aus, damit diese in Alltagsansicht und Presenter als Overlay
+  erscheinen können.
 - **Neue Session:** Die App kann eine neue Companion-Session starten, ohne die
   Bridge neu zu starten.
 

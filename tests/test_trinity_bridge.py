@@ -142,6 +142,31 @@ def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
     assert "file://" not in events[0]["payload_html"]
 
 
+def test_bridge_rewrites_core_payload_media_urls(tmp_path):
+    home = tmp_path
+    core_dir = home / "core"
+    core_dir.mkdir(parents=True)
+    image = core_dir / "sandbox_screenshot.png"
+    image.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "assistant",
+            "source": "runtime",
+            "text": "Sandbox fertig",
+            "payload_html": f'<img src="{image.resolve().as_uri()}">',
+        },
+    )
+    bridge = TrinityBridge(home)
+
+    events = bridge.events_since(0)
+
+    assert "/media?path=" in events[0]["payload_html"]
+    assert "sandbox_screenshot.png" in events[0]["payload_html"]
+    assert "file://" not in events[0]["payload_html"]
+
+
 def test_bridge_returns_media_urls_for_event_attachments(tmp_path):
     home = tmp_path
     upload_dir = home / "memory" / "companion_uploads"
