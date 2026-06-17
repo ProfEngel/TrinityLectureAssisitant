@@ -380,6 +380,15 @@ def test_ios_stt_trigger_word_works_in_chat_mode(tmp_path, monkeypatch):
         {
             "source": "ios-stt",
             "text": "Trinity erklär mir Spieltheorie",
+            "is_final": False,
+            "speak": False,
+        },
+    )
+    append_external_stt_event(
+        core_dir / "ios_stt_feed.jsonl",
+        {
+            "source": "ios-stt",
+            "text": "Trinity erklär mir Spieltheorie",
             "is_final": True,
             "speak": False,
         },

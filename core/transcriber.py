@@ -829,10 +829,10 @@ class TrinityEar:
         feed_file = os.path.join(CORE_DIR, "ios_stt_feed.jsonl")
         for event in pop_external_stt_events(feed_file):
             text = str(event.get("text") or "").strip()
-            if not text or text == self._last_external_stt_text:
+            is_final = bool(event.get("is_final", False))
+            if not text or (not is_final and text == self._last_external_stt_text):
                 continue
             self._last_external_stt_text = text
-            is_final = bool(event.get("is_final", False))
             speak = bool(event.get("speak", False))
             marker = "final" if is_final else "live"
             print(f"📱 iPhone-STT ({marker}): {text}")

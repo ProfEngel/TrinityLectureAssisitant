@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.4:** Companion-STT-Finalisierung korrigiert: iPhone-Live-STT und finaler Trigger werden sauber getrennt, damit gesprochene Wake-Word-Anfragen Trinity zuverlässig erreichen.
 > - **v0.11.3:** Hellmodus der Einstellungen überarbeitet: helle Eingabefelder, passende Kontraste und Live-Synchronisierung mit der ClassicUI.
 > - **v0.11.2:** Präziser Trinity-Trigger, damit normale Fragen zu Liebe nicht fälschlich den persönlichen Trigger-Modus auslösen.
 > - **v0.11.1:** ClassicUI als Erststart-Standard mit Reitern für Chat, Live-Mitschrift/Agentenlog und Memory Graph sowie Dark-/Light-Ansicht.
@@ -252,6 +253,41 @@ Netzwerke bzw. Tailscale erlaubt werden. Ohne Tailscale sollte die Bridge nicht
 Der Bearer Token ist ein einfacher Zugriffsschutz: Die App sendet
 `Authorization: Bearer <token>`, und die Bridge lehnt fremde Clients ab. Für rein
 lokale Tests kann der Token leer bleiben; für Tailscale-Betrieb ist er empfohlen.
+
+### iPhone/iPad Companion-App
+
+Die optionale Companion-App ist bewusst nicht Teil des normalen Desktop-Installers.
+Sie richtet sich an Setups, in denen Trinity auf macOS oder Windows 11 als lokaler
+Server läuft und ein iPhone/iPad als mobiles Mikrofon, Anzeige- und
+Vorlesungs-Interface dient.
+
+Aktueller Stand:
+
+- **Lokales iPhone-STT:** Die App transkribiert Sprache auf dem iPhone und sendet
+  Live-Fragmente sowie finale Sätze an `trinity bridge`.
+- **Wake-Word über Companion-STT:** Finale iPhone-STT-Sätze werden von Trinity wie
+  externe Spracheingabe verarbeitet. In Lecture/Office-Modus bleibt das Wake-Word
+  relevant; im Chat-Modus kann direkter Text ohne Wake-Word verarbeitet werden.
+- **Lokales iPhone-TTS:** Antworten können auf dem iPhone vorgelesen werden, statt
+  auf dem Desktop-Rechner. Während iPhone-TTS pausiert die App ihr STT, damit sie
+  Trinitys eigene Antwort nicht wieder mithört.
+- **Alltagsansicht:** Die Companion-App bietet eine reduzierte Avatar-Ansicht mit
+  Kamera-/Dateianhang, Flüstern per Tippen, Kamera per Doppeltippen und
+  Dateiauswahl per Dreifachtippen.
+- **Chat und Live-Mitschrift:** Neben der Alltagsansicht gibt es eine Chatansicht
+  und eine Live-/Debugansicht für Mitschrift, Bridge-Status und Diagnose.
+- **Anlagen und Medien:** Texte, PDFs und Bilder können an Trinity gesendet
+  werden. Medienergebnisse aus Trinity, etwa Bilder, Audio oder Video, werden in
+  der Companion-App als Vollansicht angezeigt.
+- **Neue Session:** Die App kann eine neue Companion-Session starten, ohne die
+  Bridge neu zu starten.
+
+Hinweis zu iOS-Hintergrundbetrieb: Die App nutzt den iOS-Audio-Background-Modus
+und hält ihre Audio-Session aktiv. iOS kann lokale Speech Recognition im
+Hintergrund oder bei gesperrtem Gerät dennoch begrenzen. Für garantiert
+dauerhafte Hintergrundaufnahme ist langfristig ein Desktop-Transkriptionspfad
+sinnvoller: Das iPhone streamt oder überträgt Audio-Chunks lokal per Tailscale,
+Trinity transkribiert auf dem Desktop.
 
 ### Trinity TUI, Sessions und Memory
 
