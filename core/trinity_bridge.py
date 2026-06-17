@@ -78,11 +78,15 @@ class TrinityBridge:
             self.home / "memory",
         ]
 
-    def check_auth(self, handler):
+    def check_auth(self, handler, query=None):
         if not self.token:
             return True
         header = handler.headers.get("Authorization", "")
-        return header == f"Bearer {self.token}"
+        if header == f"Bearer {self.token}":
+            return True
+        if query is not None:
+            return query.get("token", [""])[0] == self.token
+        return False
 
     def send_message(self, payload):
         text = str(payload.get("text", "")).strip()
@@ -196,6 +200,8 @@ class TrinityBridge:
             cleaned = dict(event)
             if cleaned.get("payload_html"):
                 cleaned["payload_html"] = self.rewrite_html(cleaned["payload_html"])
+            if cleaned.get("attachments"):
+                cleaned["attachments"] = self.rewrite_attachments(cleaned["attachments"])
             events.append(cleaned)
         return events[-limit:]
 
@@ -229,9 +235,33 @@ class TrinityBridge:
             url = match.group(2)
             parsed = urlparse(url)
             path = parsed.path if parsed.scheme == "file" else url
-            return f"{quote_char}/media?path={quote(path)}{quote_char}"
+            return f"{quote_char}{self.media_url(path)}{quote_char}"
 
         return re.sub(r"(['\"])(file://[^'\"]+)\1", replace, html)
+
+    def media_url(self, path):
+        url = f"/media?path={quote(str(path), safe='')}"
+        if self.token:
+            url += f"&token={quote(self.token, safe='')}"
+        return url
+
+    def rewrite_attachments(self, attachments):
+        if not isinstance(attachments, list):
+            return []
+        rewritten = []
+        for item in attachments:
+            if not isinstance(item, dict):
+                continue
+            cleaned = {key: value for key, value in item.items() if key != "path"}
+            raw_path = str(item.get("path") or "")
+            if raw_path:
+                try:
+                    media_path = self.media_path_from_query(raw_path)
+                    cleaned["media_url"] = self.media_url(media_path)
+                except (OSError, PermissionError, ValueError):
+                    pass
+            rewritten.append(cleaned)
+        return rewritten
 
     @staticmethod
     def _mtime(path):
@@ -252,11 +282,11 @@ def make_handler(bridge):
             _json_response(self, 200, {"ok": True})
 
         def do_GET(self):  # noqa: N802
-            if not bridge.check_auth(self):
-                _json_response(self, 401, {"ok": False, "error": "unauthorized"})
-                return
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
+            if not bridge.check_auth(self, query=query if parsed.path == "/media" else None):
+                _json_response(self, 401, {"ok": False, "error": "unauthorized"})
+                return
             try:
                 if parsed.path == "/health":
                     _json_response(

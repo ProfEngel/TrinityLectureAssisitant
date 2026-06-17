@@ -142,6 +142,62 @@ def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
     assert "file://" not in events[0]["payload_html"]
 
 
+def test_bridge_returns_media_urls_for_event_attachments(tmp_path):
+    home = tmp_path
+    upload_dir = home / "memory" / "companion_uploads"
+    upload_dir.mkdir(parents=True)
+    image = upload_dir / "result.png"
+    image.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "assistant",
+            "source": "runtime",
+            "text": "Fertig",
+            "attachments": [
+                {
+                    "name": "result.png",
+                    "path": str(image),
+                    "kind": "image",
+                    "mime": "image/png",
+                    "size": 3,
+                }
+            ],
+        },
+    )
+    bridge = TrinityBridge(home)
+
+    events = bridge.events_since(0)
+
+    attachment = events[0]["attachments"][0]
+    assert attachment["media_url"].startswith("/media?path=")
+    assert "path" not in attachment
+
+
+def test_bridge_media_urls_include_token_when_configured(tmp_path):
+    home = tmp_path
+    media_dir = home / "gen_images"
+    media_dir.mkdir(parents=True)
+    image = media_dir / "result.png"
+    image.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "assistant",
+            "source": "runtime",
+            "text": "Fertig",
+            "payload_html": f'<img src="{image.resolve().as_uri()}">',
+        },
+    )
+    bridge = TrinityBridge(home, token="secret-token")
+
+    events = bridge.events_since(0)
+
+    assert "token=secret-token" in events[0]["payload_html"]
+
+
 def test_bridge_rejects_media_outside_allowed_roots(tmp_path):
     home = tmp_path / "home"
     home.mkdir()
