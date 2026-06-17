@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.11.6:** macOS-Starter-App zeigt das Trinity-Symbol nun zuverlässig bereits im Finder/Desktop, nicht erst nach dem Start.
 > - **v0.11.5:** Companion-Medienabruf stabilisiert: generierte Bilder, Audio- und Videoergebnisse werden über die Desktop-Bridge plattformneutral von macOS und Windows 11 an iPhone/iPad ausgeliefert.
 > - **v0.11.4:** Companion-STT-Finalisierung korrigiert: iPhone-Live-STT und finaler Trigger werden sauber getrennt, damit gesprochene Wake-Word-Anfragen Trinity zuverlässig erreichen.
 > - **v0.11.3:** Hellmodus der Einstellungen überarbeitet: helle Eingabefelder, passende Kontraste und Live-Synchronisierung mit der ClassicUI.

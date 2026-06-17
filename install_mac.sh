@@ -153,6 +153,10 @@ if [ -f "$ICON_SRC" ]; then
     # .icns bauen und direkt ins Bundle kopieren
     iconutil -c icns "$ICONSET_DIR" -o /tmp/trinity_icon.icns
     cp /tmp/trinity_icon.icns "$ICNS_TARGET"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
     # Auch im Projekt-Assets ablegen für spätere Verwendung
     cp /tmp/trinity_icon.icns "$INSTALL_DIR/assets/trinity_icon.icns"
     rm -rf "$ICONSET_DIR" /tmp/trinity_icon.icns

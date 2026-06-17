@@ -6,6 +6,9 @@ APP_NAME="Trinity"
 DESKTOP_DIR="$HOME/Desktop"
 APP_PATH="$DESKTOP_DIR/$APP_NAME.app"
 ICON_PNG="$PROJECT_DIR/core/icon.png"
+ICONSET_DIR="/tmp/TrinityIcon.iconset"
+ICNS_TMP="/tmp/trinity_icon.icns"
+ICNS_TARGET="$APP_PATH/Contents/Resources/applet.icns"
 
 echo "🚀 Erstelle native macOS App für Trinity..."
 
@@ -41,13 +44,31 @@ rm /tmp/trinity_app.applescript
 
 echo "🖼️  Setze Icon für $APP_NAME.app..."
 
-# 3. Icon setzen (via Python/Cocoa wie im Installer)
-./venv/bin/python3 -c "
-import Cocoa, sys
-image = Cocoa.NSImage.alloc().initWithContentsOfFile_('$ICON_PNG')
-if image:
-    Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, '$APP_PATH', 0)
-" 2>/dev/null || true
+# 3. Bundle-Icon setzen. Ein echtes .icns im App-Bundle ist zuverlässiger als
+# ein Finder-Custom-Icon und erscheint bereits vor dem ersten Start der App.
+if [ -f "$ICON_PNG" ]; then
+    rm -rf "$ICONSET_DIR" "$ICNS_TMP"
+    mkdir -p "$ICONSET_DIR"
+    sips -z 16   16   "$ICON_PNG" --out "$ICONSET_DIR/icon_16x16.png"       &>/dev/null
+    sips -z 32   32   "$ICON_PNG" --out "$ICONSET_DIR/icon_16x16@2x.png"    &>/dev/null
+    sips -z 32   32   "$ICON_PNG" --out "$ICONSET_DIR/icon_32x32.png"       &>/dev/null
+    sips -z 64   64   "$ICON_PNG" --out "$ICONSET_DIR/icon_32x32@2x.png"    &>/dev/null
+    sips -z 128  128  "$ICON_PNG" --out "$ICONSET_DIR/icon_128x128.png"     &>/dev/null
+    sips -z 256  256  "$ICON_PNG" --out "$ICONSET_DIR/icon_128x128@2x.png"  &>/dev/null
+    sips -z 256  256  "$ICON_PNG" --out "$ICONSET_DIR/icon_256x256.png"     &>/dev/null
+    sips -z 512  512  "$ICON_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png"  &>/dev/null
+    sips -z 512  512  "$ICON_PNG" --out "$ICONSET_DIR/icon_512x512.png"     &>/dev/null
+    sips -z 1024 1024 "$ICON_PNG" --out "$ICONSET_DIR/icon_512x512@2x.png"  &>/dev/null
+    iconutil -c icns "$ICONSET_DIR" -o "$ICNS_TMP"
+    cp "$ICNS_TMP" "$ICNS_TARGET"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
+    rm -rf "$ICONSET_DIR" "$ICNS_TMP"
+else
+    echo "⚠️  $ICON_PNG nicht gefunden – App-Icon bleibt Standard."
+fi
 
 echo "✅ Fertig! Du findest '$APP_NAME.app' auf deinem Desktop."
 echo "👉 Du kannst es jetzt einfach in deine Dock-Leiste ziehen."
