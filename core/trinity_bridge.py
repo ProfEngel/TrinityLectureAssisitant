@@ -14,6 +14,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.request import url2pathname
 
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
@@ -55,6 +56,16 @@ def _is_relative_to(path, root):
         return True
     except ValueError:
         return False
+
+
+def _local_path_value(raw_path):
+    value = unquote(str(raw_path or ""))
+    if value.startswith("file://"):
+        parsed = urlparse(value)
+        value = url2pathname(parsed.path)
+    if re.match(r"^/[A-Za-z]:[\\/]", value):
+        value = value[1:]
+    return value
 
 
 class TrinityBridge:
@@ -215,9 +226,7 @@ class TrinityBridge:
     def media_path_from_query(self, raw_path):
         if not raw_path:
             raise ValueError("Kein Medienpfad angegeben.")
-        value = unquote(raw_path)
-        if value.startswith("file://"):
-            value = urlparse(value).path
+        value = _local_path_value(raw_path)
         path = Path(value).expanduser().resolve()
         for root in self.media_roots:
             if _is_relative_to(path, root):
@@ -233,8 +242,10 @@ class TrinityBridge:
         def replace(match):
             quote_char = match.group(1)
             url = match.group(2)
-            parsed = urlparse(url)
-            path = parsed.path if parsed.scheme == "file" else url
+            try:
+                path = self.media_path_from_query(url)
+            except (OSError, PermissionError, ValueError):
+                return match.group(0)
             return f"{quote_char}{self.media_url(path)}{quote_char}"
 
         return re.sub(r"(['\"])(file://[^'\"]+)\1", replace, html)

@@ -1,7 +1,7 @@
 import json
 import base64
 
-from trinity_bridge import TrinityBridge
+from trinity_bridge import TrinityBridge, _local_path_value
 from chat_protocol import append_chat_event, load_chat_events, parse_command
 from external_stt_feed import pop_external_stt_events
 
@@ -196,6 +196,12 @@ def test_bridge_media_urls_include_token_when_configured(tmp_path):
     events = bridge.events_since(0)
 
     assert "token=secret-token" in events[0]["payload_html"]
+
+
+def test_bridge_normalizes_windows_drive_paths_from_media_query():
+    raw = "%2FC%3A%2FUsers%2FMatMax%2FAppData%2FLocal%2FTrinity%2Fgen_images%2Fgen.png"
+
+    assert _local_path_value(raw) == "C:/Users/MatMax/AppData/Local/Trinity/gen_images/gen.png"
 
 
 def test_bridge_rejects_media_outside_allowed_roots(tmp_path):
