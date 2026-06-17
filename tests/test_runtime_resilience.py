@@ -13,6 +13,7 @@ if "requests" not in sys.modules:
 
 from core import transcriber
 from chat_protocol import build_chat_request, encode_chat_request
+from external_stt_feed import append_external_stt_event
 
 
 def test_windows_config_disables_speech_input_by_default(tmp_path, monkeypatch):
@@ -294,6 +295,7 @@ def test_whisper_command_works_without_loading_audio(tmp_path, monkeypatch):
         ear.is_running = False
 
     monkeypatch.setattr(transcriber, "__file__", str(core_dir / "transcriber.py"))
+    monkeypatch.setattr(transcriber, "CORE_DIR", str(core_dir))
     monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
     monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
     monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
@@ -366,3 +368,61 @@ def test_structured_classic_command_reaches_runtime_with_attachments(
     assert received[0][0] == "Analysiere das Bild"
     assert received[0][1] is True
     assert received[0][2]["attachments"][0]["name"] == "bild.png"
+
+
+def test_ios_stt_trigger_word_works_in_chat_mode(tmp_path, monkeypatch):
+    core_dir = tmp_path / "core"
+    memory_dir = tmp_path / "memory"
+    core_dir.mkdir()
+    memory_dir.mkdir()
+    append_external_stt_event(
+        core_dir / "ios_stt_feed.jsonl",
+        {
+            "source": "ios-stt",
+            "text": "Trinity erklär mir Spieltheorie",
+            "is_final": True,
+            "speak": False,
+        },
+    )
+    received = []
+
+    class FakeBrain:
+        pass
+
+    class FakeTTS:
+        pass
+
+    def fake_load_config(ear):
+        ear.model_name = "small"
+        ear.silence_threshold = 0.015
+        ear.chunk_duration = 2
+        ear.show_volume_meter = False
+        ear.voice = "Standard"
+        ear.agent_name = "Trinity"
+        ear.trigger_variants = ["trinity"]
+        ear.proactive_cfg = {}
+        ear.audio_routing = {}
+        ear.telegram_cfg = {}
+        ear.system_cfg = {"mode": "chat"}
+        ear.mode = "chat"
+        ear.speech_input_enabled = False
+
+    def fake_trigger(ear, text, silent_response=False, recent_text=None, **kwargs):
+        received.append((text, silent_response, recent_text, kwargs.get("chat_request")))
+        ear.is_running = False
+
+    monkeypatch.setattr(transcriber, "__file__", str(core_dir / "transcriber.py"))
+    monkeypatch.setattr(transcriber, "CORE_DIR", str(core_dir))
+    monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
+    monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
+    monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
+    monkeypatch.setattr(transcriber.TrinityEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.TrinityEar, "trigger_action", fake_trigger)
+
+    ear = transcriber.TrinityEar()
+    ear.start()
+
+    assert received
+    assert "Trinity erklär mir Spieltheorie" in received[0][0]
+    assert received[0][1] is True
+    assert received[0][3] is None

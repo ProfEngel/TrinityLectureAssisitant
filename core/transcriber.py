@@ -839,7 +839,10 @@ class TrinityEar:
             if not is_final:
                 continue
 
-            if getattr(self, "mode", "office") == "chat":
+            if getattr(self, "mode", "office") == "chat" and not has_trigger(
+                text,
+                self.trigger_variants,
+            ):
                 request = {
                     "request_id": event.get("event_id"),
                     "source": "ios-stt",
