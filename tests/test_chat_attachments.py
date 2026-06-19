@@ -1,6 +1,7 @@
 import zipfile
 
 from chat_attachments import (
+    attachment_preview_html,
     attachment_kind,
     prepare_attachment_content,
     stage_attachment,
@@ -37,6 +38,7 @@ def test_spreadsheet_attachment_is_added_to_prompt(tmp_path):
     assert "Tabelle: Punkte" in prepared["fallback_text"]
     assert "Person XY" in prepared["fallback_text"]
     assert "B: 17" in prepared["fallback_text"]
+    assert "Person XY" in attachment_preview_html(attachment["path"], attachment["kind"])
 
 
 def test_text_attachment_is_staged_and_added_to_prompt(tmp_path):

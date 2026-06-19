@@ -15,13 +15,19 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtGui import QDesktopServices
 
 CORE_MODULE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core")
 if CORE_MODULE_DIR not in sys.path:
     sys.path.insert(0, CORE_MODULE_DIR)
 
-from chat_attachments import spreadsheet_preview_html, stage_attachment  # noqa: E402
-from chat_protocol import append_chat_event, build_chat_request, encode_chat_request  # noqa: E402
+from chat_attachments import attachment_preview_html, stage_attachment  # noqa: E402
+from chat_protocol import (  # noqa: E402
+    append_chat_event,
+    build_chat_request,
+    encode_chat_request,
+    load_chat_events,
+)
 from workspace_context import clear_workspace_attachment, save_workspace_attachment  # noqa: E402
 
 class ContentResizeFilter(QObject):
@@ -442,6 +448,7 @@ class WorkspaceWindow(QMainWindow):
         self.history_path = os.path.join(self.home_dir, "memory", "classic_chat_history.jsonl")
         self.command_path = os.path.join(self.core_dir, "cmd.txt")
         self.attachment = None
+        self.pending_request_id = ""
 
         self.setWindowTitle("Trinity Arbeitsbereich")
         self.resize(1120, 760)
@@ -453,17 +460,31 @@ class WorkspaceWindow(QMainWindow):
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(10)
 
+        header = QHBoxLayout()
         self.title = QLabel("Datei-Arbeitsbereich")
         self.title.setStyleSheet("font-size:18px;font-weight:600;")
+        self.open_button = QPushButton("Im Standardprogramm oeffnen")
+        self.open_button.clicked.connect(self.open_in_default_application)
+        header.addWidget(self.title, 1)
+        header.addWidget(self.open_button)
         self.hint = QLabel("Die Datei bleibt als Kontext fuer Sprach- und Fluesteraustraege aktiv.")
         self.hint.setStyleSheet("color:#7d8da1;")
-        layout.addWidget(self.title)
+        layout.addLayout(header)
         layout.addWidget(self.hint)
 
         self.preview = QWebEngineView(self)
         settings = self.preview.settings()
         settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
         layout.addWidget(self.preview, 1)
+
+        self.response = QLabel("")
+        self.response.setWordWrap(True)
+        self.response.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.response.setStyleSheet(
+            "background:#172536;border:1px solid #2a4e70;border-radius:10px;padding:12px;"
+        )
+        self.response.setVisible(False)
+        layout.addWidget(self.response)
 
         command_row = QHBoxLayout()
         self.command = QLineEdit(self)
@@ -475,6 +496,8 @@ class WorkspaceWindow(QMainWindow):
         command_row.addWidget(send_button)
         layout.addLayout(command_row)
         self.setCentralWidget(root)
+        self.response_timer = QTimer(self)
+        self.response_timer.timeout.connect(self.refresh_response)
 
     def show_attachment(self, attachment):
         self.attachment = attachment
@@ -482,25 +505,23 @@ class WorkspaceWindow(QMainWindow):
         self.title.setText(f"Arbeitsbereich: {attachment['name']}")
         path = os.path.abspath(str(attachment["path"]))
         kind = attachment.get("kind")
-        if kind in {"pdf", "image"}:
+        if kind == "image":
             self.preview.load(QUrl.fromLocalFile(path))
-        elif kind == "spreadsheet":
-            self.preview.setHtml(spreadsheet_preview_html(path), QUrl.fromLocalFile(self.home_dir + os.sep))
         else:
-            try:
-                text = open(path, "r", encoding="utf-8", errors="replace").read()
-            except OSError as exc:
-                text = f"Datei konnte nicht gelesen werden: {exc}"
-            escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             self.preview.setHtml(
-                "<html><body style='background:#10151d;color:#e8edf4;font-family:monospace;padding:24px;'>"
-                f"<pre style='white-space:pre-wrap'>{escaped}</pre></body></html>",
+                attachment_preview_html(path, kind),
                 QUrl.fromLocalFile(self.home_dir + os.sep),
             )
+        self.response.clear()
+        self.response.setVisible(False)
         self.showNormal()
         self.raise_()
         self.activateWindow()
         self.command.setFocus(Qt.OtherFocusReason)
+
+    def open_in_default_application(self):
+        if self.attachment:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.attachment["path"])))
 
     def send_prompt(self):
         if not self.attachment:
@@ -522,12 +543,32 @@ class WorkspaceWindow(QMainWindow):
         try:
             with open(self.command_path, "w", encoding="utf-8") as handle:
                 handle.write(encode_chat_request(request))
+            self.pending_request_id = request["request_id"]
             self.command.clear()
             self.hint.setText("Auftrag an Trinity gesendet. Die Datei bleibt als aktiver Kontext geoeffnet.")
+            self.response.setText("Trinity denkt nach ...")
+            self.response.setVisible(True)
+            self.response_timer.start(450)
         except OSError as exc:
             self.hint.setText(f"Auftrag konnte nicht gesendet werden: {exc}")
 
+    def refresh_response(self):
+        if not self.pending_request_id:
+            self.response_timer.stop()
+            return
+        for event in reversed(load_chat_events(self.history_path, limit=120)):
+            if (
+                event.get("role") == "assistant"
+                and event.get("request_id") == self.pending_request_id
+            ):
+                self.response.setText(event.get("text") or "Trinity hat kein Textresultat geliefert.")
+                self.hint.setText("Antwort bereit. Die Datei bleibt weiter als Kontext aktiv.")
+                self.pending_request_id = ""
+                self.response_timer.stop()
+                return
+
     def closeEvent(self, event):  # noqa: N802
+        self.response_timer.stop()
         if self.attachment:
             clear_workspace_attachment(self.core_dir, self.attachment.get("path"))
         super().closeEvent(event)

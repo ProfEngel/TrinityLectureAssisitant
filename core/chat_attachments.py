@@ -190,6 +190,31 @@ def spreadsheet_preview_html(path, max_rows=80, max_columns=14):
     )
 
 
+def attachment_preview_html(path, kind=None, max_chars=18_000):
+    """Render a safe text preview when the native desktop application owns the file."""
+    path = Path(path)
+    kind = kind or attachment_kind(path)
+    try:
+        if kind == "spreadsheet":
+            return spreadsheet_preview_html(path)
+        if kind == "pdf":
+            content = _read_pdf(path)
+        else:
+            content = _read_text(path)
+    except Exception as exc:
+        content = f"Vorschau konnte nicht erstellt werden: {exc}"
+    excerpt = content[:max_chars]
+    suffix = "\n\n[Weitere Inhalte in der Originaldatei.]" if len(content) > len(excerpt) else ""
+    return (
+        "<html><head><meta charset='utf-8'><style>"
+        "body{font-family:system-ui,sans-serif;background:#10151d;color:#e8edf4;padding:24px;}"
+        "h1{margin-top:0;color:#66c7ff}pre{white-space:pre-wrap;line-height:1.45}"
+        "</style></head><body>"
+        f"<h1>{html.escape(path.name)}</h1><pre>{html.escape(excerpt + suffix)}</pre>"
+        "</body></html>"
+    )
+
+
 def prepare_attachment_content(user_query, attachments):
     text_sections = []
     image_parts = []

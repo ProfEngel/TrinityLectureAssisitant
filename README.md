@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.12.1:** Augen-UI-Datei-Arbeitsbereich korrigiert: PDFs erhalten eine lesbare Vorschau, Dateien lassen sich im Standardprogramm oeffnen und Antworten auf Fluestern-Auftraege erscheinen direkt im Arbeitsbereich.
 > - **v0.12.0:** Desktop-Arbeitsbereich fuer Datei-Drop auf der Augen-UI sowie schlanke Linux-Servervariante mit token-geschuetzter Browser-WebUI, Uploads und Medienanzeige.
 > - **v0.11.7:** Companion-Bridge liefert nun auch Agenten-Widgets aus `core/` aus, damit Python-/Pyodide-Sandbox, Diagramme, Timer und Simulationen in der iPhone/iPad-Companion als Overlay/Presenter-Ergebnis angezeigt werden können.
 > - **v0.11.6:** macOS-Starter-App zeigt das Trinity-Symbol nun zuverlässig bereits im Finder/Desktop, nicht erst nach dem Start.
