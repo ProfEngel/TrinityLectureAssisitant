@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.11.1"
+VERSION = "0.12.0"
 
 
 def find_trinity_home(explicit=None):
@@ -362,6 +362,20 @@ def run_bridge_command(home, args):
     return run_bridge(home, host=host, port=port, token=token)
 
 
+def run_server_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from configuration import load_config  # pylint: disable=import-outside-toplevel
+    from trinity_server import run_server  # pylint: disable=import-outside-toplevel
+
+    server = load_config(Path(home) / "core" / "config.json").get("server", {})
+    host = args.host or server.get("host") or "127.0.0.1"
+    port = args.port or server.get("port") or 8765
+    token = args.token if args.token is not None else server.get("token", "")
+    return run_server(home, host=host, port=port, token=token)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -423,6 +437,13 @@ def build_parser():
         default=None,
         help="Optionales Bearer-Token für Companion-Clients",
     )
+    server = subparsers.add_parser(
+        "server",
+        help="Headless Trinity-Kern mit browserbasierter WebUI starten",
+    )
+    server.add_argument("--host", default=None, help="Bind-Adresse, z.B. 0.0.0.0 für Tailscale")
+    server.add_argument("--port", type=int, default=None, help="HTTP-Port")
+    server.add_argument("--token", default=None, help="Bearer-Token für die WebUI")
     return parser
 
 
@@ -454,6 +475,8 @@ def main(argv=None):
             return run_doctor_command(home, args)
         if args.command == "bridge":
             return run_bridge_command(home, args)
+        if args.command == "server":
+            return run_server_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

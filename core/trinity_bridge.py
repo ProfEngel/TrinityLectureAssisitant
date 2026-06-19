@@ -19,6 +19,7 @@ from urllib.request import url2pathname
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from external_stt_feed import append_external_stt_event
+from web_ui import render_web_ui
 
 
 DEFAULT_HOST = "127.0.0.1"
@@ -36,6 +37,15 @@ def _json_response(handler, status, payload):
     handler.send_header("Access-Control-Allow-Origin", "*")
     handler.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
     handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    handler.end_headers()
+    handler.wfile.write(data)
+
+
+def _html_response(handler, status, content):
+    data = content.encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "text/html; charset=utf-8")
+    handler.send_header("Content-Length", str(len(data)))
     handler.end_headers()
     handler.wfile.write(data)
 
@@ -109,7 +119,7 @@ class TrinityBridge:
             raise ValueError("Text oder Anlage darf nicht leer sein.")
 
         request = build_chat_request(text, attachments, history_recorded=True)
-        request["source"] = "ios"
+        request["source"] = str(payload.get("source", "ios") or "ios")[:64]
         request["session_id"] = str(payload.get("session_id", "")).strip()
         request["privacy_mode"] = str(payload.get("privacy_mode", "local")).strip() or "local"
         request["silent"] = not bool(payload.get("speak", False))
@@ -123,7 +133,7 @@ class TrinityBridge:
                 {
                     "request_id": request["request_id"],
                     "role": "user",
-                    "source": "ios",
+                    "source": request["source"],
                     "text": text,
                     "attachments": attachments,
                     "session_id": request["session_id"],
@@ -296,6 +306,9 @@ def make_handler(bridge):
         def do_GET(self):  # noqa: N802
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
+            if parsed.path in {"/", "/web"}:
+                _html_response(self, 200, render_web_ui())
+                return
             if not bridge.check_auth(self, query=query if parsed.path == "/media" else None):
                 _json_response(self, 401, {"ok": False, "error": "unauthorized"})
                 return

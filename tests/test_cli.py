@@ -22,7 +22,7 @@ def _modules():
 def test_cli_exposes_requested_commands():
     parser = trinity_cli.build_parser()
 
-    for command in ("start", "settings", "onboarding", "tui", "doctor", "bridge"):
+    for command in ("start", "settings", "onboarding", "tui", "doctor", "bridge", "server"):
         parsed = parser.parse_args([command])
         assert parsed.command == command
 
@@ -126,3 +126,19 @@ def test_bridge_uses_saved_companion_settings(tmp_path, monkeypatch):
         "port": 9999,
         "token": "secret",
     }
+
+
+def test_server_uses_saved_server_settings(tmp_path, monkeypatch):
+    import trinity_server
+
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "trinity_launcher.py").touch()
+    save_config(home / "core" / "config.json", {"server": {"host": "0.0.0.0", "port": 8888, "token": "secret"}})
+    captured = {}
+    monkeypatch.setattr(trinity_server, "run_server", lambda home_arg, host, port, token: captured.update({"home": home_arg, "host": host, "port": port, "token": token}) or 0)
+
+    result = trinity_cli.run_server_command(home, SimpleNamespace(host=None, port=None, token=None))
+
+    assert result == 0
+    assert captured == {"home": home, "host": "0.0.0.0", "port": 8888, "token": "secret"}

@@ -106,6 +106,11 @@ def default_config(platform_name=None):
             "port": 8765,
             "token": "",
         },
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8765,
+            "token": "",
+        },
     }
 
 

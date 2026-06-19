@@ -2,6 +2,7 @@ import json
 import base64
 
 from trinity_bridge import TrinityBridge, _local_path_value
+from web_ui import render_web_ui
 from chat_protocol import append_chat_event, load_chat_events, parse_command
 from external_stt_feed import pop_external_stt_events
 
@@ -22,6 +23,26 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     assert request["source"] == "ios"
     assert request["session_id"] == "ios-1"
     assert request["privacy_mode"] == "local"
+
+
+def test_bridge_keeps_explicit_web_source(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    bridge.send_message({"text": "Hallo", "source": "web"})
+
+    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    assert request["source"] == "web"
+
+
+def test_web_ui_contains_file_upload_and_token_login():
+    page = render_web_ui()
+
+    assert 'id="files"' in page
+    assert "Bearer Token" in page
+    assert "'/message'" in page
 
 
 def test_bridge_can_allow_tts_for_ios_message(tmp_path):

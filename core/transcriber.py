@@ -21,6 +21,7 @@ from chat_protocol import append_chat_event, parse_command
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
 from platform_adapters import create_tts_backend
+from workspace_context import load_workspace_attachment
 
 # Konfiguration
 MODEL = "small"  # Schnell auf CPU: <1s Latenz. Für beste Qualität: 'large-v3-turbo'
@@ -173,7 +174,7 @@ class TrinityEar:
             self.speech_input_enabled = (
                 sys.platform != "win32"
                 or self.system_cfg.get("windows_speech_enabled", False)
-            )
+            ) and os.environ.get("TRINITY_SERVER") != "1"
             self._config_mtime = os.path.getmtime(self.config_path)
         except:
             self.model_name = MODEL
@@ -188,7 +189,9 @@ class TrinityEar:
             self.telegram_cfg = {}
             self.system_cfg = {}
             self.mode = "office"
-            self.speech_input_enabled = sys.platform != "win32"
+            self.speech_input_enabled = (
+                sys.platform != "win32" and os.environ.get("TRINITY_SERVER") != "1"
+            )
             self._config_mtime = None
 
     def reload_config_if_changed(self):
@@ -1081,11 +1084,18 @@ class TrinityEar:
         # Abfrage ans Gehirn senden
         use_text_mode = getattr(self, 'text_mode', False) or silent_response
         print(f"🧠 {self.agent_name} denkt nach über: '{text[-60:]}...'")
+        attachments = (chat_request or {}).get("attachments", [])
+        if not attachments:
+            workspace_attachment = load_workspace_attachment(CORE_DIR)
+            if workspace_attachment:
+                attachments = [workspace_attachment]
+                print(f"📎 Aktiver Arbeitsbereich: {workspace_attachment.get('name', 'Anlage')}")
+
         antwort, has_payload = self.brain.ask(
             text, self.transcript_file,
             text_mode=use_text_mode, action_text=recent_text or text,
             from_telegram=from_telegram,
-            attachments=(chat_request or {}).get("attachments", []),
+            attachments=attachments,
         )
 
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")

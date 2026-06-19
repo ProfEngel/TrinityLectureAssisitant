@@ -1,9 +1,12 @@
 """Attachment staging and LLM context preparation for Trinity chat."""
 
 import base64
+import html
 import mimetypes
 import shutil
 import uuid
+import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 
@@ -23,6 +26,7 @@ TEXT_SUFFIXES = {
     ".css",
 }
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+SPREADSHEET_SUFFIXES = {".xlsx", ".xlsm"}
 MAX_TEXT_CHARS_PER_FILE = 24_000
 MAX_TOTAL_TEXT_CHARS = 60_000
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -34,6 +38,8 @@ def attachment_kind(path):
         return "pdf"
     if suffix in IMAGE_SUFFIXES:
         return "image"
+    if suffix in SPREADSHEET_SUFFIXES:
+        return "spreadsheet"
     if suffix in TEXT_SUFFIXES:
         return "text"
     return None
@@ -85,6 +91,105 @@ def _image_data_url(path, mime):
     return f"data:{mime};base64,{encoded}"
 
 
+def _xlsx_column_name(index):
+    name = ""
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        name = chr(65 + remainder) + name
+    return name or "A"
+
+
+def _xlsx_shared_strings(archive):
+    try:
+        root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+    except KeyError:
+        return []
+    namespace = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    values = []
+    for item in root.findall("x:si", namespace):
+        values.append("".join(node.text or "" for node in item.iterfind(".//x:t", namespace)))
+    return values
+
+
+def _read_spreadsheet(path, max_rows=240, max_columns=24):
+    """Read simple Office Open XML workbooks without making pandas mandatory."""
+    namespace = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    with zipfile.ZipFile(path) as archive:
+        shared_strings = _xlsx_shared_strings(archive)
+        workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+        sheets = []
+        for index, sheet in enumerate(workbook.findall("x:sheets/x:sheet", namespace), start=1):
+            name = sheet.attrib.get("name") or f"Tabelle {index}"
+            sheet_path = f"xl/worksheets/sheet{index}.xml"
+            try:
+                root = ET.fromstring(archive.read(sheet_path))
+            except KeyError:
+                continue
+            rows = []
+            for row in root.findall("x:sheetData/x:row", namespace)[:max_rows]:
+                values = {}
+                for cell in row.findall("x:c", namespace):
+                    reference = cell.attrib.get("r", "A1")
+                    column = "".join(character for character in reference if character.isalpha()) or "A"
+                    if len(values) >= max_columns:
+                        break
+                    value_node = cell.find("x:v", namespace)
+                    raw_value = value_node.text if value_node is not None else ""
+                    if cell.attrib.get("t") == "s" and raw_value.isdigit():
+                        number = int(raw_value)
+                        raw_value = shared_strings[number] if number < len(shared_strings) else raw_value
+                    elif cell.attrib.get("t") == "inlineStr":
+                        raw_value = "".join(
+                            node.text or "" for node in cell.findall(".//x:t", namespace)
+                        )
+                    values[column] = raw_value or ""
+                if values:
+                    rows.append(values)
+            sheets.append({"name": name, "rows": rows})
+    return sheets
+
+
+def _spreadsheet_text(path):
+    sections = []
+    for sheet in _read_spreadsheet(path):
+        rows = sheet["rows"]
+        if not rows:
+            continue
+        columns = sorted({column for row in rows for column in row})
+        sections.append(f"--- Tabelle: {sheet['name']} ---")
+        for row in rows:
+            sections.append(" | ".join(f"{column}: {row.get(column, '')}" for column in columns))
+    return "\n".join(sections)
+
+
+def spreadsheet_preview_html(path, max_rows=80, max_columns=14):
+    """Return a compact HTML preview for the desktop workspace and WebUI."""
+    sheets = _read_spreadsheet(path, max_rows=max_rows, max_columns=max_columns)
+    blocks = []
+    for sheet in sheets:
+        rows = sheet["rows"]
+        columns = sorted({column for row in rows for column in row})
+        header = "".join(f"<th>{html.escape(column)}</th>" for column in columns)
+        body = "".join(
+            "<tr>" + "".join(f"<td>{html.escape(str(row.get(column, '')))}</td>" for column in columns) + "</tr>"
+            for row in rows
+        )
+        blocks.append(
+            f"<section><h2>{html.escape(sheet['name'])}</h2>"
+            f"<table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table></section>"
+        )
+    return (
+        "<html><head><meta charset='utf-8'><style>"
+        "body{font-family:system-ui,sans-serif;background:#10151d;color:#e8edf4;padding:24px;}"
+        "h1{margin-top:0;}h2{color:#66c7ff;margin-top:26px;}table{border-collapse:collapse;width:100%;}"
+        "th,td{border:1px solid #334155;padding:7px;text-align:left;vertical-align:top;}"
+        "th{background:#182230;position:sticky;top:0;}tr:nth-child(even){background:#15202d;}"
+        "</style></head><body>"
+        f"<h1>{html.escape(Path(path).name)}</h1>{''.join(blocks) or '<p>Keine lesbaren Tabellenzeilen gefunden.</p>'}"
+        "</body></html>"
+    )
+
+
 def prepare_attachment_content(user_query, attachments):
     text_sections = []
     image_parts = []
@@ -99,9 +204,14 @@ def prepare_attachment_content(user_query, attachments):
             text_sections.append(f"Anlage `{name}` ist nicht mehr verfügbar.")
             continue
 
-        if kind in {"text", "pdf"} and remaining > 0:
+        if kind in {"text", "pdf", "spreadsheet"} and remaining > 0:
             try:
-                content = _read_pdf(path) if kind == "pdf" else _read_text(path)
+                if kind == "pdf":
+                    content = _read_pdf(path)
+                elif kind == "spreadsheet":
+                    content = _spreadsheet_text(path)
+                else:
+                    content = _read_text(path)
             except Exception as exc:
                 text_sections.append(f"Anlage `{name}` konnte nicht gelesen werden: {exc}")
                 continue

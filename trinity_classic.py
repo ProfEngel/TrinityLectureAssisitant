@@ -614,7 +614,7 @@ class ClassicWindow(QMainWindow):
             (
                 "Unterstützte Dateien (*.txt *.md *.markdown *.csv *.tsv *.json "
                 "*.yaml *.yml *.log *.py *.js *.html *.css *.pdf *.png *.jpg "
-                "*.jpeg *.webp *.gif);;Alle Dateien (*)"
+                "*.jpeg *.webp *.gif *.xlsx *.xlsm);;Alle Dateien (*)"
             ),
         )
         self._add_attachments(paths)

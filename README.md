@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.12.0:** Desktop-Arbeitsbereich fuer Datei-Drop auf der Augen-UI sowie schlanke Linux-Servervariante mit token-geschuetzter Browser-WebUI, Uploads und Medienanzeige.
 > - **v0.11.7:** Companion-Bridge liefert nun auch Agenten-Widgets aus `core/` aus, damit Python-/Pyodide-Sandbox, Diagramme, Timer und Simulationen in der iPhone/iPad-Companion als Overlay/Presenter-Ergebnis angezeigt werden können.
 > - **v0.11.6:** macOS-Starter-App zeigt das Trinity-Symbol nun zuverlässig bereits im Finder/Desktop, nicht erst nach dem Start.
 > - **v0.11.5:** Companion-Medienabruf stabilisiert: generierte Bilder, Audio- und Videoergebnisse werden über die Desktop-Bridge plattformneutral von macOS und Windows 11 an iPhone/iPad ausgeliefert.
@@ -31,7 +32,7 @@
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11 sowie als schlanker Linux-Server mit WebUI. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
 
 ---
 
@@ -75,7 +76,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
  | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
  | **OpenCode-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale OpenCode-Projekte und Automationspipelines. |
- | **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
+| **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
  
  ---
  
@@ -83,7 +84,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  
  *   **AirPod Souffleur:** Private Informationen direkt ins Ohr, Umschalten auf Plenum-Speaker auf Befehl.
  *   **Proaktiver Heartbeat:** Analyse des Transkripts alle 2 Min. mit Warnungen vor logischen Fehlern.
- *   **Document Intelligence:** Lokale Dateien (Thesen, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
+*   **Document Intelligence:** Lokale Dateien (Thesen, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
  *   **Secure Sandbox Environment:** 100% einbruchsichere Python/WASM-Umgebung (Pyodide) für wissenschaftliche Berechnungen, sympy-Algebra und interaktive Plotly-Diagramme.
  *   **Dynamic Progress Ring:** Kreisförmige Fortschrittsanzeige (Orange: Reading, Rot: Analyzing) um den Avatar.
  *   **User Telemetry:** Tracking der Zeit in Vorlesungen, Teams-Sitzungen und Mail-Bearbeitung (analog Bildschirmzeit).
@@ -118,6 +119,7 @@ Trinity_Assistant/
 ├── trinity_app.py             ← UI (Avatar + Content-Fenster)
 ├── trinity_classic.py         ← Klassische App mit Chat und Einstellungen
 ├── trinity_console.py         ← Terminal-CLI und Headless-Oberfläche
+├── trinity_server.py          ← Headless-Laufzeit mit browserbasierter WebUI
 ├── trinity-blueprint.md       ← Architektur-Konzept
 ├── README.md
 ├── core/
@@ -178,6 +180,23 @@ Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im
 [Windows-Portierungsplan](docs/WINDOWS11_PORTING_PLAN.md).
 
+### Linux / Ubuntu Server
+
+Die Linux-Variante ist bewusst schlank: kein PySide, keine Augen-UI und kein
+lokales Mikrofon. Sie startet Trinity-Kern und Browser-WebUI gemeinsam; geeignet
+für Ubuntu, einen Heimserver oder einen Tailscale-Knoten.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_linux.sh | bash
+~/.local/bin/trinity onboarding
+~/.local/bin/trinity server --host 127.0.0.1 --port 8765
+```
+
+Danach steht die WebUI unter `http://SERVER:8765/` bereit. Für Tailscale den Host
+auf `0.0.0.0` setzen und ein Token verwenden, etwa
+`trinity server --host 0.0.0.0 --token "langer-zufaelliger-wert"`. Details stehen
+in [Deployment Linux](docs/Deployment_Linux.md).
+
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
 
 ### Wählbare Oberflächen
@@ -196,6 +215,14 @@ unabhängig kombinieren:
   links oben, das Zahnrad öffnet die Einstellungen im selben Fenster, und die
   Ansicht kann zwischen Dark Mode und Hell Mode wechseln.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
+
+Seit v0.12.0 kann eine Datei direkt auf die **Augen-UI** gezogen werden. Trinity
+öffnet dafür einen Arbeitsbereich mit Vorschau: PDFs und Bilder werden nativ
+angezeigt, Textdateien lesbar gerendert und `.xlsx`/`.xlsm` als Tabelle dargestellt.
+Die geöffnete Datei bleibt für den nächsten Sprachauftrag oder Flüsterprompt als
+Kontext aktiv. Damit funktionieren z.B. „Trinity, fasse die Datei zusammen“ oder
+„Trinity, wie viele Punkte hat Person XY in Entscheidungsökonomik?“ ohne erneuten
+Upload. Die Classic-UI unterstützt dieselben Dateitypen per Button und Drag-and-drop.
 
 Seit v0.11.1 startet eine frische Installation standardmäßig mit der Classic-UI.
 Bestehende Installationen behalten ihre gespeicherten Oberflächen-Einstellungen.
@@ -217,6 +244,7 @@ trinity doctor
 trinity doctor --fix
 trinity tui
 trinity bridge
+trinity server
 ```
 
 `trinity settings` ist eine interaktive Einstellungsoberfläche für Headless-Systeme.
@@ -228,6 +256,12 @@ einzelnen Start überschrieben werden.
 `trinity bridge` startet die HTTP-Bridge für die optionale iPhone/iPad
 Companion-App. Host, Port und Bearer Token können auch grafisch unter
 **Einstellungen → System → Companion Bridge** gesetzt werden.
+
+`trinity server` ist die Linux-/Headless-Variante: Sie startet Trinity ohne lokale
+Desktop-Oberfläche oder Audioeingang und liefert die WebUI direkt unter `/` aus.
+Die WebUI kann textliche Aufträge sowie PDF-, Bild-, Text- und Excel-Anlagen senden,
+zeigt Chatverlauf, generierte Medien und HTML-/Sandbox-Ergebnisse an. Bei gesetztem
+Token wird dieses im Browser einmalig eingetragen und nur lokal gespeichert.
 
 Gespeicherte LLM-, Persona-, User-/Soul-, Telegram-, TTS- und Modus-Änderungen
 werden von laufenden Trinity-Anfragen automatisch neu geladen. Ein Neustart ist
@@ -387,11 +421,11 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  
  *   **Trinity Mobile (v0.8.0):** Companion-App für Single-Monitor-Setups, Tablet-Support und mobile Session-Synchronisation.
  *   **Office Mode Integration (Q2 2026):** Lokale Mail-Drafts, AppleScript-Anbindung für Teams/Kalender & Writing Sample RAG.
- *   **Document Intelligence (Q2 2026):** Drag & Drop Support für Thesen und Excel-Auswertungen inkl. Korrektur-Agenten.
+ *   **Document Intelligence (Q2 2026):** Dateidrop und Excel-Auswertung sind verfügbar; als Nächstes folgen Word-Import, Annotationen und Korrektur-Agenten.
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
  *   **Erstbenutzer Onboarding:** Terminal-Onboarding ist ab v0.10.2 verfügbar; ein grafisches Einführungstutorial bleibt geplant.
- *   **Multi-OS & Cross-Platform Packaging:** macOS und Windows 11 werden unterstützt; als Nächstes folgen signierte Pakete sowie später iOS, Android und Headless Ubuntu.
+ *   **Multi-OS & Cross-Platform Packaging:** macOS, Windows 11 und Linux-Server mit WebUI werden unterstützt; als Nächstes folgen signierte Pakete sowie Android.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).

@@ -3,9 +3,26 @@ import os
 import json
 import subprocess
 from PySide6.QtCore import Qt, QUrl, QTimer, QObject, QEvent
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLineEdit, QVBoxLayout
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QLineEdit,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
+
+CORE_MODULE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core")
+if CORE_MODULE_DIR not in sys.path:
+    sys.path.insert(0, CORE_MODULE_DIR)
+
+from chat_attachments import spreadsheet_preview_html, stage_attachment  # noqa: E402
+from chat_protocol import append_chat_event, build_chat_request, encode_chat_request  # noqa: E402
+from workspace_context import clear_workspace_attachment, save_workspace_attachment  # noqa: E402
 
 class ContentResizeFilter(QObject):
     """EventFilter der auf dem WebEngine-FocusProxy lauscht und Resize an den Rändern ermöglicht."""
@@ -374,6 +391,18 @@ class WebEngineDragFilter(QObject):
         self.drag_pos = None
 
     def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.DragEnter and event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            return True
+        if event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
+            paths = [
+                url.toLocalFile()
+                for url in event.mimeData().urls()
+                if url.isLocalFile()
+            ]
+            self.window.open_workspace_files(paths)
+            event.acceptProposedAction()
+            return True
         if event.type() == QEvent.Type.MouseButtonPress:
             if event.button() == Qt.LeftButton:
                 self.dragging = True
@@ -403,6 +432,107 @@ class WebEngineDragFilter(QObject):
         return False
 
 
+class WorkspaceWindow(QMainWindow):
+    """Desktop workbench for a file dropped on the floating Trinity UI."""
+
+    def __init__(self, home_dir, parent=None):
+        super().__init__(parent)
+        self.home_dir = os.path.abspath(home_dir)
+        self.core_dir = os.path.join(self.home_dir, "core")
+        self.history_path = os.path.join(self.home_dir, "memory", "classic_chat_history.jsonl")
+        self.command_path = os.path.join(self.core_dir, "cmd.txt")
+        self.attachment = None
+
+        self.setWindowTitle("Trinity Arbeitsbereich")
+        self.resize(1120, 760)
+        self.setMinimumSize(720, 500)
+        self.setWindowFlags(Qt.Window)
+
+        root = QWidget(self)
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
+
+        self.title = QLabel("Datei-Arbeitsbereich")
+        self.title.setStyleSheet("font-size:18px;font-weight:600;")
+        self.hint = QLabel("Die Datei bleibt als Kontext fuer Sprach- und Fluesteraustraege aktiv.")
+        self.hint.setStyleSheet("color:#7d8da1;")
+        layout.addWidget(self.title)
+        layout.addWidget(self.hint)
+
+        self.preview = QWebEngineView(self)
+        settings = self.preview.settings()
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        layout.addWidget(self.preview, 1)
+
+        command_row = QHBoxLayout()
+        self.command = QLineEdit(self)
+        self.command.setPlaceholderText("z.B. Fasse die Datei zusammen oder nenne die Punkte von Person XY ...")
+        self.command.returnPressed.connect(self.send_prompt)
+        send_button = QPushButton("Fluestern")
+        send_button.clicked.connect(self.send_prompt)
+        command_row.addWidget(self.command, 1)
+        command_row.addWidget(send_button)
+        layout.addLayout(command_row)
+        self.setCentralWidget(root)
+
+    def show_attachment(self, attachment):
+        self.attachment = attachment
+        save_workspace_attachment(self.core_dir, attachment)
+        self.title.setText(f"Arbeitsbereich: {attachment['name']}")
+        path = os.path.abspath(str(attachment["path"]))
+        kind = attachment.get("kind")
+        if kind in {"pdf", "image"}:
+            self.preview.load(QUrl.fromLocalFile(path))
+        elif kind == "spreadsheet":
+            self.preview.setHtml(spreadsheet_preview_html(path), QUrl.fromLocalFile(self.home_dir + os.sep))
+        else:
+            try:
+                text = open(path, "r", encoding="utf-8", errors="replace").read()
+            except OSError as exc:
+                text = f"Datei konnte nicht gelesen werden: {exc}"
+            escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            self.preview.setHtml(
+                "<html><body style='background:#10151d;color:#e8edf4;font-family:monospace;padding:24px;'>"
+                f"<pre style='white-space:pre-wrap'>{escaped}</pre></body></html>",
+                QUrl.fromLocalFile(self.home_dir + os.sep),
+            )
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        self.command.setFocus(Qt.OtherFocusReason)
+
+    def send_prompt(self):
+        if not self.attachment:
+            return
+        text = self.command.text().strip() or "Bitte analysiere die geoeffnete Datei."
+        request = build_chat_request(text, [self.attachment], history_recorded=True)
+        request["source"] = "eyes-workspace"
+        request["silent"] = True
+        append_chat_event(
+            self.history_path,
+            {
+                "request_id": request["request_id"],
+                "role": "user",
+                "source": "eyes-workspace",
+                "text": text,
+                "attachments": [self.attachment],
+            },
+        )
+        try:
+            with open(self.command_path, "w", encoding="utf-8") as handle:
+                handle.write(encode_chat_request(request))
+            self.command.clear()
+            self.hint.setText("Auftrag an Trinity gesendet. Die Datei bleibt als aktiver Kontext geoeffnet.")
+        except OSError as exc:
+            self.hint.setText(f"Auftrag konnte nicht gesendet werden: {exc}")
+
+    def closeEvent(self, event):  # noqa: N802
+        if self.attachment:
+            clear_workspace_attachment(self.core_dir, self.attachment.get("path"))
+        super().closeEvent(event)
+
+
 class TrinityWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -414,6 +544,7 @@ class TrinityWindow(QMainWindow):
             Qt.Tool
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAcceptDrops(True)
         if sys.platform == "darwin":
             self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
         
@@ -433,6 +564,7 @@ class TrinityWindow(QMainWindow):
 
         # Ohne parent bleibt das Inhaltsfenster plattformübergreifend eigenständig oben.
         self.content_window = ContentWindow(None)
+        self.workspace_window = WorkspaceWindow(os.path.dirname(os.path.abspath(__file__)), None)
         
         # Chat-Eingabe Fenster (ohne parent)
         self.chat_window = ChatWindow(None)
@@ -441,6 +573,7 @@ class TrinityWindow(QMainWindow):
         self.drag_filter = WebEngineDragFilter(self)
         self._input_filter_targets = set()
         self.browser.installEventFilter(self.drag_filter)
+        self.browser.setAcceptDrops(True)
         self._input_filter_targets.add(id(self.browser))
         self.browser.loadFinished.connect(self._install_input_filter)
         QTimer.singleShot(0, self._install_input_filter)
@@ -458,6 +591,7 @@ class TrinityWindow(QMainWindow):
         proxy = self.browser.focusProxy()
         if proxy and id(proxy) not in self._input_filter_targets:
             proxy.installEventFilter(self.drag_filter)
+            proxy.setAcceptDrops(True)
             proxy.setMouseTracking(True)
             self._input_filter_targets.add(id(proxy))
 
@@ -516,6 +650,30 @@ class TrinityWindow(QMainWindow):
         # Bubble verstecken
         self.bubble_active = False
         self.browser.page().runJavaScript("window.setBubbleColor('none');")
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        self.open_workspace_files(
+            [url.toLocalFile() for url in event.mimeData().urls() if url.isLocalFile()]
+        )
+        event.acceptProposedAction()
+
+    def open_workspace_files(self, paths):
+        if not paths:
+            return
+        upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "workspace_uploads")
+        try:
+            attachment = stage_attachment(paths[0], upload_dir)
+        except (OSError, ValueError) as exc:
+            self.content_window.show_content(
+                f"<h2>Datei konnte nicht geoeffnet werden</h2><p>{exc}</p>",
+                self.pos(),
+            )
+            return
+        self.workspace_window.show_attachment(attachment)
 
     def mousePressEvent(self, event):
         # Ermöglicht das Verschieben des Widgets
