@@ -2,6 +2,7 @@ import subprocess
 import sys
 import time
 import os
+import webbrowser
 from datetime import datetime
 from html import escape
 
@@ -38,6 +39,13 @@ def _read_show_terminal(config_file):
 def _read_companion_config(config_file):
     try:
         return load_config(config_file).get("companion", {})
+    except Exception:
+        return {}
+
+
+def _read_server_config(config_file):
+    try:
+        return load_config(config_file).get("server", {})
     except Exception:
         return {}
 
@@ -172,16 +180,18 @@ def launch_trinity():
     )
     surface = _requested_surface()
     surface_modes = {
-        "classic": {"eyes": False, "classic": True, "terminal": False},
-        "eyes": {"eyes": True, "classic": False, "terminal": False},
-        "terminal": {"eyes": False, "classic": False, "terminal": True},
-        "all": {"eyes": True, "classic": True, "terminal": True},
+        "classic": {"eyes": False, "classic": True, "web": False, "terminal": False},
+        "eyes": {"eyes": True, "classic": False, "web": False, "terminal": False},
+        "web": {"eyes": False, "classic": False, "web": True, "terminal": False},
+        "terminal": {"eyes": False, "classic": False, "web": False, "terminal": True},
+        "all": {"eyes": True, "classic": True, "web": True, "terminal": True},
     }
     if surface in surface_modes:
         ui_modes = surface_modes[surface]
     show_terminal = ui_modes["terminal"]
     child_env = _trinity_subprocess_env()
     companion_config = _read_companion_config(config_file)
+    server_config = _read_server_config(config_file)
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -200,7 +210,12 @@ def launch_trinity():
             console_flags = subprocess.CREATE_NEW_CONSOLE
 
         bridge_process = None
-        if companion_config.get("enabled", False):
+        web_enabled = ui_modes["web"]
+        companion_enabled = companion_config.get("enabled", False)
+        if companion_enabled or web_enabled:
+            bridge_config = companion_config if companion_enabled else server_config
+            bridge_host = str(bridge_config.get("host") or "127.0.0.1")
+            bridge_port = int(bridge_config.get("port") or 8765)
             bridge_command = [
                 sys.executable,
                 "-u",
@@ -208,13 +223,15 @@ def launch_trinity():
                 "--home",
                 base_dir,
                 "--host",
-                str(companion_config.get("host") or "127.0.0.1"),
+                bridge_host,
                 "--port",
-                str(companion_config.get("port") or 8765),
+                str(bridge_port),
             ]
-            token = str(companion_config.get("token") or "")
+            token = str(bridge_config.get("token") or "")
             if token:
                 bridge_command.extend(["--token", token])
+            if web_enabled and not companion_enabled and bridge_config.get("auth_enabled", False):
+                bridge_command.append("--auth")
             bridge_process = subprocess.Popen(
                 bridge_command,
                 stdout=None if show_terminal else runtime_log,
@@ -224,10 +241,13 @@ def launch_trinity():
             )
             _log_message(
                 launcher_log,
-                "Companion Bridge gestartet auf "
-                f"{companion_config.get('host') or '127.0.0.1'}:"
-                f"{companion_config.get('port') or 8765}",
+                ("WebUI und Companion Bridge" if companion_enabled and web_enabled else
+                 "WebUI" if web_enabled else "Companion Bridge")
+                + f" gestartet auf {bridge_host}:{bridge_port}",
             )
+            if web_enabled:
+                browser_host = "127.0.0.1" if bridge_host in {"0.0.0.0", "::"} else bridge_host
+                webbrowser.open(f"http://{browser_host}:{bridge_port}/")
 
         if show_terminal:
             ear_process = subprocess.Popen(
@@ -299,6 +319,8 @@ def launch_trinity():
                         f"Companion Bridge wurde mit Code {bridge_process.returncode} beendet.",
                     )
                     bridge_process = None
+                    if web_enabled and not ui_processes:
+                        break
                 time.sleep(1)
         except KeyboardInterrupt:
             _log_message(launcher_log, "Trinity wurde manuell beendet.")

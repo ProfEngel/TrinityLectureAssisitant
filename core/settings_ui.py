@@ -105,11 +105,13 @@ class SettingsWindow(QMainWindow):
         self._sync_ui_mode_controls()
         eyes_enabled = getattr(self, "eyes_ui_cb", QCheckBox()).isChecked()
         classic_enabled = getattr(self, "classic_ui_cb", QCheckBox()).isChecked()
+        web_enabled = getattr(self, "web_ui_cb", QCheckBox()).isChecked()
         terminal_enabled = getattr(self, "terminal_cb", QCheckBox()).isChecked()
-        if not eyes_enabled and not classic_enabled:
+        if not eyes_enabled and not classic_enabled and not web_enabled:
             terminal_enabled = True
         self.config["system"]["eyes_ui_enabled"] = eyes_enabled
         self.config["system"]["classic_ui_enabled"] = classic_enabled
+        self.config["system"]["web_ui_enabled"] = web_enabled
         self.config["system"]["terminal_cli_enabled"] = terminal_enabled
         self.config["system"]["show_terminal"] = terminal_enabled
         self.config["system"]["mode"] = getattr(self, 'mode_combo', QComboBox()).currentText()
@@ -811,6 +813,12 @@ class SettingsWindow(QMainWindow):
         self.classic_ui_cb.setChecked(ui_modes["classic"])
         form.addRow(self.classic_ui_cb)
 
+        self.web_ui_cb = QCheckBox(
+            "WebUI im Browser starten (lokal unter http://127.0.0.1:8765/)"
+        )
+        self.web_ui_cb.setChecked(ui_modes["web"])
+        form.addRow(self.web_ui_cb)
+
         self.terminal_cb = QCheckBox(
             "Terminal-CLI mit Mitschrift, Log-Ausgabe und Texteingabe"
         )
@@ -824,6 +832,7 @@ class SettingsWindow(QMainWindow):
 
         self.eyes_ui_cb.stateChanged.connect(self._sync_ui_mode_controls)
         self.classic_ui_cb.stateChanged.connect(self._sync_ui_mode_controls)
+        self.web_ui_cb.stateChanged.connect(self._sync_ui_mode_controls)
         self.terminal_cb.stateChanged.connect(self._sync_ui_mode_controls)
         self._sync_ui_mode_controls()
 
@@ -988,12 +997,14 @@ class SettingsWindow(QMainWindow):
     def _sync_ui_mode_controls(self):
         if not all(
             hasattr(self, name)
-            for name in ("eyes_ui_cb", "classic_ui_cb", "terminal_cb")
+            for name in ("eyes_ui_cb", "classic_ui_cb", "web_ui_cb", "terminal_cb")
         ):
             return
 
         gui_enabled = (
-            self.eyes_ui_cb.isChecked() or self.classic_ui_cb.isChecked()
+            self.eyes_ui_cb.isChecked()
+            or self.classic_ui_cb.isChecked()
+            or self.web_ui_cb.isChecked()
         )
         if not gui_enabled:
             self.terminal_cb.blockSignals(True)
@@ -1007,8 +1018,8 @@ class SettingsWindow(QMainWindow):
         else:
             self.terminal_cb.setEnabled(True)
             message = (
-                "Mindestens eine Oberfläche muss aktiv bleiben. Augen und Classic "
-                "können gemeinsam verwendet werden."
+                "Mindestens eine Oberfläche muss aktiv bleiben. Augen, Classic "
+                "und WebUI können gemeinsam verwendet werden."
             )
         if hasattr(self, "ui_mode_hint"):
             self.ui_mode_hint.setText(message)

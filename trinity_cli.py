@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.13.1"
+VERSION = "0.13.2"
 
 
 def find_trinity_home(explicit=None):
@@ -80,25 +80,28 @@ def _configure_surfaces(config, input_fn=input):
         current.append("eyes")
     if system.get("classic_ui_enabled", False):
         current.append("classic")
+    if system.get("web_ui_enabled", False):
+        current.append("web")
     if system.get("terminal_cli_enabled", system.get("show_terminal", False)):
         current.append("terminal")
     default = ",".join(current) or "terminal"
     raw = _prompt(
-        "Oberflächen, kommagetrennt: eyes, classic, terminal",
+        "Oberflächen, kommagetrennt: eyes, classic, web, terminal",
         default,
         input_fn,
     )
     selected = {
         item.strip().casefold()
         for item in raw.split(",")
-        if item.strip().casefold() in {"eyes", "classic", "terminal"}
+        if item.strip().casefold() in {"eyes", "classic", "web", "terminal"}
     }
     if not selected:
         selected = {"terminal"}
-    if not selected.intersection({"eyes", "classic"}):
+    if not selected.intersection({"eyes", "classic", "web"}):
         selected.add("terminal")
     system["eyes_ui_enabled"] = "eyes" in selected
     system["classic_ui_enabled"] = "classic" in selected
+    system["web_ui_enabled"] = "web" in selected
     system["terminal_cli_enabled"] = "terminal" in selected
     system["show_terminal"] = "terminal" in selected
 
@@ -443,7 +446,7 @@ def build_parser():
     start = subparsers.add_parser("start", help="Trinity starten")
     start.add_argument(
         "--surface",
-        choices=("configured", "classic", "eyes", "terminal", "all"),
+        choices=("configured", "classic", "eyes", "web", "terminal", "all"),
         default="configured",
         help="Oberflächen für diesen Start temporär überschreiben",
     )

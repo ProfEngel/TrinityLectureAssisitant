@@ -39,6 +39,15 @@ def test_surface_settings_force_terminal_without_graphical_ui():
     assert config["system"]["terminal_cli_enabled"] is True
 
 
+def test_surface_settings_accept_web_ui_without_terminal():
+    config = {"system": {}}
+
+    trinity_cli._configure_surfaces(config, input_fn=lambda _prompt: "web")
+
+    assert config["system"]["web_ui_enabled"] is True
+    assert config["system"]["terminal_cli_enabled"] is False
+
+
 def test_direct_cli_setting_updates_shared_config(tmp_path, monkeypatch):
     home = tmp_path
     (home / "core").mkdir()

@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.13.2:** WebUI als vierte auswählbare Desktop-Oberfläche für macOS und Windows 11; startet parallel oder allein direkt im Standardbrowser.
 > - **v0.13.1:** Einstellungen-UI stabilisiert: Die Systemseite scrollt sauber, Formfelder bleiben lesbar und die Reiterleiste funktioniert auch bei wenig Platz.
 > - **v0.13.0:** Optionaler Mehrbenutzer-Server mit Passwort-Accounts, getrennten Nutzerbereichen und ClassicUI-Client fuer Linux-, macOS- und Windows-Installationen.
 > - **v0.12.1:** Augen-UI-Datei-Arbeitsbereich korrigiert: PDFs erhalten eine lesbare Vorschau, Dateien lassen sich im Standardprogramm oeffnen und Antworten auf Fluestern-Auftraege erscheinen direkt im Arbeitsbereich.
@@ -229,7 +230,7 @@ Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wi
 
 ### Wählbare Oberflächen
 
-Unter **Einstellungen → System → Bedienoberflächen** lassen sich drei Oberflächen
+Unter **Einstellungen → System → Bedienoberflächen** lassen sich vier Oberflächen
 unabhängig kombinieren:
 
 - **Augen-UI:** schwebende Trinity für Vorlesung, Präsentation und schnelle Zurufe
@@ -243,6 +244,12 @@ unabhängig kombinieren:
   links oben, das Zahnrad öffnet die Einstellungen im selben Fenster, und die
   Ansicht kann zwischen Dark Mode und Hell Mode wechseln.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
+- **WebUI:** Browser-Oberfläche unter `http://127.0.0.1:8765/` mit Chat, Anlagen
+  und eingebetteten Agenten-/Medienergebnissen. Sie kann parallel zu Augen-UI,
+  Classic-UI oder Terminal laufen und wird beim Start automatisch im Browser geöffnet.
+
+Alternativ startet `trinity start --surface web` ausschließlich die WebUI; mit
+`trinity start --surface all` werden alle Oberflächen geöffnet.
 
 Seit v0.12.0 kann eine Datei direkt auf die **Augen-UI** gezogen werden. Trinity
 öffnet dafür einen Arbeitsbereich mit Vorschau: PDFs und Bilder werden nativ
@@ -254,7 +261,7 @@ Upload. Die Classic-UI unterstützt dieselben Dateitypen per Button und Drag-and
 
 Seit v0.11.1 startet eine frische Installation standardmäßig mit der Classic-UI.
 Bestehende Installationen behalten ihre gespeicherten Oberflächen-Einstellungen.
-Wenn Augen- und Classic-UI beide ausgeschaltet werden, aktiviert Trinity zwingend
+Wenn Augen-, Classic- und WebUI ausgeschaltet werden, aktiviert Trinity zwingend
 die Terminal-CLI. Damit bleibt die Anwendung immer bedienbar und schafft zugleich
 die Grundlage für eine spätere Ubuntu-/Linux-Portierung.
 

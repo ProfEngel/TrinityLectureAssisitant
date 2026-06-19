@@ -65,6 +65,7 @@ def default_config(platform_name=None):
             "show_terminal": windows,
             "eyes_ui_enabled": False,
             "classic_ui_enabled": True,
+            "web_ui_enabled": False,
             "terminal_cli_enabled": windows,
             "mode": "chat",
             "windows_speech_enabled": False,

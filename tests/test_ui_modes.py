@@ -7,6 +7,7 @@ def test_first_start_uses_classic_ui_as_default():
     assert modes == {
         "eyes": False,
         "classic": True,
+        "web": False,
         "terminal": False,
     }
 
@@ -33,6 +34,7 @@ def test_terminal_is_forced_when_both_graphical_uis_are_disabled():
     assert modes == {
         "eyes": False,
         "classic": False,
+        "web": False,
         "terminal": True,
     }
 
@@ -70,3 +72,22 @@ def test_diagnostic_mode_forces_terminal():
     )
 
     assert modes["terminal"] is True
+
+
+def test_web_ui_is_a_valid_surface_without_terminal():
+    modes = resolve_ui_modes(
+        {
+            "eyes_ui_enabled": False,
+            "classic_ui_enabled": False,
+            "web_ui_enabled": True,
+            "terminal_cli_enabled": False,
+        },
+        platform_name="Darwin",
+    )
+
+    assert modes == {
+        "eyes": False,
+        "classic": False,
+        "web": True,
+        "terminal": False,
+    }
