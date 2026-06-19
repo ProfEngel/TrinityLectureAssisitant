@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.13.1:** Einstellungen-UI stabilisiert: Die Systemseite scrollt sauber, Formfelder bleiben lesbar und die Reiterleiste funktioniert auch bei wenig Platz.
 > - **v0.13.0:** Optionaler Mehrbenutzer-Server mit Passwort-Accounts, getrennten Nutzerbereichen und ClassicUI-Client fuer Linux-, macOS- und Windows-Installationen.
 > - **v0.12.1:** Augen-UI-Datei-Arbeitsbereich korrigiert: PDFs erhalten eine lesbare Vorschau, Dateien lassen sich im Standardprogramm oeffnen und Antworten auf Fluestern-Auftraege erscheinen direkt im Arbeitsbereich.
 > - **v0.12.0:** Desktop-Arbeitsbereich fuer Datei-Drop auf der Augen-UI sowie schlanke Linux-Servervariante mit token-geschuetzter Browser-WebUI, Uploads und Medienanzeige.

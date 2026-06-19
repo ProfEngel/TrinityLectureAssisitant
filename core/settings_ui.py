@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QCheckBox, QComboBox, QGroupBox, QFormLayout,
                              QTextEdit, QTabWidget, QDoubleSpinBox, QSpinBox,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
-                             QButtonGroup)
+                             QButtonGroup, QSizePolicy)
 
 from platform_adapters import create_tts_backend, find_codex_executable, find_opencode_executable
 from configuration import DEFAULT_CONFIG, load_config, save_config
@@ -401,7 +401,8 @@ class SettingsWindow(QMainWindow):
             
             QPushButton#saveBtn:hover {{ background: {colors["text"]}; color: {colors["app_bg"]}; }}
             
-            QScrollArea {{ background: transparent; border: none; }}
+            QScrollArea {{ background: {colors["panel_bg"]}; border: none; }}
+            QWidget#settingsScrollContent {{ background: {colors["panel_bg"]}; }}
             QScrollBar:vertical {{ border: none; background: {colors["app_bg"]}; width: 10px; margin: 0px; }}
             QScrollBar::handle:vertical {{ background: {colors["raised_bg"]}; min-height: 20px; border-radius: 5px; }}
             QScrollBar::handle:vertical:hover {{ background: {colors["hover_bg"]}; }}
@@ -428,6 +429,8 @@ class SettingsWindow(QMainWindow):
         
         # Tabs
         tabs = QTabWidget()
+        tabs.setUsesScrollButtons(True)
+        tabs.setElideMode(Qt.ElideRight)
         tabs.addTab(self._create_persona_tab(), "🤖 Persona")
         tabs.addTab(self._create_llm_tab(), "🧠 LLM")
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
@@ -436,7 +439,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
         tabs.addTab(self._create_opencode_tab(), "🛠️ OpenCode")
-        tabs.addTab(self._create_system_tab(), "🖥️ System")
+        tabs.addTab(self._scrollable_tab(self._create_system_tab()), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
         main_layout.addWidget(tabs)
@@ -458,6 +461,17 @@ class SettingsWindow(QMainWindow):
         btn_layout.addStretch()
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
+
+    @staticmethod
+    def _scrollable_tab(content):
+        """Keep longer settings pages readable instead of letting Qt shrink forms."""
+        content.setObjectName("settingsScrollContent")
+        content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidget(content)
+        return scroll
 
     # --- TAB: Proaktiv ---
     def _create_proactive_tab(self):
@@ -761,6 +775,9 @@ class SettingsWindow(QMainWindow):
         
         group = QGroupBox("System & App-Verhalten")
         form = QFormLayout()
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setFormAlignment(Qt.AlignTop)
         
         system_conf = self.config.get("system", {})
         ui_modes = resolve_ui_modes(system_conf)
@@ -843,6 +860,9 @@ class SettingsWindow(QMainWindow):
         companion_group = QGroupBox("Companion Bridge (iPhone / iPad / Smart Glass)")
         companion_form = QFormLayout()
         companion_form.setSpacing(14)
+        companion_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        companion_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        companion_form.setFormAlignment(Qt.AlignTop)
 
         self.companion_cb = QCheckBox(
             "Bridge beim Trinity-Start öffnen"
@@ -897,6 +917,9 @@ class SettingsWindow(QMainWindow):
         client_group = QGroupBox("Trinity-Server Client (Linux, Mac oder Windows)")
         client_form = QFormLayout()
         client_form.setSpacing(14)
+        client_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        client_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        client_form.setFormAlignment(Qt.AlignTop)
         self.remote_client_cb = QCheckBox(
             "Diesen Desktop als Client eines entfernten Trinity-Servers verwenden"
         )
