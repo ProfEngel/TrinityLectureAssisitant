@@ -19,6 +19,8 @@ from urllib.request import url2pathname
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from external_stt_feed import append_external_stt_event
+from server_auth import ServerAuth
+from tenant_context import tenant_history_path, tenant_upload_dir
 from web_ui import render_web_ui
 
 
@@ -79,7 +81,7 @@ def _local_path_value(raw_path):
 
 
 class TrinityBridge:
-    def __init__(self, home, token=""):
+    def __init__(self, home, token="", auth_enabled=False):
         self.home = Path(home).resolve()
         self.core_dir = self.home / "core"
         self.memory_dir = self.home / "memory"
@@ -89,6 +91,8 @@ class TrinityBridge:
         self.stt_feed_path = self.core_dir / "ios_stt_feed.jsonl"
         self.payload_path = self.core_dir / "payload.html"
         self.token = token or ""
+        self.auth_enabled = bool(auth_enabled)
+        self.auth = ServerAuth(self.home) if self.auth_enabled else None
         self._lock = threading.Lock()
 
     @property
@@ -100,19 +104,41 @@ class TrinityBridge:
             self.home / "memory",
         ]
 
+    @staticmethod
+    def _bearer_token(handler, query=None):
+        header = handler.headers.get("Authorization", "")
+        if header.lower().startswith("bearer "):
+            return header[7:].strip()
+        if query is not None:
+            return query.get("token", [""])[0]
+        return ""
+
+    def current_user(self, handler, query=None):
+        """Return an authenticated tenant, or ``None`` for legacy token mode."""
+        if not self.auth_enabled:
+            return {} if self.check_auth(handler, query) else None
+        return self.auth.authenticate(self._bearer_token(handler, query))
+
     def check_auth(self, handler, query=None):
+        if self.auth_enabled:
+            return self.current_user(handler, query) is not None
         if not self.token:
             return True
-        header = handler.headers.get("Authorization", "")
-        if header == f"Bearer {self.token}":
-            return True
-        if query is not None:
-            return query.get("token", [""])[0] == self.token
-        return False
+        return self._bearer_token(handler, query) == self.token
 
-    def send_message(self, payload):
+    @staticmethod
+    def _tenant_id(user):
+        return str((user or {}).get("id") or "")
+
+    def history_path_for(self, user=None):
+        return tenant_history_path(self.home, self._tenant_id(user))
+
+    def upload_dir_for(self, user=None):
+        return tenant_upload_dir(self.home, self._tenant_id(user))
+
+    def send_message(self, payload, user=None):
         text = str(payload.get("text", "")).strip()
-        attachments = self._save_attachments(payload.get("attachments", []))
+        attachments = self._save_attachments(payload.get("attachments", []), user=user)
         if not text and attachments:
             text = "Bitte analysiere die beigefügten Anlagen."
         if not text:
@@ -124,12 +150,14 @@ class TrinityBridge:
         request["privacy_mode"] = str(payload.get("privacy_mode", "local")).strip() or "local"
         request["silent"] = not bool(payload.get("speak", False))
         request["allow_tts"] = bool(payload.get("speak", False))
+        request["tenant_id"] = self._tenant_id(user)
+        history_path = self.history_path_for(user)
 
         with self._lock:
             if self.command_path.exists():
                 raise RuntimeError("Trinity verarbeitet noch eine vorherige Anfrage.")
             append_chat_event(
-                self.history_path,
+                history_path,
                 {
                     "request_id": request["request_id"],
                     "role": "user",
@@ -144,7 +172,7 @@ class TrinityBridge:
 
         return {"ok": True, "request_id": request["request_id"], "accepted_at": time.time()}
 
-    def send_stt(self, payload):
+    def send_stt(self, payload, user=None):
         text = str(payload.get("text", "")).strip()
         if not text:
             raise ValueError("STT-Text darf nicht leer sein.")
@@ -158,11 +186,12 @@ class TrinityBridge:
                 "speak": bool(payload.get("speak", False)),
                 "session_id": str(payload.get("session_id", "")).strip(),
                 "privacy_mode": str(payload.get("privacy_mode", "local")).strip() or "local",
+                "tenant_id": self._tenant_id(user),
             },
         )
         if is_final:
             append_chat_event(
-                self.history_path,
+                self.history_path_for(user),
                 {
                     "request_id": event["event_id"],
                     "role": "user",
@@ -174,11 +203,12 @@ class TrinityBridge:
             )
         return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
 
-    def _save_attachments(self, attachments):
+    def _save_attachments(self, attachments, user=None):
         saved = []
         if not isinstance(attachments, list):
             raise ValueError("attachments muss eine Liste sein.")
-        self.upload_dir.mkdir(parents=True, exist_ok=True)
+        upload_dir = self.upload_dir_for(user)
+        upload_dir.mkdir(parents=True, exist_ok=True)
         for item in attachments:
             if not isinstance(item, dict):
                 continue
@@ -196,7 +226,7 @@ class TrinityBridge:
                 raise ValueError(
                     f"Anlage `{name}` ist größer als {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB."
                 )
-            target = self.upload_dir / f"{uuid.uuid4().hex}_{name}"
+            target = upload_dir / f"{uuid.uuid4().hex}_{name}"
             target.write_bytes(data)
             kind = item.get("kind") or attachment_kind(target)
             if kind is None:
@@ -213,28 +243,46 @@ class TrinityBridge:
             )
         return saved
 
-    def events_since(self, after=0.0, limit=MAX_EVENTS):
+    def events_since(self, after=0.0, limit=MAX_EVENTS, user=None, access_token=""):
         events = []
-        for event in load_chat_events(self.history_path, limit=max(limit * 3, MAX_EVENTS)):
+        for event in load_chat_events(
+            self.history_path_for(user), limit=max(limit * 3, MAX_EVENTS)
+        ):
             timestamp = float(event.get("timestamp", 0) or 0)
             if timestamp <= after:
                 continue
             cleaned = dict(event)
             if cleaned.get("payload_html"):
-                cleaned["payload_html"] = self.rewrite_html(cleaned["payload_html"])
+                cleaned["payload_html"] = self.rewrite_html(
+                    cleaned["payload_html"], user=user, access_token=access_token
+                )
             if cleaned.get("attachments"):
-                cleaned["attachments"] = self.rewrite_attachments(cleaned["attachments"])
+                cleaned["attachments"] = self.rewrite_attachments(
+                    cleaned["attachments"], user=user, access_token=access_token
+                )
             events.append(cleaned)
         return events[-limit:]
 
-    def latest_payload(self):
+    def latest_payload(self, user=None, access_token=""):
+        if user:
+            for event in reversed(load_chat_events(self.history_path_for(user), limit=MAX_EVENTS * 4)):
+                html = str(event.get("payload_html") or "")
+                if html:
+                    return {
+                        "html": self.rewrite_html(html, user=user, access_token=access_token),
+                        "timestamp": float(event.get("timestamp", 0) or 0),
+                    }
+            return {"html": "", "timestamp": 0.0}
         try:
             html = self.payload_path.read_text(encoding="utf-8")
         except OSError:
             html = ""
-        return {"html": self.rewrite_html(html), "timestamp": self._mtime(self.payload_path)}
+        return {
+            "html": self.rewrite_html(html, user=user, access_token=access_token),
+            "timestamp": self._mtime(self.payload_path),
+        }
 
-    def media_path_from_query(self, raw_path):
+    def media_path_from_query(self, raw_path, user=None):
         if not raw_path:
             raise ValueError("Kein Medienpfad angegeben.")
         value = _local_path_value(raw_path)
@@ -242,11 +290,13 @@ class TrinityBridge:
         for root in self.media_roots:
             if _is_relative_to(path, root):
                 if path.is_file():
+                    if user and not self._user_can_access_media(path, user):
+                        raise PermissionError("Medium gehört nicht zu diesem Trinity-Account.")
                     return path
                 raise FileNotFoundError(path)
         raise PermissionError("Medienpfad ist nicht freigegeben.")
 
-    def rewrite_html(self, html):
+    def rewrite_html(self, html, user=None, access_token=""):
         if not html:
             return ""
 
@@ -254,20 +304,22 @@ class TrinityBridge:
             quote_char = match.group(1)
             url = match.group(2)
             try:
-                path = self.media_path_from_query(url)
+                path = self.media_path_from_query(url, user=user)
             except (OSError, PermissionError, ValueError):
                 return match.group(0)
-            return f"{quote_char}{self.media_url(path)}{quote_char}"
+            return f"{quote_char}{self.media_url(path, access_token=access_token)}{quote_char}"
 
         return re.sub(r"(['\"])(file://[^'\"]+)\1", replace, html)
 
-    def media_url(self, path):
+    def media_url(self, path, access_token=""):
         url = f"/media?path={quote(str(path), safe='')}"
-        if self.token:
+        if access_token:
+            url += f"&token={quote(access_token, safe='')}"
+        elif self.token:
             url += f"&token={quote(self.token, safe='')}"
         return url
 
-    def rewrite_attachments(self, attachments):
+    def rewrite_attachments(self, attachments, user=None, access_token=""):
         if not isinstance(attachments, list):
             return []
         rewritten = []
@@ -278,12 +330,26 @@ class TrinityBridge:
             raw_path = str(item.get("path") or "")
             if raw_path:
                 try:
-                    media_path = self.media_path_from_query(raw_path)
-                    cleaned["media_url"] = self.media_url(media_path)
+                    media_path = self.media_path_from_query(raw_path, user=user)
+                    cleaned["media_url"] = self.media_url(media_path, access_token=access_token)
                 except (OSError, PermissionError, ValueError):
                     pass
             rewritten.append(cleaned)
         return rewritten
+
+    def _user_can_access_media(self, path, user):
+        """Only serve a server user's uploads or files referenced by their history."""
+        path = Path(path).resolve()
+        if _is_relative_to(path, self.upload_dir_for(user)):
+            return True
+        for event in load_chat_events(self.history_path_for(user), limit=MAX_EVENTS * 8):
+            for item in event.get("attachments", []):
+                if str(item.get("path") or "") == str(path):
+                    return True
+            payload_html = str(event.get("payload_html") or "")
+            if str(path) in payload_html or path.as_uri() in payload_html:
+                return True
+        return False
 
     @staticmethod
     def _mtime(path):
@@ -307,9 +373,17 @@ def make_handler(bridge):
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             if parsed.path in {"/", "/web"}:
-                _html_response(self, 200, render_web_ui())
+                _html_response(self, 200, render_web_ui(auth_enabled=bridge.auth_enabled))
                 return
-            if not bridge.check_auth(self, query=query if parsed.path == "/media" else None):
+            if parsed.path == "/auth/status":
+                _json_response(
+                    self,
+                    200,
+                    bridge.auth.status() if bridge.auth_enabled else {"ok": True, "enabled": False},
+                )
+                return
+            user = bridge.current_user(self, query=query if parsed.path == "/media" else None)
+            if user is None:
                 _json_response(self, 401, {"ok": False, "error": "unauthorized"})
                 return
             try:
@@ -321,16 +395,40 @@ def make_handler(bridge):
                             "ok": True,
                             "name": "Trinity Bridge",
                             "time": time.time(),
-                            "history": bridge.history_path.exists(),
+                            "history": bridge.history_path_for(user).exists(),
+                            "user": user or None,
                         },
                     )
                 elif parsed.path == "/events":
                     after = float(query.get("after", ["0"])[0] or 0)
-                    _json_response(self, 200, {"ok": True, "events": bridge.events_since(after)})
+                    _json_response(
+                        self,
+                        200,
+                        {
+                            "ok": True,
+                            "events": bridge.events_since(
+                                after,
+                                user=user,
+                                access_token=bridge._bearer_token(self, query),
+                            ),
+                        },
+                    )
                 elif parsed.path == "/payload":
-                    _json_response(self, 200, {"ok": True, **bridge.latest_payload()})
+                    _json_response(
+                        self,
+                        200,
+                        {
+                            "ok": True,
+                            **bridge.latest_payload(
+                                user=user,
+                                access_token=bridge._bearer_token(self, query),
+                            ),
+                        },
+                    )
                 elif parsed.path == "/media":
-                    path = bridge.media_path_from_query(query.get("path", [""])[0])
+                    path = bridge.media_path_from_query(
+                        query.get("path", [""])[0], user=user
+                    )
                     data = path.read_bytes()
                     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
                     self.send_response(200)
@@ -344,15 +442,57 @@ def make_handler(bridge):
                 _json_response(self, 400, {"ok": False, "error": str(exc)})
 
         def do_POST(self):  # noqa: N802
-            if not bridge.check_auth(self):
-                _json_response(self, 401, {"ok": False, "error": "unauthorized"})
-                return
             parsed = urlparse(self.path)
             try:
+                if bridge.auth_enabled and parsed.path == "/auth/login":
+                    payload = _read_json(self)
+                    _json_response(
+                        self,
+                        200,
+                        {
+                            "ok": True,
+                            **bridge.auth.login(payload.get("username"), payload.get("password")),
+                        },
+                    )
+                    return
+                if bridge.auth_enabled and parsed.path == "/auth/register":
+                    payload = _read_json(self)
+                    _json_response(
+                        self,
+                        201,
+                        {
+                            "ok": True,
+                            **bridge.auth.register_first_admin(
+                                payload.get("username"), payload.get("password")
+                            ),
+                        },
+                    )
+                    return
+            except PermissionError as exc:
+                _json_response(self, 403, {"ok": False, "error": str(exc)})
+                return
+            except (ValueError, KeyError) as exc:
+                _json_response(self, 400, {"ok": False, "error": str(exc)})
+                return
+
+            user = bridge.current_user(self)
+            if user is None:
+                _json_response(self, 401, {"ok": False, "error": "unauthorized"})
+                return
+            try:
                 if parsed.path == "/message":
-                    _json_response(self, 200, bridge.send_message(_read_json(self)))
+                    _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
-                    _json_response(self, 200, bridge.send_stt(_read_json(self)))
+                    _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
+                elif bridge.auth_enabled and parsed.path == "/auth/users":
+                    payload = _read_json(self)
+                    created = bridge.auth.create_user(
+                        user,
+                        payload.get("username"),
+                        payload.get("password"),
+                        payload.get("role", "user"),
+                    )
+                    _json_response(self, 201, {"ok": True, "user": created})
                 else:
                     _json_response(self, 404, {"ok": False, "error": "not found"})
             except RuntimeError as exc:
@@ -363,12 +503,12 @@ def make_handler(bridge):
     return Handler
 
 
-def run_bridge(home, host=DEFAULT_HOST, port=DEFAULT_PORT, token=""):
-    bridge = TrinityBridge(home, token=token)
+def run_bridge(home, host=DEFAULT_HOST, port=DEFAULT_PORT, token="", auth_enabled=False):
+    bridge = TrinityBridge(home, token=token, auth_enabled=auth_enabled)
     server = ThreadingHTTPServer((host, int(port)), make_handler(bridge))
     print(f"Trinity Bridge läuft auf http://{host}:{port}")
     if host in {"0.0.0.0", "::"}:
-        print("Hinweis: Für Tailscale erreichbar. Nutze wenn möglich --token.")
+        print("Hinweis: Für Tailscale erreichbar. Nutze --auth oder mindestens --token.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -384,12 +524,13 @@ def build_parser():
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--token", default=os.environ.get("TRINITY_BRIDGE_TOKEN", ""))
+    parser.add_argument("--auth", action="store_true", help="Passwort-Accounts und getrennte Nutzerbereiche aktivieren")
     return parser
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
-    return run_bridge(args.home, host=args.host, port=args.port, token=args.token)
+    return run_bridge(args.home, host=args.host, port=args.port, token=args.token, auth_enabled=args.auth)
 
 
 if __name__ == "__main__":

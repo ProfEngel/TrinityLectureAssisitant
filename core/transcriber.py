@@ -20,6 +20,7 @@ from brain import TrinityBrain
 from chat_protocol import append_chat_event, parse_command
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
+from tenant_context import tenant_history_path, tenant_memory_db_path
 from platform_adapters import create_tts_backend
 from workspace_context import load_workspace_attachment
 
@@ -75,6 +76,12 @@ def set_state(state):
             f.write(state)
     except:
         pass
+
+
+def chat_history_path_for_request(chat_request=None):
+    """Keep authenticated server conversations outside the local shared history."""
+    tenant_id = (chat_request or {}).get("tenant_id", "")
+    return str(tenant_history_path(PROJECT_DIR, tenant_id))
 
 class TrinityEar:
     def __init__(self):
@@ -678,7 +685,7 @@ class TrinityEar:
                                 and not request.get("history_recorded")
                             ):
                                 append_chat_event(
-                                    CHAT_HISTORY_FILE,
+                                    chat_history_path_for_request(request),
                                     {
                                         "request_id": request["request_id"],
                                         "role": "user",
@@ -853,6 +860,7 @@ class TrinityEar:
                     "attachments": [],
                     "silent": not speak,
                     "history_recorded": True,
+                    "tenant_id": event.get("tenant_id", ""),
                 }
                 self.trigger_action(text, silent_response=not speak, chat_request=request)
                 continue
@@ -868,6 +876,7 @@ class TrinityEar:
                     "history_recorded": True,
                     "session_id": event.get("session_id", ""),
                     "privacy_mode": event.get("privacy_mode", "local"),
+                    "tenant_id": event.get("tenant_id", ""),
                 }
             self.process_text(text)
             if self.trigger_armed:
@@ -1137,7 +1146,7 @@ class TrinityEar:
 
         if chat_request or history_payload:
             append_chat_event(
-                CHAT_HISTORY_FILE,
+                chat_history_path_for_request(chat_request),
                 {
                     "request_id": (chat_request or {}).get("request_id"),
                     "role": "assistant",
@@ -1147,7 +1156,12 @@ class TrinityEar:
                 },
             )
             try:
-                memory_store = MemoryStore()
+                tenant_id = (chat_request or {}).get("tenant_id", "")
+                memory_store = MemoryStore(
+                    str(tenant_memory_db_path(PROJECT_DIR, tenant_id))
+                    if tenant_id
+                    else None
+                )
                 source = "telegram" if from_telegram else (
                     (chat_request or {}).get("source") or "eyes"
                 )

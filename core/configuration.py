@@ -110,6 +110,13 @@ def default_config(platform_name=None):
             "host": "127.0.0.1",
             "port": 8765,
             "token": "",
+            "auth_enabled": False,
+        },
+        "client": {
+            "enabled": False,
+            "server_url": "",
+            "username": "",
+            "token": "",
         },
     }
 

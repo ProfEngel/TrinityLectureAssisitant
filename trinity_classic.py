@@ -4,7 +4,9 @@ import glob
 import html
 import json
 import os
+import re
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -42,6 +44,7 @@ from chat_protocol import (
     load_chat_events,
 )
 from memory_store import MemoryStore, render_graph_html
+from remote_client import RemoteTrinityClient
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -104,10 +107,12 @@ def _attachment_html(attachment):
     kind = attachment.get("kind", "file")
     size = html.escape(_format_size(attachment.get("size", 0)))
     path = Path(str(attachment.get("path", "")))
+    media_url = str(attachment.get("media_url", ""))
     preview = ""
-    if kind == "image" and path.is_file():
+    if kind == "image" and (path.is_file() or media_url):
+        source = media_url or path.resolve().as_uri()
         preview = (
-            f'<img class="attachment-preview" src="{html.escape(path.resolve().as_uri())}" '
+            f'<img class="attachment-preview" src="{html.escape(source)}" '
             f'alt="{name}">'
         )
     labels = {"image": "Bild", "pdf": "PDF", "text": "Text"}
@@ -253,6 +258,10 @@ class ClassicWindow(QMainWindow):
         self._memory_signature = None
         self._last_state = ""
         self.pending_attachments = []
+        self.remote_client = self._load_remote_client()
+        self.remote_events = []
+        self.remote_after = 0.0
+        self._remote_next_poll = 0.0
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
         self.theme = self._load_theme()
         self.setAcceptDrops(True)
@@ -400,6 +409,34 @@ class ClassicWindow(QMainWindow):
         self.timer.start(400)
         self.refresh()
 
+    def _load_remote_client(self):
+        try:
+            config = json.loads(Path(CONFIG_FILE).read_text(encoding="utf-8"))
+            client = config.get("client", {})
+            if client.get("enabled") and client.get("server_url") and client.get("token"):
+                return RemoteTrinityClient(client["server_url"], client["token"], timeout=1.5)
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+        return None
+
+    def _remote_event_for_render(self, event):
+        cloned = dict(event)
+        base_url = self.remote_client.server_url.rstrip("/") if self.remote_client else ""
+        attachments = []
+        for item in event.get("attachments", []):
+            copied = dict(item)
+            if str(copied.get("media_url", "")).startswith("/"):
+                copied["media_url"] = base_url + copied["media_url"]
+            attachments.append(copied)
+        cloned["attachments"] = attachments
+        payload = str(cloned.get("payload_html", ""))
+        cloned["payload_html"] = re.sub(
+            r"([\"'])/media\?",
+            lambda match: f"{match.group(1)}{base_url}/media?",
+            payload,
+        )
+        return cloned
+
     def _logo_path(self):
         candidates = [
             os.path.join(CORE_DIR, "icon.png"),
@@ -509,10 +546,34 @@ class ClassicWindow(QMainWindow):
         """)
 
     def refresh(self):
+        if self.remote_client:
+            self._refresh_remote_chat()
+            return
         self._refresh_state()
         self._refresh_transcript()
         self._refresh_chat_history()
         self._refresh_memory_if_changed()
+
+    def _refresh_remote_chat(self):
+        if time.monotonic() < self._remote_next_poll:
+            return
+        self._remote_next_poll = time.monotonic() + 1.2
+        try:
+            incoming = self.remote_client.events_since(self.remote_after)
+        except RuntimeError as exc:
+            self.status.setText(f"Server nicht erreichbar: {exc}")
+            return
+        if incoming:
+            self.remote_events.extend(self._remote_event_for_render(event) for event in incoming)
+            self.remote_after = max(
+                self.remote_after,
+                max(float(event.get("timestamp", 0) or 0) for event in incoming),
+            )
+            self.chat_history.setHtml(
+                _render_chat_html(self.remote_events, self.theme),
+                QUrl(self.remote_client.server_url + "/"),
+            )
+        self.status.setText("Server verbunden")
 
     def _refresh_state(self):
         state_path = os.path.join(CORE_DIR, "state.txt")
@@ -677,6 +738,18 @@ class ClassicWindow(QMainWindow):
             return
         if not text:
             text = "Bitte analysiere die beigefügten Anlagen."
+        if self.remote_client:
+            try:
+                self.remote_client.send_message(text, self.pending_attachments)
+                self.command.clear()
+                self.pending_attachments = []
+                self._update_attachment_summary()
+                self.status.setText("Auftrag an Trinity-Server gesendet")
+                self._remote_next_poll = 0
+            except RuntimeError as exc:
+                self.status.setText(f"Senden fehlgeschlagen: {exc}")
+            return
+
         request = build_chat_request(
             text,
             self.pending_attachments,

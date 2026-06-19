@@ -263,3 +263,22 @@ def test_bridge_rejects_media_outside_allowed_roots(tmp_path):
         pass
     else:
         raise AssertionError("Medien außerhalb erlaubter Ordner dürfen nicht serviert werden.")
+
+
+def test_authenticated_bridge_separates_user_histories_and_uploads(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home, auth_enabled=True)
+    admin_login = bridge.auth.register_first_admin("Admin", "ein-langes-passwort")
+    admin = bridge.auth.authenticate(admin_login["token"])
+    colleague = bridge.auth.create_user(admin, "Kollegin", "zweites-langes-passwort")
+
+    bridge.send_message({"text": "Nur fuer Admin"}, user=admin)
+    bridge.command_path.unlink()
+    bridge.send_message({"text": "Nur fuer Kollegin"}, user=colleague)
+
+    admin_events = bridge.events_since(0, user=admin)
+    colleague_events = bridge.events_since(0, user=colleague)
+    assert [event["text"] for event in admin_events] == ["Nur fuer Admin"]
+    assert [event["text"] for event in colleague_events] == ["Nur fuer Kollegin"]
+    assert bridge.history_path_for(admin) != bridge.history_path_for(colleague)

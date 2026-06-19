@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.12.1"
+VERSION = "0.13.0"
 
 
 def find_trinity_home(explicit=None):
@@ -373,7 +373,62 @@ def run_server_command(home, args):
     host = args.host or server.get("host") or "127.0.0.1"
     port = args.port or server.get("port") or 8765
     token = args.token if args.token is not None else server.get("token", "")
+    auth_enabled = bool(getattr(args, "auth", False) or server.get("auth_enabled", False))
+    if auth_enabled:
+        return run_server(home, host=host, port=port, token=token, auth_enabled=True)
     return run_server(home, host=host, port=port, token=token)
+
+
+def run_client_command(home, args):
+    modules = _core_modules(home)
+    config_path = Path(home) / "core" / "config.json"
+    config = modules["load_config"](config_path)
+    client_config = config.setdefault("client", {})
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from remote_client import RemoteTrinityClient  # pylint: disable=import-outside-toplevel
+
+    if args.client_action == "logout":
+        client_config.update({"enabled": False, "server_url": "", "username": "", "token": ""})
+        modules["save_config"](config_path, config)
+        print("Trinity arbeitet wieder lokal. Gespeicherte Client-Anmeldung entfernt.")
+        return 0
+
+    server_url = args.url or client_config.get("server_url", "")
+    if not server_url:
+        raise ValueError("Bitte Server-URL mit --url angeben.")
+    remote = RemoteTrinityClient(server_url, client_config.get("token", ""))
+    if args.client_action == "login":
+        username = args.username or _prompt("Benutzername", client_config.get("username", ""))
+        password = getpass.getpass("Passwort: ")
+        status = remote.auth_status()
+        result = remote.login(username, password, register=bool(status.get("bootstrap_required")))
+        client_config.update(
+            {
+                "enabled": True,
+                "server_url": remote.server_url,
+                "username": result["user"]["username"],
+                "token": remote.token,
+            }
+        )
+        modules["save_config"](config_path, config)
+        print(f"Als {result['user']['username']} mit {remote.server_url} verbunden.")
+        return 0
+    if args.client_action == "add-user":
+        username = args.username or _prompt("Neuer Benutzername")
+        password = getpass.getpass("Passwort fuer neuen Account: ")
+        result = remote.create_user(username, password, role=args.role)
+        print(f"Account {result['user']['username']} angelegt ({result['user']['role']}).")
+        return 0
+    if args.client_action == "status":
+        if not client_config.get("token"):
+            print("Kein Remote-Client konfiguriert.")
+            return 1
+        result = remote._request("/health", method="GET")
+        print(json.dumps({"server_url": remote.server_url, **result}, ensure_ascii=False, indent=2))
+        return 0
+    raise ValueError("Unbekannte Client-Aktion.")
 
 
 def build_parser():
@@ -444,6 +499,12 @@ def build_parser():
     server.add_argument("--host", default=None, help="Bind-Adresse, z.B. 0.0.0.0 für Tailscale")
     server.add_argument("--port", type=int, default=None, help="HTTP-Port")
     server.add_argument("--token", default=None, help="Bearer-Token für die WebUI")
+    server.add_argument("--auth", action="store_true", help="Passwort-Accounts und getrennte Nutzerbereiche aktivieren")
+    client = subparsers.add_parser("client", help="Diese Desktop-Installation mit einem Trinity-Server verbinden")
+    client.add_argument("client_action", choices=("login", "status", "logout", "add-user"))
+    client.add_argument("--url", help="URL des Trinity-Servers, z.B. http://100.x.y.z:8765")
+    client.add_argument("--username", help="Benutzername für login")
+    client.add_argument("--role", choices=("user", "admin"), default="user", help="Rolle bei add-user")
     return parser
 
 
@@ -477,6 +538,8 @@ def main(argv=None):
             return run_bridge_command(home, args)
         if args.command == "server":
             return run_server_command(home, args)
+        if args.command == "client":
+            return run_client_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

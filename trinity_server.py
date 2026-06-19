@@ -16,7 +16,7 @@ def _terminate(process):
         process.terminate()
 
 
-def run_server(home, host="127.0.0.1", port=8765, token=""):
+def run_server(home, host="127.0.0.1", port=8765, token="", auth_enabled=False):
     home = Path(home).resolve()
     logs = home / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -28,9 +28,14 @@ def run_server(home, host="127.0.0.1", port=8765, token=""):
     bridge_command = [sys.executable, "-u", str(home / "core" / "trinity_bridge.py"), "--home", str(home), "--host", host, "--port", str(port)]
     if token:
         bridge_command.extend(["--token", token])
+    if auth_enabled:
+        bridge_command.append("--auth")
     bridge = subprocess.Popen(bridge_command, cwd=home, env=env, stdout=bridge_log, stderr=subprocess.STDOUT)
     print(f"Trinity Server laeuft auf http://{host}:{port}")
-    print("WebUI: /  |  Logs: logs/server-runtime.log und logs/server-web.log")
+    if auth_enabled:
+        print("WebUI: /  |  Erster Aufruf: Admin-Account anlegen | getrennte Nutzerbereiche aktiv")
+    else:
+        print("WebUI: /  |  Logs: logs/server-runtime.log und logs/server-web.log")
     try:
         while runtime.poll() is None and bridge.poll() is None:
             time.sleep(0.4)
@@ -50,8 +55,9 @@ def main(argv=None):
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--token", default=os.environ.get("TRINITY_WEB_TOKEN", ""))
+    parser.add_argument("--auth", action="store_true", help="Passwort-Accounts und getrennte Nutzerbereiche aktivieren")
     args = parser.parse_args(argv)
-    return run_server(args.home, args.host, args.port, args.token)
+    return run_server(args.home, args.host, args.port, args.token, args.auth)
 
 
 if __name__ == "__main__":

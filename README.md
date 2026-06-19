@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.13.0:** Optionaler Mehrbenutzer-Server mit Passwort-Accounts, getrennten Nutzerbereichen und ClassicUI-Client fuer Linux-, macOS- und Windows-Installationen.
 > - **v0.12.1:** Augen-UI-Datei-Arbeitsbereich korrigiert: PDFs erhalten eine lesbare Vorschau, Dateien lassen sich im Standardprogramm oeffnen und Antworten auf Fluestern-Auftraege erscheinen direkt im Arbeitsbereich.
 > - **v0.12.0:** Desktop-Arbeitsbereich fuer Datei-Drop auf der Augen-UI sowie schlanke Linux-Servervariante mit token-geschuetzter Browser-WebUI, Uploads und Medienanzeige.
 > - **v0.11.7:** Companion-Bridge liefert nun auch Agenten-Widgets aus `core/` aus, damit Python-/Pyodide-Sandbox, Diagramme, Timer und Simulationen in der iPhone/iPad-Companion als Overlay/Presenter-Ergebnis angezeigt werden können.
@@ -194,9 +195,34 @@ curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/m
 ```
 
 Danach steht die WebUI unter `http://SERVER:8765/` bereit. Für Tailscale den Host
-auf `0.0.0.0` setzen und ein Token verwenden, etwa
-`trinity server --host 0.0.0.0 --token "langer-zufaelliger-wert"`. Details stehen
-in [Deployment Linux](docs/Deployment_Linux.md).
+auf `0.0.0.0` setzen und Passwort-Accounts aktivieren, etwa
+`trinity server --host 0.0.0.0 --auth`. Beim ersten Aufruf wird ein Admin-Account
+angelegt. Details stehen in [Deployment Linux](docs/Deployment_Linux.md).
+
+### Einen Linux-Server von Mac oder Windows nutzen
+
+Die Desktop-App bleibt standardmäßig lokal. Soll sie stattdessen einen Trinity-
+Server auf Ubuntu, macOS oder Windows verwenden, meldet sie sich einmalig an:
+
+```bash
+trinity client login --url http://TAILSCALE-IP:8765
+trinity start --surface classic
+```
+
+Die ClassicUI zeigt dann ausschließlich den eigenen Server-Verlauf und sendet
+Text, PDFs, Bilder und Tabellen an den Server. Der lokale Betrieb lässt sich
+ohne Datenverlust mit `trinity client logout` wieder einschalten. Die gleiche
+Umschaltung ist in den grafischen Einstellungen unter **Trinity-Server Client**
+sichtbar.
+
+Ein angemeldeter Admin legt weitere Nutzer über `trinity client add-user --url
+http://TAILSCALE-IP:8765 --username NAME` an.
+
+Der Server verarbeitet Anfragen weiterhin nacheinander, damit lokale Agenten
+und Modelle stabil bleiben. Konten trennen jedoch Verlauf, Uploads und
+Memory-Datenbank pro Person. Passwörter werden nur als PBKDF2-Hash gespeichert;
+Sitzungstokens werden nicht auf dem Server persistiert und laufen beim
+Server-Neustart aus.
 
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
 

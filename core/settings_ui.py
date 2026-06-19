@@ -146,6 +146,13 @@ class SettingsWindow(QMainWindow):
             self.config["companion"]["port"] = self.companion_port_spin.value()
             self.config["companion"]["token"] = self.companion_token_edit.text()
 
+        # Remote server client
+        if hasattr(self, "remote_client_cb"):
+            self.config.setdefault("client", {})["enabled"] = self.remote_client_cb.isChecked()
+            self.config["client"]["server_url"] = self.remote_server_url_edit.text().strip()
+            self.config["client"]["username"] = self.remote_username_edit.text().strip()
+            self.config["client"]["token"] = self.remote_token_edit.text().strip()
+
         # Codex
         if "codex" not in self.config:
             self.config["codex"] = {}
@@ -885,6 +892,34 @@ class SettingsWindow(QMainWindow):
 
         companion_group.setLayout(companion_form)
         layout.addWidget(companion_group)
+
+        client_conf = self.config.get("client", {})
+        client_group = QGroupBox("Trinity-Server Client (Linux, Mac oder Windows)")
+        client_form = QFormLayout()
+        client_form.setSpacing(14)
+        self.remote_client_cb = QCheckBox(
+            "Diesen Desktop als Client eines entfernten Trinity-Servers verwenden"
+        )
+        self.remote_client_cb.setChecked(client_conf.get("enabled", False))
+        client_form.addRow(self.remote_client_cb)
+        self.remote_server_url_edit = QLineEdit(str(client_conf.get("server_url", "")))
+        self.remote_server_url_edit.setPlaceholderText("http://TAILSCALE-IP:8765")
+        client_form.addRow("Server-URL:", self.remote_server_url_edit)
+        self.remote_username_edit = QLineEdit(str(client_conf.get("username", "")))
+        client_form.addRow("Benutzername:", self.remote_username_edit)
+        self.remote_token_edit = QLineEdit(str(client_conf.get("token", "")))
+        self.remote_token_edit.setEchoMode(QLineEdit.Password)
+        client_form.addRow("Sitzungstoken:", self.remote_token_edit)
+        client_hint = QLabel(
+            "Am einfachsten per Terminal anmelden: `trinity client login --url "
+            "http://TAILSCALE-IP:8765`. Das speichert URL und Sitzungstoken. "
+            "Nach Speichern und Neustart nutzt die Classic-UI den entfernten Server."
+        )
+        client_hint.setWordWrap(True)
+        client_hint.setStyleSheet("color: #888; font-size: 11px;")
+        client_form.addRow("", client_hint)
+        client_group.setLayout(client_form)
+        layout.addWidget(client_group)
         layout.addStretch()
         return widget
 
