@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.13.3:** Zentrales Onboarding fuer Desktop, Linux-Server, iPhone/iPad-Companion, Betriebsstufen und sichere Codex-/OpenCode-Projekte; OpenCode findet auf macOS/Linux nun auch projektlokale Agenten-Konfigurationen zuverlaessig.
 > - **v0.13.2:** WebUI als vierte auswählbare Desktop-Oberfläche für macOS und Windows 11; startet parallel oder allein direkt im Standardbrowser.
 > - **v0.13.1:** Einstellungen-UI stabilisiert: Die Systemseite scrollt sauber, Formfelder bleiben lesbar und die Reiterleiste funktioniert auch bei wenig Platz.
 > - **v0.13.0:** Optionaler Mehrbenutzer-Server mit Passwort-Accounts, getrennten Nutzerbereichen und ClassicUI-Client fuer Linux-, macOS- und Windows-Installationen.
@@ -37,6 +38,12 @@
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
 Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11 sowie als schlanker Linux-Server mit WebUI. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
+
+> [!TIP]
+> **Neu bei Trinity oder bei Codex/OpenCode?** Starte mit dem
+> **[vollständigen Onboarding](docs/ONBOARDING.md)**. Es erklärt Installation,
+> Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
+> sichere Codex-/OpenCode-Einstellungen und eine empfohlene Testreihenfolge.
 
 ---
 
@@ -227,6 +234,8 @@ Sitzungstokens werden nicht auf dem Server persistiert und laufen beim
 Server-Neustart aus.
 
 Detaillierte Anweisungen zu den API-Keys und der Konfiguration findest du im [Wiki](https://github.com/ProfEngel/TrinityLectureAssisitant/wiki).
+Das aktuelle, versionskontrollierte Handbuch liegt direkt im Repository unter
+[Onboarding](docs/ONBOARDING.md).
 
 ### Wählbare Oberflächen
 
@@ -404,6 +413,10 @@ Memory-Treffer automatisch als zusätzlichen Kontext beim Antworten.
 
 ### Codex als lokaler Ausführungsagent
 
+Die Schritt-fuer-Schritt-Einrichtung inklusive Pfadsuche, Projekt-Allowlist,
+Sandbox-Wahl, sicheren Testauftraegen und Grenzen steht im
+[Onboarding: lokale Codex- und OpenCode-Agenten](docs/ONBOARDING.md#6-lokale-codex--und-opencode-agenten).
+
 Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
 angemeldete Codex CLI übergeben. Codex arbeitet dabei ausschließlich in Projektordnern,
 die zuvor unter **Einstellungen → Codex** freigegeben wurden.
@@ -425,6 +438,10 @@ stehen in der offiziellen Dokumentation zu
 [Codex Skills](https://developers.openai.com/codex/skills).
 
 ### OpenCode als lokales Subagententeam
+
+Die Schritt-fuer-Schritt-Einrichtung inklusive projektlokalem Agenten,
+Rechte-Policy und sicheren Testauftraegen steht im
+[Onboarding: lokale Codex- und OpenCode-Agenten](docs/ONBOARDING.md#6-lokale-codex--und-opencode-agenten).
 
 Trinity kann alternativ Aufgaben an eine lokal installierte OpenCode CLI übergeben.
 Der Agent nutzt `opencode run` im freigegebenen Projektordner und eignet sich für

@@ -3,6 +3,7 @@
 import html
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -182,6 +183,11 @@ def _needs_windows_shell(executable: str, host_os=None) -> bool:
     return (host_os or os.name) == "nt" and str(executable).casefold().endswith((".cmd", ".bat"))
 
 
+def _needs_posix_shell(executable: str, host_os=None) -> bool:
+    """OpenCode's macOS/Linux launcher needs a shell to retain project config."""
+    return (host_os or os.name) != "nt" and Path(str(executable)).name.casefold() == "opencode"
+
+
 def _run_opencode(
     executable: str,
     project_path: Path,
@@ -201,8 +207,15 @@ def _run_opencode(
     if os.name == "nt":
         creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-    use_shell = _needs_windows_shell(executable)
-    run_command = subprocess.list2cmdline(command) if use_shell else command
+    use_windows_shell = _needs_windows_shell(executable)
+    use_posix_shell = _needs_posix_shell(executable)
+    use_shell = use_windows_shell or use_posix_shell
+    if use_windows_shell:
+        run_command = subprocess.list2cmdline(command)
+    elif use_posix_shell:
+        run_command = shlex.join(command)
+    else:
+        run_command = command
     completed = subprocess.run(
         run_command,
         text=True,

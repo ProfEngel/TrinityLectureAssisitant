@@ -1,5 +1,6 @@
 import importlib.util
 import re
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -68,12 +69,13 @@ def test_run_opencode_uses_run_model_agent_and_project_cwd(monkeypatch, tmp_path
 
     command = captured["command"]
     assert answer == "Aufgabe erledigt."
-    assert command[:2] == ["/usr/local/bin/opencode", "run"]
-    assert command[command.index("--model") + 1] == "provider/model"
-    assert command[command.index("--agent") + 1] == "build"
-    assert command[-1] == "Prüfe das Projekt."
+    assert shlex.split(command)[:2] == ["/usr/local/bin/opencode", "run"]
+    parsed = shlex.split(command)
+    assert parsed[parsed.index("--model") + 1] == "provider/model"
+    assert parsed[parsed.index("--agent") + 1] == "build"
+    assert parsed[-1] == "Prüfe das Projekt."
+    assert captured["kwargs"]["shell"] is True
     assert captured["kwargs"]["cwd"] == str(tmp_path)
-    assert captured["kwargs"]["shell"] is False
 
 
 def test_windows_cmd_launcher_uses_shell_argument_escaping(monkeypatch, tmp_path):
@@ -108,6 +110,33 @@ def test_windows_cmd_launcher_uses_shell_argument_escaping(monkeypatch, tmp_path
     assert captured["kwargs"]["shell"] is True
     assert isinstance(captured["command"], str)
     assert captured["command"].startswith(captured["expected_prefix"])
+
+
+def test_posix_opencode_launcher_uses_shell_quoted_command(monkeypatch, tmp_path):
+    agent = _load_agent()
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout="macOS erledigt.", stderr="")
+
+    monkeypatch.setattr(agent.subprocess, "run", fake_run)
+    monkeypatch.setattr(agent, "_needs_posix_shell", lambda executable: True)
+
+    answer = agent._run_opencode(
+        executable="/Users/test/.opencode/bin/opencode",
+        project_path=tmp_path,
+        prompt="Prüfe das Projekt mit Leerzeichen.",
+        timeout=120,
+        agent="trinity-smoke",
+    )
+
+    assert answer == "macOS erledigt."
+    assert captured["kwargs"]["shell"] is True
+    assert isinstance(captured["command"], str)
+    assert "--agent trinity-smoke" in captured["command"]
+    assert "'Prüfe das Projekt mit Leerzeichen.'" in captured["command"]
 
 
 def test_execute_returns_opencode_answer_directly(monkeypatch, tmp_path):

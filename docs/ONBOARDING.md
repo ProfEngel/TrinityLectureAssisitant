@@ -1,0 +1,357 @@
+# Trinity Onboarding
+
+Dieses Dokument ist der zentrale Einstieg fuer Trinity auf macOS, Windows 11,
+Linux-Servern sowie mit der optionalen iPhone/iPad-Companion-App. Es fuehrt von
+der ersten lokalen Antwort bis zu proaktiven Vorlesungs-Workflows und lokalen
+Codex-/OpenCode-Projekten.
+
+## 1. Vor dem Start
+
+Trinity besteht aus drei bewusst getrennten Ebenen:
+
+| Ebene | Aufgabe | Beispiele |
+|---|---|---|
+| Betriebsmodus | Legt die Interaktionslogik fest. | lecture, office, chat |
+| Oberflaeche | Legt fest, wo Trinity sichtbar und bedienbar ist. | Augen-UI, ClassicUI, Terminal, WebUI |
+| Geraeterolle | Legt fest, welches Geraet Eingabe, Ausgabe oder Server ist. | Desktop, Linux-Server, iPhone/iPad-Companion |
+
+Der Betriebsmodus ist also keine UI-Auswahl: Ein Vortrag kann beispielsweise im
+Lecture-Modus mit Augen-UI, ClassicUI, WebUI oder iPad-Companion stattfinden.
+
+### Voraussetzungen
+
+- macOS oder Windows 11 fuer den vollstaendigen Desktop-Betrieb; Ubuntu/Linux
+  eignet sich als Headless-Server mit WebUI.
+- Ein erreichbares LLM: lokal etwa LM Studio/Ollama oder ein konfigurierter
+  Remote-Provider.
+- Ein Mikrofon nur fuer Sprachbetrieb; fuer ClassicUI, WebUI und TUI reicht Text.
+- Fuer die Companion-App: iPhone/iPad, Desktop- oder Server-Trinity und im
+  empfohlenen Fall Tailscale auf beiden Geraeten.
+- Optional: Tavily fuer Webrecherche, fal.ai oder ComfyUI fuer Medien, Codex CLI
+  und/oder OpenCode CLI fuer lokale Projekt-Automationen.
+
+Nach jeder Installation pruefen:
+
+~~~bash
+trinity doctor
+trinity start
+~~~
+
+trinity doctor --fix darf nur fuer die angezeigten, lokalen Reparaturen verwendet
+werden. Zugangsdaten, Bearer-Token und API-Keys gehoeren nie in Screenshots,
+Chats, Issues oder Git-Repositories.
+
+## 2. Installation und erste Antwort
+
+### macOS
+
+~~~bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
+trinity onboarding
+trinity doctor
+trinity start
+~~~
+
+### Windows 11
+
+In PowerShell:
+
+~~~powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
+trinity onboarding
+trinity doctor
+trinity start
+~~~
+
+Die Ausfuehrungsrichtlinie gilt damit nur fuer das geoeffnete PowerShell-Fenster.
+Weitere Hinweise stehen in [Deployment Windows 11](Deployment_Windows11.md).
+
+### Linux / Ubuntu Server
+
+~~~bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_linux.sh | bash
+~/.local/bin/trinity onboarding
+~/.local/bin/trinity doctor
+~/.local/bin/trinity server --host 127.0.0.1 --port 8765
+~~~
+
+Linux startet bewusst ohne lokale Augen-UI und ohne lokalen Audioeingang. Es
+liefert die WebUI und kann von Desktop-Clients oder der Companion-App genutzt
+werden. Details: [Deployment Linux](Deployment_Linux.md).
+
+### LLM einrichten
+
+Nutze die ClassicUI ueber das Zahnrad oder im Terminal:
+
+~~~bash
+trinity settings
+~~~
+
+Unter APIs/LLM wird ein Provider-Slot gewaehlt und mit URL, Modell und bei Bedarf
+API-Key konfiguriert. Fuer einen lokalen LM-Studio-Server ist der
+Standardanschluss typischerweise http://localhost:1234/v1/chat/completions.
+Erst wenn trinity doctor den LLM-Zugang bestaetigt, sollte STT, Medien oder
+Proaktivitaet aktiviert werden.
+
+## 3. Oberflaechen und Terminal
+
+In Einstellungen -> System -> Bedienoberflaechen koennen Oberflaechen frei
+kombiniert werden:
+
+- **Augen-UI:** dezente, schwebende Vorlesungsoberflaeche und Datei-Drop.
+- **ClassicUI:** Chat, Anlagen, Live-Mitschrift/Agentenlog, Memory Graph und
+  Einstellungen im gleichen Fenster.
+- **Terminal/TUI:** robust fuer Headless, SSH und Diagnose. trinity tui bietet
+  Sessions, Memory und Slash-Commands.
+- **WebUI:** Browser-Chat fuer Server, Client oder Desktop. Start mit
+  trinity start --surface web.
+
+trinity start --surface all startet alle Oberflaechen. Sind Augen-UI, ClassicUI
+und WebUI deaktiviert, bleibt die Terminal-CLI als bedienbarer Fallback aktiv.
+
+Einstellungen fuer LLM, Persona, Sprache, TTS, Telegram und Betriebsmodus werden
+bei neuen Anfragen neu eingelesen. Ein Neustart ist nur fuer eine geaenderte
+Oberflaechenkombination oder die Companion Bridge erforderlich.
+
+## 4. Betriebsmodi und Einsatzstufen
+
+### Lecture-Modus: Vorlesung und Praesentation
+
+Der Lecture-Modus nutzt das Wake-Word und ist fuer eine moeglichst unaufdringliche
+Begleitung ausgelegt.
+
+| Stufe | Aktivierung | Was Trinity tut |
+|---|---|---|
+| **Level 1 - Zuhoeren** | Lecture, STT aktiv, Heartbeat aus | Schreibt lokal mit, reagiert auf ausdrueckliche Wake-Word-Anfragen und kann kurz antworten. |
+| **Level 2 - Auf Zuruf handeln** | Zusaetzlich Medien-, Recherche-, Timer-, Simulation- oder Sandbox-Agenten nutzen | Erstellt auf ausdruecklichen Befehl Schaubilder, Rechercheergebnisse, Python-Ausgaben, Timer, Simulationen oder lokale Medien. Ergebnisse erscheinen in der passenden UI und auf Companion/Presenter, sofern verbunden. |
+| **Level 3 - Proaktiver Begleiter** | Einstellungen -> Proaktiv: Heartbeat aktivieren; optional Bubbles, Visuals und Auto-RAG | Analysiert das Transkript periodisch auf Fehler, Perspektiven oder Uebungen und meldet Befunde als Bubble/Payload. Der Heartbeat erzeugt zusaetzliche LLM-Anfragen und sollte erst nach einem stabilen Level-1-Test aktiviert werden. |
+
+Fuer sensible Situationen kann mit Formulierungen wie "Trinity, bitte nicht
+zuhoeren" in einen passiven Fokusmodus gewechselt werden. Wichtig: Das physische
+Mikrofon oder die Aufnahmeberechtigung des Betriebssystems bleibt die technische
+Quelle; vor einer Veranstaltung sind Datenschutz- und Einwilligungsregeln der
+Institution zu pruefen.
+
+### Office-Modus: Dateien, Recherche und lokale Arbeit
+
+Der Office-Modus eignet sich fuer vorbereitende Arbeit, Dokumente und
+Automationen. ClassicUI und WebUI unterstuetzen Text-, PDF-, Bild- und
+Tabellenanlagen. In der Augen-UI kann eine Datei abgelegt werden; Trinity zeigt
+eine Vorschau oder oeffnet sie mit dem Standardprogramm und behaelt sie als
+Kontext fuer den naechsten Auftrag.
+
+Typische Aufgaben sind Zusammenfassungen, RAG-Abfragen, Webrecherche,
+Schaubilder, Python-Berechnungen sowie lokale Codex-/OpenCode-Workflows. Fuer
+eingehende E-Mails, Dateien mit personenbezogenen Daten oder Noten gelten immer
+die lokalen Projektregeln und institutionellen Datenschutzvorgaben.
+
+### Chat-Modus: bewusst auf Anforderung
+
+Der Chat-Modus ist fuer ClassicUI, WebUI, TUI und Headless-Betrieb gedacht.
+Er verarbeitet Text und Anlagen gezielt; der Heartbeat wird nicht gestartet.
+Agenten bleiben moeglich, werden aber nur durch klare Auftraege ausgeloest. Das
+ist der beste Modus, um LLM-, Anlagen- und Code-Integrationen einzeln zu testen.
+
+## 5. Companion: iPhone und iPad
+
+Die Companion-App ist absichtlich nicht Teil der Desktop-Installer. Sie ist ein
+separates iOS/iPadOS-Projekt und verbindet sich mit einer laufenden
+Desktop-/Server-Trinity per lokaler HTTP-Bridge.
+
+### Empfohlenes privates Setup mit Tailscale
+
+1. Tailscale auf dem Trinity-Host und dem iPhone/iPad anmelden.
+2. In Trinity Einstellungen -> System -> Companion Bridge oeffnen.
+3. Bridge beim Trinity-Start oeffnen aktivieren.
+4. Host 0.0.0.0, einen freien Port (typisch 8765) und einen langen Bearer Token
+   setzen.
+5. Trinity neu starten.
+6. In der Companion-App http://TAILSCALE-IP:8765 und denselben Token eintragen.
+
+Bei Tailscale muss normalerweise kein Router-Port ins Internet geoeffnet werden.
+Die lokale Firewall darf Trinity/Python nur in privaten Netzen beziehungsweise im
+Tailnet akzeptieren. Eine Bridge mit 0.0.0.0 ohne Token darf nicht ungeschuetzt
+ins oeffentliche Internet gestellt werden.
+
+### Geraeterollen
+
+- **iPhone:** mobiles STT, Fluestern/Text, Kamera/Anlagen und lokales TTS.
+- **iPad:** Alltags-, Chat-, Presenter-, Vortrags- und Webansicht; geeignet fuer
+  Folien, Annotationen und Medienpraesentation.
+- **Desktop oder Linux-Server:** LLM, Agenten, Dateien, Mediengenerierung,
+  Memory und Bridge.
+
+Die Companion-App kann Chat, Live-Mitschrift, Bilder, Audio, Video, Timer,
+Simulationen und Python-/Sandbox-Ergebnisse darstellen. iOS/iPadOS kann
+Hintergrund-Spracherkennung systembedingt begrenzen; ein sichtbarer Vordergrund-
+oder Split-View-Betrieb ist fuer laengere Vortraege robuster.
+
+Android Tablet/Phone ist als zukuenftige Companion-Variante vorgesehen. Es gibt
+in diesem Repository noch keinen Android-Installer oder Android-Client.
+
+## 6. Lokale Codex- und OpenCode-Agenten
+
+Diese Integrationen sind absichtlich keine allgemeinen Fernsteuerungen des
+Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegebene
+Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
+Rechte des jeweiligen Projekts gebunden.
+
+### Gemeinsame Sicherheitsgrundsaetze
+
+1. Zuerst ein separates Testprojekt freigeben, nicht das Produktivprojekt.
+2. Nur vollstaendige Pfade und sprechende Projektnamen verwenden:
+
+   ~~~text
+   Testprojekt = /vollstaendiger/Pfad/zum/Testprojekt
+   ~~~
+
+3. Auftraege immer mit Codex beziehungsweise OpenCode und dem Projektnamen
+   ansprechen. Das verhindert versehentliche Agentenstarts.
+4. Externe Aktionen nur vorbereiten: keine E-Mails senden, keine Kaeufe, keine
+   Deployments, keine Pushes und keine Loeschungen ohne eigene, spaetere
+   Bestaetigung.
+5. Projektregeln sind entscheidend: Trinity kann ein Projekt mit absichtlich
+   weitreichenden Shell-/Netzwerkrechten nicht automatisch unschaedlich machen.
+
+### Codex einrichten
+
+Voraussetzung ist eine installierte und angemeldete Codex CLI. Den erkannten Pfad
+anzeigen:
+
+~~~bash
+command -v codex
+~~~
+
+Unter Windows PowerShell:
+
+~~~powershell
+(Get-Command codex).Source
+~~~
+
+In Einstellungen -> Codex:
+
+| Feld | Sicherer erster Wert |
+|---|---|
+| Codex-Auftraege erlauben | aktivieren |
+| Programm | codex oder der mit dem Befehl ermittelte volle Pfad |
+| Freigegebene Projekte | eine Zeile Alias = /vollstaendiger/Pfad |
+| Standardprojekt | derselbe Alias |
+| Codex-Rechte | zuerst read-only, fuer einen kontrollierten Bericht workspace-write |
+| Zeitlimit | 180 bis 900 Sekunden |
+| Antwortlaenge | 3200 bis 4000 Zeichen |
+| Laeufe nicht als dauerhafte Sitzungen speichern | aktivieren |
+| Netzwerkzugriff gestarteter Programme | deaktiviert lassen, solange kein klarer Bedarf besteht |
+
+Beispiel:
+
+> Trinity, nutze Codex im Projekt Testprojekt. Lies die Projektregeln, fuehre nur
+> die vorhandenen Tests aus und schreibe den Bericht unter artifacts/.
+
+Codex wird im nicht-interaktiven Modus mit einer auf das Projekt begrenzten
+Sandbox gestartet. Informationen zu Codex selbst: [Codex non-interactive
+mode](https://developers.openai.com/codex/noninteractive) und [Codex
+Skills](https://developers.openai.com/codex/skills).
+
+### OpenCode einrichten
+
+Voraussetzung ist eine installierte OpenCode CLI. Den Pfad pruefen:
+
+~~~bash
+command -v opencode
+opencode --version
+~~~
+
+Unter Windows PowerShell:
+
+~~~powershell
+(Get-Command opencode).Source
+opencode --version
+~~~
+
+In Einstellungen -> OpenCode:
+
+| Feld | Sicherer erster Wert |
+|---|---|
+| OpenCode-Auftraege erlauben | aktivieren |
+| Programm | opencode oder der volle CLI-Pfad |
+| Freigegebene Projekte | eine Zeile Alias = /vollstaendiger/Pfad |
+| Standardprojekt | derselbe Alias |
+| OpenCode-Agent | ein projektlokaler, eingeschraenkter Agent, nicht blind build |
+| Modell | leer lassen fuer das in OpenCode konfigurierte Standardmodell; sonst provider/modell |
+| Zeitlimit | 180 bis 900 Sekunden |
+| Antwortlaenge | 3200 bis 4000 Zeichen |
+
+OpenCode wird mit opencode run im erlaubten Projektordner gestartet. Auf
+macOS/Linux verwendet Trinity fuer die OpenCode-CLI eine korrekt gequotete Shell,
+damit projektlokale OpenCode-Konfigurationen sicher gefunden werden. Unter
+Windows bleibt der .cmd-Startweg erhalten.
+
+Ein sicherer OpenCode-Testagent sollte in der Projektkonfiguration opencode.json
+einen Default-Deny-Ansatz nutzen: zuerst "*": "deny", danach nur Lesen, genau
+definierte Testbefehle und einen einzelnen Berichtspfad freigeben. Beispielauftrag:
+
+> Trinity, nutze OpenCode im Projekt Testprojekt. Lies die Projektregeln, fuehre
+> nur die vorhandene Fixture-Pruefung aus und erstelle einen Bericht unter
+> artifacts/. Aendere keine andere Datei.
+
+Pruefe die wirksamen Agenten vorher mit opencode agent list. OpenCode-Agenten und
+ihre Rechte werden vom Projekt selbst definiert; die Trinity-Einstellung waehlt
+nur aus, welcher Agent in welchem erlaubten Projekt gestartet wird.
+
+## 7. Server-Client, Telegram und Memory
+
+### Desktop als Client eines Trinity-Servers
+
+Ein macOS- oder Windows-Desktop kann statt lokal gegen einen Trinity-Server
+arbeiten:
+
+~~~bash
+trinity client login --url http://TAILSCALE-IP:8765
+trinity start --surface classic
+~~~
+
+Die grafischen Felder liegen unter Einstellungen -> System -> Trinity-Server
+Client. Der Client trennt Verlauf, Uploads und Memory nach Serverkonto. Mit
+trinity client logout wird der lokale Betrieb wieder aktiviert.
+
+### Telegram
+
+Telegram ist optional. Es eignet sich fuer Statusmeldungen und ausdrueckliche
+Textauftraege, nicht als Ersatz fuer die lokale Sicherheitspruefung. Bot-Token
+und Chat-ID werden in Einstellungen -> Proaktiv -> Telegram Bridge gesetzt.
+
+### TUI und lokales Memory
+
+trinity tui bietet Sessions, Kontextverdichtung und lokales Memory. Wichtige
+Kommandos sind /session new, /context, /remember, /memory bake, /memory dream
+und /graph. Die Daten liegen lokal in memory/trinity_memory.sqlite3.
+
+## 8. Diagnose und Fehlerbilder
+
+| Symptom | Pruefung |
+|---|---|
+| Trinity antwortet nicht | trinity doctor; LLM-URL/Modell testen; ClassicUI-Live-Log lesen. |
+| Codex/OpenCode wird nicht gefunden | CLI im gleichen Benutzerkonto installieren; command -v beziehungsweise Get-Command nutzen; vollen Pfad eintragen. |
+| Agent waehlt falsches Projekt | Alias im Auftrag nennen und exakt wie im Feld Standardprojekt schreiben. |
+| Code-Agent kann nicht schreiben | Codex-Sandbox pruefen; bei OpenCode die projektlokale opencode.json und den konkreten edit-Pfad pruefen. |
+| Companion verbindet nicht | Tailscale-IP, Bridge-Port, Bearer-Token und lokale Firewall pruefen; Bridge nach Einstellungswechsel neu starten. |
+| Heartbeat erzeugt Last | Intervall vergroessern oder Heartbeat/Bubbles deaktivieren. |
+
+Fuer den ersten Fehlerbericht immer diese Angaben sammeln: Betriebssystem,
+Trinity-Version, gewaehlte Oberflaeche, Betriebsmodus, die sichtbare Fehlermeldung
+und die Ausgabe von trinity doctor. Zugangsdaten gehoeren nicht in den Bericht.
+
+## 9. Empfohlene Reihenfolge
+
+1. LLM und ClassicUI im Chat-Modus testen.
+2. Eine Datei oder PDF anhaengen und die Antwort pruefen.
+3. STT und Wake-Word im Lecture-Modus mit Heartbeat aus testen.
+4. Companion per Tailscale und Bearer-Token verbinden.
+5. Erst dann Medien, Heartbeat, Telegram und Auto-RAG aktivieren.
+6. Codex oder OpenCode ausschliesslich in einem separaten Testprojekt erproben.
+7. Produktive Automationen erst nach einer eigenen Projekt- und Rechtepruefung
+   freigeben.
+
+Damit bleibt Trinity schrittweise nachvollziehbar: Jede neue Faehigkeit baut auf
+einem bereits getesteten, lokalen Fundament auf.
