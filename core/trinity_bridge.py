@@ -518,7 +518,12 @@ def make_handler(bridge):
         server_version = "TrinityBridge/0.1"
 
         def log_message(self, fmt, *args):
-            print(f"[bridge] {self.address_string()} - {fmt % args}")
+            try:
+                print(f"[bridge] {self.address_string()} - {fmt % args}")
+            except (BrokenPipeError, OSError):
+                # A detached desktop launcher can outlive its original stdout.
+                # Logging must never prevent an otherwise valid HTTP response.
+                pass
 
         def do_OPTIONS(self):  # noqa: N802
             _json_response(self, 200, {"ok": True})
