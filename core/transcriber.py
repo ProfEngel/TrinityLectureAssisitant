@@ -101,6 +101,8 @@ class TrinityEar:
         self.is_muted = False  # Stumm-Modus: Trinity hört nicht zu
         self.trigger_armed = False # Wartet auf Ende des Satzes nach Wake-Word
         self._last_external_stt_text = ""
+        self._last_assistant_response = ""
+        self._last_assistant_response_at = 0.0
         
         # Neues Transkript für diese Sitzung anlegen
         timestamp = time.strftime("%d%b%Y_%H%M")
@@ -178,10 +180,12 @@ class TrinityEar:
             # System Config
             self.system_cfg = config.get("system", {})
             self.mode = self.system_cfg.get("mode", "office")
+            self.microphone_enabled = self.system_cfg.get("microphone_enabled", True)
+            self.tts_enabled = self.system_cfg.get("tts_enabled", True)
             self.speech_input_enabled = (
                 sys.platform != "win32"
                 or self.system_cfg.get("windows_speech_enabled", False)
-            ) and os.environ.get("TRINITY_SERVER") != "1"
+            ) and os.environ.get("TRINITY_SERVER") != "1" and self.microphone_enabled
             self._config_mtime = os.path.getmtime(self.config_path)
         except:
             self.model_name = MODEL
@@ -196,6 +200,8 @@ class TrinityEar:
             self.telegram_cfg = {}
             self.system_cfg = {}
             self.mode = "office"
+            self.microphone_enabled = True
+            self.tts_enabled = True
             self.speech_input_enabled = (
                 sys.platform != "win32" and os.environ.get("TRINITY_SERVER") != "1"
             )
@@ -211,15 +217,16 @@ class TrinityEar:
             return False
 
         old_mode = getattr(self, "mode", "office")
+        old_speech_input_enabled = getattr(self, "speech_input_enabled", False)
         self.load_config()
         if hasattr(self.brain, "reload_runtime_config"):
             self.brain.reload_runtime_config(force=True)
 
         new_mode = getattr(self, "mode", "office")
-        if old_mode != new_mode and not getattr(self, "uses_native_speech", False):
-            if new_mode == "chat":
+        if not getattr(self, "uses_native_speech", False):
+            if new_mode == "chat" or not self.speech_input_enabled:
                 self._stop_audio_input()
-            elif old_mode == "chat" and self.speech_input_enabled:
+            elif (old_mode == "chat" or not old_speech_input_enabled) and self.speech_input_enabled:
                 try:
                     self._start_audio_input()
                 except Exception as exc:
@@ -651,6 +658,7 @@ class TrinityEar:
         audio_buffer = []
         try:
             while self.is_running:
+                self.reload_config_if_changed()
                 self._process_external_stt_feed()
 
                 # 1. Prüfe auf stille Text-Eingaben
@@ -848,6 +856,11 @@ class TrinityEar:
             print(f"📱 iPhone-STT ({marker}): {text}")
             if not is_final:
                 continue
+            if self._looks_like_recent_assistant_echo(text):
+                print("🔇 Companion-STT Echo verworfen: iPad/iPhone hat Trinitys Antwort mitgehört.")
+                self.trigger_armed = False
+                self.recent_chunks.clear()
+                continue
 
             if getattr(self, "mode", "office") == "chat" and not has_trigger(
                 text,
@@ -882,6 +895,33 @@ class TrinityEar:
             if self.trigger_armed:
                 self.fire_trigger(silent_response=not speak, chat_request=request)
 
+    def _looks_like_recent_assistant_echo(self, text):
+        if not self._last_assistant_response:
+            return False
+        if time.time() - self._last_assistant_response_at > 90:
+            return False
+
+        def tokens(value):
+            cleaned = re.sub(r"[^a-zäöüß0-9 ]+", " ", value.lower())
+            stopwords = {
+                "aber", "auch", "dann", "dass", "denn", "der", "die", "das",
+                "ein", "eine", "einen", "einer", "erst", "für", "habe", "hat",
+                "ich", "ist", "mit", "nicht", "oder", "sich", "sie", "und",
+                "von", "was", "wenn", "wir", "zu", "zum", "zur",
+            }
+            return [
+                token
+                for token in cleaned.split()
+                if len(token) > 3 and token not in stopwords
+            ]
+
+        incoming = set(tokens(text))
+        answer = set(tokens(self._last_assistant_response))
+        if len(incoming) < 5 or len(answer) < 5:
+            return False
+        overlap = len(incoming & answer) / min(len(incoming), len(answer))
+        return overlap >= 0.45
+
     def fire_trigger(self, silent_response=False, chat_request=None):
         if not self.trigger_armed:
             return
@@ -907,6 +947,9 @@ class TrinityEar:
         self.recent_chunks.clear()  # Reset nach Trigger
 
     def _speak_thread(self, text):
+        if not getattr(self, "tts_enabled", True):
+            set_state("idle")
+            return
         set_state("speaking")
         
         target_device = self.audio_routing.get("private_device", "Standard")
@@ -1110,6 +1153,8 @@ class TrinityEar:
         print(f"💡 Trinity hat eine Antwort bereit ({len(antwort)} Zeichen).")
         if antwort:
             print(f"\n{self.agent_name}: {antwort}\n")
+            self._last_assistant_response = antwort
+            self._last_assistant_response_at = time.time()
         
         # 🧠 Kontext-Gedächtnis: Trinitys eigene Antwort ins Transkript speichern!
         if antwort and len(antwort.strip()) > 0:
@@ -1153,6 +1198,8 @@ class TrinityEar:
                     "source": (chat_request or {}).get("source", "runtime"),
                     "text": antwort,
                     "payload_html": history_payload,
+                    "session_id": (chat_request or {}).get("session_id", ""),
+                    "session_name": (chat_request or {}).get("session_name", ""),
                 },
             )
             try:

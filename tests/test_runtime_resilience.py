@@ -1,5 +1,6 @@
 import json
 import sys
+import time
 import types
 from pathlib import Path
 
@@ -496,3 +497,68 @@ def test_ios_stt_trigger_word_creates_bridge_request_in_lecture_mode(tmp_path, m
     assert received[0][1] is True
     assert received[0][3]["source"] == "ios-stt"
     assert received[0][3]["session_id"] == "ios-session"
+
+
+def test_ios_stt_echo_of_recent_assistant_response_is_ignored(tmp_path, monkeypatch):
+    core_dir = tmp_path / "core"
+    memory_dir = tmp_path / "memory"
+    core_dir.mkdir()
+    memory_dir.mkdir()
+    assistant_answer = (
+        "Ich habe die Folien durchgesehen und die technischen Begriffe in "
+        "betriebswirtschaftliche Vergleiche übersetzt. Soll ich die "
+        "Zusammenfassung direkt für das Plenum aufbereiten?"
+    )
+    append_external_stt_event(
+        core_dir / "ios_stt_feed.jsonl",
+        {
+            "source": "ios-stt",
+            "text": (
+                "Ich habe die Folien durchgesehen und die technischen Begriffe "
+                "in betriebswirtschaftliche Vergleiche übersetzt soll ich die "
+                "Zusammenfassung direkt für das Plenum"
+            ),
+            "is_final": True,
+            "speak": False,
+        },
+    )
+    received = []
+
+    class FakeBrain:
+        pass
+
+    class FakeTTS:
+        pass
+
+    def fake_load_config(ear):
+        ear.model_name = "small"
+        ear.silence_threshold = 0.015
+        ear.chunk_duration = 2
+        ear.show_volume_meter = False
+        ear.voice = "Standard"
+        ear.agent_name = "Trinity"
+        ear.trigger_variants = ["trinity"]
+        ear.proactive_cfg = {}
+        ear.audio_routing = {}
+        ear.telegram_cfg = {}
+        ear.system_cfg = {"mode": "chat"}
+        ear.mode = "chat"
+        ear.speech_input_enabled = False
+
+    def fake_trigger(ear, text, silent_response=False, **kwargs):
+        received.append((text, silent_response, kwargs.get("chat_request")))
+
+    monkeypatch.setattr(transcriber, "__file__", str(core_dir / "transcriber.py"))
+    monkeypatch.setattr(transcriber, "CORE_DIR", str(core_dir))
+    monkeypatch.setattr(transcriber, "MEMORY_DIR", str(memory_dir))
+    monkeypatch.setattr(transcriber, "TrinityBrain", FakeBrain)
+    monkeypatch.setattr(transcriber, "create_tts_backend", lambda: FakeTTS())
+    monkeypatch.setattr(transcriber.TrinityEar, "load_config", fake_load_config)
+    monkeypatch.setattr(transcriber.TrinityEar, "trigger_action", fake_trigger)
+
+    ear = transcriber.TrinityEar()
+    ear._last_assistant_response = assistant_answer
+    ear._last_assistant_response_at = time.time()
+    ear._process_external_stt_feed()
+
+    assert received == []

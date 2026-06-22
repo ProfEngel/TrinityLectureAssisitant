@@ -98,6 +98,8 @@ class TrinityBridge:
         self.stt_feed_path = self.core_dir / "ios_stt_feed.jsonl"
         self.payload_path = self.core_dir / "payload.html"
         self.config_path = self.core_dir / "config.json"
+        self.bubble_payload_path = self.core_dir / "bubble_payload.html"
+        self.state_path = self.core_dir / "state.txt"
         self.token = token or ""
         self.auth_enabled = bool(auth_enabled)
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
@@ -155,6 +157,7 @@ class TrinityBridge:
         request = build_chat_request(text, attachments, history_recorded=True)
         request["source"] = str(payload.get("source", "ios") or "ios")[:64]
         request["session_id"] = str(payload.get("session_id", "")).strip()
+        request["session_name"] = str(payload.get("session_name", "")).strip()[:160]
         request["privacy_mode"] = str(payload.get("privacy_mode", "local")).strip() or "local"
         request["silent"] = not bool(payload.get("speak", False))
         request["allow_tts"] = bool(payload.get("speak", False))
@@ -173,6 +176,7 @@ class TrinityBridge:
                     "text": text,
                     "attachments": attachments,
                     "session_id": request["session_id"],
+                    "session_name": request["session_name"],
                     "privacy_mode": request["privacy_mode"],
                 },
             )
@@ -210,6 +214,56 @@ class TrinityBridge:
                 },
             )
         return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
+
+    def get_mode(self):
+        config = self._read_config()
+        mode = str(config.get("system", {}).get("mode", "office") or "office")
+        if mode not in {"office", "lecture", "chat"}:
+            mode = "office"
+        return {"ok": True, "mode": mode}
+
+    def set_mode(self, payload):
+        mode = str(payload.get("mode", "")).strip().lower()
+        if mode not in {"office", "lecture", "chat"}:
+            raise ValueError("Modus muss office, lecture oder chat sein.")
+        with self._lock:
+            config = self._read_config()
+            config.setdefault("system", {})["mode"] = mode
+            self.core_dir.mkdir(parents=True, exist_ok=True)
+            self.config_path.write_text(
+                json.dumps(config, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        return {"ok": True, "mode": mode, "updated_at": time.time()}
+
+    def get_runtime(self):
+        config = load_config(self.config_path)
+        system = config.get("system", {})
+        return {
+            "ok": True,
+            "mode": str(system.get("mode", "lecture") or "lecture"),
+            "microphone_enabled": bool(system.get("microphone_enabled", True)),
+            "tts_enabled": bool(system.get("tts_enabled", True)),
+        }
+
+    def set_runtime(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Laufzeitwerte muessen ein Objekt sein.")
+        with self._lock:
+            config = load_config(self.config_path)
+            system = config.setdefault("system", {})
+            if "mode" in payload:
+                mode = str(payload["mode"] or "").strip().lower()
+                if mode not in {"office", "lecture", "chat"}:
+                    raise ValueError("Modus muss office, lecture oder chat sein.")
+                system["mode"] = mode
+            for key in ("microphone_enabled", "tts_enabled"):
+                if key in payload:
+                    system[key] = bool(payload[key])
+            save_config(self.config_path, config)
+        result = self.get_runtime()
+        result["updated_at"] = time.time()
+        return result
 
     def can_manage_settings(self, handler, user):
         """Settings are local-only without a token and admin-only with accounts."""
@@ -331,6 +385,25 @@ class TrinityBridge:
             "timestamp": self._mtime(self.payload_path),
         }
 
+    def latest_bubble(self):
+        try:
+            html = self.bubble_payload_path.read_text(encoding="utf-8")
+        except OSError:
+            html = ""
+        color = self._bubble_color()
+        title = {
+            "red": "Kritischer Hinweis",
+            "yellow": "Hinweis",
+            "blue": "Übungsaufgabe",
+            "green": "Info",
+        }.get(color, "Heartbeat")
+        return {
+            "html": self.rewrite_html(html),
+            "timestamp": self._mtime(self.bubble_payload_path),
+            "color": color,
+            "title": title,
+        }
+
     def media_path_from_query(self, raw_path, user=None):
         if not raw_path:
             raise ValueError("Kein Medienpfad angegeben.")
@@ -406,6 +479,23 @@ class TrinityBridge:
             return Path(path).stat().st_mtime
         except OSError:
             return 0.0
+
+    def _bubble_color(self):
+        try:
+            state = self.state_path.read_text(encoding="utf-8").strip().lower()
+        except OSError:
+            state = ""
+        if state.startswith("bubble_"):
+            color = state.split("_", 1)[1]
+            if color in {"red", "yellow", "blue", "green"}:
+                return color
+        return "blue"
+
+    def _read_config(self):
+        try:
+            return json.loads(self.config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
 
     @staticmethod
     def _merge_settings_section(target, incoming):
@@ -489,6 +579,12 @@ def make_handler(bridge):
                             ),
                         },
                     )
+                elif parsed.path == "/bubble":
+                    _json_response(self, 200, {"ok": True, **bridge.latest_bubble()})
+                elif parsed.path == "/mode":
+                    _json_response(self, 200, bridge.get_mode())
+                elif parsed.path == "/runtime":
+                    _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/settings":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
@@ -556,6 +652,10 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
+                elif parsed.path == "/mode":
+                    _json_response(self, 200, bridge.set_mode(_read_json(self)))
+                elif parsed.path == "/runtime":
+                    _json_response(self, 200, bridge.set_runtime(_read_json(self)))
                 elif parsed.path == "/settings":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(

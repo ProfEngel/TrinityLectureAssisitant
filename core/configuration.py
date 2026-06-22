@@ -69,6 +69,8 @@ def default_config(platform_name=None):
             "terminal_cli_enabled": windows,
             "mode": "chat",
             "windows_speech_enabled": False,
+            "microphone_enabled": True,
+            "tts_enabled": True,
         },
         "audio_routing": {
             "private_device": "Standard",

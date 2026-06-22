@@ -20,6 +20,7 @@ def test_remote_client_registers_and_receives_own_events(tmp_path):
         client.send_message("Vom Desktop-Client")
         events = client.events_since(0)
         assert [event["text"] for event in events] == ["Vom Desktop-Client"]
+        assert client.latest_payload()["html"] == ""
     finally:
         server.shutdown()
         server.server_close()

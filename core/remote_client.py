@@ -31,17 +31,28 @@ class RemoteTrinityClient:
     def auth_status(self):
         return self._request("/auth/status", authenticated=False, method="GET")
 
-    def send_message(self, text, attachments=None, source="classic", speak=False):
+    def send_message(self, text, attachments=None, source="classic", speak=False, session_id="", session_name=""):
         payload = {
             "text": text,
             "attachments": self.encode_attachments(attachments or []),
             "source": source,
             "speak": bool(speak),
+            "session_id": session_id,
+            "session_name": session_name,
         }
         return self._request("/message", payload)
 
     def events_since(self, after=0.0):
         return self._request(f"/events?after={float(after)}", method="GET").get("events", [])
+
+    def latest_payload(self):
+        return self._request("/payload", method="GET")
+
+    def get_runtime(self):
+        return self._request("/runtime", method="GET")
+
+    def set_runtime(self, updates):
+        return self._request("/runtime", dict(updates or {}))
 
     def create_user(self, username, password, role="user"):
         return self._request(

@@ -45,6 +45,28 @@ def test_web_ui_contains_file_upload_and_token_login():
     assert "'/message'" in page
     assert 'id="settingsView"' in page
     assert "'/settings'" in page
+    assert 'id="newSession"' in page
+    assert 'id="microphoneToggle"' in page
+    assert 'id="ttsToggle"' in page
+    assert "'/runtime'" in page
+    for view in ("Alltag", "Vortrag", "Web", "Presenter", "Chat", "Live"):
+        assert view in page
+    assert 'id="lectureFrame"' in page
+    assert 'id="presenterFrame"' in page
+    assert "'/payload'" in page
+
+
+def test_bridge_runtime_updates_saved_config(tmp_path):
+    bridge = TrinityBridge(tmp_path)
+
+    updated = bridge.set_runtime(
+        {"mode": "lecture", "microphone_enabled": False, "tts_enabled": False}
+    )
+
+    assert updated["mode"] == "lecture"
+    assert updated["microphone_enabled"] is False
+    assert updated["tts_enabled"] is False
+    assert bridge.get_runtime()["mode"] == "lecture"
 
 
 def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):

@@ -7,16 +7,20 @@ import os
 import re
 import sys
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPixmap, QTextCursor
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPixmap, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QHBoxLayout,
+    QComboBox,
+    QInputDialog,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QStackedWidget,
@@ -45,6 +49,7 @@ from chat_protocol import (
 )
 from memory_store import MemoryStore, render_graph_html
 from remote_client import RemoteTrinityClient
+from configuration import load_config, save_config
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -257,6 +262,10 @@ class ClassicWindow(QMainWindow):
         self._chat_signature = None
         self._memory_signature = None
         self._last_state = ""
+        self._workspace_payload_signature = None
+        self._lecture_path = ""
+        self.session_id = ""
+        self.session_name = ""
         self.pending_attachments = []
         self.remote_client = self._load_remote_client()
         self.remote_events = []
@@ -292,6 +301,19 @@ class ClassicWindow(QMainWindow):
         title.setObjectName("title")
         self.status = QLabel("Bereit")
         self.status.setObjectName("status")
+        self.listen_button = QPushButton()
+        self.listen_button.setObjectName("subtle")
+        self.listen_button.clicked.connect(self.toggle_microphone)
+        self.new_session_button = QPushButton("Neue Session")
+        self.new_session_button.setObjectName("subtle")
+        self.new_session_button.clicked.connect(self.start_new_session)
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["lecture", "office", "chat"])
+        self.mode_combo.setToolTip("Trinity-Betriebsmodus")
+        self.mode_combo.currentTextChanged.connect(self.set_runtime_mode)
+        self.tts_button = QPushButton()
+        self.tts_button.setObjectName("subtle")
+        self.tts_button.clicked.connect(self.toggle_tts)
         self.theme_button = QPushButton()
         self.theme_button.setObjectName("theme")
         self.theme_button.setFixedHeight(38)
@@ -306,11 +328,92 @@ class ClassicWindow(QMainWindow):
         header.addWidget(title)
         header.addStretch()
         header.addWidget(self.status)
+        header.addWidget(self.listen_button)
+        header.addWidget(self.new_session_button)
+        header.addWidget(self.mode_combo)
+        header.addWidget(self.tts_button)
         header.addWidget(self.theme_button)
         header.addWidget(settings_button)
         layout.addLayout(header)
 
         self.main_tabs = QTabWidget()
+        self.main_tabs.setObjectName("workspaceTabs")
+
+        daily_tab = QWidget()
+        daily_layout = QVBoxLayout(daily_tab)
+        daily_layout.setContentsMargins(0, 0, 0, 0)
+        self.daily_workspace = QWebEngineView()
+        self._configure_web_view(self.daily_workspace)
+        daily_layout.addWidget(self.daily_workspace)
+
+        lecture_tab = QWidget()
+        lecture_layout = QVBoxLayout(lecture_tab)
+        lecture_layout.setContentsMargins(0, 0, 0, 0)
+        lecture_toolbar = QHBoxLayout()
+        self.lecture_label = QLabel("Noch kein Foliensatz geöffnet")
+        self.lecture_label.setObjectName("section")
+        lecture_open_button = QPushButton("PDF öffnen")
+        lecture_open_button.setObjectName("subtle")
+        lecture_open_button.clicked.connect(self.choose_lecture_pdf)
+        lecture_external_button = QPushButton("Extern öffnen")
+        lecture_external_button.setObjectName("subtle")
+        lecture_external_button.clicked.connect(self.open_lecture_externally)
+        lecture_toolbar.addWidget(self.lecture_label, 1)
+        lecture_toolbar.addWidget(lecture_open_button)
+        lecture_toolbar.addWidget(lecture_external_button)
+        self.lecture_workspace = QWebEngineView()
+        self._configure_web_view(self.lecture_workspace)
+        lecture_layout.addLayout(lecture_toolbar)
+        lecture_layout.addWidget(self.lecture_workspace, 1)
+
+        web_tab = QWidget()
+        web_layout = QVBoxLayout(web_tab)
+        web_layout.setContentsMargins(0, 0, 0, 0)
+        web_toolbar = QHBoxLayout()
+        self.web_address = QLineEdit("https://www.google.com")
+        self.web_address.setPlaceholderText("https://…")
+        self.web_address.returnPressed.connect(self.open_web_address)
+        web_back_button = QPushButton("←")
+        web_back_button.setObjectName("subtle")
+        web_back_button.clicked.connect(lambda: self.web_workspace.back())
+        web_forward_button = QPushButton("→")
+        web_forward_button.setObjectName("subtle")
+        web_forward_button.clicked.connect(lambda: self.web_workspace.forward())
+        web_reload_button = QPushButton("Neu laden")
+        web_reload_button.setObjectName("subtle")
+        web_reload_button.clicked.connect(lambda: self.web_workspace.reload())
+        web_open_button = QPushButton("Öffnen")
+        web_open_button.setObjectName("subtle")
+        web_open_button.clicked.connect(self.open_web_address)
+        web_external_button = QPushButton("Extern")
+        web_external_button.setObjectName("subtle")
+        web_external_button.clicked.connect(self.open_web_externally)
+        for widget in (
+            web_back_button, web_forward_button, self.web_address, web_reload_button,
+            web_open_button, web_external_button,
+        ):
+            web_toolbar.addWidget(widget, 1 if widget is self.web_address else 0)
+        self.web_workspace = QWebEngineView()
+        self._configure_web_view(self.web_workspace)
+        self.web_workspace.setUrl(QUrl("https://www.google.com"))
+        web_layout.addLayout(web_toolbar)
+        web_layout.addWidget(self.web_workspace, 1)
+
+        presenter_tab = QWidget()
+        presenter_layout = QVBoxLayout(presenter_tab)
+        presenter_layout.setContentsMargins(0, 0, 0, 0)
+        presenter_toolbar = QHBoxLayout()
+        presenter_label = QLabel("Generierte Medien und Ergebnisse in großer Ansicht")
+        presenter_label.setObjectName("section")
+        presenter_fullscreen_button = QPushButton("Vollbild")
+        presenter_fullscreen_button.setObjectName("subtle")
+        presenter_fullscreen_button.clicked.connect(self.toggle_presenter_fullscreen)
+        presenter_toolbar.addWidget(presenter_label, 1)
+        presenter_toolbar.addWidget(presenter_fullscreen_button)
+        self.presenter_workspace = QWebEngineView()
+        self._configure_web_view(self.presenter_workspace)
+        presenter_layout.addLayout(presenter_toolbar)
+        presenter_layout.addWidget(self.presenter_workspace, 1)
 
         chat_tab = QWidget()
         chat_tab_layout = QVBoxLayout(chat_tab)
@@ -357,9 +460,20 @@ class ClassicWindow(QMainWindow):
         memory_layout.addLayout(memory_header)
         memory_layout.addWidget(self.memory_graph, 1)
 
+        live_tab = QWidget()
+        live_layout = QVBoxLayout(live_tab)
+        live_layout.setContentsMargins(0, 0, 0, 0)
+        live_tabs = QTabWidget()
+        live_tabs.addTab(transcript_tab, "Mitschrift")
+        live_tabs.addTab(memory_tab, "Memory")
+        live_layout.addWidget(live_tabs)
+
+        self.main_tabs.addTab(daily_tab, "Alltag")
+        self.main_tabs.addTab(lecture_tab, "Vortrag")
+        self.main_tabs.addTab(web_tab, "Web")
+        self.main_tabs.addTab(presenter_tab, "Presenter")
         self.main_tabs.addTab(chat_tab, "Chat")
-        self.main_tabs.addTab(transcript_tab, "Live-Mitschrift")
-        self.main_tabs.addTab(memory_tab, "Memory Graph")
+        self.main_tabs.addTab(live_tab, "Live")
         layout.addWidget(self.main_tabs, 1)
 
         attachment_row = QHBoxLayout()
@@ -403,6 +517,8 @@ class ClassicWindow(QMainWindow):
         self.setCentralWidget(self.pages)
         self._apply_style()
         self._update_theme_button()
+        self._sync_runtime_controls()
+        self._refresh_workspace_views(force=True)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
@@ -517,6 +633,10 @@ class ClassicWindow(QMainWindow):
                 border: 1px solid {colors["border"]}; border-radius: 8px;
                 padding: 10px; selection-background-color: {colors["selection"]};
             }}
+            QLineEdit {{
+                background: {colors["panel_bg"]}; color: {colors["text"]};
+                border: 1px solid {colors["border"]}; border-radius: 8px; padding: 8px;
+            }}
             QTextEdit#transcript {{ font-family: "SF Mono", Consolas, monospace; }}
             QLabel#attachments {{
                 background: {colors["raised_bg"]}; border: 1px solid {colors["strong_border"]};
@@ -543,16 +663,115 @@ class ClassicWindow(QMainWindow):
                 border-top-right-radius: 8px;
             }}
             QTabBar::tab:selected {{ background: {colors["raised_bg"]}; color: {colors["text"]}; }}
+            QTabWidget#workspaceTabs::pane {{ border-radius: 12px; }}
+            QTabWidget#workspaceTabs QTabBar::tab {{ min-width: 92px; padding: 10px 15px; }}
         """)
 
     def refresh(self):
         if self.remote_client:
             self._refresh_remote_chat()
+            self._refresh_workspace_views()
             return
         self._refresh_state()
         self._refresh_transcript()
         self._refresh_chat_history()
         self._refresh_memory_if_changed()
+        self._refresh_workspace_views()
+
+    def _payload_for_workspace(self):
+        if self.remote_client:
+            try:
+                result = self.remote_client.latest_payload()
+            except RuntimeError:
+                return "", None, QUrl()
+            return (
+                str(result.get("html") or ""),
+                float(result.get("timestamp", 0) or 0),
+                QUrl(self.remote_client.server_url.rstrip("/") + "/"),
+            )
+        payload_path = os.path.join(CORE_DIR, "payload.html")
+        try:
+            signature = (os.path.getmtime(payload_path), os.path.getsize(payload_path))
+            payload = Path(payload_path).read_text(encoding="utf-8")
+        except OSError:
+            signature = None
+            payload = ""
+        return payload, signature, QUrl.fromLocalFile(BASE_DIR + os.sep)
+
+    def _workspace_html(self, title, subtitle, payload):
+        colors = THEMES[self.theme]
+        if payload.strip():
+            content = payload.replace("<!-- FULLPAGE -->", "")
+        else:
+            content = (
+                '<div class="empty"><div class="orb"></div>'
+                f"<h2>{html.escape(title)}</h2><p>{html.escape(subtitle)}</p></div>"
+            )
+        return f"""<!doctype html><html><head><meta charset='utf-8'><style>
+            body {{ margin:0; min-height:100vh; background:{colors['app_bg']}; color:{colors['text']}; font:16px system-ui,sans-serif; }}
+            .empty {{ min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:{colors['muted']}; }}
+            .empty h2 {{ color:{colors['text']}; margin:18px 0 6px; }} .empty p {{ max-width:440px; margin:0; line-height:1.5; }}
+            .orb {{ width:132px; height:132px; border-radius:50%; background:radial-gradient(circle at 38% 35%, #d8b4fe, #7c3aed 45%, #172554 72%); box-shadow:0 0 48px #7c3aed88; animation:pulse 4s ease-in-out infinite; }}
+            @keyframes pulse {{ 50% {{ transform:scale(1.06); box-shadow:0 0 72px #a855f788; }} }}
+        </style></head><body>{content}</body></html>"""
+
+    def _refresh_workspace_views(self, force=False):
+        payload, payload_signature, base_url = self._payload_for_workspace()
+        signature = (payload_signature, self._last_state, self.theme)
+        if not force and signature == self._workspace_payload_signature:
+            return
+        self._workspace_payload_signature = signature
+        daily_html = self._workspace_html(
+            "Trinity im Alltag",
+            "Mikrofon und Lautsprecher oben steuern. Neue Ergebnisse erscheinen hier.",
+            payload,
+        )
+        presenter_html = self._workspace_html(
+            "Presenter bereit",
+            "Generierte Medien, Simulationen und Sandbox-Ergebnisse erscheinen hier groß.",
+            payload,
+        )
+        self.daily_workspace.setHtml(daily_html, base_url)
+        self.presenter_workspace.setHtml(presenter_html, base_url)
+
+    def choose_lecture_pdf(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Foliensatz als PDF öffnen",
+            self._lecture_path or str(Path.home()),
+            "PDF-Dateien (*.pdf)",
+        )
+        if not path:
+            return
+        self._lecture_path = path
+        self.lecture_label.setText(Path(path).name)
+        self.lecture_workspace.setUrl(QUrl.fromLocalFile(path))
+        self.main_tabs.setCurrentIndex(1)
+
+    def open_lecture_externally(self):
+        if self._lecture_path:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(self._lecture_path))
+        else:
+            self.choose_lecture_pdf()
+
+    def open_web_address(self):
+        url = QUrl.fromUserInput(self.web_address.text().strip())
+        if not url.isValid() or not url.scheme():
+            self.status.setText("Bitte eine gültige Webadresse eingeben")
+            return
+        self.web_address.setText(url.toString())
+        self.web_workspace.setUrl(url)
+
+    def open_web_externally(self):
+        url = QUrl.fromUserInput(self.web_address.text().strip())
+        if url.isValid() and url.scheme():
+            QDesktopServices.openUrl(url)
+
+    def toggle_presenter_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
 
     def _refresh_remote_chat(self):
         if time.monotonic() < self._remote_next_poll:
@@ -564,7 +783,11 @@ class ClassicWindow(QMainWindow):
             self.status.setText(f"Server nicht erreichbar: {exc}")
             return
         if incoming:
-            self.remote_events.extend(self._remote_event_for_render(event) for event in incoming)
+            matching = [
+                event for event in incoming
+                if not self.session_id or event.get("session_id") == self.session_id
+            ]
+            self.remote_events.extend(self._remote_event_for_render(event) for event in matching)
             self.remote_after = max(
                 self.remote_after,
                 max(float(event.get("timestamp", 0) or 0) for event in incoming),
@@ -631,8 +854,92 @@ class ClassicWindow(QMainWindow):
             return
         self._chat_signature = signature
         events = load_chat_events(path)
+        if self.session_id:
+            events = [
+                event for event in events
+                if event.get("session_id") == self.session_id
+            ]
         base_url = QUrl.fromLocalFile(BASE_DIR + os.sep)
         self.chat_history.setHtml(_render_chat_html(events, self.theme), base_url)
+
+    def _runtime_values(self):
+        if self.remote_client:
+            try:
+                return self.remote_client.get_runtime()
+            except RuntimeError:
+                pass
+        config = load_config(CONFIG_FILE)
+        system = config.get("system", {})
+        return {
+            "mode": str(system.get("mode", "lecture") or "lecture"),
+            "microphone_enabled": bool(system.get("microphone_enabled", True)),
+            "tts_enabled": bool(system.get("tts_enabled", True)),
+        }
+
+    def _set_runtime_values(self, updates):
+        if self.remote_client:
+            try:
+                return self.remote_client.set_runtime(updates)
+            except RuntimeError as exc:
+                self.status.setText(f"Laufzeitsteuerung fehlgeschlagen: {exc}")
+                return None
+        config = load_config(CONFIG_FILE)
+        system = config.setdefault("system", {})
+        system.update(updates)
+        save_config(CONFIG_FILE, config)
+        return self._runtime_values()
+
+    def _sync_runtime_controls(self, values=None):
+        values = values or self._runtime_values()
+        microphone_enabled = bool(values.get("microphone_enabled", True))
+        tts_enabled = bool(values.get("tts_enabled", True))
+        self.listen_button.setText("Hört zu" if microphone_enabled else "Mikro aus")
+        self.tts_button.setText("Lautsprecher an" if tts_enabled else "Lautsprecher aus")
+        mode = values.get("mode", "lecture")
+        self.mode_combo.blockSignals(True)
+        self.mode_combo.setCurrentText(mode if mode in {"lecture", "office", "chat"} else "lecture")
+        self.mode_combo.blockSignals(False)
+
+    def toggle_microphone(self):
+        values = self._runtime_values()
+        result = self._set_runtime_values(
+            {"microphone_enabled": not values["microphone_enabled"]}
+        )
+        if result:
+            self._sync_runtime_controls(result)
+            self.status.setText("Mikrofon aktiviert" if result["microphone_enabled"] else "Mikrofon pausiert")
+
+    def toggle_tts(self):
+        values = self._runtime_values()
+        result = self._set_runtime_values({"tts_enabled": not values["tts_enabled"]})
+        if result:
+            self._sync_runtime_controls(result)
+            self.status.setText("Desktop-TTS aktiviert" if result["tts_enabled"] else "Desktop-TTS pausiert")
+
+    def set_runtime_mode(self, mode):
+        result = self._set_runtime_values({"mode": mode})
+        if result:
+            self._sync_runtime_controls(result)
+            self.status.setText(f"Trinity-Modus: {result['mode']}")
+
+    def start_new_session(self):
+        name, accepted = QInputDialog.getText(
+            self,
+            "Neue Session",
+            "Sessionname (optional):",
+        )
+        if not accepted:
+            return
+        self.session_id = uuid.uuid4().hex
+        self.session_name = name.strip()
+        self.remote_events = []
+        self.remote_after = time.time()
+        self.pending_attachments = []
+        self._update_attachment_summary()
+        self._chat_signature = None
+        self.chat_history.setHtml(_render_chat_html([], self.theme))
+        label = self.session_name or "ohne Namen"
+        self.status.setText(f"Neue Session: {label}")
 
     def _refresh_memory_if_changed(self):
         path = os.path.join(MEMORY_DIR, "trinity_memory.sqlite3")
@@ -740,7 +1047,12 @@ class ClassicWindow(QMainWindow):
             text = "Bitte analysiere die beigefügten Anlagen."
         if self.remote_client:
             try:
-                self.remote_client.send_message(text, self.pending_attachments)
+                self.remote_client.send_message(
+                    text,
+                    self.pending_attachments,
+                    session_id=self.session_id,
+                    session_name=self.session_name,
+                )
                 self.command.clear()
                 self.pending_attachments = []
                 self._update_attachment_summary()
@@ -755,6 +1067,8 @@ class ClassicWindow(QMainWindow):
             self.pending_attachments,
             history_recorded=True,
         )
+        request["session_id"] = self.session_id
+        request["session_name"] = self.session_name
         append_chat_event(
             CHAT_HISTORY_FILE,
             {
@@ -763,6 +1077,8 @@ class ClassicWindow(QMainWindow):
                 "source": "classic",
                 "text": text,
                 "attachments": self.pending_attachments,
+                "session_id": self.session_id,
+                "session_name": self.session_name,
             },
         )
         try:
