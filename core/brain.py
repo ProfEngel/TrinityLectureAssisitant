@@ -9,6 +9,8 @@ import time
 from platform_adapters import capability_message, detect_capabilities
 from chat_attachments import prepare_attachment_content
 from memory_store import MemoryStore
+from skill_registry import SkillRegistry
+from task_orchestrator import TaskOrchestrator
 
 
 class TrinityBrain:
@@ -29,6 +31,12 @@ class TrinityBrain:
         self.capabilities = detect_capabilities()
         self.live_skills = []
         self.unavailable_skills = []
+        self.skill_registry = SkillRegistry(
+            os.path.dirname(os.path.dirname(__file__))
+        )
+        self.task_orchestrator = TaskOrchestrator(
+            os.path.dirname(os.path.dirname(__file__))
+        )
         self._load_live_skills()
 
         # Soul + User einmalig laden und cachen (nicht bei jedem Request neu lesen)
@@ -132,8 +140,10 @@ class TrinityBrain:
         return True
 
     def _load_live_skills(self):
-        """Lädt alle Live-Skills aus dem agents/ Ordner dynamisch beim Start."""
+        """Load legacy agents plus validated shared/personal managed skills."""
         import importlib.util
+        self.live_skills = []
+        self.unavailable_skills = []
         agents_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agents")
         print(f"📂 Suche nach Live-Skills in: {os.path.abspath(agents_dir)}")
         if not os.path.exists(agents_dir):
@@ -167,6 +177,22 @@ class TrinityBrain:
                 except Exception as e:
                     print(f"⚠️ Fehler beim Laden des Skills {item}: {e}")
 
+        # Managed skills are additive. Staging skills are deliberately excluded
+        # until their tests and an explicit promotion approval succeeded.
+        try:
+            for module in self.skill_registry.load_active_modules():
+                required = set(getattr(module, "REQUIRED_CAPABILITIES", set()))
+                missing = required - self.capabilities
+                if missing:
+                    self.unavailable_skills.append((module, missing))
+                    continue
+                self.live_skills.append(module)
+                print(f"🔌 Verwalteter Skill geladen: {module.__name__}")
+                if hasattr(module, "init"):
+                    module.init()
+        except Exception as e:
+            print(f"⚠️ Fehler beim Laden verwalteter Skills: {e}")
+
         self.live_skills.sort(
             key=lambda module: getattr(module, "PRIORITY", 0),
             reverse=True,
@@ -175,6 +201,18 @@ class TrinityBrain:
             key=lambda item: getattr(item[0], "PRIORITY", 0),
             reverse=True,
         )
+
+    def reload_skills(self):
+        """Reload only skill metadata/modules; running jobs remain persisted."""
+        self.skill_registry.reload()
+        self._load_live_skills()
+        summary = self.skill_registry.summary()
+        print(
+            "🔄 Skill-Registry neu geladen: "
+            f"{summary['shared']} shared, {summary['personal']} personal, "
+            f"{summary['staging']} staging."
+        )
+        return summary
 
     def ask_llm(self, messages):
         """Hilfsmethode für interne LLM-Aufrufe (z.B. Context Enrichment)."""
@@ -308,6 +346,31 @@ class TrinityBrain:
         # user_query = voller Kontext (alle 8 Chunks, für LLM-Verständnis)
         router_text = (action_text or user_query).lower()
         lower_query = user_query.lower()
+        task_decision = None
+        orchestrator = getattr(self, "task_orchestrator", None)
+        if orchestrator is not None:
+            try:
+                task_decision = orchestrator.prepare(
+                    action_text or user_query,
+                    source="telegram" if from_telegram else ("chat" if text_mode else "speech"),
+                )
+                if task_decision.blocked:
+                    job_id = (task_decision.job or {}).get("job_id", "")
+                    approval_id = (task_decision.approval or {}).get("approval_id", "")
+                    message = task_decision.message or "Der Auftrag braucht eine Freigabe."
+                    if approval_id:
+                        message += (
+                            f" Freigabe {approval_id} fuer Job {job_id} wurde lokal angelegt; "
+                            "es wurde noch nichts ausgefuehrt."
+                        )
+                    return message, False
+                if task_decision.job:
+                    print(
+                        "📋 Trinity-Plan angelegt: "
+                        f"{task_decision.job['job_id']} ({task_decision.route})"
+                    )
+            except Exception as exc:
+                print(f"⚠️ Job-Planung nicht verfuegbar: {exc}")
 
         for skill, missing in getattr(self, "unavailable_skills", []):
             if skill.can_handle(router_text):
@@ -378,6 +441,8 @@ class TrinityBrain:
                     break
 
         if direct_answer:
+            if orchestrator is not None:
+                orchestrator.finish(task_decision, direct_answer)
             return direct_answer, has_payload
 
         try:
@@ -449,10 +514,18 @@ class TrinityBrain:
                     f.write(html_payload)
                 has_payload = True
 
+            if orchestrator is not None:
+                orchestrator.finish(task_decision, answer)
             return answer, has_payload
             
         except Exception as e:
             print(f"Fehler bei der Kommunikation mit dem Gehirn: {e}")
+            if orchestrator is not None:
+                orchestrator.finish(
+                    task_decision,
+                    str(e),
+                    succeeded=False,
+                )
             return "Entschuldigung, ich habe gerade den Faden verloren. Bitte wiederhole das.", False
 
 if __name__ == "__main__":

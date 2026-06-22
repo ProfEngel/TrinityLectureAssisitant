@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.14.0:** Dreigeteilte Agentenkiste mit Shared/Personal/Staging, persistenter Plan-/Job-Verwaltung, Quality Gates sowie lokalen Freigaben inklusive Eltern-/Kind-Bezug fuer Codex-, OpenCode- und kuenftige Agent-Forge-Workflows.
 > - **v0.13.3:** Zentrales Onboarding fuer Desktop, Linux-Server, iPhone/iPad-Companion, Betriebsstufen und sichere Codex-/OpenCode-Projekte; OpenCode findet auf macOS/Linux nun auch projektlokale Agenten-Konfigurationen zuverlaessig.
 > - **v0.13.2:** WebUI als vierte auswählbare Desktop-Oberfläche für macOS und Windows 11; startet parallel oder allein direkt im Standardbrowser.
 > - **v0.13.1:** Einstellungen-UI stabilisiert: Die Systemseite scrollt sauber, Formfelder bleiben lesbar und die Reiterleiste funktioniert auch bei wenig Platz.
@@ -44,6 +45,8 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > **[vollständigen Onboarding](docs/ONBOARDING.md)**. Es erklärt Installation,
 > Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
 > sichere Codex-/OpenCode-Einstellungen und eine empfohlene Testreihenfolge.
+> Die technische Einordnung der neuen Agentenkiste steht im
+> **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**.
 
 ---
 

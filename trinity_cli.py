@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.13.3"
+VERSION = "0.14.0"
 
 
 def find_trinity_home(explicit=None):
@@ -434,6 +434,102 @@ def run_client_command(home, args):
     raise ValueError("Unbekannte Client-Aktion.")
 
 
+def _agent_ecosystem_modules(home):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from approval_manager import ApprovalManager  # pylint: disable=import-outside-toplevel
+    from job_manager import JobManager  # pylint: disable=import-outside-toplevel
+    from skill_registry import SkillRegistry  # pylint: disable=import-outside-toplevel
+
+    return SkillRegistry(home), JobManager(home), ApprovalManager(home)
+
+
+def run_skills_command(home, args):
+    registry, _jobs, approvals = _agent_ecosystem_modules(home)
+    if args.skills_action == "list":
+        print(
+            json.dumps(
+                {
+                    "summary": registry.summary(),
+                    "skills": [record.summary() for record in registry.list(args.tier)],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if args.skills_action == "reload":
+        registry.reload()
+        print(json.dumps(registry.summary(), ensure_ascii=False, indent=2))
+        return 0
+    if args.skills_action == "promote":
+        if not args.skill_id or not args.approval_id:
+            raise ValueError("promote braucht SKILL_ID und --approval-id.")
+        record = registry.promote(args.skill_id, approvals, args.approval_id)
+        print(json.dumps(record.summary(), ensure_ascii=False, indent=2))
+        return 0
+    raise ValueError("Unbekannte Skill-Aktion.")
+
+
+def run_jobs_command(home, args):
+    _registry, jobs, _approvals = _agent_ecosystem_modules(home)
+    if args.jobs_action == "list":
+        print(json.dumps(jobs.list(limit=args.limit, status=args.status), ensure_ascii=False, indent=2))
+        return 0
+    if args.jobs_action == "show":
+        if not args.job_id:
+            raise ValueError("show braucht eine JOB_ID.")
+        print(json.dumps(jobs.get(args.job_id), ensure_ascii=False, indent=2))
+        return 0
+    if args.jobs_action == "cancel":
+        if not args.job_id:
+            raise ValueError("cancel braucht eine JOB_ID.")
+        print(
+            json.dumps(
+                jobs.set_status(args.job_id, "CANCELLED", "Vom Nutzer abgebrochen."),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    raise ValueError("Unbekannte Job-Aktion.")
+
+
+def run_approvals_command(home, args):
+    _registry, _jobs, approvals = _agent_ecosystem_modules(home)
+    if args.approvals_action == "list":
+        print(json.dumps(approvals.list_pending(args.job_id or ""), ensure_ascii=False, indent=2))
+        return 0
+    if args.approvals_action == "request":
+        if not args.job_id or not args.action_type or not args.summary:
+            raise ValueError("request braucht --job-id, --action-type und --summary.")
+        result = approvals.request(
+            args.job_id,
+            args.action_type,
+            args.summary,
+            risk_level=args.risk_level,
+            parent_approval_id=args.parent_approval_id or "",
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    if args.approvals_action in {"approve", "reject"}:
+        if not args.approval_id:
+            raise ValueError("approve oder reject braucht eine APPROVAL_ID.")
+        child_actions = [
+            item.strip() for item in (args.child_action or []) if item.strip()
+        ]
+        result = approvals.decide(
+            args.approval_id,
+            args.approvals_action,
+            actor=args.actor,
+            child_actions=child_actions,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    raise ValueError("Unbekannte Freigabe-Aktion.")
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -508,6 +604,29 @@ def build_parser():
     client.add_argument("--url", help="URL des Trinity-Servers, z.B. http://100.x.y.z:8765")
     client.add_argument("--username", help="Benutzername für login")
     client.add_argument("--role", choices=("user", "admin"), default="user", help="Rolle bei add-user")
+
+    skills = subparsers.add_parser("skills", help="Shared-, Personal- und Staging-Skills verwalten")
+    skills.add_argument("skills_action", choices=("list", "reload", "promote"))
+    skills.add_argument("skill_id", nargs="?", help="Skill-ID bei promote")
+    skills.add_argument("--tier", choices=("shared", "personal", "staging"))
+    skills.add_argument("--approval-id", default="", help="Einmalige Freigabe-ID bei promote")
+
+    jobs = subparsers.add_parser("jobs", help="Geplante und laufende Trinity-Jobs anzeigen")
+    jobs.add_argument("jobs_action", choices=("list", "show", "cancel"))
+    jobs.add_argument("job_id", nargs="?", help="Job-ID bei show oder cancel")
+    jobs.add_argument("--status", default="", help="Nach Status filtern")
+    jobs.add_argument("--limit", type=int, default=50)
+
+    approvals = subparsers.add_parser("approvals", help="Lokale Freigaben verwalten")
+    approvals.add_argument("approvals_action", choices=("list", "request", "approve", "reject"))
+    approvals.add_argument("approval_id", nargs="?", help="Freigabe-ID bei approve oder reject")
+    approvals.add_argument("--job-id", default="", help="Zugehoeriger Job")
+    approvals.add_argument("--action-type", default="", help="Aktion bei request")
+    approvals.add_argument("--summary", default="", help="Zusammenfassung bei request")
+    approvals.add_argument("--risk-level", default="medium")
+    approvals.add_argument("--parent-approval-id", default="")
+    approvals.add_argument("--child-action", action="append", default=[])
+    approvals.add_argument("--actor", default="local-user")
     return parser
 
 
@@ -543,6 +662,12 @@ def main(argv=None):
             return run_server_command(home, args)
         if args.command == "client":
             return run_client_command(home, args)
+        if args.command == "skills":
+            return run_skills_command(home, args)
+        if args.command == "jobs":
+            return run_jobs_command(home, args)
+        if args.command == "approvals":
+            return run_approvals_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

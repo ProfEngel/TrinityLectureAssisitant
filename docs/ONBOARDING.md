@@ -299,6 +299,9 @@ Pruefe die wirksamen Agenten vorher mit opencode agent list. OpenCode-Agenten un
 ihre Rechte werden vom Projekt selbst definiert; die Trinity-Einstellung waehlt
 nur aus, welcher Agent in welchem erlaubten Projekt gestartet wird.
 
+Die neue dreigeteilte Agentenkiste, geplante Jobs und Freigaben sind im
+[Agenten-Oekosystem](AGENT_ECOSYSTEM.md) beschrieben.
+
 ## 7. Server-Client, Telegram und Memory
 
 ### Desktop als Client eines Trinity-Servers

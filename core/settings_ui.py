@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 
 from platform_adapters import create_tts_backend, find_codex_executable, find_opencode_executable
 from configuration import DEFAULT_CONFIG, load_config, save_config
+from skill_registry import SkillRegistry
 from ui_modes import resolve_ui_modes
 
 
@@ -441,6 +442,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
         tabs.addTab(self._create_opencode_tab(), "🛠️ OpenCode")
+        tabs.addTab(self._create_agent_ecosystem_tab(), "🧰 Agenten")
         tabs.addTab(self._scrollable_tab(self._create_system_tab()), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
@@ -463,6 +465,63 @@ class SettingsWindow(QMainWindow):
         btn_layout.addStretch()
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
+
+    def _create_agent_ecosystem_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        description = QLabel(
+            "Die Agentenkiste trennt gepruefte Shared Skills, persoenliche Skills "
+            "und noch nicht produktive Staging Skills. Staging wird erst nach "
+            "Tests und expliziter Freigabe aktiviert. Bestehende Trinity-Agenten "
+            "laufen weiter als Legacy-Skills."
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        self.agent_ecosystem_summary = QLabel()
+        self.agent_ecosystem_summary.setWordWrap(True)
+        layout.addWidget(self.agent_ecosystem_summary)
+
+        self.agent_ecosystem_details = QTextEdit()
+        self.agent_ecosystem_details.setReadOnly(True)
+        self.agent_ecosystem_details.setMinimumHeight(240)
+        layout.addWidget(self.agent_ecosystem_details)
+
+        reload_button = QPushButton("Agentenkiste auf Datenträger prüfen")
+        reload_button.clicked.connect(self._refresh_agent_ecosystem)
+        layout.addWidget(reload_button)
+
+        hint = QLabel(
+            "Terminal: trinity skills list | trinity jobs list | trinity approvals list. "
+            "Eine laufende Trinity-Instanz laedt neue produktive Skills erst bei "
+            "einem kontrollierten Skill-Reload oder Neustart."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        layout.addWidget(hint)
+        layout.addStretch()
+        self._refresh_agent_ecosystem()
+        return widget
+
+    def _refresh_agent_ecosystem(self):
+        home = os.path.dirname(CORE_DIR)
+        registry = SkillRegistry(home)
+        summary = registry.summary()
+        self.agent_ecosystem_summary.setText(
+            "Shared: {shared} | Personal: {personal} | Staging: {staging} | "
+            "Legacy: {legacy} | Aktiv: {active}".format(**summary)
+        )
+        rows = []
+        for record in registry.list():
+            state = "OK" if record.valid else "UNGÜLTIG"
+            suffix = "; ".join(record.errors)
+            rows.append(
+                f"{record.manifest.tier:8} {record.manifest.status:8} "
+                f"{record.manifest.skill_id} [{state}] {suffix}".rstrip()
+            )
+        if summary["conflicts"]:
+            rows.extend(["", "Trigger-Konflikte:", *summary["conflicts"]])
+        self.agent_ecosystem_details.setPlainText("\n".join(rows) or "Keine Skills gefunden.")
 
     @staticmethod
     def _scrollable_tab(content):
