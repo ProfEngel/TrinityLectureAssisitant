@@ -43,6 +43,48 @@ def test_web_ui_contains_file_upload_and_token_login():
     assert 'id="files"' in page
     assert "Bearer Token" in page
     assert "'/message'" in page
+    assert 'id="settingsView"' in page
+    assert "'/settings'" in page
+
+
+def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+
+    result = bridge.save_web_settings(
+        {
+            "config": {
+                "persona": {"agent_name": "Nova"},
+                "codex": {"projects": {"Buch": "/tmp/buch"}},
+                "opencode": {"projects": {"Kurse": "/tmp/kurse"}},
+            },
+            "soul": "Meine Soul",
+            "user": "Mein Profil",
+        }
+    )
+
+    assert result["config"]["persona"]["agent_name"] == "Nova"
+    assert result["config"]["persona"]["trigger_variants"]
+    assert result["config"]["codex"]["projects"] == {"Buch": "/tmp/buch"}
+    assert result["config"]["opencode"]["projects"] == {"Kurse": "/tmp/kurse"}
+    assert result["files"] == {"soul": "Meine Soul", "user": "Mein Profil"}
+
+
+def test_web_settings_are_local_or_administrator_only(tmp_path):
+    class LocalHandler:
+        client_address = ("127.0.0.1", 12345)
+
+    class RemoteHandler:
+        client_address = ("100.90.5.25", 12345)
+
+    local_bridge = TrinityBridge(tmp_path)
+    assert local_bridge.can_manage_settings(LocalHandler(), {}) is True
+    assert local_bridge.can_manage_settings(RemoteHandler(), {}) is False
+
+    account_bridge = TrinityBridge(tmp_path / "accounts", auth_enabled=True)
+    assert account_bridge.can_manage_settings(LocalHandler(), {"role": "user"}) is False
+    assert account_bridge.can_manage_settings(RemoteHandler(), {"role": "admin"}) is True
 
 
 def test_bridge_can_allow_tts_for_ios_message(tmp_path):

@@ -105,7 +105,10 @@ kombiniert werden:
 - **Terminal/TUI:** robust fuer Headless, SSH und Diagnose. trinity tui bietet
   Sessions, Memory und Slash-Commands.
 - **WebUI:** Browser-Chat fuer Server, Client oder Desktop. Start mit
-  trinity start --surface web.
+  trinity start --surface web. Die Schaltflaeche Einstellungen oeffnet dieselben
+  zentralen Konfigurationsbereiche wie die ClassicUI: LLM, Persona, Sprache,
+  Oberflaechen, Codex/OpenCode, Companion, Server sowie Soul/User. Ohne Token
+  ist sie nur auf localhost erreichbar; mit Server-Accounts nur fuer Admins.
 
 trinity start --surface all startet alle Oberflaechen. Sind Augen-UI, ClassicUI
 und WebUI deaktiviert, bleibt die Terminal-CLI als bedienbarer Fallback aktiv.
@@ -298,6 +301,41 @@ definierte Testbefehle und einen einzelnen Berichtspfad freigeben. Beispielauftr
 Pruefe die wirksamen Agenten vorher mit opencode agent list. OpenCode-Agenten und
 ihre Rechte werden vom Projekt selbst definiert; die Trinity-Einstellung waehlt
 nur aus, welcher Agent in welchem erlaubten Projekt gestartet wird.
+
+### Mehrere Projekte und ein sicherer Mac-Test
+
+Codex und OpenCode koennen dieselben oder unterschiedliche, vollstaendig
+getrennte Projekt-Aliasse erhalten. Beispielsweise in beiden Einstellungen:
+
+~~~text
+Trinity = /Users/NAME/.../Trinity_Assistant
+Hochschulprojekte = /Users/NAME/.../Hochschulprojekte
+Erendria = /Users/NAME/.../Erendria
+Testprojekt = /Users/NAME/.../Testprojekt
+~~~
+
+Ein Alias ist keine Freigabe fuer andere Ordner und erzeugt kein gemeinsames
+Projekt-Memory. Fuer den ersten Mac-Test zuerst die installierten Programme im
+gleichen Terminal pruefen:
+
+~~~bash
+command -v codex && codex --version
+command -v opencode && opencode --version
+cd "/Users/NAME/.../Trinity_Assistant"
+python3 -m pytest -q tests/test_codex_agent.py tests/test_opencode_agent.py
+~~~
+
+Danach in Trinity ausschliesslich gegen den Alias `Testprojekt` testen:
+
+> Trinity, nutze Codex im Projekt Testprojekt. Lies nur die Projektregeln und
+> fuehre den vorhandenen Smoke-Test aus. Aendere keine Dateien.
+
+> Trinity, nutze OpenCode im Projekt Testprojekt. Fuehre nur den erlaubten
+> Fixture-Test aus und berichte das Ergebnis. Aendere keine andere Datei.
+
+Mit `trinity jobs list` und `trinity jobs show JOB_ID` erscheint jeweils der
+angelegte Plan samt Quality Gates. Erst nach zwei erfolgreichen, nachvollziehbaren
+Testlaeufen sollte ein produktiver Alias aktiviert werden.
 
 Die neue dreigeteilte Agentenkiste, geplante Jobs und Freigaben sind im
 [Agenten-Oekosystem](AGENT_ECOSYSTEM.md) beschrieben.

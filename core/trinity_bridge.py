@@ -18,6 +18,7 @@ from urllib.request import url2pathname
 
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
+from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_upload_dir
@@ -29,6 +30,12 @@ DEFAULT_PORT = 8765
 MAX_BODY_BYTES = 50 * 1024 * 1024
 MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024
 MAX_EVENTS = 200
+MAX_SETTINGS_TEXT_BYTES = 100 * 1024
+SETTINGS_SECTIONS = {
+    "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
+    "audio_routing", "telegram", "codex", "opencode", "comfyui", "companion",
+    "server", "client",
+}
 
 
 def _json_response(handler, status, payload):
@@ -90,6 +97,7 @@ class TrinityBridge:
         self.command_path = self.core_dir / "cmd.txt"
         self.stt_feed_path = self.core_dir / "ios_stt_feed.jsonl"
         self.payload_path = self.core_dir / "payload.html"
+        self.config_path = self.core_dir / "config.json"
         self.token = token or ""
         self.auth_enabled = bool(auth_enabled)
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
@@ -202,6 +210,47 @@ class TrinityBridge:
                 },
             )
         return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
+
+    def can_manage_settings(self, handler, user):
+        """Settings are local-only without a token and admin-only with accounts."""
+        if self.auth_enabled:
+            return bool(user and user.get("role") == "admin")
+        if self.token:
+            return True
+        address = str(getattr(handler, "client_address", ("",))[0])
+        return address in {"127.0.0.1", "::1", "localhost"}
+
+    def get_web_settings(self):
+        return {
+            "ok": True,
+            "config": load_config(self.config_path),
+            "files": {
+                "soul": self._read_text_file(self.core_dir / "Soul.md"),
+                "user": self._read_text_file(self.core_dir / "User.md"),
+            },
+        }
+
+    def save_web_settings(self, payload):
+        if not isinstance(payload, dict) or not isinstance(payload.get("config"), dict):
+            raise ValueError("Einstellungen muessen ein Konfigurationsobjekt enthalten.")
+        incoming = payload["config"]
+        config = load_config(self.config_path)
+        for section in SETTINGS_SECTIONS:
+            value = incoming.get(section)
+            if isinstance(value, dict):
+                self._merge_settings_section(config.setdefault(section, {}), value)
+
+        self.core_dir.mkdir(parents=True, exist_ok=True)
+        for name, value in {"Soul.md": payload.get("soul"), "User.md": payload.get("user")}.items():
+            if value is None:
+                continue
+            encoded = str(value).encode("utf-8")
+            if len(encoded) > MAX_SETTINGS_TEXT_BYTES:
+                raise ValueError(f"{name} ist zu gross.")
+            (self.core_dir / name).write_text(str(value), encoding="utf-8")
+
+        save_config(self.config_path, config)
+        return self.get_web_settings()
 
     def _save_attachments(self, attachments, user=None):
         saved = []
@@ -358,6 +407,21 @@ class TrinityBridge:
         except OSError:
             return 0.0
 
+    @staticmethod
+    def _merge_settings_section(target, incoming):
+        for key, value in incoming.items():
+            if isinstance(value, dict) and isinstance(target.get(key), dict):
+                TrinityBridge._merge_settings_section(target[key], value)
+            else:
+                target[key] = value
+
+    @staticmethod
+    def _read_text_file(path):
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError:
+            return ""
+
 
 def make_handler(bridge):
     class Handler(BaseHTTPRequestHandler):
@@ -425,6 +489,12 @@ def make_handler(bridge):
                             ),
                         },
                     )
+                elif parsed.path == "/settings":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Einstellungen sind nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.get_web_settings())
                 elif parsed.path == "/media":
                     path = bridge.media_path_from_query(
                         query.get("path", [""])[0], user=user
@@ -438,6 +508,8 @@ def make_handler(bridge):
                     self.wfile.write(data)
                 else:
                     _json_response(self, 404, {"ok": False, "error": "not found"})
+            except PermissionError as exc:
+                _json_response(self, 403, {"ok": False, "error": str(exc)})
             except Exception as exc:  # pylint: disable=broad-except
                 _json_response(self, 400, {"ok": False, "error": str(exc)})
 
@@ -484,6 +556,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
+                elif parsed.path == "/settings":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Einstellungen sind nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.save_web_settings(_read_json(self)))
                 elif bridge.auth_enabled and parsed.path == "/auth/users":
                     payload = _read_json(self)
                     created = bridge.auth.create_user(
@@ -495,6 +573,8 @@ def make_handler(bridge):
                     _json_response(self, 201, {"ok": True, "user": created})
                 else:
                     _json_response(self, 404, {"ok": False, "error": "not found"})
+            except PermissionError as exc:
+                _json_response(self, 403, {"ok": False, "error": str(exc)})
             except RuntimeError as exc:
                 _json_response(self, 409, {"ok": False, "error": str(exc)})
             except Exception as exc:  # pylint: disable=broad-except

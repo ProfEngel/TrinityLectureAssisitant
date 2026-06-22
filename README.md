@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.14.1:** Vollwertige WebUI-Einstellungen fuer LLM, Persona, Sprache, Oberflaechen, Agentenprojekte, Companion, Server und Profile; gesichert durch lokale, Token- oder Admin-Berechtigung.
 > - **v0.14.0:** Dreigeteilte Agentenkiste mit Shared/Personal/Staging, persistenter Plan-/Job-Verwaltung, Quality Gates sowie lokalen Freigaben inklusive Eltern-/Kind-Bezug fuer Codex-, OpenCode- und kuenftige Agent-Forge-Workflows.
 > - **v0.13.3:** Zentrales Onboarding fuer Desktop, Linux-Server, iPhone/iPad-Companion, Betriebsstufen und sichere Codex-/OpenCode-Projekte; OpenCode findet auf macOS/Linux nun auch projektlokale Agenten-Konfigurationen zuverlaessig.
 > - **v0.13.2:** WebUI als vierte auswählbare Desktop-Oberfläche für macOS und Windows 11; startet parallel oder allein direkt im Standardbrowser.
@@ -256,9 +257,11 @@ unabhängig kombinieren:
   links oben, das Zahnrad öffnet die Einstellungen im selben Fenster, und die
   Ansicht kann zwischen Dark Mode und Hell Mode wechseln.
 - **Terminal-CLI:** Mitschrift, Logs und Texteingabe im Terminal, auch für Headless
-- **WebUI:** Browser-Oberfläche unter `http://127.0.0.1:8765/` mit Chat, Anlagen
-  und eingebetteten Agenten-/Medienergebnissen. Sie kann parallel zu Augen-UI,
-  Classic-UI oder Terminal laufen und wird beim Start automatisch im Browser geöffnet.
+- **WebUI:** Browser-Oberfläche unter `http://127.0.0.1:8765/` mit Chat, Anlagen,
+  eingebetteten Agenten-/Medienergebnissen und einer Settings-Seite. Sie kann
+  parallel zu Augen-UI, Classic-UI oder Terminal laufen und wird beim Start
+  automatisch im Browser geöffnet. Einstellungen sind ohne Token nur lokal,
+  mit Server-Accounts nur fuer Administratoren erreichbar.
 
 Alternativ startet `trinity start --surface web` ausschließlich die WebUI; mit
 `trinity start --surface all` werden alle Oberflächen geöffnet.
