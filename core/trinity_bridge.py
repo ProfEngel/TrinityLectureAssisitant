@@ -346,7 +346,14 @@ class TrinityBridge:
             )
         return saved
 
-    def events_since(self, after=0.0, limit=MAX_EVENTS, user=None, access_token=""):
+    def events_since(
+        self,
+        after=0.0,
+        limit=MAX_EVENTS,
+        user=None,
+        access_token="",
+        include_payload_html=True,
+    ):
         events = []
         for event in load_chat_events(
             self.history_path_for(user), limit=max(limit * 3, MAX_EVENTS)
@@ -355,10 +362,14 @@ class TrinityBridge:
             if timestamp <= after:
                 continue
             cleaned = dict(event)
-            if cleaned.get("payload_html"):
+            if cleaned.get("payload_html") and include_payload_html:
                 cleaned["payload_html"] = self.rewrite_html(
                     cleaned["payload_html"], user=user, access_token=access_token
                 )
+            elif not include_payload_html:
+                # Mobile clients load the current payload independently. Avoid
+                # repeatedly sending old, potentially very large sandbox HTML.
+                cleaned.pop("payload_html", None)
             if cleaned.get("attachments"):
                 cleaned["attachments"] = self.rewrite_attachments(
                     cleaned["attachments"], user=user, access_token=access_token
@@ -366,23 +377,29 @@ class TrinityBridge:
             events.append(cleaned)
         return events[-limit:]
 
-    def latest_payload(self, user=None, access_token=""):
+    def latest_payload(self, user=None, access_token="", after=0.0):
         if user:
             for event in reversed(load_chat_events(self.history_path_for(user), limit=MAX_EVENTS * 4)):
                 html = str(event.get("payload_html") or "")
                 if html:
+                    timestamp = float(event.get("timestamp", 0) or 0)
+                    if timestamp <= after:
+                        return {"html": "", "timestamp": timestamp}
                     return {
                         "html": self.rewrite_html(html, user=user, access_token=access_token),
-                        "timestamp": float(event.get("timestamp", 0) or 0),
+                        "timestamp": timestamp,
                     }
             return {"html": "", "timestamp": 0.0}
+        timestamp = self._mtime(self.payload_path)
+        if timestamp <= after:
+            return {"html": "", "timestamp": timestamp}
         try:
             html = self.payload_path.read_text(encoding="utf-8")
         except OSError:
             html = ""
         return {
             "html": self.rewrite_html(html, user=user, access_token=access_token),
-            "timestamp": self._mtime(self.payload_path),
+            "timestamp": timestamp,
         }
 
     def latest_bubble(self):
@@ -560,6 +577,14 @@ def make_handler(bridge):
                     )
                 elif parsed.path == "/events":
                     after = float(query.get("after", ["0"])[0] or 0)
+                    try:
+                        limit = int(query.get("limit", [str(MAX_EVENTS)])[0] or MAX_EVENTS)
+                    except (TypeError, ValueError):
+                        limit = MAX_EVENTS
+                    limit = max(1, min(limit, MAX_EVENTS))
+                    include_payload_html = str(
+                        query.get("include_payload_html", ["1"])[0]
+                    ).strip().lower() not in {"0", "false", "no"}
                     _json_response(
                         self,
                         200,
@@ -567,12 +592,15 @@ def make_handler(bridge):
                             "ok": True,
                             "events": bridge.events_since(
                                 after,
+                                limit=limit,
                                 user=user,
                                 access_token=bridge._bearer_token(self, query),
+                                include_payload_html=include_payload_html,
                             ),
                         },
                     )
                 elif parsed.path == "/payload":
+                    after = float(query.get("after", ["0"])[0] or 0)
                     _json_response(
                         self,
                         200,
@@ -581,6 +609,7 @@ def make_handler(bridge):
                             **bridge.latest_payload(
                                 user=user,
                                 access_token=bridge._bearer_token(self, query),
+                                after=after,
                             ),
                         },
                     )
