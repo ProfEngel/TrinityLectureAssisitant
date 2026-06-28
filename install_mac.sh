@@ -33,6 +33,7 @@ if [ -d "$INSTALL_DIR" ]; then
     [ -d "$INSTALL_DIR/memory" ]            && cp -r "$INSTALL_DIR/memory"         "$BACKUP_DIR/memory"       && echo "   💾 memory/ (Transkripte) gesichert"
     [ -d "$INSTALL_DIR/RAG" ]               && cp -r "$INSTALL_DIR/RAG"            "$BACKUP_DIR/RAG"          && echo "   💾 RAG/ (Wissensbasis) gesichert"
     [ -d "$INSTALL_DIR/gen_images" ]        && cp -r "$INSTALL_DIR/gen_images"     "$BACKUP_DIR/gen_images"   && echo "   💾 gen_images/ gesichert"
+    [ -d "$INSTALL_DIR/TrinityRuntime" ]    && cp -r "$INSTALL_DIR/TrinityRuntime" "$BACKUP_DIR/TrinityRuntime" && echo "   💾 TrinityRuntime/ gesichert"
 
     echo ""
     echo "   📁 Backup gespeichert unter: $BACKUP_DIR"
@@ -64,6 +65,7 @@ if [ "$IS_UPDATE" = true ]; then
     [ -d "$BACKUP_DIR/memory" ]     && mkdir -p "$INSTALL_DIR/memory" && cp -a "$BACKUP_DIR/memory/." "$INSTALL_DIR/memory/" && echo "   ✅ memory/ wiederhergestellt"
     [ -d "$BACKUP_DIR/RAG" ]        && mkdir -p "$INSTALL_DIR/RAG" && cp -a "$BACKUP_DIR/RAG/." "$INSTALL_DIR/RAG/" && echo "   ✅ RAG/ wiederhergestellt"
     [ -d "$BACKUP_DIR/gen_images" ] && mkdir -p "$INSTALL_DIR/gen_images" && cp -a "$BACKUP_DIR/gen_images/." "$INSTALL_DIR/gen_images/" && echo "   ✅ gen_images/ wiederhergestellt"
+    [ -d "$BACKUP_DIR/TrinityRuntime" ] && mkdir -p "$INSTALL_DIR/TrinityRuntime" && cp -a "$BACKUP_DIR/TrinityRuntime/." "$INSTALL_DIR/TrinityRuntime/" && echo "   ✅ TrinityRuntime/ wiederhergestellt"
 
     echo ""
     echo "   🗑️  Temporäres Backup wird entfernt..."
@@ -99,6 +101,11 @@ if [ ! -f "$ZPROFILE" ] || ! grep -Fq "$PATH_LINE" "$ZPROFILE"; then
     echo "$PATH_LINE" >> "$ZPROFILE"
 fi
 export PATH="$CLI_BIN:$PATH"
+
+# 6.6 MainHub / Control Plane idempotent vorbereiten
+echo "🧭 Prüfe MainHub-/Control-Plane-Ordner..."
+./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" control-plane init >/dev/null 2>&1 || \
+    echo "   ⚠️  Control Plane konnte jetzt nicht initialisiert werden. Später möglich mit: trinity control-plane init"
 
 # 7. Desktop-Verknüpfung (Native macOS App) erstellen
 DESKTOP_DIR="$HOME/Desktop"
@@ -174,7 +181,7 @@ echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
-echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte)"
+echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte, TrinityRuntime)"
 echo "   wurden automatisch aus der alten Version übernommen."
 fi
 echo ""

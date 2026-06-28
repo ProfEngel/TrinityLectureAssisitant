@@ -42,3 +42,58 @@ def test_setting_values_are_parsed_for_cli_use():
         "terminal",
     ]
     assert parse_setting_value("plain text") == "plain text"
+
+
+def test_legacy_enabled_harnesses_seed_roles_once(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "codex": {"enabled": True},
+                "opencode": {"enabled": True},
+                "pi": {"enabled": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(path, platform_name="Linux")
+    frameworks = config["harness_routing"]["frameworks"]
+
+    assert frameworks["codex"]["roles"]["agent_builder"] is True
+    assert frameworks["codex"]["roles"]["agent_execution"] is True
+    assert frameworks["opencode"]["roles"]["agent_execution"] is True
+    assert frameworks["pi"]["roles"]["agent_execution"] is True
+
+
+def test_existing_harness_roles_are_not_overwritten_by_enabled_flags(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "codex": {"enabled": True},
+                "harness_routing": {
+                    "frameworks": {
+                        "codex": {
+                            "label": "Codex",
+                            "roles": {
+                                "agent_builder": False,
+                                "complex_cases": False,
+                                "agent_execution": False,
+                            },
+                        }
+                    },
+                    "agent_assignments": {},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(path, platform_name="Linux")
+    roles = config["harness_routing"]["frameworks"]["codex"]["roles"]
+
+    assert roles["agent_builder"] is False
+    assert roles["complex_cases"] is False
+    assert roles["agent_execution"] is False
+    assert config["harness_routing"]["agent_assignments"] == {}

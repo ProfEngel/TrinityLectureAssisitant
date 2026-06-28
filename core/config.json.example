@@ -85,5 +85,38 @@
     "default_mode": "guided",
     "builder_harness": "codex",
     "catalog_include_legacy": true
+  },
+  "harness_routing": {
+    "frameworks": {
+      "codex": {
+        "label": "Codex",
+        "roles": {
+          "agent_builder": true,
+          "complex_cases": true,
+          "agent_execution": true
+        }
+      },
+      "pi": {
+        "label": "Pi",
+        "roles": {
+          "agent_builder": false,
+          "complex_cases": true,
+          "agent_execution": false
+        }
+      },
+      "opencode": {
+        "label": "OpenCode",
+        "roles": {
+          "agent_builder": false,
+          "complex_cases": true,
+          "agent_execution": true
+        }
+      }
+    },
+    "agent_assignments": {
+      "codex_agent": ["codex"],
+      "pi_agent": ["pi"],
+      "opencode_agent": ["opencode"]
+    }
   }
 }

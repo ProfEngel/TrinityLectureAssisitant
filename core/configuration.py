@@ -136,6 +136,39 @@ def default_config(platform_name=None):
             "builder_harness": "codex",
             "catalog_include_legacy": True,
         },
+        "harness_routing": {
+            "frameworks": {
+                "codex": {
+                    "label": "Codex",
+                    "roles": {
+                        "agent_builder": True,
+                        "complex_cases": True,
+                        "agent_execution": True,
+                    },
+                },
+                "pi": {
+                    "label": "Pi",
+                    "roles": {
+                        "agent_builder": False,
+                        "complex_cases": True,
+                        "agent_execution": False,
+                    },
+                },
+                "opencode": {
+                    "label": "OpenCode",
+                    "roles": {
+                        "agent_builder": False,
+                        "complex_cases": True,
+                        "agent_execution": True,
+                    },
+                },
+            },
+            "agent_assignments": {
+                "codex_agent": ["codex"],
+                "pi_agent": ["pi"],
+                "opencode_agent": ["opencode"],
+            },
+        },
     }
 
 
@@ -160,7 +193,61 @@ def load_config(config_path, platform_name=None):
             data = {}
     except (OSError, json.JSONDecodeError):
         data = {}
-    return _merge_defaults(data, defaults)
+    had_harness_routing = isinstance(data.get("harness_routing"), dict)
+    original_assignments = None
+    if had_harness_routing and isinstance(
+        data.get("harness_routing", {}).get("agent_assignments"), dict
+    ):
+        original_assignments = copy.deepcopy(
+            data["harness_routing"]["agent_assignments"]
+        )
+    merged = _merge_defaults(data, defaults)
+    if original_assignments is not None:
+        merged.setdefault("harness_routing", {})[
+            "agent_assignments"
+        ] = original_assignments
+    return _migrate_config(
+        merged,
+        had_harness_routing=had_harness_routing,
+    )
+
+
+def _migrate_config(config, had_harness_routing=True):
+    """Keep older configs usable after schema additions."""
+
+    routing = config.setdefault("harness_routing", {})
+    frameworks = routing.setdefault("frameworks", {})
+    defaults = DEFAULT_CONFIG["harness_routing"]
+    for harness_id, default_framework in defaults["frameworks"].items():
+        framework = frameworks.setdefault(harness_id, {})
+        framework.setdefault("label", default_framework["label"])
+        roles = framework.setdefault("roles", {})
+        for role, default_value in default_framework["roles"].items():
+            roles.setdefault(role, default_value)
+
+    assignments = routing.get("agent_assignments")
+    if not isinstance(assignments, dict):
+        assignments = copy.deepcopy(defaults["agent_assignments"])
+        routing["agent_assignments"] = assignments
+    elif not had_harness_routing:
+        for agent_id, harnesses in defaults["agent_assignments"].items():
+            assignments.setdefault(agent_id, list(harnesses))
+
+    # Older installations only had codex/opencode/pi enabled flags. When no
+    # explicit role data existed yet, mirror those choices into the new layer.
+    if had_harness_routing:
+        return config
+
+    for harness_id in ("codex", "opencode", "pi"):
+        enabled = bool(config.get(harness_id, {}).get("enabled", False))
+        framework = frameworks.setdefault(harness_id, {})
+        roles = framework.setdefault("roles", {})
+        if enabled:
+            roles["complex_cases"] = True
+            roles["agent_execution"] = True
+            if harness_id == "codex":
+                roles["agent_builder"] = True
+    return config
 
 
 def save_config(config_path, config):

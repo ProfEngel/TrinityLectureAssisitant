@@ -1,5 +1,6 @@
 import json
 import base64
+import sys
 
 from trinity_bridge import TrinityBridge, _local_path_value
 from web_ui import render_web_ui
@@ -80,6 +81,19 @@ def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
                 "persona": {"agent_name": "Nova"},
                 "codex": {"projects": {"Buch": "/tmp/buch"}},
                 "opencode": {"projects": {"Kurse": "/tmp/kurse"}},
+                "harness_routing": {
+                    "frameworks": {
+                        "codex": {
+                            "label": "Codex",
+                            "roles": {
+                                "agent_builder": False,
+                                "complex_cases": True,
+                                "agent_execution": False,
+                            },
+                        }
+                    },
+                    "agent_assignments": {"codex_agent": ["codex"]},
+                },
             },
             "soul": "Meine Soul",
             "user": "Mein Profil",
@@ -90,7 +104,26 @@ def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
     assert result["config"]["persona"]["trigger_variants"]
     assert result["config"]["codex"]["projects"] == {"Buch": "/tmp/buch"}
     assert result["config"]["opencode"]["projects"] == {"Kurse": "/tmp/kurse"}
+    assert result["config"]["harness_routing"]["frameworks"]["codex"]["roles"][
+        "agent_builder"
+    ] is False
+    assert result["config"]["harness_routing"]["agent_assignments"] == {
+        "codex_agent": ["codex"]
+    }
     assert result["files"] == {"soul": "Meine Soul", "user": "Mein Profil"}
+
+
+def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path):
+    bridge = TrinityBridge(tmp_path)
+
+    result = bridge.test_harness({"harness": "codex", "executable": sys.executable})
+    pi_result = bridge.test_harness({"harness": "pi", "executable": sys.executable})
+
+    assert result["ok"] is True
+    assert result["found"] is True
+    assert result["path"] == sys.executable
+    assert pi_result["ok"] is True
+    assert pi_result["message"].startswith("Pi-Wrapper gefunden")
 
 
 def test_web_settings_are_local_or_administrator_only(tmp_path):

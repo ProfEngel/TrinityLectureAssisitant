@@ -11,3 +11,5 @@ def test_macos_installer_adds_trinity_cli_to_user_path():
     assert '".[macos]"' in script
     assert 'CLI_PATH="$CLI_BIN/trinity"' in script
     assert 'export PATH="$HOME/.local/bin:$PATH"' in script
+    assert '"$INSTALL_DIR/TrinityRuntime"' in script
+    assert 'control-plane init' in script

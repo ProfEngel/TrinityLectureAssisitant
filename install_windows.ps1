@@ -236,6 +236,7 @@ if ($isUpdate) {
     Copy-DirectoryContents "$InstallDir\RAG" "$backupDir\RAG"
     Copy-DirectoryContents "$InstallDir\gen_images" "$backupDir\gen_images"
     Copy-DirectoryContents "$InstallDir\logs" "$backupDir\logs"
+    Copy-DirectoryContents "$InstallDir\TrinityRuntime" "$backupDir\TrinityRuntime"
 
     Remove-Item $InstallDir -Recurse -Force
 }
@@ -269,6 +270,7 @@ if ($isUpdate) {
     Copy-DirectoryContents "$backupDir\RAG" "$InstallDir\RAG" @("build_index.py")
     Copy-DirectoryContents "$backupDir\gen_images" "$InstallDir\gen_images"
     Copy-DirectoryContents "$backupDir\logs" "$InstallDir\logs"
+    Copy-DirectoryContents "$backupDir\TrinityRuntime" "$InstallDir\TrinityRuntime"
     Remove-Item $backupDir -Recurse -Force
 }
 
@@ -330,6 +332,18 @@ if ($cliBin -notin $pathEntries) {
 }
 if ($cliBin -notin ($env:Path -split ";")) {
     $env:Path = "$env:Path;$cliBin"
+}
+
+Write-Host "Initialisiere MainHub / Control Plane ..."
+Push-Location $InstallDir
+try {
+    & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir control-plane init | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Control Plane konnte jetzt nicht initialisiert werden. Später möglich mit: trinity control-plane init"
+    }
+}
+finally {
+    Pop-Location
 }
 
 $iconPng = "$InstallDir\core\icon.png"

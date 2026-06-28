@@ -8,6 +8,8 @@ import json
 import mimetypes
 import os
 import re
+import shutil
+import subprocess
 import threading
 import time
 import uuid
@@ -20,6 +22,7 @@ from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
+from platform_adapters import find_codex_executable, find_opencode_executable, find_pi_executable
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_upload_dir
 from web_ui import render_web_ui
@@ -34,7 +37,7 @@ MAX_SETTINGS_TEXT_BYTES = 100 * 1024
 SETTINGS_SECTIONS = {
     "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
     "audio_routing", "telegram", "codex", "opencode", "pi", "comfyui",
-    "companion", "server", "client", "control_plane",
+    "companion", "server", "client", "control_plane", "harness_routing",
 }
 
 
@@ -292,7 +295,10 @@ class TrinityBridge:
         for section in SETTINGS_SECTIONS:
             value = incoming.get(section)
             if isinstance(value, dict):
-                self._merge_settings_section(config.setdefault(section, {}), value)
+                if section == "harness_routing":
+                    config[section] = value
+                else:
+                    self._merge_settings_section(config.setdefault(section, {}), value)
 
         self.core_dir.mkdir(parents=True, exist_ok=True)
         for name, value in {"Soul.md": payload.get("soul"), "User.md": payload.get("user")}.items():
@@ -305,6 +311,74 @@ class TrinityBridge:
 
         save_config(self.config_path, config)
         return self.get_web_settings()
+
+    def test_harness(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Harness-Test erwartet ein Objekt.")
+        harness_id = str(payload.get("harness") or "").strip().lower()
+        if harness_id not in {"codex", "pi", "opencode"}:
+            raise ValueError("Unbekanntes Harness.")
+
+        config = load_config(self.config_path)
+        raw_executable = str(
+            payload.get("executable")
+            or config.get(harness_id, {}).get("executable")
+            or harness_id
+        ).strip()
+        resolved = self._resolve_harness_executable(harness_id, raw_executable)
+        label = {"codex": "Codex", "pi": "Pi", "opencode": "OpenCode"}[harness_id]
+        if not resolved:
+            return {
+                "ok": False,
+                "harness": harness_id,
+                "found": False,
+                "message": f"{label} wurde nicht gefunden.",
+            }
+
+        if harness_id == "pi":
+            return {
+                "ok": True,
+                "harness": harness_id,
+                "found": True,
+                "path": resolved,
+                "message": "Pi-Wrapper gefunden. Kein Testauftrag wurde ausgefuehrt.",
+            }
+
+        command = [resolved, "--version"]
+        use_shell = os.name == "nt" and str(resolved).casefold().endswith((".cmd", ".bat"))
+        run_command = subprocess.list2cmdline(command) if use_shell else command
+        try:
+            completed = subprocess.run(
+                run_command,
+                text=True,
+                capture_output=True,
+                timeout=10,
+                check=False,
+                shell=use_shell,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            return {
+                "ok": False,
+                "harness": harness_id,
+                "found": True,
+                "path": resolved,
+                "message": str(exc),
+            }
+
+        output = (completed.stdout or completed.stderr or "").strip()
+        return {
+            "ok": completed.returncode == 0,
+            "harness": harness_id,
+            "found": True,
+            "path": resolved,
+            "returncode": completed.returncode,
+            "output": output[:1200],
+            "message": (
+                f"{label} ist erreichbar."
+                if completed.returncode == 0
+                else f"{label} antwortete mit Code {completed.returncode}."
+            ),
+        }
 
     def _save_attachments(self, attachments, user=None):
         saved = []
@@ -523,6 +597,22 @@ class TrinityBridge:
                 target[key] = value
 
     @staticmethod
+    def _resolve_harness_executable(harness_id, raw_value):
+        value = os.path.expandvars(os.path.expanduser(str(raw_value or harness_id).strip()))
+        if os.path.dirname(value):
+            path = os.path.abspath(value)
+            return path if os.path.isfile(path) else ""
+        finders = {
+            "codex": find_codex_executable,
+            "pi": find_pi_executable,
+            "opencode": find_opencode_executable,
+        }
+        if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:
+            finder = finders.get(harness_id)
+            return finder() if finder else ""
+        return shutil.which(value) or ""
+
+    @staticmethod
     def _read_text_file(path):
         try:
             return path.read_text(encoding="utf-8")
@@ -696,6 +786,12 @@ def make_handler(bridge):
                             "Einstellungen sind nur lokal oder fuer Administratoren verfuegbar."
                         )
                     _json_response(self, 200, bridge.save_web_settings(_read_json(self)))
+                elif parsed.path == "/harness/test":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Harness-Tests sind nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.test_harness(_read_json(self)))
                 elif bridge.auth_enabled and parsed.path == "/auth/users":
                     payload = _read_json(self)
                     created = bridge.auth.create_user(

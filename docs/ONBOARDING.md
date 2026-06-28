@@ -241,6 +241,14 @@ Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegeben
 Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
 Rechte des jeweiligen Projekts gebunden.
 
+Seit v0.15.1 liegen Codex, Pi und OpenCode gemeinsam unter
+Einstellungen -> Harnesses. Dort hat jedes Framework dieselben Rollen:
+Agentenbuilder, harte komplexe Faelle und Ausfuehrung der Agenten. Darunter
+steht eine Agenten-Matrix, in der pro Trinity-Agent ausgewaehlt werden kann,
+welches Harness-Framework ihn ausfuehren darf. So bleibt Codex/OpenCode/Pi
+heute sauber getrennt und spaeter lassen sich weitere Harnesses wie Claude Code
+ergaenzen.
+
 ### Gemeinsame Sicherheitsgrundsaetze
 
 1. Zuerst ein separates Testprojekt freigeben, nicht das Produktivprojekt.
@@ -273,7 +281,7 @@ Unter Windows PowerShell:
 (Get-Command codex).Source
 ~~~
 
-In Einstellungen -> Codex:
+In Einstellungen -> Harnesses -> Codex:
 
 | Feld | Sicherer erster Wert |
 |---|---|
@@ -313,7 +321,7 @@ Unter Windows PowerShell:
 opencode --version
 ~~~
 
-In Einstellungen -> OpenCode:
+In Einstellungen -> Harnesses -> OpenCode:
 
 | Feld | Sicherer erster Wert |
 |---|---|
@@ -346,7 +354,8 @@ nur aus, welcher Agent in welchem erlaubten Projekt gestartet wird.
 ### Mehrere Projekte und ein sicherer Mac-Test
 
 Codex und OpenCode koennen dieselben oder unterschiedliche, vollstaendig
-getrennte Projekt-Aliasse erhalten. Beispielsweise in beiden Einstellungen:
+getrennte Projekt-Aliasse erhalten. Beispielsweise in den Codex- und
+OpenCode-Bloecken unter Einstellungen -> Harnesses:
 
 ~~~text
 Trinity = /Users/NAME/.../Trinity_Assistant
@@ -390,6 +399,8 @@ ausfuehrbares Programm oder Skript, das Trinity starten darf. Ohne
 wird der Auftrag als Argument eingesetzt.
 
 Beispiele fuer Einstellungen:
+
+In Einstellungen -> Harnesses -> Pi:
 
 ~~~text
 Programm: /Users/NAME/bin/pi-wrapper
@@ -444,8 +455,8 @@ und /graph. Die Daten liegen lokal in memory/trinity_memory.sqlite3.
 | Symptom | Pruefung |
 |---|---|
 | Trinity antwortet nicht | trinity doctor; LLM-URL/Modell testen; ClassicUI-Live-Log lesen. |
-| Codex/OpenCode wird nicht gefunden | CLI im gleichen Benutzerkonto installieren; command -v beziehungsweise Get-Command nutzen; vollen Pfad eintragen. |
-| Pi wird nicht gefunden | Eigenen Pi-Wrapper anlegen, ausfuehrbar machen und den vollstaendigen Pfad in Einstellungen -> Pi eintragen. |
+| Codex/OpenCode wird nicht gefunden | CLI im gleichen Benutzerkonto installieren; command -v beziehungsweise Get-Command nutzen; vollen Pfad in Einstellungen -> Harnesses eintragen. |
+| Pi wird nicht gefunden | Eigenen Pi-Wrapper anlegen, ausfuehrbar machen und den vollstaendigen Pfad in Einstellungen -> Harnesses -> Pi eintragen. |
 | Agent waehlt falsches Projekt | Alias im Auftrag nennen und exakt wie im Feld Standardprojekt schreiben. |
 | Code-Agent kann nicht schreiben | Codex-Sandbox pruefen; bei OpenCode die projektlokale opencode.json und den konkreten edit-Pfad pruefen. |
 | Companion verbindet nicht | Tailscale-IP, Bridge-Port, Bearer-Token und lokale Firewall pruefen; Bridge nach Einstellungswechsel neu starten. |

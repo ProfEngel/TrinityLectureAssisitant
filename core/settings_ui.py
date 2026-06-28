@@ -2,6 +2,8 @@ import sys
 import os
 import platform
 import shlex
+import shutil
+import subprocess
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -9,7 +11,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QCheckBox, QComboBox, QGroupBox, QFormLayout,
                              QTextEdit, QTabWidget, QDoubleSpinBox, QSpinBox,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
-                             QButtonGroup, QSizePolicy)
+                             QButtonGroup, QSizePolicy, QTableWidget,
+                             QTableWidgetItem, QHeaderView)
 
 from platform_adapters import (
     create_tts_backend,
@@ -248,6 +251,31 @@ class SettingsWindow(QMainWindow):
             self.config["pi"]["timeout_seconds"] = self.pi_timeout_spin.value()
             self.config["pi"]["max_output_chars"] = self.pi_output_spin.value()
 
+        # Harness routing: roles and per-agent execution matrix
+        if hasattr(self, "harness_role_checks"):
+            routing = self.config.setdefault("harness_routing", {})
+            frameworks = routing.setdefault("frameworks", {})
+            for harness_id, label in self._harness_labels().items():
+                framework = frameworks.setdefault(harness_id, {})
+                framework["label"] = label
+                framework["roles"] = {
+                    role: checkbox.isChecked()
+                    for (current_harness, role), checkbox in self.harness_role_checks.items()
+                    if current_harness == harness_id
+                }
+            assignments = {}
+            if hasattr(self, "harness_agent_table"):
+                harness_ids = self._harness_ids()
+                for row, agent_id in enumerate(getattr(self, "harness_agent_ids", [])):
+                    selected = []
+                    for col, harness_id in enumerate(harness_ids, start=1):
+                        item = self.harness_agent_table.item(row, col)
+                        if item and item.checkState() == Qt.Checked:
+                            selected.append(harness_id)
+                    if selected:
+                        assignments[agent_id] = selected
+            routing["agent_assignments"] = assignments
+
         # Control Plane / MainHub
         if "control_plane" not in self.config:
             self.config["control_plane"] = {}
@@ -409,6 +437,23 @@ class SettingsWindow(QMainWindow):
                 font-size: 13px;
                 selection-background-color: {colors["selection"]};
             }}
+
+            QTableWidget {{
+                background: {colors["field_bg"]};
+                color: {colors["text"]};
+                border: 1px solid {colors["border"]};
+                border-radius: 8px;
+                gridline-color: {colors["border"]};
+                selection-background-color: {colors["selection"]};
+            }}
+
+            QHeaderView::section {{
+                background: {colors["raised_bg"]};
+                color: {colors["text"]};
+                border: 1px solid {colors["border"]};
+                padding: 6px;
+                font-weight: 600;
+            }}
             
             QCheckBox {{ color: {colors["muted"]}; spacing: 10px; font-size: 13px; }}
             QCheckBox::indicator {{ width: 20px; height: 20px; border-radius: 5px; border: 1px solid {colors["strong_border"]}; background: {colors["field_bg"]}; }}
@@ -475,9 +520,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
-        tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
-        tabs.addTab(self._create_opencode_tab(), "🛠️ OpenCode")
-        tabs.addTab(self._create_pi_tab(), "π Pi")
+        tabs.addTab(self._scrollable_tab(self._create_harnesses_tab()), "🧭 Harnesses")
         tabs.addTab(self._scrollable_tab(self._create_mainhub_tab()), "🗂 MainHub")
         tabs.addTab(self._create_agent_ecosystem_tab(), "🧰 Agenten")
         tabs.addTab(self._scrollable_tab(self._create_system_tab()), "🖥️ System")
@@ -632,6 +675,417 @@ class SettingsWindow(QMainWindow):
         layout.addWidget(group)
         layout.addStretch()
         return widget
+
+    # --- TAB: Harnesses ---
+    def _create_harnesses_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        description = QLabel(
+            "Hier werden lokale Agenten-Frameworks zentral konfiguriert. Codex, "
+            "Pi und OpenCode bleiben intern kompatibel zu ihren bisherigen "
+            "Einstellungen, werden aber gemeinsam nach Rollen und Agenten-"
+            "Ausfuehrung gesteuert. Spaeter kann hier z.B. Claude Code ergaenzt werden."
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        self.harness_role_checks = {}
+        self.harness_agent_ids = []
+
+        layout.addWidget(self._create_codex_harness_group())
+        layout.addWidget(self._create_pi_harness_group())
+        layout.addWidget(self._create_opencode_harness_group())
+        layout.addWidget(self._create_harness_agent_matrix_group())
+        layout.addStretch()
+        return widget
+
+    @staticmethod
+    def _harness_ids():
+        return ["codex", "pi", "opencode"]
+
+    @staticmethod
+    def _harness_labels():
+        return {
+            "codex": "Codex",
+            "pi": "Pi",
+            "opencode": "OpenCode",
+        }
+
+    @staticmethod
+    def _role_labels():
+        return {
+            "agent_builder": "Agentenbuilder",
+            "complex_cases": "Harte komplexe Faelle",
+            "agent_execution": "Ausfuehrung der Agenten",
+        }
+
+    def _role_enabled(self, harness_id, role):
+        routing = self.config.get("harness_routing", {})
+        frameworks = routing.get("frameworks", {})
+        roles = frameworks.get(harness_id, {}).get("roles", {})
+        return bool(roles.get(role, False))
+
+    def _add_harness_roles(self, form, harness_id):
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        for role, label in self._role_labels().items():
+            checkbox = QCheckBox(label)
+            checkbox.setChecked(self._role_enabled(harness_id, role))
+            self.harness_role_checks[(harness_id, role)] = checkbox
+            row_layout.addWidget(checkbox)
+        row_layout.addStretch()
+        form.addRow("Rollen:", row)
+
+    def _create_codex_harness_group(self):
+        group = QGroupBox("Codex")
+        form = QFormLayout()
+        codex_conf = self.config.get("codex", {})
+
+        top_row = QWidget()
+        top_layout = QHBoxLayout(top_row)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        self.codex_cb = QCheckBox("Codex-Auftraege erlauben")
+        self.codex_cb.setChecked(codex_conf.get("enabled", False))
+        top_layout.addWidget(self.codex_cb)
+        test_btn = QPushButton("Anbindung testen")
+        test_btn.clicked.connect(lambda: self._test_harness_connection("codex"))
+        top_layout.addWidget(test_btn)
+        top_layout.addStretch()
+        form.addRow(top_row)
+
+        detected = find_codex_executable()
+        status = QLabel(
+            f"Codex gefunden: {detected}" if detected else "Codex wurde noch nicht gefunden."
+        )
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+        self._add_harness_roles(form, "codex")
+
+        self.codex_executable_edit = QLineEdit(codex_conf.get("executable", "codex"))
+        form.addRow("Programm:", self.codex_executable_edit)
+
+        self.codex_projects_edit = QTextEdit()
+        self.codex_projects_edit.setPlainText(self._projects_to_text(codex_conf.get("projects", {})))
+        self.codex_projects_edit.setPlaceholderText(
+            "Automatismen = /vollstaendiger/Pfad/zum/Projekt\n"
+            "Lehre = C:\\Users\\Name\\Projekte\\Lehre"
+        )
+        self.codex_projects_edit.setMinimumHeight(90)
+        form.addRow("Freigegebene Projekte:", self.codex_projects_edit)
+
+        self.codex_default_project_edit = QLineEdit(codex_conf.get("default_project", ""))
+        form.addRow("Standardprojekt:", self.codex_default_project_edit)
+
+        self.codex_sandbox_combo = QComboBox()
+        self.codex_sandbox_combo.addItems(["workspace-write", "read-only"])
+        sandbox = codex_conf.get("sandbox", "workspace-write")
+        if sandbox in {"workspace-write", "read-only"}:
+            self.codex_sandbox_combo.setCurrentText(sandbox)
+        form.addRow("Codex-Rechte:", self.codex_sandbox_combo)
+
+        self.codex_timeout_spin = QSpinBox()
+        self.codex_timeout_spin.setRange(30, 3600)
+        self.codex_timeout_spin.setSuffix(" Sekunden")
+        self.codex_timeout_spin.setValue(int(codex_conf.get("timeout_seconds", 900)))
+        form.addRow("Zeitlimit:", self.codex_timeout_spin)
+
+        self.codex_output_spin = QSpinBox()
+        self.codex_output_spin.setRange(500, 12000)
+        self.codex_output_spin.setSingleStep(500)
+        self.codex_output_spin.setSuffix(" Zeichen")
+        self.codex_output_spin.setValue(int(codex_conf.get("max_output_chars", 3200)))
+        form.addRow("Antwortlaenge:", self.codex_output_spin)
+
+        self.codex_ephemeral_cb = QCheckBox("Keine dauerhaften Codex-Sitzungen")
+        self.codex_ephemeral_cb.setChecked(codex_conf.get("ephemeral", True))
+        form.addRow(self.codex_ephemeral_cb)
+
+        self.codex_network_cb = QCheckBox("Netzwerkzugriff fuer Codex erlauben")
+        self.codex_network_cb.setChecked(codex_conf.get("network_access", False))
+        form.addRow(self.codex_network_cb)
+
+        group.setLayout(form)
+        return group
+
+    def _create_pi_harness_group(self):
+        group = QGroupBox("Pi")
+        form = QFormLayout()
+        pi_conf = self.config.get("pi", {})
+
+        top_row = QWidget()
+        top_layout = QHBoxLayout(top_row)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        self.pi_cb = QCheckBox("Pi-Auftraege erlauben")
+        self.pi_cb.setChecked(pi_conf.get("enabled", False))
+        top_layout.addWidget(self.pi_cb)
+        test_btn = QPushButton("Anbindung testen")
+        test_btn.clicked.connect(lambda: self._test_harness_connection("pi"))
+        top_layout.addWidget(test_btn)
+        top_layout.addStretch()
+        form.addRow(top_row)
+
+        detected = find_pi_executable()
+        status = QLabel(
+            f"Pi gefunden: {detected}" if detected else "Pi wurde noch nicht gefunden."
+        )
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+        self._add_harness_roles(form, "pi")
+
+        self.pi_executable_edit = QLineEdit(pi_conf.get("executable", "pi"))
+        form.addRow("Programm oder Wrapper:", self.pi_executable_edit)
+
+        raw_arguments = pi_conf.get("arguments", [])
+        if isinstance(raw_arguments, list):
+            arguments_text = " ".join(str(item) for item in raw_arguments)
+        else:
+            arguments_text = str(raw_arguments or "")
+        self.pi_arguments_edit = QLineEdit(arguments_text)
+        self.pi_arguments_edit.setPlaceholderText("optional, z.B. chat --stdin oder ask {prompt}")
+        form.addRow("Argumente:", self.pi_arguments_edit)
+
+        self.pi_timeout_spin = QSpinBox()
+        self.pi_timeout_spin.setRange(30, 3600)
+        self.pi_timeout_spin.setSuffix(" Sekunden")
+        self.pi_timeout_spin.setValue(int(pi_conf.get("timeout_seconds", 600)))
+        form.addRow("Zeitlimit:", self.pi_timeout_spin)
+
+        self.pi_output_spin = QSpinBox()
+        self.pi_output_spin.setRange(500, 12000)
+        self.pi_output_spin.setSingleStep(500)
+        self.pi_output_spin.setSuffix(" Zeichen")
+        self.pi_output_spin.setValue(int(pi_conf.get("max_output_chars", 3200)))
+        form.addRow("Antwortlaenge:", self.pi_output_spin)
+
+        hint = QLabel(
+            "Ohne {prompt} uebergibt Trinity den Auftrag per stdin. Mit {prompt} "
+            "wird der Auftrag als Argument eingesetzt."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", hint)
+
+        group.setLayout(form)
+        return group
+
+    def _create_opencode_harness_group(self):
+        group = QGroupBox("OpenCode")
+        form = QFormLayout()
+        opencode_conf = self.config.get("opencode", {})
+
+        top_row = QWidget()
+        top_layout = QHBoxLayout(top_row)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        self.opencode_cb = QCheckBox("OpenCode-Auftraege erlauben")
+        self.opencode_cb.setChecked(opencode_conf.get("enabled", False))
+        top_layout.addWidget(self.opencode_cb)
+        test_btn = QPushButton("Anbindung testen")
+        test_btn.clicked.connect(lambda: self._test_harness_connection("opencode"))
+        top_layout.addWidget(test_btn)
+        top_layout.addStretch()
+        form.addRow(top_row)
+
+        detected = find_opencode_executable()
+        status = QLabel(
+            f"OpenCode gefunden: {detected}" if detected else "OpenCode wurde noch nicht gefunden."
+        )
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+        self._add_harness_roles(form, "opencode")
+
+        self.opencode_executable_edit = QLineEdit(opencode_conf.get("executable", "opencode"))
+        form.addRow("Programm:", self.opencode_executable_edit)
+
+        self.opencode_projects_edit = QTextEdit()
+        self.opencode_projects_edit.setPlainText(self._projects_to_text(opencode_conf.get("projects", {})))
+        self.opencode_projects_edit.setPlaceholderText(
+            "Automatismen = /vollstaendiger/Pfad/zum/Projekt\n"
+            "Mail = C:\\Users\\Name\\Projekte\\MailAutomationen"
+        )
+        self.opencode_projects_edit.setMinimumHeight(90)
+        form.addRow("Freigegebene Projekte:", self.opencode_projects_edit)
+
+        self.opencode_default_project_edit = QLineEdit(opencode_conf.get("default_project", ""))
+        form.addRow("Standardprojekt:", self.opencode_default_project_edit)
+
+        self.opencode_agent_edit = QLineEdit(opencode_conf.get("agent", "build"))
+        form.addRow("OpenCode-Agent:", self.opencode_agent_edit)
+
+        self.opencode_model_edit = QLineEdit(opencode_conf.get("model", ""))
+        form.addRow("Modell:", self.opencode_model_edit)
+
+        self.opencode_timeout_spin = QSpinBox()
+        self.opencode_timeout_spin.setRange(30, 7200)
+        self.opencode_timeout_spin.setSuffix(" Sekunden")
+        self.opencode_timeout_spin.setValue(int(opencode_conf.get("timeout_seconds", 900)))
+        form.addRow("Zeitlimit:", self.opencode_timeout_spin)
+
+        self.opencode_output_spin = QSpinBox()
+        self.opencode_output_spin.setRange(500, 12000)
+        self.opencode_output_spin.setSingleStep(500)
+        self.opencode_output_spin.setSuffix(" Zeichen")
+        self.opencode_output_spin.setValue(int(opencode_conf.get("max_output_chars", 3200)))
+        form.addRow("Antwortlaenge:", self.opencode_output_spin)
+
+        group.setLayout(form)
+        return group
+
+    def _create_harness_agent_matrix_group(self):
+        group = QGroupBox("Welche Agenten darf welches Framework ausfuehren?")
+        layout = QVBoxLayout(group)
+        hint = QLabel(
+            "Links stehen die bekannten Trinity-Agenten. Pro Zeile kann festgelegt "
+            "werden, ob Codex, Pi oder OpenCode diesen Agenten beziehungsweise "
+            "diese Agentenfamilie ausfuehren darf. Das ist die Vorbereitung fuer "
+            "spaetere Frameworks wie Claude Code."
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        records = self._harness_agent_records()
+        harness_ids = self._harness_ids()
+        assignments = self.config.get("harness_routing", {}).get("agent_assignments", {})
+        table = QTableWidget(len(records), len(harness_ids) + 1)
+        table.setHorizontalHeaderLabels(["Agent", *[self._harness_labels()[item] for item in harness_ids]])
+        table.verticalHeader().setVisible(False)
+        table.setMinimumHeight(260)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        for column in range(1, len(harness_ids) + 1):
+            table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeToContents)
+
+        self.harness_agent_ids = []
+        for row, record in enumerate(records):
+            agent_id = record.manifest.skill_id
+            self.harness_agent_ids.append(agent_id)
+            label = f"{record.manifest.name} ({agent_id})"
+            if record.legacy:
+                label += " · Legacy"
+            item = QTableWidgetItem(label)
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            item.setToolTip(str(record.directory))
+            table.setItem(row, 0, item)
+            selected = set(assignments.get(agent_id, []))
+            for col, harness_id in enumerate(harness_ids, start=1):
+                check_item = QTableWidgetItem()
+                check_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+                check_item.setCheckState(Qt.Checked if harness_id in selected else Qt.Unchecked)
+                table.setItem(row, col, check_item)
+
+        self.harness_agent_table = table
+        layout.addWidget(table)
+        return group
+
+    def _harness_agent_records(self):
+        try:
+            registry = SkillRegistry(os.path.dirname(CORE_DIR))
+            return sorted(
+                registry.list(),
+                key=lambda record: (record.manifest.name.casefold(), record.manifest.skill_id),
+            )
+        except Exception as exc:
+            print(f"Agentenliste fuer Harness-Matrix konnte nicht geladen werden: {exc}")
+            return []
+
+    @staticmethod
+    def _projects_to_text(projects):
+        if not isinstance(projects, dict):
+            return ""
+        return "\n".join(f"{alias} = {path}" for alias, path in projects.items())
+
+    def _test_harness_connection(self, harness_id):
+        executable = self._current_harness_executable(harness_id)
+        resolved = self._resolve_harness_executable(harness_id, executable)
+        label = self._harness_labels().get(harness_id, harness_id)
+        if not resolved:
+            QMessageBox.warning(
+                self,
+                f"{label} nicht gefunden",
+                f"{label} wurde nicht gefunden. Bitte Programmpfad pruefen.",
+            )
+            return
+
+        if harness_id == "pi":
+            QMessageBox.information(
+                self,
+                "Pi gefunden",
+                f"Pi-Wrapper gefunden:\n{resolved}\n\n"
+                "Da Pi als generischer Wrapper konfiguriert ist, fuehrt Trinity "
+                "hier keinen Testauftrag aus.",
+            )
+            return
+
+        command = [resolved, "--version"]
+        use_shell = os.name == "nt" and str(resolved).casefold().endswith((".cmd", ".bat"))
+        run_command = subprocess.list2cmdline(command) if use_shell else command
+        try:
+            completed = subprocess.run(
+                run_command,
+                text=True,
+                capture_output=True,
+                timeout=10,
+                check=False,
+                shell=use_shell,
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, f"{label} Test fehlgeschlagen", str(exc))
+            return
+        output = (completed.stdout or completed.stderr or "").strip()
+        if completed.returncode == 0:
+            QMessageBox.information(
+                self,
+                f"{label} erreichbar",
+                f"{label} ist erreichbar:\n{resolved}\n\n{output[:1000]}",
+            )
+        else:
+            QMessageBox.warning(
+                self,
+                f"{label} Test mit Fehlercode {completed.returncode}",
+                f"Gefunden: {resolved}\n\n{output[:1000]}",
+            )
+
+    def _current_harness_executable(self, harness_id):
+        fields = {
+            "codex": getattr(self, "codex_executable_edit", None),
+            "pi": getattr(self, "pi_executable_edit", None),
+            "opencode": getattr(self, "opencode_executable_edit", None),
+        }
+        field = fields.get(harness_id)
+        if field is not None:
+            return field.text().strip()
+        return self.config.get(harness_id, {}).get("executable", harness_id)
+
+    @staticmethod
+    def _resolve_harness_executable(harness_id, raw_value):
+        value = os.path.expandvars(os.path.expanduser(str(raw_value or harness_id).strip()))
+        if os.path.dirname(value):
+            path = os.path.abspath(value)
+            return path if os.path.isfile(path) else ""
+        finders = {
+            "codex": find_codex_executable,
+            "pi": find_pi_executable,
+            "opencode": find_opencode_executable,
+        }
+        if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:
+            finder = finders.get(harness_id)
+            return finder() if finder else ""
+        return shutil.which(value) or ""
 
     # --- TAB: Codex ---
     def _create_codex_tab(self):

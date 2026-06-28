@@ -17,14 +17,15 @@ vNext-Phasen.
 | Approval Manager | implementiert | Lokale, zeitlich begrenzte Freigaben; Eltern-Freigaben koennen eng begrenzte Kind-Aktionen erlauben. |
 | Policy Engine | implementiert | Paketinstallation und unbekannte Systemaktionen sind standardmaessig blockiert; Versand, Loeschung, Upload, Publikation und Skill-Aktivierung verlangen Freigabe. |
 | Task Orchestrator | implementiert | Codex-, OpenCode-, Agent-Forge- und umfangreiche Auftraege bekommen vor dem Start einen Plan und Job. |
+| Harness-Routing | implementiert | Einstellungen -> Harnesses buendelt Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung plus Agenten-Matrix. |
 | Grafische Agentenkiste | implementiert | Einstellungen -> Agenten zeigt Tiers, Legacy-Skills, Staging und Konflikte. |
 | CLI | implementiert | trinity skills, trinity jobs und trinity approvals machen Status und Freigaben kontrollierbar. |
 
 ## Mehrere voneinander getrennte Projektordner
 
 Ja: Codex und OpenCode akzeptieren jeweils beliebig viele Projekt-Aliasse.
-Jede Zeile in Einstellungen -> Codex oder Einstellungen -> OpenCode hat dieses
-Format:
+Jede Zeile in den Codex- und OpenCode-Bloecken unter
+Einstellungen -> Harnesses hat dieses Format:
 
 ~~~text
 Trinity = /Users/NAME/.../Trinity_Assistant

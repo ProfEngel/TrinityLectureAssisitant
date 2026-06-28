@@ -16,3 +16,5 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert '--no-terminal' in script
     assert "trinity.cmd" in script
     assert "SetEnvironmentVariable(\"Path\"" in script
+    assert "TrinityRuntime" in script
+    assert "control-plane init" in script

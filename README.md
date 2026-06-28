@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.15.1:** Gemeinsame Harness-Einstellungen fuer Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung sowie update-sicherer Sicherung von TrinityRuntime.
 > - **v0.15.0:** MainHub-/Control-Plane-Fundament mit getrenntem lokalem TrinityRuntime-Ordner und synchronisiertem TrinityVault, Onboarding fuer Cloud-Vault/Runtime-Pfade, Artifact-Index, Builder-Harness und generischem Pi-CLI-Agenten.
 > - **v0.14.1:** Vollwertige WebUI-Einstellungen fuer LLM, Persona, Sprache, Oberflaechen, Agentenprojekte, Companion, Server und Profile; gesichert durch lokale, Token- oder Admin-Berechtigung.
 > - **v0.14.0:** Dreigeteilte Agentenkiste mit Shared/Personal/Staging, persistenter Plan-/Job-Verwaltung, Quality Gates sowie lokalen Freigaben inklusive Eltern-/Kind-Bezug fuer Codex-, OpenCode- und kuenftige Agent-Forge-Workflows.
@@ -43,10 +44,10 @@
 Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11 sowie als schlanker Linux-Server mit WebUI. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
 
 > [!TIP]
-> **Neu bei Trinity oder bei Codex/OpenCode?** Starte mit dem
+> **Neu bei Trinity oder bei den lokalen Harnesses Codex/Pi/OpenCode?** Starte mit dem
 > **[vollständigen Onboarding](docs/ONBOARDING.md)**. Es erklärt Installation,
 > Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
-> sichere Codex-/OpenCode-Einstellungen und eine empfohlene Testreihenfolge.
+> sichere Harness-Einstellungen und eine empfohlene Testreihenfolge.
 > Die technische Einordnung der neuen Agentenkiste steht im
 > **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Der neue
 > MainHub-Unterbau fuer Trinity als harness-agnostisches Agenten-Betriebssystem
@@ -433,8 +434,8 @@ Sandbox-Wahl, sicheren Testauftraegen und Grenzen steht im
 [Onboarding: lokale Codex-, OpenCode- und Pi-Agenten](docs/ONBOARDING.md#7-lokale-codex--opencode--und-pi-agenten).
 
 Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
-angemeldete Codex CLI übergeben. Codex arbeitet dabei ausschließlich in Projektordnern,
-die zuvor unter **Einstellungen → Codex** freigegeben wurden.
+angemeldete Codex CLI uebergeben. Codex arbeitet dabei ausschliesslich in Projektordnern,
+die zuvor unter **Einstellungen -> Harnesses -> Codex** freigegeben wurden.
 
 Beispiel:
 
@@ -463,7 +464,7 @@ Der Agent nutzt `opencode run` im freigegebenen Projektordner und eignet sich f�
 Automationspipelines, die bereits in OpenCode-Projekten liegen, z.B. Mail-Entwürfe,
 PDF-/Excel-Workflows oder projektinterne Subagenten.
 
-Einrichtung: **Einstellungen → OpenCode** öffnen, Agent aktivieren, optional den
+Einrichtung: **Einstellungen -> Harnesses -> OpenCode** oeffnen, Agent aktivieren, optional den
 Programmpfad setzen und mindestens ein Projekt als `Name = /vollständiger/Pfad`
 freigeben. Optional können `agent` und `model` gesetzt werden, z.B. `build`,
 `plan` oder ein provider-spezifisches Modell.
@@ -482,7 +483,7 @@ Pi kann ueber einen eigenen lokalen CLI-Wrapper angebunden werden. Trinity start
 ihn nur bei ausdruecklichen Formulierungen wie „nutze Pi“, „frage Pi“ oder
 „Pi-Agent“. Eine normale Frage zur Kreiszahl Pi loest den Agenten nicht aus.
 
-Einrichtung: **Einstellungen → Pi** oeffnen, Agent aktivieren, `Programm` auf den
+Einrichtung: **Einstellungen -> Harnesses -> Pi** oeffnen, Agent aktivieren, `Programm` auf den
 Pi-Wrapper setzen und optional Argumente eintragen. Ohne `{prompt}` uebergibt
 Trinity den Auftrag per stdin; mit `{prompt}` wird der Auftrag als Argument
 eingesetzt.
