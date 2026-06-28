@@ -121,6 +121,32 @@ freigabeorientiert: Er formuliert Anforderung, Plan, Quality Gates, Staging-Bau,
 Validierung und Release-Schritt, aktiviert produktiven Code aber erst nach einer
 expliziten Freigabe.
 
+## Agenten importieren, erstellen und erweitern
+
+Der Agentenbuilder versteht drei praktische Auftragsklassen:
+
+~~~text
+Trinity, baue einen neuen Agenten fuer ...
+Trinity, hol Dir diesen Agenten "/vollstaendiger/Pfad/zum/Agentenordner"
+Trinity, erweitere den Agenten ... um ...
+~~~
+
+Ein Import kopiert nicht blind Code in die produktive Laufzeit. Stattdessen wird
+unter `skills/staging/<skill-id>/` ein Staging-Skill erzeugt:
+
+- `manifest.json` mit Herkunft, Rechten, Freigaben und erkannten Subagenten,
+- `source_snapshot/` mit relevanten Markdown-, JSON/YAML-, Python- und
+  Konfigurationsdateien,
+- `README_IMPORT.md` als Importbericht,
+- ein Platzhalter-`script.py`, das vor produktiver Aktivierung bremst,
+- ein Smoke-Test als Minimal-Quality-Gate.
+
+Subagenten werden als Unterordner erkannt, wenn dort typische Marker wie
+`README.md`, `agent.md`, `workflow.yaml` oder `script.py` liegen. Im
+Agentenkatalog erscheinen diese Subagenten in der Hinweis-Spalte des importierten
+Hauptagenten. Erst nach echten Tests und Freigabe wird daraus ein Personal- oder
+Shared-Agent.
+
 ## Terminal-Kontrolle
 
 ~~~bash

@@ -23,6 +23,9 @@ def _write_shared_skill(home, skill_id="research-helper"):
                 "status": "active",
                 "script": "script.py",
                 "risk_level": "medium",
+                "parent_agent": "haupt-agent",
+                "subagents": ["sub-a", "sub-b"],
+                "source_agent_path": "/tmp/source-agent",
             }
         ),
         encoding="utf-8",
@@ -55,6 +58,9 @@ def test_catalog_includes_trinity_agent_builder_managed_and_legacy_agents(tmp_pa
     assert by_id["trinity-core"].quality_status == "stable"
     assert by_id["agent-builder"].runtime_status == "missing"
     assert by_id["research-helper"].allowed_tools == ["web", "filesystem"]
+    assert by_id["research-helper"].parent_agent == "haupt-agent"
+    assert by_id["research-helper"].subagents == ["sub-a", "sub-b"]
+    assert by_id["research-helper"].source_agent_path == "/tmp/source-agent"
     assert by_id["legacy-codex-agent"].legacy is True
     assert "codex" in default_harnesses_for_agent("legacy-codex-agent")
     assert default_harnesses_for_agent("unknown") == ["trinity"]

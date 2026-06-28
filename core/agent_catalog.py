@@ -38,6 +38,9 @@ class AgentCatalogRecord:
     errors: list[str] = field(default_factory=list)
     legacy: bool = False
     synthetic: bool = False
+    parent_agent: str = ""
+    subagents: list[str] = field(default_factory=list)
+    source_agent_path: str = ""
 
     @property
     def tier_order(self) -> int:
@@ -195,6 +198,9 @@ def _record_from_skill(record: SkillRecord, overrides: dict, stats: dict) -> Age
             valid=record.valid,
             errors=list(record.errors),
             legacy=record.legacy,
+            parent_agent=str(record.manifest.raw.get("parent_agent") or ""),
+            subagents=_string_list(record.manifest.raw.get("subagents")),
+            source_agent_path=str(record.manifest.raw.get("source_agent_path") or ""),
             **stats.get(agent_id, {}),
         ),
         overrides,

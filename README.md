@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.15.3:** Desktop-Settings erhalten schnelle Mikrofon-/Lautsprecher-Toggles gegen Selbstmithören; der Agentenbuilder kann vorhandene Agentenordner/Uebersichtsdateien sicher als Staging-Agent importieren und erkennt Erstellen-, Aendern- und Erweiterungsauftraege per Zuruf.
 > - **v0.15.2:** Vollstaendiger Agentenkatalog in den Einstellungen: Trinity, Agentenbuilder, Shared/Personal/Staging- und Legacy-Agenten mit Reifegrad, Rechten, Freigaben, Lauf-/Parallelitaetslimits sowie Trinity als sichtbares Harness in der Ausfuehrungsmatrix.
 > - **v0.15.1:** Gemeinsame Harness-Einstellungen fuer Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung sowie update-sicherer Sicherung von TrinityRuntime.
 > - **v0.15.0:** MainHub-/Control-Plane-Fundament mit getrenntem lokalem TrinityRuntime-Ordner und synchronisiertem TrinityVault, Onboarding fuer Cloud-Vault/Runtime-Pfade, Artifact-Index, Builder-Harness und generischem Pi-CLI-Agenten.
@@ -497,6 +498,22 @@ eingesetzt.
 Beispiel:
 
 > „Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.“
+
+### Agenten erstellen, importieren oder erweitern
+
+Der Agentenbuilder reagiert auf klare Formulierungen und arbeitet immer
+freigabeorientiert:
+
+> „Trinity, baue einen neuen Agenten fuer die DCM-Auswertung.“
+
+> „Trinity, hol Dir diesen Agenten `/vollstaendiger/Pfad/zum/DCM-Agenten`.“
+
+> „Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.“
+
+Bei Imports legt Trinity zuerst einen Staging-Skill unter `skills/staging/` an,
+kopiert relevante Markdown-/JSON-/YAML-/Python-Dateien als Snapshot, erkennt
+Subagenten aus Unterordnern und schreibt einen Importbericht. Produktiv wird der
+Agent erst nach Tests und Freigabe.
 
 ---
 

@@ -528,11 +528,24 @@ class SettingsWindow(QMainWindow):
         header.setFont(QFont("", 18, QFont.Bold))
         header_row.addWidget(header)
         header_row.addStretch()
+        self.settings_mic_button = QPushButton()
+        self.settings_mic_button.setToolTip(
+            "Desktop-Zuhören sofort pausieren oder wieder aktivieren"
+        )
+        self.settings_mic_button.clicked.connect(self._toggle_settings_microphone)
+        header_row.addWidget(self.settings_mic_button)
+        self.settings_tts_button = QPushButton()
+        self.settings_tts_button.setToolTip(
+            "Desktop-Sprachausgabe sofort pausieren oder wieder aktivieren"
+        )
+        self.settings_tts_button.clicked.connect(self._toggle_settings_tts)
+        header_row.addWidget(self.settings_tts_button)
         if self.embedded:
             header_back = QPushButton("Zurück zum Chat")
             header_back.clicked.connect(self._return_to_chat)
             header_row.addWidget(header_back)
         main_layout.addLayout(header_row)
+        self._sync_settings_runtime_buttons()
         
         # Tabs
         tabs = QTabWidget()
@@ -569,6 +582,42 @@ class SettingsWindow(QMainWindow):
         btn_layout.addStretch()
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
+
+    def _settings_runtime_values(self):
+        system = self.config.setdefault("system", {})
+        return {
+            "microphone_enabled": bool(system.get("microphone_enabled", True)),
+            "tts_enabled": bool(system.get("tts_enabled", True)),
+        }
+
+    def _sync_settings_runtime_buttons(self):
+        if not hasattr(self, "settings_mic_button"):
+            return
+        values = self._settings_runtime_values()
+        microphone_enabled = values["microphone_enabled"]
+        tts_enabled = values["tts_enabled"]
+        self.settings_mic_button.setText(
+            "🎙 Hört zu" if microphone_enabled else "🔇 Hört nicht zu"
+        )
+        self.settings_tts_button.setText(
+            "🔊 Spricht" if tts_enabled else "🔈 Spricht nicht"
+        )
+
+    def _save_runtime_toggle(self, updates):
+        system = self.config.setdefault("system", {})
+        system.update(updates)
+        save_config(self.config_path, self.config)
+        self._sync_settings_runtime_buttons()
+
+    def _toggle_settings_microphone(self):
+        values = self._settings_runtime_values()
+        self._save_runtime_toggle(
+            {"microphone_enabled": not values["microphone_enabled"]}
+        )
+
+    def _toggle_settings_tts(self):
+        values = self._settings_runtime_values()
+        self._save_runtime_toggle({"tts_enabled": not values["tts_enabled"]})
 
     def _create_agent_ecosystem_tab(self):
         widget = QWidget()
@@ -689,6 +738,12 @@ class SettingsWindow(QMainWindow):
                 notes.append("synthetisch")
             if record.legacy:
                 notes.append("Legacy")
+            if record.parent_agent:
+                notes.append(f"Parent: {record.parent_agent}")
+            if record.subagents:
+                notes.append("Subagenten: " + ", ".join(record.subagents))
+            if record.source_agent_path:
+                notes.append(f"Quelle: {record.source_agent_path}")
             if not record.valid:
                 notes.append("ungueltig")
             notes.extend(record.errors)

@@ -158,6 +158,12 @@ Einstellungen fuer LLM, Persona, Sprache, TTS, Telegram und Betriebsmodus werden
 bei neuen Anfragen neu eingelesen. Ein Neustart ist nur fuer eine geaenderte
 Oberflaechenkombination oder die Companion Bridge erforderlich.
 
+Seit v0.15.3 haben ClassicUI und Einstellungsfenster zusaetzlich schnelle
+Desktop-Schalter fuer **Zuhoeren** und **Sprechen**. Damit kann der Mac oder
+Windows-PC sofort stumm geschaltet werden, wenn parallel iPad/iPhone, Telegram
+oder ein anderes Trinity-Frontend aktiv ist. Das verhindert, dass Trinity ihre
+eigene Sprachausgabe wieder als neuen Auftrag hoert.
+
 ## 5. Betriebsmodi und Einsatzstufen
 
 ### Lecture-Modus: Vorlesung und Praesentation
@@ -289,6 +295,20 @@ strukturiert Anforderung, Plan, Staging-Bau, Tests, Quality Gates und den
 Freigabeschritt. Erst wenn Tests und Freigabe stimmen, wird ein Agent aus
 `skills/staging/` nach `skills/personal/` oder spaeter in Shared Skills
 uebernommen.
+
+Typische Auftraege sind:
+
+~~~text
+Trinity, baue einen neuen Agenten fuer die DCM-Auswertung.
+Trinity, hol Dir diesen Agenten "/vollstaendiger/Pfad/zum/DCM-Agenten".
+Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.
+~~~
+
+Ein Import ist absichtlich nur ein sicherer Staging-Schritt. Trinity kopiert die
+relevanten Dateien in einen Snapshot, erkennt moegliche Subagenten aus
+Unterordnern, schreibt einen Importbericht und traegt den Agenten im Katalog als
+Staging ein. Produktiv wird er erst, wenn Tests, Rechte, Freigaben und Harness-
+Zuordnung sauber geprueft sind.
 
 ### Codex einrichten
 
@@ -485,6 +505,7 @@ und /graph. Die Daten liegen lokal in memory/trinity_memory.sqlite3.
 | Code-Agent kann nicht schreiben | Codex-Sandbox pruefen; bei OpenCode die projektlokale opencode.json und den konkreten edit-Pfad pruefen. |
 | Companion verbindet nicht | Tailscale-IP, Bridge-Port, Bearer-Token und lokale Firewall pruefen; Bridge nach Einstellungswechsel neu starten. |
 | Heartbeat erzeugt Last | Intervall vergroessern oder Heartbeat/Bubbles deaktivieren. |
+| Trinity hoert sich selbst | Im Desktop-Fenster Mikrofon/Zuhören oder Lautsprecher/Sprechen pausieren, wenn iPad/iPhone daneben testweise aktiv ist. |
 
 Fuer den ersten Fehlerbericht immer diese Angaben sammeln: Betriebssystem,
 Trinity-Version, gewaehlte Oberflaeche, Betriebsmodus, die sichtbare Fehlermeldung

@@ -9,7 +9,11 @@
     "agent builder",
     "neuen agenten",
     "baue einen agenten",
-    "erstelle einen agenten"
+    "erstelle einen agenten",
+    "importiere agenten",
+    "hol dir diesen agenten",
+    "agenten ändern",
+    "agenten erweitern"
   ],
   "allowed_tools": [
     "job_manager",
