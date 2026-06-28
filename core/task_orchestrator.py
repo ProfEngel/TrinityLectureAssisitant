@@ -150,7 +150,13 @@ class TaskOrchestrator:
         if decision is None or not decision.job:
             return
         job = self.jobs.get(decision.job["job_id"])
-        if job["status"] in {"WAITING_FOR_APPROVAL", "CANCELLED"}:
+        if job["status"] in {
+            "WAITING_FOR_APPROVAL",
+            "CANCELLED",
+            "SUCCEEDED",
+            "FAILED",
+            "NEEDS_ESCALATION",
+        }:
             return
         steps = job["steps"]
         if len(steps) > 1:
@@ -200,14 +206,22 @@ class TaskOrchestrator:
     @staticmethod
     def _route_for(text: str) -> str:
         normalized = text.casefold()
+        if (
+            "agent forge" in normalized
+            or "neuen agent" in normalized
+            or "agentenbuilder" in normalized
+            or re.search(r"\b(?:baue|erstelle|entwickle)\s+(?:einen\s+)?agenten\b", normalized)
+            or re.search(r"\b(?:importiere|importier|uebernimm|übernimm|hol(?:e)?\s+dir)\s+(?:diesen\s+|den\s+|einen\s+)?agenten\b", normalized)
+            or re.search(r"\bagenten?\s+(?:aendern|ändern|erweitern|verbessern|umbauen)\b", normalized)
+            or re.search(r"\b(?:aendere|ändere|erweitere|verbessere)\s+(?:den\s+|einen\s+)?agenten\b", normalized)
+        ):
+            return "agent_forge"
         if re.search(r"\b(open[- ]?code|opencode)\b", normalized):
             return "opencode"
         if re.search(r"\b(codex|kodeks)\b", normalized):
             return "codex"
         if re.search(r"\b(?:nutze|starte|frage|verwende)\s+pi\b|\bpi[- ]agent\b", normalized):
             return "pi"
-        if "agent forge" in normalized or "neuen agent" in normalized:
-            return "agent_forge"
         return "local"
 
     @staticmethod

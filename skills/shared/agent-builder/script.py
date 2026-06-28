@@ -1,9 +1,12 @@
 """Shared Agentenbuilder skill for Trinity's controlled agent forge."""
 
 import html
+import importlib.util
 import json
+import py_compile
 import re
 import shutil
+import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -60,13 +63,13 @@ def execute(query: str, context=None) -> dict:
     title = _short_title(query)
     action = _classify_action(query)
 
-    import_result = None
+    staging_result = None
     if action == "import":
         source_path = _source_path_from_context(query, context)
         if source_path and source_path.exists():
-            import_result = _stage_agent_import(source_path, query, job_id)
+            staging_result = _stage_agent_import(source_path, query, job_id)
         else:
-            import_result = {
+            staging_result = {
                 "ok": False,
                 "message": (
                     "Ich brauche fuer den Import einen lokalen Agentenordner "
@@ -78,18 +81,20 @@ def execute(query: str, context=None) -> dict:
                 "skill_id": "",
                 "subagents": [],
             }
+    else:
+        staging_result = _stage_agent_request(action, query, job_id)
 
-    message = _direct_message(action, import_result)
-    if job_id:
-        message += f" Der Builder-Auftrag laeuft unter Job {job_id}."
+    builder_result = _run_builder_loop(query, context, action, staging_result)
+    message = _direct_message(action, staging_result, builder_result)
 
     html_payload = _html_payload(
         title=title,
         query=query,
-        job_id=job_id,
+        job_id=(builder_result or {}).get("job_id") or job_id,
         route=route,
         action=action,
-        import_result=import_result,
+        import_result=staging_result,
+        builder_result=builder_result,
     )
     return {
         "direct_answer": message,
@@ -115,32 +120,40 @@ def _classify_action(query: str) -> str:
     return "create"
 
 
-def _direct_message(action: str, import_result) -> str:
+def _direct_message(action: str, import_result, builder_result=None) -> str:
+    job_id = (builder_result or {}).get("job_id", "")
+    status = (builder_result or {}).get("status", "")
+    job_suffix = f" Builder-Job: {job_id} ({status})." if job_id else ""
     if action == "import" and import_result:
         if import_result.get("ok"):
             return (
-                "Ich habe den Agentenimport als Staging-Skill vorbereitet. "
-                f"Skill-ID: {import_result['skill_id']}. "
-                "Bitte pruefe Importbericht, Tests und Freigabe, bevor der Agent "
-                "produktiver Personal- oder Shared-Agent wird."
+                "Ich habe den Agentenimport als Staging-Skill vorbereitet und "
+                f"die Quality-Gates im Builder-Loop gestartet. Skill-ID: {import_result['skill_id']}."
+                f"{job_suffix} Produktiv wird der Agent erst nach Deiner Freigabe."
             )
         return "Ich habe den Agentenimport vorbereitet, brauche aber noch eine eindeutige Quelle."
     if action == "edit":
         return (
-            "Ich habe den Agentenbuilder fuer eine Aenderung oder Erweiterung aktiviert. "
-            "Der sichere Weg ist: bestehenden Agenten identifizieren, Zielverhalten "
-            "beschreiben, Tests ergaenzen, Staging-Aenderung bauen und erst nach "
-            "Freigabe produktiv ersetzen."
+            "Ich habe fuer die Aenderung oder Erweiterung einen Staging-Entwurf "
+            f"angelegt und den Builder-Loop gestartet.{job_suffix} Nach Tests und "
+            "Freigabe kann daraus die produktive Agentenversion werden."
         )
     return (
-        "Ich habe den Agentenbuilder aktiviert. "
-        "Der naechste sichere Schritt ist: Anforderungen klaeren, Plan erstellen, "
-        "Staging-Agent bauen, Tests/Quality-Gates laufen lassen und erst nach Deiner "
-        "Freigabe produktiv registrieren."
+        "Ich habe den Agentenbuilder aktiviert, einen Staging-Entwurf angelegt "
+        f"und die Quality-Gates vorbereitet.{job_suffix} Produktive Aktivierung "
+        "passiert erst nach Deiner Freigabe."
     )
 
 
-def _html_payload(title: str, query: str, job_id: str, route: str, action: str, import_result=None) -> str:
+def _html_payload(
+    title: str,
+    query: str,
+    job_id: str,
+    route: str,
+    action: str,
+    import_result=None,
+    builder_result=None,
+) -> str:
     rows = _plan_rows(action, import_result)
     items = "".join(
         "<li><strong>{step}. {name}</strong><br><span>{desc}</span></li>".format(
@@ -156,6 +169,7 @@ def _html_payload(title: str, query: str, job_id: str, route: str, action: str, 
         else "<p><strong>Job:</strong> noch kein persistenter Job uebergeben.</p>"
     )
     import_block = _import_block(import_result)
+    builder_block = _builder_block(builder_result)
     return (
         "<section style='font-family: system-ui; padding: 20px; color: #e8f3ff; "
         "background: linear-gradient(135deg,#111827,#172554); border-radius: 16px;'>"
@@ -164,6 +178,7 @@ def _html_payload(title: str, query: str, job_id: str, route: str, action: str, 
         f"<p><strong>Modus:</strong> {html.escape(action)}</p>"
         f"{job_line}"
         f"{import_block}"
+        f"{builder_block}"
         "<ol style='line-height:1.45;'>"
         f"{items}"
         "</ol>"
@@ -172,6 +187,61 @@ def _html_payload(title: str, query: str, job_id: str, route: str, action: str, 
         f"<details><summary>Originalauftrag</summary><pre style='white-space:pre-wrap'>{html.escape(str(query or ''))}</pre></details>"
         "</section>"
     )
+
+
+def _stage_agent_request(action: str, query: str, job_id: str) -> dict:
+    title = _title_from_request(query, action)
+    skill_id = _unique_skill_id(
+        _repo_root() / "skills" / "staging",
+        f"{action}-" + _slug(title),
+    )
+    target = _repo_root() / "skills" / "staging" / skill_id
+    tests_dir = target / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "id": skill_id,
+        "name": f"{'Aenderung' if action == 'edit' else 'Entwurf'} {title}",
+        "version": "0.1.0",
+        "tier": "staging",
+        "description": f"Agentenbuilder-Staging fuer Auftrag: {_short_title(query)}",
+        "triggers": [_slug(title).replace("-", " "), title],
+        "allowed_tools": ["filesystem", "tests"],
+        "allowed_paths": ["skills/staging", "TrinityRuntime/jobs"],
+        "requires_approval": ["activate_skill"],
+        "tests": ["tests/test_builder_placeholder.py"],
+        "status": "staging",
+        "script": "script.py",
+        "risk_level": "medium",
+        "source": f"agent-builder-{action}",
+        "source_agent_path": "",
+        "parent_agent": _parent_agent_from_query(query) if action == "edit" else "",
+        "subagents": [],
+        "job_id": job_id,
+    }
+    (target / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (target / "script.py").write_text(_placeholder_script(title), encoding="utf-8")
+    (tests_dir / "test_builder_placeholder.py").write_text(
+        "def test_builder_placeholder_manifest_exists():\n"
+        "    from pathlib import Path\n"
+        "    assert (Path(__file__).resolve().parents[1] / 'manifest.json').is_file()\n",
+        encoding="utf-8",
+    )
+    (target / "README_BUILDER.md").write_text(
+        _builder_readme(title, action, query),
+        encoding="utf-8",
+    )
+    return {
+        "ok": True,
+        "skill_id": skill_id,
+        "staging_path": str(target),
+        "source_path": "",
+        "copied_files": [],
+        "subagents": [],
+        "action": action,
+    }
 
 
 def _plan_rows(action: str, import_result=None):
@@ -198,6 +268,486 @@ def _plan_rows(action: str, import_result=None):
         ("4", "Validieren", "Tests ausfuehren, Ergebnis pruefen, Rechte- und Freigabecheck."),
         ("5", "Freigabe & Release", "Nach Deiner Freigabe nach personal/shared promoten und katalogisieren."),
     ]
+
+
+def _run_builder_loop(query: str, context: dict, action: str, staging_result: dict) -> Optional[dict]:
+    if not staging_result or not staging_result.get("ok"):
+        return None
+    jobs = _job_manager()
+    if jobs is None:
+        return None
+    job = _ensure_builder_job(jobs, query, context, action, staging_result)
+    job_id = job["job_id"]
+    step_ids = _append_builder_steps(jobs, job_id, action)
+    staging_path = Path(staging_result["staging_path"])
+    max_attempts = _max_attempts(context)
+    requested_harnesses = _requested_harnesses(query, context)
+    harness_reports = []
+    final_validation = {"ok": False, "errors": ["Validation wurde nicht ausgefuehrt."], "warnings": []}
+
+    try:
+        _mark_step(jobs, job_id, step_ids[0], "RUNNING", {"staging_path": str(staging_path)})
+        _write_builder_plan(staging_path, query, action, requested_harnesses, max_attempts)
+        _mark_step(
+            jobs,
+            job_id,
+            step_ids[0],
+            "SUCCEEDED",
+            {
+                "staging_path": str(staging_path),
+                "skill_id": staging_result.get("skill_id", ""),
+                "subagents": staging_result.get("subagents", []),
+            },
+        )
+
+        for attempt in range(1, max_attempts + 1):
+            _mark_step(jobs, job_id, step_ids[1], "RUNNING", {"attempt": attempt})
+            final_validation = _validate_staging_skill(staging_path)
+            _write_validation_report(staging_path, final_validation, attempt)
+            _mark_step(
+                jobs,
+                job_id,
+                step_ids[1],
+                "SUCCEEDED" if final_validation["ok"] else "FAILED",
+                {"attempt": attempt, **final_validation},
+            )
+            if final_validation["ok"]:
+                if requested_harnesses and not harness_reports:
+                    _mark_step(
+                        jobs,
+                        job_id,
+                        step_ids[2],
+                        "RUNNING",
+                        {
+                            "attempt": attempt,
+                            "harnesses": requested_harnesses,
+                            "mode": "validation_feedback",
+                        },
+                    )
+                    harness_reports = _run_requested_harnesses(
+                        query,
+                        context,
+                        action,
+                        staging_path,
+                        final_validation,
+                        requested_harnesses,
+                    )
+                    _write_harness_report(staging_path, harness_reports)
+                    _mark_step(
+                        jobs,
+                        job_id,
+                        step_ids[2],
+                        "SUCCEEDED" if harness_reports else "SKIPPED",
+                        {
+                            "attempt": attempt,
+                            "reports": harness_reports,
+                            "mode": "validation_feedback",
+                        },
+                    )
+                    final_validation = _validate_staging_skill(staging_path)
+                    _write_validation_report(staging_path, final_validation, attempt)
+                break
+
+            if not requested_harnesses:
+                break
+            _mark_step(
+                jobs,
+                job_id,
+                step_ids[2],
+                "RUNNING",
+                {"attempt": attempt, "harnesses": requested_harnesses},
+            )
+            harness_reports = _run_requested_harnesses(
+                query,
+                context,
+                action,
+                staging_path,
+                final_validation,
+                requested_harnesses,
+            )
+            _write_harness_report(staging_path, harness_reports)
+            if harness_reports:
+                _mark_step(
+                    jobs,
+                    job_id,
+                    step_ids[2],
+                    "SUCCEEDED",
+                    {"attempt": attempt, "reports": harness_reports},
+                )
+            else:
+                _mark_step(
+                    jobs,
+                    job_id,
+                    step_ids[2],
+                    "SKIPPED",
+                    {"attempt": attempt, "reason": "Kein externer Harness ausfuehrbar."},
+                )
+
+        if final_validation["ok"]:
+            if not harness_reports:
+                _mark_step(
+                    jobs,
+                    job_id,
+                    step_ids[2],
+                    "SKIPPED",
+                    {"reason": "Kein externer Harness angefordert oder ausfuehrbar."},
+                )
+            _mark_step(
+                jobs,
+                job_id,
+                step_ids[3],
+                "SUCCEEDED",
+                {
+                    "quality_gate": "Staging-Agent ist syntaktisch und strukturell pruefbar.",
+                    "promotion": "Freigabe activate_skill erforderlich.",
+                },
+            )
+            jobs.complete(
+                job_id,
+                "Agentenbuilder-Loop erfolgreich abgeschlossen; Staging wartet auf Freigabe.",
+                {
+                    "skill_id": staging_result.get("skill_id", ""),
+                    "staging_path": str(staging_path),
+                    "harness_reports": harness_reports,
+                },
+            )
+        else:
+            _mark_step(
+                jobs,
+                job_id,
+                step_ids[3],
+                "FAILED",
+                {
+                    "quality_gate": "Staging-Agent braucht Nacharbeit.",
+                    "errors": final_validation.get("errors", []),
+                },
+            )
+            jobs.fail(
+                job_id,
+                "Agentenbuilder-Loop braucht Nacharbeit; Staging wurde nicht freigegeben.",
+                {
+                    "skill_id": staging_result.get("skill_id", ""),
+                    "staging_path": str(staging_path),
+                    "validation": final_validation,
+                    "harness_reports": harness_reports,
+                },
+                escalation=True,
+            )
+    except Exception as exc:  # pragma: no cover - defensive job logging path
+        jobs.fail(job_id, f"Agentenbuilder-Loop ist fehlgeschlagen: {exc}", escalation=True)
+
+    final_job = jobs.get(job_id)
+    return {
+        "job_id": job_id,
+        "status": final_job["status"],
+        "validation": final_validation,
+        "harnesses": requested_harnesses,
+        "harness_reports": harness_reports,
+        "staging_path": str(staging_path),
+        "skill_id": staging_result.get("skill_id", ""),
+    }
+
+
+def _job_manager():
+    try:
+        from job_manager import JobManager
+    except ImportError:
+        core_path = _repo_root() / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path))
+        try:
+            from job_manager import JobManager
+        except ImportError:
+            return None
+    return JobManager(_repo_root())
+
+
+def _ensure_builder_job(jobs, query: str, context: dict, action: str, staging_result: dict) -> dict:
+    existing = _existing_job_id(context)
+    if existing:
+        try:
+            job = jobs.get(existing)
+            if job["status"] == "PENDING":
+                job = jobs.start(existing, "Agentenbuilder-Loop gestartet.")
+            return job
+        except Exception:
+            pass
+    return jobs.create_job(
+        f"Agentenbuilder: {_short_title(query)}",
+        source="agent-builder",
+        route="agent_forge",
+        risk_level="medium",
+        plan=[],
+        metadata={
+            "query": str(query or ""),
+            "action": action,
+            "skill_id": staging_result.get("skill_id", ""),
+            "staging_path": staging_result.get("staging_path", ""),
+        },
+    )
+
+
+def _existing_job_id(context: dict) -> str:
+    decision = context.get("task_decision") if isinstance(context, dict) else None
+    job = getattr(decision, "job", None) if decision is not None else None
+    return str((job or {}).get("job_id") or "")
+
+
+def _append_builder_steps(jobs, job_id: str, action: str) -> list[str]:
+    titles = [
+        "Staging-Artefakte und Builder-Plan vorbereiten",
+        "Lokale Quality-Gates pruefen",
+        "Optionales Harness-Feedback auswerten",
+        "Freigabe- und Promotion-Status festlegen",
+    ]
+    step_ids = []
+    for title in titles:
+        job = jobs.add_step(
+            job_id,
+            title,
+            quality_gate=True,
+            details={"builder_action": action},
+        )
+        step_ids.append(job["steps"][-1]["step_id"])
+    return step_ids
+
+
+def _mark_step(jobs, job_id: str, step_id: str, status: str, details: dict) -> None:
+    jobs.update_step(job_id, step_id, status, details)
+
+
+def _max_attempts(context: dict) -> int:
+    config = _config_from_context(context)
+    catalog = config.get("agent_catalog", {}).get("agents", {}) if isinstance(config, dict) else {}
+    builder = catalog.get("agent-builder", {}) if isinstance(catalog, dict) else {}
+    try:
+        value = int(builder.get("max_attempts", config.get("agent_catalog", {}).get("default_max_attempts", 2)))
+    except (TypeError, ValueError):
+        value = 2
+    return max(1, min(value, 5))
+
+
+def _config_from_context(context: dict) -> dict:
+    brain = context.get("brain") if isinstance(context, dict) else None
+    if brain is not None and getattr(brain, "config_path", ""):
+        try:
+            with open(brain.config_path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+                return data if isinstance(data, dict) else {}
+        except Exception:
+            pass
+    return {
+        "codex": context.get("codex_cfg") or {},
+        "opencode": context.get("opencode_cfg") or {},
+        "pi": context.get("pi_cfg") or {},
+    }
+
+
+def _requested_harnesses(query: str, context: dict) -> list[str]:
+    text = str(query or "").casefold()
+    requested = []
+    for harness_id, markers in {
+        "codex": ("codex", "kodeks"),
+        "pi": (" mit pi", "nutze pi", " pi "),
+        "opencode": ("opencode", "open code", "open-code"),
+    }.items():
+        if any(marker in f" {text} " for marker in markers):
+            requested.append(harness_id)
+
+    config = _config_from_context(context)
+    default_builder = str(config.get("control_plane", {}).get("builder_harness", "")).strip().casefold()
+    if default_builder in {"codex", "pi", "opencode"} and default_builder not in requested:
+        if _harness_role_enabled(config, default_builder, "agent_builder"):
+            requested.insert(0, default_builder)
+    return [item for item in requested if _harness_enabled(context, config, item)]
+
+
+def _harness_role_enabled(config: dict, harness_id: str, role: str) -> bool:
+    frameworks = config.get("harness_routing", {}).get("frameworks", {})
+    roles = frameworks.get(harness_id, {}).get("roles", {}) if isinstance(frameworks, dict) else {}
+    return bool(roles.get(role, False))
+
+
+def _harness_enabled(context: dict, config: dict, harness_id: str) -> bool:
+    section = config.get(harness_id, {})
+    if not isinstance(section, dict) or not section.get("enabled", False):
+        return False
+    if harness_id == "pi":
+        return True
+    projects = section.get("projects", {})
+    return isinstance(projects, dict) and bool(projects)
+
+
+def _run_requested_harnesses(
+    query: str,
+    context: dict,
+    action: str,
+    staging_path: Path,
+    validation: dict,
+    harnesses: list[str],
+) -> list[dict]:
+    reports = []
+    for harness_id in harnesses:
+        report = _run_harness(harness_id, query, context, action, staging_path, validation)
+        reports.append(report)
+    return reports
+
+
+def _run_harness(
+    harness_id: str,
+    query: str,
+    context: dict,
+    action: str,
+    staging_path: Path,
+    validation: dict,
+) -> dict:
+    module_path = _repo_root() / "agents" / f"{harness_id}_agent" / "script.py"
+    if not module_path.is_file():
+        return {"harness": harness_id, "status": "skipped", "message": "Agentenmodul nicht gefunden."}
+    module = _load_module(module_path, f"trinity_builder_{harness_id}")
+    if module is None:
+        return {"harness": harness_id, "status": "skipped", "message": "Agentenmodul konnte nicht geladen werden."}
+    harness_query = _harness_query(harness_id, query, action, staging_path, validation)
+    harness_context = {
+        **context,
+        "from_telegram": False,
+        "codex_cfg": context.get("codex_cfg") or _config_from_context(context).get("codex", {}),
+        "opencode_cfg": context.get("opencode_cfg") or _config_from_context(context).get("opencode", {}),
+        "pi_cfg": context.get("pi_cfg") or _config_from_context(context).get("pi", {}),
+    }
+    try:
+        result = module.execute(harness_query, harness_context)
+        return {
+            "harness": harness_id,
+            "status": "completed",
+            "message": str(result.get("direct_answer") or "")[:4000],
+        }
+    except Exception as exc:
+        return {"harness": harness_id, "status": "failed", "message": str(exc)}
+
+
+def _load_module(path: Path, module_name: str):
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except Exception:
+        return None
+
+
+def _harness_query(harness_id: str, query: str, action: str, staging_path: Path, validation: dict) -> str:
+    base = (
+        f"Agentenbuilder-Auftrag ({action}): {query}\n\n"
+        f"Staging-Pfad: {staging_path}\n"
+        f"Aktuelle lokale Validierung: {json.dumps(validation, ensure_ascii=False)}\n\n"
+        "Pruefe den Staging-Agenten, verbessere nur innerhalb dieses Staging-Pfads, "
+        "erstelle oder aktualisiere Tests und gib am Ende einen knappen Bericht mit "
+        "Plan, Aenderungen, Teststatus und offenen Blockern. Keine Promotion nach "
+        "personal/shared und keine externen Aktionen."
+    )
+    if harness_id == "codex":
+        return "Trinity, nutze Codex. " + base
+    if harness_id == "opencode":
+        return "Trinity, nutze OpenCode. " + base
+    return "Trinity, nutze Pi. " + base
+
+
+def _validate_staging_skill(staging_path: Path) -> dict:
+    errors = []
+    warnings = []
+    manifest_path = staging_path / "manifest.json"
+    script_path = staging_path / "script.py"
+    manifest = {}
+    if not manifest_path.is_file():
+        errors.append("manifest.json fehlt.")
+    else:
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"manifest.json ist ungueltig: {exc}")
+    if manifest:
+        for key in ("id", "name", "tier", "status", "script"):
+            if not manifest.get(key):
+                errors.append(f"manifest.json: Feld {key} fehlt.")
+        if manifest.get("tier") != "staging":
+            errors.append("manifest.json: tier muss staging sein.")
+        for test_path in manifest.get("tests") or []:
+            if not (staging_path / str(test_path)).is_file():
+                errors.append(f"Test fehlt: {test_path}")
+    if not script_path.is_file():
+        errors.append("script.py fehlt.")
+    else:
+        try:
+            py_compile.compile(str(script_path), doraise=True)
+        except py_compile.PyCompileError as exc:
+            errors.append(f"script.py kompiliert nicht: {exc.msg}")
+    if (staging_path / "source_snapshot").is_dir():
+        if not any((staging_path / "source_snapshot").rglob("*")):
+            warnings.append("source_snapshot ist leer.")
+    if not ((staging_path / "README_IMPORT.md").is_file() or (staging_path / "README_BUILDER.md").is_file()):
+        warnings.append("Import- oder Builder-README fehlt.")
+    return {"ok": not errors, "errors": errors, "warnings": warnings}
+
+
+def _write_builder_plan(staging_path: Path, query: str, action: str, harnesses: list[str], max_attempts: int) -> None:
+    lines = [
+        "# Builder Plan",
+        "",
+        f"- Aktion: {action}",
+        f"- Maximalversuche: {max_attempts}",
+        f"- Angefragte Harnesses: {', '.join(harnesses) if harnesses else 'keine'}",
+        "",
+        "## Quality Gates",
+        "",
+        "1. Staging-Manifest ist gueltiges JSON.",
+        "2. Skill bleibt im Tier `staging`.",
+        "3. Runner-Script kompiliert.",
+        "4. Manifest-Tests existieren.",
+        "5. Produktive Aktivierung bleibt gesperrt bis `activate_skill` freigegeben ist.",
+        "",
+        "## Originalauftrag",
+        "",
+        "```text",
+        str(query or ""),
+        "```",
+    ]
+    (staging_path / "BUILDER_PLAN.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_validation_report(staging_path: Path, validation: dict, attempt: int) -> None:
+    errors = "\n".join(f"- {item}" for item in validation.get("errors", [])) or "- Keine"
+    warnings = "\n".join(f"- {item}" for item in validation.get("warnings", [])) or "- Keine"
+    text = (
+        "# Validation Report\n\n"
+        f"- Versuch: {attempt}\n"
+        f"- Ergebnis: {'OK' if validation.get('ok') else 'NACHARBEIT'}\n\n"
+        "## Fehler\n\n"
+        f"{errors}\n\n"
+        "## Hinweise\n\n"
+        f"{warnings}\n"
+    )
+    (staging_path / "VALIDATION_REPORT.md").write_text(text, encoding="utf-8")
+
+
+def _write_harness_report(staging_path: Path, reports: list[dict]) -> None:
+    if not reports:
+        return
+    body = ["# Harness Report", ""]
+    for report in reports:
+        body.extend(
+            [
+                f"## {report.get('harness', 'Harness')}",
+                "",
+                f"- Status: {report.get('status', '')}",
+                "",
+                "```text",
+                str(report.get("message", "")),
+                "```",
+                "",
+            ]
+        )
+    (staging_path / "HARNESS_REPORT.md").write_text("\n".join(body), encoding="utf-8")
 
 
 def _source_path_from_context(query: str, context: dict) -> Optional[Path]:
@@ -294,6 +844,31 @@ def _agent_title_from_source(path: Path) -> str:
     if path.is_file() and path.stem.casefold() in {"readme", "overview", "uebersicht", "übersicht"}:
         return path.parent.name
     return path.stem if path.is_file() else path.name
+
+
+def _title_from_request(query: str, action: str) -> str:
+    text = " ".join(str(query or "").split())
+    patterns = [
+        r"agenten?\s+(?:fuer|für|zu|um)\s+(.+)$",
+        r"(?:baue|erstelle|entwickle|erweitere|verbessere)\s+(?:einen\s+|den\s+)?(.+?agent(?:en)?)\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            value = match.group(1).strip(" .,:;")
+            if value:
+                return value[:80]
+    return "Agentenaenderung" if action == "edit" else "Neuer Agent"
+
+
+def _parent_agent_from_query(query: str) -> str:
+    text = " ".join(str(query or "").split())
+    match = re.search(
+        r"(?:erweitere|verbessere|aendere|ändere)\s+(?:den\s+|die\s+|das\s+)?(.+?agent(?:en)?)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return match.group(1).strip(" .,:;") if match else ""
 
 
 def _slug(value: str) -> str:
@@ -396,6 +971,28 @@ def _import_readme(title: str, source_path: Path, copied: list[str], subagents: 
     )
 
 
+def _builder_readme(title: str, action: str, query: str) -> str:
+    return (
+        f"# Builder-Staging: {title}\n\n"
+        f"- Aktion: `{action}`\n"
+        f"- Erstellt am: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        "- Status: Staging, nicht produktiv aktiviert\n\n"
+        "## Ziel\n\n"
+        "Dieser Ordner ist ein kontrollierter Entwurf fuer einen neuen oder "
+        "zu erweiternden Trinity-Agenten. Der Builder-Loop darf hier planen, "
+        "Tests ergaenzen und die Struktur verbessern. Produktiv wird der Agent "
+        "erst nach expliziter Freigabe.\n\n"
+        "## Naechste Quality Gates\n\n"
+        "1. Agentenvertrag und Trigger praezisieren.\n"
+        "2. Mindestens einen reproduzierbaren Test ergaenzen.\n"
+        "3. Rechte, erlaubte Pfade und Freigaben pruefen.\n"
+        "4. Optional Codex/Pi/OpenCode-Harnessbericht einholen.\n"
+        "5. Erst nach Freigabe nach `skills/personal` oder `skills/shared` promoten.\n\n"
+        "## Originalauftrag\n\n"
+        f"```text\n{query}\n```\n"
+    )
+
+
 def _import_block(import_result) -> str:
     if not import_result:
         return ""
@@ -413,5 +1010,26 @@ def _import_block(import_result) -> str:
         f"<p><strong>Quelle:</strong> {html.escape(import_result['source_path'])}</p>"
         f"<p><strong>Ziel:</strong> {html.escape(import_result['staging_path'])}</p>"
         f"<p><strong>Subagenten:</strong> {html.escape(subagent_text)}</p>"
+        "</aside>"
+    )
+
+
+def _builder_block(builder_result) -> str:
+    if not builder_result:
+        return ""
+    validation = builder_result.get("validation") or {}
+    errors = validation.get("errors") or []
+    warnings = validation.get("warnings") or []
+    status_color = "#22c55e" if validation.get("ok") else "#f59e0b"
+    harnesses = builder_result.get("harnesses") or []
+    return (
+        "<aside style='border:1px solid #334155; padding:12px; border-radius:12px; margin:12px 0;'>"
+        f"<p><strong>Builder-Job:</strong> {html.escape(builder_result.get('job_id', ''))} "
+        f"<span style='color:{status_color}'>({html.escape(builder_result.get('status', ''))})</span></p>"
+        f"<p><strong>Quality-Gate:</strong> {'OK' if validation.get('ok') else 'Nacharbeit noetig'}</p>"
+        f"<p><strong>Harnesses:</strong> {html.escape(', '.join(harnesses) if harnesses else 'keine externen Harnesses gestartet')}</p>"
+        f"<p><strong>Fehler:</strong> {html.escape(str(len(errors)))} · "
+        f"<strong>Hinweise:</strong> {html.escape(str(len(warnings)))}</p>"
+        f"<p><strong>Staging:</strong> {html.escape(builder_result.get('staging_path', ''))}</p>"
         "</aside>"
     )

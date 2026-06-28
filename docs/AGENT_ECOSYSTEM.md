@@ -138,6 +138,7 @@ unter `skills/staging/<skill-id>/` ein Staging-Skill erzeugt:
 - `source_snapshot/` mit relevanten Markdown-, JSON/YAML-, Python- und
   Konfigurationsdateien,
 - `README_IMPORT.md` als Importbericht,
+- `BUILDER_PLAN.md` und `VALIDATION_REPORT.md` fuer den sichtbaren Builder-Loop,
 - ein Platzhalter-`script.py`, das vor produktiver Aktivierung bremst,
 - ein Smoke-Test als Minimal-Quality-Gate.
 
@@ -146,6 +147,14 @@ Subagenten werden als Unterordner erkannt, wenn dort typische Marker wie
 Agentenkatalog erscheinen diese Subagenten in der Hinweis-Spalte des importierten
 Hauptagenten. Erst nach echten Tests und Freigabe wird daraus ein Personal- oder
 Shared-Agent.
+
+Der Builder-Loop arbeitet jobbasiert. Er markiert die Staging-Erstellung,
+lokale Quality-Gates, optionales Harness-Feedback und die Freigabevorbereitung
+als einzelne Schritte im Trinity-Jobmanager. Wenn Codex, Pi oder OpenCode in den
+Harness-Einstellungen aktiviert sind und fuer die passende Rolle freigegeben
+wurden, kann Trinity sie fuer Feedback oder Nacharbeit am Staging-Ordner
+aufrufen. Der Loop darf dabei nicht automatisch nach `personal` oder `shared`
+promoten; dafuer bleibt `activate_skill` als Freigabe notwendig.
 
 ## Terminal-Kontrolle
 

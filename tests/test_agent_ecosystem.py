@@ -149,6 +149,17 @@ def test_orchestrator_routes_explicit_pi_but_not_math_pi(tmp_path):
     assert plain.requires_plan is False
 
 
+def test_orchestrator_routes_agent_builder_even_when_pi_is_mentioned(tmp_path):
+    orchestrator = TaskOrchestrator(tmp_path)
+
+    planned = orchestrator.prepare(
+        "Trinity, hol Dir diesen Agenten und mache ihn mit Pi lauffaehig."
+    )
+
+    assert planned.route == "agent_forge"
+    assert planned.requires_plan is True
+
+
 def test_policy_blocks_package_installation_and_requires_mail_approval():
     policy = PolicyEngine()
 

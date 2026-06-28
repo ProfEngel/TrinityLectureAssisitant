@@ -46,7 +46,7 @@ Chats, Issues oder Git-Repositories.
 ### macOS
 
 ~~~bash
-curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
+curl -sSL https://raw.githubusercontent.com/OWNER/REPO/main/install_mac.sh | bash
 trinity onboarding
 trinity doctor
 trinity start
@@ -58,7 +58,7 @@ In PowerShell:
 
 ~~~powershell
 Set-ExecutionPolicy -Scope Process Bypass
-irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
+irm https://raw.githubusercontent.com/OWNER/REPO/main/install_windows.ps1 | iex
 trinity onboarding
 trinity doctor
 trinity start
@@ -70,7 +70,7 @@ Weitere Hinweise stehen in [Deployment Windows 11](Deployment_Windows11.md).
 ### Linux / Ubuntu Server
 
 ~~~bash
-curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_linux.sh | bash
+curl -sSL https://raw.githubusercontent.com/OWNER/REPO/main/install_linux.sh | bash
 ~/.local/bin/trinity onboarding
 ~/.local/bin/trinity doctor
 ~/.local/bin/trinity server --host 127.0.0.1 --port 8765
@@ -109,12 +109,12 @@ anfassen. Fuer laufende Jobs und SQLite-Datenbanken ist das eine schlechte Idee.
 Der Vault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox oder
 einem anderen Sync-Ordner liegen.
 
-Beispiel fuer Mathias' Setup:
+Generisches Beispiel:
 
 ~~~bash
 trinity control-plane init \
-  --runtime-root /Users/matmax/Trinity_Assistant/TrinityRuntime \
-  --vault-root "/Users/matmax/Library/Mobile Documents/com~apple~CloudDocs/BrainVault/MainHub/TrinityVault"
+  --runtime-root "/lokaler/pfad/zu/TrinityRuntime" \
+  --vault-root "/cloud/pfad/zu/TrinityVault"
 ~~~
 
 Status pruefen:
@@ -310,6 +310,25 @@ Unterordnern, schreibt einen Importbericht und traegt den Agenten im Katalog als
 Staging ein. Produktiv wird er erst, wenn Tests, Rechte, Freigaben und Harness-
 Zuordnung sauber geprueft sind.
 
+Der Builder-Loop legt dazu einen sichtbaren Job an. Mit `trinity jobs list` und
+`trinity jobs show JOB_ID` siehst Du Plan, Quality-Gates, Validierungsstatus und
+gegebenenfalls Harness-Rueckmeldungen. Im Staging-Ordner entstehen
+`BUILDER_PLAN.md`, `VALIDATION_REPORT.md` und bei externem Feedback
+`HARNESS_REPORT.md`.
+
+Wenn Du Codex, Pi oder OpenCode im Auftrag nennst und die jeweilige Anbindung in
+Einstellungen -> Harnesses aktiv ist, kann Trinity diese Harnesses in den
+Builder-Loop einbeziehen. Beispiel:
+
+~~~text
+Trinity, hol Dir diesen Agenten "/pfad/zum/Agentenordner" und mache ihn mit Pi
+fuer Trinity lauffaehig.
+~~~
+
+Ohne aktivierte Harness-Anbindung macht Trinity trotzdem den lokalen
+Staging-/Quality-Gate-Teil und schreibt einen nachvollziehbaren Blocker in den
+Job.
+
 ### Codex einrichten
 
 Voraussetzung ist eine installierte und angemeldete Codex CLI. Den erkannten Pfad
@@ -403,8 +422,8 @@ OpenCode-Bloecken unter Einstellungen -> Harnesses:
 
 ~~~text
 Trinity = /Users/NAME/.../Trinity_Assistant
-Hochschulprojekte = /Users/NAME/.../Hochschulprojekte
-Erendria = /Users/NAME/.../Erendria
+Arbeitsprojekt = /Users/NAME/.../Arbeitsprojekt
+Schreibprojekt = /Users/NAME/.../Schreibprojekt
 Testprojekt = /Users/NAME/.../Testprojekt
 ~~~
 
@@ -447,14 +466,14 @@ Beispiele fuer Einstellungen:
 In Einstellungen -> Harnesses -> Pi:
 
 ~~~text
-Programm: /Users/NAME/bin/pi-wrapper
+Programm: /pfad/zu/pi-wrapper
 Argumente: chat --stdin
 ~~~
 
 oder:
 
 ~~~text
-Programm: /Users/NAME/bin/pi-wrapper
+Programm: /pfad/zu/pi-wrapper
 Argumente: ask {prompt}
 ~~~
 

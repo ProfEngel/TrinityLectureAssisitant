@@ -24,12 +24,14 @@ def test_agent_builder_requires_builder_trigger():
     assert not skill.can_handle("Trinity, erklaere Spieltheorie")
 
 
-def test_agent_builder_returns_reviewable_payload():
+def test_agent_builder_returns_reviewable_payload(tmp_path, monkeypatch):
     skill = _load_agent_builder()
+    monkeypatch.setattr(skill, "_repo_root", lambda: tmp_path / "Trinity")
 
     result = skill.execute("Trinity, baue einen Agenten fuer Folienchecks")
 
-    assert result["direct_answer"].startswith("Ich habe den Agentenbuilder aktiviert.")
+    assert result["direct_answer"].startswith("Ich habe den Agentenbuilder aktiviert")
+    assert "Builder-Job" in result["direct_answer"]
     assert result["has_payload"] is True
     assert "Quality-Gates" in result["html_payload"]
     assert "Freigabe" in result["html_payload"]
@@ -61,3 +63,26 @@ def test_agent_builder_imports_existing_agent_as_staging_skill(tmp_path, monkeyp
     assert manifest["subagents"] == ["SubagentRecherche"]
     assert (created[0] / "source_snapshot" / "Agenten-Uebersicht.md").is_file()
     assert (created[0] / "README_IMPORT.md").is_file()
+    assert (created[0] / "BUILDER_PLAN.md").is_file()
+    assert (created[0] / "VALIDATION_REPORT.md").is_file()
+    assert "Builder-Job" in result["direct_answer"]
+
+
+def test_agent_builder_edit_creates_staging_request_with_parent(tmp_path, monkeypatch):
+    skill = _load_agent_builder()
+    repo = tmp_path / "Trinity"
+    monkeypatch.setattr(skill, "_repo_root", lambda: repo)
+
+    result = skill.execute("Trinity, erweitere den Deep Research Agent um Quellenbewertung")
+
+    staging_root = repo / "skills" / "staging"
+    created = list(staging_root.iterdir())
+    assert len(created) == 1
+    manifest = json.loads((created[0] / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["tier"] == "staging"
+    assert manifest["source"] == "agent-builder-edit"
+    assert manifest["parent_agent"] == "Deep Research Agent"
+    assert (created[0] / "README_BUILDER.md").is_file()
+    assert (created[0] / "BUILDER_PLAN.md").is_file()
+    assert (created[0] / "VALIDATION_REPORT.md").is_file()
+    assert "Builder-Job" in result["direct_answer"]
