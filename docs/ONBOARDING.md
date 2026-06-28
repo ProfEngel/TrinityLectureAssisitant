@@ -241,13 +241,20 @@ Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegeben
 Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
 Rechte des jeweiligen Projekts gebunden.
 
-Seit v0.15.1 liegen Codex, Pi und OpenCode gemeinsam unter
+Seit v0.15.2 liegen Trinity, Codex, Pi und OpenCode gemeinsam unter
 Einstellungen -> Harnesses. Dort hat jedes Framework dieselben Rollen:
 Agentenbuilder, harte komplexe Faelle und Ausfuehrung der Agenten. Darunter
 steht eine Agenten-Matrix, in der pro Trinity-Agent ausgewaehlt werden kann,
-welches Harness-Framework ihn ausfuehren darf. So bleibt Codex/OpenCode/Pi
-heute sauber getrennt und spaeter lassen sich weitere Harnesses wie Claude Code
-ergaenzen.
+welches Harness-Framework ihn ausfuehren darf. Trinity ist dort bewusst
+sichtbar: Die Standard-Agenten, Memory, Payloads und die Control Plane laufen
+zunaechst ueber Trinity selbst. Codex/OpenCode/Pi werden nur fuer passende
+Agenten zusaetzlich angehakt.
+
+Unter Einstellungen -> Agenten steht der eigentliche Agentenkatalog. Er zeigt
+Trinity, den Agentenbuilder, Shared/Personal/Staging-Skills und Legacy-Agenten
+mit Reifegrad, Runtime-Status, erlaubten Tools/Rechten, Pfaden, Freigaben,
+maximalen Wiederholungen, parallelen Laeufen und Jobzahlen. Nach Tests kannst Du
+einen Agenten dort z.B. von "Nicht erprobt" auf "Erprobt" oder "Stabil" setzen.
 
 ### Gemeinsame Sicherheitsgrundsaetze
 
@@ -265,6 +272,23 @@ ergaenzen.
    Bestaetigung.
 5. Projektregeln sind entscheidend: Trinity kann ein Projekt mit absichtlich
    weitreichenden Shell-/Netzwerkrechten nicht automatisch unschaedlich machen.
+6. Neue Agenten zuerst im Katalog pruefen: Reifegrad, erlaubte Pfade,
+   Freigaben, maximale Laeufe und Harness-Haekchen sollten zum Einsatzzweck
+   passen.
+
+### Agentenbuilder nutzen
+
+Der Agentenbuilder ist ein eigener Shared Skill und steht im Agentenkatalog.
+Ein sicherer Startauftrag ist:
+
+> Trinity, aktiviere den Agentenbuilder. Ich moechte einen Agenten planen, der
+> PDF-Folien auf fehlende Quellen prueft und nur einen Bericht schreibt.
+
+Trinity legt dabei keinen produktiven Agenten heimlich frei. Der Builder
+strukturiert Anforderung, Plan, Staging-Bau, Tests, Quality Gates und den
+Freigabeschritt. Erst wenn Tests und Freigabe stimmen, wird ein Agent aus
+`skills/staging/` nach `skills/personal/` oder spaeter in Shared Skills
+uebernommen.
 
 ### Codex einrichten
 

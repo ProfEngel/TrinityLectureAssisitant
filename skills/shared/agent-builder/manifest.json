@@ -1,0 +1,32 @@
+{
+  "id": "agent-builder",
+  "name": "Agentenbuilder",
+  "version": "0.1.0",
+  "tier": "shared",
+  "description": "Plant neue Trinity-Agenten, legt Quality-Gates sichtbar an und bereitet Staging-Freigaben vor.",
+  "triggers": [
+    "agentenbuilder",
+    "agent builder",
+    "neuen agenten",
+    "baue einen agenten",
+    "erstelle einen agenten"
+  ],
+  "allowed_tools": [
+    "job_manager",
+    "filesystem",
+    "tests",
+    "harness"
+  ],
+  "allowed_paths": [
+    "skills/staging",
+    "TrinityRuntime/jobs"
+  ],
+  "requires_approval": [
+    "activate_skill",
+    "write_code"
+  ],
+  "tests": [],
+  "status": "active",
+  "script": "script.py",
+  "risk_level": "medium"
+}

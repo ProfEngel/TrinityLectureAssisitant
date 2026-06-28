@@ -17,8 +17,8 @@ vNext-Phasen.
 | Approval Manager | implementiert | Lokale, zeitlich begrenzte Freigaben; Eltern-Freigaben koennen eng begrenzte Kind-Aktionen erlauben. |
 | Policy Engine | implementiert | Paketinstallation und unbekannte Systemaktionen sind standardmaessig blockiert; Versand, Loeschung, Upload, Publikation und Skill-Aktivierung verlangen Freigabe. |
 | Task Orchestrator | implementiert | Codex-, OpenCode-, Agent-Forge- und umfangreiche Auftraege bekommen vor dem Start einen Plan und Job. |
-| Harness-Routing | implementiert | Einstellungen -> Harnesses buendelt Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung plus Agenten-Matrix. |
-| Grafische Agentenkiste | implementiert | Einstellungen -> Agenten zeigt Tiers, Legacy-Skills, Staging und Konflikte. |
+| Harness-Routing | implementiert | Einstellungen -> Harnesses buendelt Trinity, Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung plus Agenten-Matrix. |
+| Grafischer Agentenkatalog | implementiert | Einstellungen -> Agenten zeigt Trinity, Agentenbuilder, Shared/Personal/Staging- und Legacy-Agenten samt Reifegrad, Runtime-Status, Rechten, Pfaden, Freigaben, Lauf-/Parallelitaetslimits und Jobzahlen. |
 | CLI | implementiert | trinity skills, trinity jobs und trinity approvals machen Status und Freigaben kontrollierbar. |
 
 ## Mehrere voneinander getrennte Projektordner
@@ -97,6 +97,29 @@ Kind-Freigaben sind fuer mehrschrittige Aufgaben vorgesehen: Eine explizite
 Eltern-Freigabe kann nur konkret benannte Folgeaktionen fuer denselben Job
 erlauben. Eine Freigabe fuer einen Mail-Entwurf ist also keine Freigabe fuer
 Loeschungen, Uploads oder andere Projekte.
+
+## Agentenkatalog und Harness-Matrix
+
+Seit v0.15.2 gibt es zwei bewusst getrennte Einstellungsbereiche:
+
+- **Einstellungen -> Agenten:** Der Katalog zeigt jeden bekannten Agenten. Dort
+  werden Reifegrad, erlaubte Tools/Rechte, erlaubte Pfade, explizite Freigaben,
+  maximale Wiederholungen und parallele Laeufe gepflegt. Ein noch nicht
+  erprobter Agent kann nach echten Tests auf "erprobt" oder "stabil" gesetzt
+  werden.
+- **Einstellungen -> Harnesses:** Die Matrix legt fest, welcher Ausfuehrer
+  welchen Agenten starten darf. Trinity ist sichtbar, weil die Standard-Agenten
+  und die Control Plane bei Trinity selbst liegen. Codex, Pi und OpenCode werden
+  nur dort angehakt, wo sie wirklich passende Worker sind.
+
+Neue Shared-/Personal-/Staging-Skills und vorhandene Legacy-Agenten tauchen
+automatisch in beiden Listen auf. Das verhindert Dupletten: Der Katalog verwaltet
+Status und Rechte, die Matrix verwaltet die technische Ausfuehrung.
+
+Der Agentenbuilder ist als Shared Skill vorhanden. Er ist absichtlich
+freigabeorientiert: Er formuliert Anforderung, Plan, Quality Gates, Staging-Bau,
+Validierung und Release-Schritt, aktiviert produktiven Code aber erst nach einer
+expliziten Freigabe.
 
 ## Terminal-Kontrolle
 

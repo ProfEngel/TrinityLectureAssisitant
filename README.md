@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.15.2:** Vollstaendiger Agentenkatalog in den Einstellungen: Trinity, Agentenbuilder, Shared/Personal/Staging- und Legacy-Agenten mit Reifegrad, Rechten, Freigaben, Lauf-/Parallelitaetslimits sowie Trinity als sichtbares Harness in der Ausfuehrungsmatrix.
 > - **v0.15.1:** Gemeinsame Harness-Einstellungen fuer Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung sowie update-sicherer Sicherung von TrinityRuntime.
 > - **v0.15.0:** MainHub-/Control-Plane-Fundament mit getrenntem lokalem TrinityRuntime-Ordner und synchronisiertem TrinityVault, Onboarding fuer Cloud-Vault/Runtime-Pfade, Artifact-Index, Builder-Harness und generischem Pi-CLI-Agenten.
 > - **v0.14.1:** Vollwertige WebUI-Einstellungen fuer LLM, Persona, Sprache, Oberflaechen, Agentenprojekte, Companion, Server und Profile; gesichert durch lokale, Token- oder Admin-Berechtigung.
@@ -49,7 +50,9 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
 > sichere Harness-Einstellungen und eine empfohlene Testreihenfolge.
 > Die technische Einordnung der neuen Agentenkiste steht im
-> **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Der neue
+> **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Dort ist auch beschrieben,
+> wie der neue Agentenkatalog Reifegrad, Rechte, Freigaben und Harness-Zuordnung
+> je Agent verwaltet. Der neue
 > MainHub-Unterbau fuer Trinity als harness-agnostisches Agenten-Betriebssystem
 > ist in **[Control Plane und MainHub](docs/CONTROL_PLANE_MAINHUB.md)**
 > dokumentiert; das Erstsetup fuer lokalen Runtime-Ordner und Cloud-Vault steht
@@ -436,6 +439,9 @@ Sandbox-Wahl, sicheren Testauftraegen und Grenzen steht im
 Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
 angemeldete Codex CLI uebergeben. Codex arbeitet dabei ausschliesslich in Projektordnern,
 die zuvor unter **Einstellungen -> Harnesses -> Codex** freigegeben wurden.
+Welche konkreten Trinity-Agenten Codex ausfuehren darf, wird in derselben
+Harness-Matrix gesetzt; Reifegrad, Rechte, Freigaben und Laufgrenzen stehen unter
+**Einstellungen -> Agenten**.
 
 Beispiel:
 

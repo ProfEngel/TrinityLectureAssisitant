@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
+from agent_catalog import build_agent_catalog
 from artifact_store import ArtifactStore
 from configuration import load_config
 from harness_adapters import BuilderHarnessAdapter, ScriptWorkflowAdapter
@@ -65,13 +67,16 @@ class TrinityControlPlane:
         }
 
     def export_agent_catalog(self) -> dict:
-        self.registry.reload()
+        records = build_agent_catalog(self.home, self.config)
+        summary = {"total": len(records)}
+        for record in records:
+            summary[record.tier] = summary.get(record.tier, 0) + 1
         catalog = {
-            "schema_version": 1,
+            "schema_version": 2,
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "source_home": str(self.home),
-            "summary": self.registry.summary(),
-            "agents": [record.summary() for record in self.registry.list()],
+            "summary": summary,
+            "agents": [asdict(record) for record in records],
         }
         self.agent_catalog_path.parent.mkdir(parents=True, exist_ok=True)
         self.agent_catalog_path.write_text(

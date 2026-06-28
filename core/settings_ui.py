@@ -20,8 +20,13 @@ from platform_adapters import (
     find_opencode_executable,
     find_pi_executable,
 )
+from agent_catalog import (
+    QUALITY_STATUSES,
+    build_agent_catalog,
+    default_harnesses_for_agent,
+    normalize_catalog_overrides,
+)
 from configuration import DEFAULT_CONFIG, load_config, save_config
-from skill_registry import SkillRegistry
 from trinity_paths import default_runtime_root, default_vault_root
 from ui_modes import resolve_ui_modes
 
@@ -272,9 +277,28 @@ class SettingsWindow(QMainWindow):
                         item = self.harness_agent_table.item(row, col)
                         if item and item.checkState() == Qt.Checked:
                             selected.append(harness_id)
-                    if selected:
-                        assignments[agent_id] = selected
+                    assignments[agent_id] = selected
             routing["agent_assignments"] = assignments
+
+        # Agent catalog metadata: maturity, rights and run limits
+        if hasattr(self, "agent_catalog_table"):
+            agents = {}
+            for row, agent_id in enumerate(getattr(self, "agent_catalog_agent_ids", [])):
+                quality_combo = self.agent_catalog_table.cellWidget(row, 3)
+                quality_status = (
+                    quality_combo.currentData()
+                    if isinstance(quality_combo, QComboBox)
+                    else "unverified"
+                )
+                agents[agent_id] = {
+                    "quality_status": quality_status,
+                    "allowed_tools": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 5)),
+                    "allowed_paths": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 6)),
+                    "requires_approval": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 7)),
+                    "max_attempts": self._table_int(self.agent_catalog_table, row, 8, 2),
+                    "parallel_runs": self._table_int(self.agent_catalog_table, row, 9, 1),
+                }
+            self.config.setdefault("agent_catalog", {})["agents"] = normalize_catalog_overrides(agents)
 
         # Control Plane / MainHub
         if "control_plane" not in self.config:
@@ -522,7 +546,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._scrollable_tab(self._create_harnesses_tab()), "🧭 Harnesses")
         tabs.addTab(self._scrollable_tab(self._create_mainhub_tab()), "🗂 MainHub")
-        tabs.addTab(self._create_agent_ecosystem_tab(), "🧰 Agenten")
+        tabs.addTab(self._scrollable_tab(self._create_agent_ecosystem_tab()), "🧰 Agenten")
         tabs.addTab(self._scrollable_tab(self._create_system_tab()), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
         tabs.addTab(self._create_user_tab(), "👤 User")
@@ -552,8 +576,9 @@ class SettingsWindow(QMainWindow):
         description = QLabel(
             "Die Agentenkiste trennt gepruefte Shared Skills, persoenliche Skills "
             "und noch nicht produktive Staging Skills. Staging wird erst nach "
-            "Tests und expliziter Freigabe aktiviert. Bestehende Trinity-Agenten "
-            "laufen weiter als Legacy-Skills."
+            "Tests und expliziter Freigabe aktiviert. Diese Liste wird aus der "
+            "Agenten-Registry und den Legacy-Agenten aufgebaut und wächst mit "
+            "jedem neuen Agenten automatisch mit."
         )
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -562,19 +587,43 @@ class SettingsWindow(QMainWindow):
         self.agent_ecosystem_summary.setWordWrap(True)
         layout.addWidget(self.agent_ecosystem_summary)
 
-        self.agent_ecosystem_details = QTextEdit()
-        self.agent_ecosystem_details.setReadOnly(True)
-        self.agent_ecosystem_details.setMinimumHeight(240)
-        layout.addWidget(self.agent_ecosystem_details)
+        self.agent_catalog_agent_ids = []
+        self.agent_catalog_table = QTableWidget(0, 12)
+        self.agent_catalog_table.setHorizontalHeaderLabels(
+            [
+                "Agent",
+                "Ebene",
+                "Runtime",
+                "Reifegrad",
+                "Quelle/Risiko",
+                "Tools/Rechte",
+                "Pfade",
+                "Freigaben",
+                "Max Läufe",
+                "Parallel",
+                "Jobs",
+                "Hinweise",
+            ]
+        )
+        self.agent_catalog_table.verticalHeader().setVisible(False)
+        self.agent_catalog_table.setMinimumHeight(420)
+        self.agent_catalog_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        for column in range(1, 12):
+            self.agent_catalog_table.horizontalHeader().setSectionResizeMode(
+                column,
+                QHeaderView.ResizeToContents,
+            )
+        layout.addWidget(self.agent_catalog_table)
 
         reload_button = QPushButton("Agentenkiste auf Datenträger prüfen")
         reload_button.clicked.connect(self._refresh_agent_ecosystem)
         layout.addWidget(reload_button)
 
         hint = QLabel(
-            "Terminal: trinity skills list | trinity jobs list | trinity approvals list. "
-            "Eine laufende Trinity-Instanz laedt neue produktive Skills erst bei "
-            "einem kontrollierten Skill-Reload oder Neustart."
+            "Reifegrad und Rechte sind bewusst manuell editierbar: Nicht erprobte "
+            "Agenten koennen nach Tests auf 'erprobt' oder 'stabil' gesetzt werden. "
+            "Produktive Freigaben bleiben trotzdem explizit und auditierbar. "
+            "Terminal: trinity skills list | trinity jobs list | trinity approvals list."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
@@ -585,23 +634,109 @@ class SettingsWindow(QMainWindow):
 
     def _refresh_agent_ecosystem(self):
         home = os.path.dirname(CORE_DIR)
-        registry = SkillRegistry(home)
-        summary = registry.summary()
+        records = build_agent_catalog(home, self.config)
+        counts = {}
+        for record in records:
+            counts[record.tier] = counts.get(record.tier, 0) + 1
         self.agent_ecosystem_summary.setText(
-            "Shared: {shared} | Personal: {personal} | Staging: {staging} | "
-            "Legacy: {legacy} | Aktiv: {active}".format(**summary)
-        )
-        rows = []
-        for record in registry.list():
-            state = "OK" if record.valid else "UNGÜLTIG"
-            suffix = "; ".join(record.errors)
-            rows.append(
-                f"{record.manifest.tier:8} {record.manifest.status:8} "
-                f"{record.manifest.skill_id} [{state}] {suffix}".rstrip()
+            "Agenten gesamt: {total} | Trinity: {trinity} | Shared: {shared} | "
+            "Personal: {personal} | Staging: {staging} | Legacy: {legacy}".format(
+                total=len(records),
+                trinity=counts.get("trinity", 0),
+                shared=counts.get("shared", 0),
+                personal=counts.get("personal", 0),
+                staging=counts.get("staging", 0),
+                legacy=counts.get("legacy", 0),
             )
-        if summary["conflicts"]:
-            rows.extend(["", "Trigger-Konflikte:", *summary["conflicts"]])
-        self.agent_ecosystem_details.setPlainText("\n".join(rows) or "Keine Skills gefunden.")
+        )
+        table = self.agent_catalog_table
+        table.setRowCount(len(records))
+        self.agent_catalog_agent_ids = []
+        for row, record in enumerate(records):
+            self.agent_catalog_agent_ids.append(record.agent_id)
+            self._set_readonly_cell(
+                table,
+                row,
+                0,
+                f"{record.name}\n{record.agent_id}",
+                record.description or record.path,
+            )
+            self._set_readonly_cell(table, row, 1, record.tier)
+            self._set_readonly_cell(table, row, 2, record.runtime_status)
+
+            quality_combo = QComboBox()
+            for status in QUALITY_STATUSES:
+                quality_combo.addItem(self._quality_label(status), status)
+            current_index = quality_combo.findData(record.quality_status)
+            quality_combo.setCurrentIndex(max(0, current_index))
+            table.setCellWidget(row, 3, quality_combo)
+
+            source_risk = f"{record.source}\nRisiko: {record.risk_level}"
+            self._set_readonly_cell(table, row, 4, source_risk)
+            table.setItem(row, 5, QTableWidgetItem(self._list_to_csv(record.allowed_tools)))
+            table.setItem(row, 6, QTableWidgetItem(self._list_to_csv(record.allowed_paths)))
+            table.setItem(row, 7, QTableWidgetItem(self._list_to_csv(record.requires_approval)))
+            table.setItem(row, 8, QTableWidgetItem(str(record.max_attempts)))
+            table.setItem(row, 9, QTableWidgetItem(str(record.parallel_runs)))
+            job_summary = (
+                f"gesamt {record.job_total}\n"
+                f"offen {record.job_open}\n"
+                f"Fehler {record.job_failed}"
+            )
+            self._set_readonly_cell(table, row, 10, job_summary)
+            notes = []
+            if record.synthetic:
+                notes.append("synthetisch")
+            if record.legacy:
+                notes.append("Legacy")
+            if not record.valid:
+                notes.append("ungueltig")
+            notes.extend(record.errors)
+            self._set_readonly_cell(table, row, 11, "\n".join(notes) or "OK")
+        table.resizeRowsToContents()
+
+    @staticmethod
+    def _quality_label(status):
+        labels = {
+            "unverified": "Nicht erprobt",
+            "testing": "Im Test",
+            "validated": "Erprobt",
+            "stable": "Stabil",
+            "deprecated": "Veraltet",
+        }
+        return labels.get(status, status)
+
+    @staticmethod
+    def _list_to_csv(values):
+        if not values:
+            return ""
+        return ", ".join(str(item).strip() for item in values if str(item).strip())
+
+    @staticmethod
+    def _csv_to_list(value):
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        return [item.strip() for item in str(value or "").split(",") if item.strip()]
+
+    @staticmethod
+    def _table_text(table, row, column):
+        item = table.item(row, column)
+        return item.text().strip() if item else ""
+
+    @staticmethod
+    def _table_int(table, row, column, default):
+        try:
+            return int(SettingsWindow._table_text(table, row, column))
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _set_readonly_cell(table, row, column, text, tooltip=""):
+        item = QTableWidgetItem(str(text or ""))
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        if tooltip:
+            item.setToolTip(str(tooltip))
+        table.setItem(row, column, item)
 
     @staticmethod
     def _scrollable_tab(content):
@@ -693,6 +828,7 @@ class SettingsWindow(QMainWindow):
         self.harness_role_checks = {}
         self.harness_agent_ids = []
 
+        layout.addWidget(self._create_trinity_harness_group())
         layout.addWidget(self._create_codex_harness_group())
         layout.addWidget(self._create_pi_harness_group())
         layout.addWidget(self._create_opencode_harness_group())
@@ -702,11 +838,12 @@ class SettingsWindow(QMainWindow):
 
     @staticmethod
     def _harness_ids():
-        return ["codex", "pi", "opencode"]
+        return ["trinity", "codex", "pi", "opencode"]
 
     @staticmethod
     def _harness_labels():
         return {
+            "trinity": "Trinity",
             "codex": "Codex",
             "pi": "Pi",
             "opencode": "OpenCode",
@@ -737,6 +874,27 @@ class SettingsWindow(QMainWindow):
             row_layout.addWidget(checkbox)
         row_layout.addStretch()
         form.addRow("Rollen:", row)
+
+    def _create_trinity_harness_group(self):
+        group = QGroupBox("Trinity")
+        form = QFormLayout()
+        status = QLabel(
+            "Trinity ist immer vorhanden und fuehrt die Standard-Agenten, "
+            "Routing, Memory, Payloads, UI-Events und lokale Orchestrierung aus."
+        )
+        status.setWordWrap(True)
+        status.setStyleSheet("color: #7ee787; font-size: 11px;")
+        form.addRow("Status:", status)
+        self._add_harness_roles(form, "trinity")
+        hint = QLabel(
+            "Trinity bleibt die Control Plane. Externe Harnesses wie Codex, Pi "
+            "oder OpenCode werden nur fuer passende Agenten und Rollen zugeschaltet."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        form.addRow("", hint)
+        group.setLayout(form)
+        return group
 
     def _create_codex_harness_group(self):
         group = QGroupBox("Codex")
@@ -951,10 +1109,10 @@ class SettingsWindow(QMainWindow):
         group = QGroupBox("Welche Agenten darf welches Framework ausfuehren?")
         layout = QVBoxLayout(group)
         hint = QLabel(
-            "Links stehen die bekannten Trinity-Agenten. Pro Zeile kann festgelegt "
-            "werden, ob Codex, Pi oder OpenCode diesen Agenten beziehungsweise "
-            "diese Agentenfamilie ausfuehren darf. Das ist die Vorbereitung fuer "
-            "spaetere Frameworks wie Claude Code."
+            "Links stehen alle bekannten Trinity-Agenten inklusive Trinity selbst, "
+            "Agentenbuilder, Shared/Personal/Staging Skills und Legacy-Agenten. "
+            "Pro Zeile wird festgelegt, ob Trinity, Codex, Pi oder OpenCode diesen "
+            "Agenten beziehungsweise diese Agentenfamilie ausfuehren darf."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -972,16 +1130,21 @@ class SettingsWindow(QMainWindow):
 
         self.harness_agent_ids = []
         for row, record in enumerate(records):
-            agent_id = record.manifest.skill_id
+            agent_id = record.agent_id
             self.harness_agent_ids.append(agent_id)
-            label = f"{record.manifest.name} ({agent_id})"
+            label = f"{record.name} ({agent_id}) · {record.tier}/{record.quality_status}"
             if record.legacy:
                 label += " · Legacy"
+            if record.synthetic:
+                label += " · Managed"
             item = QTableWidgetItem(label)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-            item.setToolTip(str(record.directory))
+            item.setToolTip(record.description or record.path)
             table.setItem(row, 0, item)
-            selected = set(assignments.get(agent_id, []))
+            if agent_id in assignments:
+                selected = set(assignments.get(agent_id, []))
+            else:
+                selected = set(default_harnesses_for_agent(agent_id))
             for col, harness_id in enumerate(harness_ids, start=1):
                 check_item = QTableWidgetItem()
                 check_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
@@ -994,11 +1157,7 @@ class SettingsWindow(QMainWindow):
 
     def _harness_agent_records(self):
         try:
-            registry = SkillRegistry(os.path.dirname(CORE_DIR))
-            return sorted(
-                registry.list(),
-                key=lambda record: (record.manifest.name.casefold(), record.manifest.skill_id),
-            )
+            return build_agent_catalog(os.path.dirname(CORE_DIR), self.config)
         except Exception as exc:
             print(f"Agentenliste fuer Harness-Matrix konnte nicht geladen werden: {exc}")
             return []
@@ -1010,6 +1169,15 @@ class SettingsWindow(QMainWindow):
         return "\n".join(f"{alias} = {path}" for alias, path in projects.items())
 
     def _test_harness_connection(self, harness_id):
+        if harness_id == "trinity":
+            QMessageBox.information(
+                self,
+                "Trinity aktiv",
+                "Trinity ist die integrierte Control Plane und muss nicht als "
+                "externes Programm getestet werden.",
+            )
+            return
+
         executable = self._current_harness_executable(harness_id)
         resolved = self._resolve_harness_executable(harness_id, executable)
         label = self._harness_labels().get(harness_id, harness_id)
@@ -1062,6 +1230,7 @@ class SettingsWindow(QMainWindow):
 
     def _current_harness_executable(self, harness_id):
         fields = {
+            "trinity": None,
             "codex": getattr(self, "codex_executable_edit", None),
             "pi": getattr(self, "pi_executable_edit", None),
             "opencode": getattr(self, "opencode_executable_edit", None),

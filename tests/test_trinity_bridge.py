@@ -94,6 +94,15 @@ def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
                     },
                     "agent_assignments": {"codex_agent": ["codex"]},
                 },
+                "agent_catalog": {
+                    "agents": {
+                        "agent-builder": {
+                            "quality_status": "validated",
+                            "allowed_tools": ["filesystem", "tests"],
+                            "max_attempts": 4,
+                        }
+                    }
+                },
             },
             "soul": "Meine Soul",
             "user": "Mein Profil",
@@ -110,6 +119,12 @@ def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
     assert result["config"]["harness_routing"]["agent_assignments"] == {
         "codex_agent": ["codex"]
     }
+    assert result["config"]["agent_catalog"]["agents"]["agent-builder"][
+        "quality_status"
+    ] == "validated"
+    assert result["config"]["agent_catalog"]["agents"]["agent-builder"][
+        "allowed_tools"
+    ] == ["filesystem", "tests"]
     assert result["files"] == {"soul": "Meine Soul", "user": "Mein Profil"}
 
 
@@ -118,12 +133,15 @@ def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path)
 
     result = bridge.test_harness({"harness": "codex", "executable": sys.executable})
     pi_result = bridge.test_harness({"harness": "pi", "executable": sys.executable})
+    trinity_result = bridge.test_harness({"harness": "trinity"})
 
     assert result["ok"] is True
     assert result["found"] is True
     assert result["path"] == sys.executable
     assert pi_result["ok"] is True
     assert pi_result["message"].startswith("Pi-Wrapper gefunden")
+    assert trinity_result["ok"] is True
+    assert trinity_result["message"].startswith("Trinity ist")
 
 
 def test_web_settings_are_local_or_administrator_only(tmp_path):

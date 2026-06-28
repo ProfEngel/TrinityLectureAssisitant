@@ -398,6 +398,7 @@ class TrinityBrain:
                         "pi_cfg": getattr(self, '_pi_cfg', {}),
                         "image_path": primary_image_path,
                         "attachments": attachments or [],
+                        "task_decision": task_decision,
                     })
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
@@ -430,6 +431,7 @@ class TrinityBrain:
                             "pi_cfg": getattr(self, '_pi_cfg', {}),
                             "image_path": primary_image_path,
                             "attachments": attachments or [],
+                            "task_decision": task_decision,
                         })
                         if result.get("has_payload"):
                             payload_path = os.path.join(os.path.dirname(__file__), "payload.html")

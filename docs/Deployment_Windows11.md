@@ -184,12 +184,16 @@ das konfigurierte Whisper-Modell herunter. Das kann mehrere Minuten dauern.
 ## Codex-Agent
 
 Voraussetzung ist eine installierte und angemeldete Codex CLI. Danach unter
-`Einstellungen > Codex`:
+`Einstellungen > Harnesses > Codex`:
 
 1. Codex-Aufträge aktivieren.
 2. Freigegebene Projekte als `Name = vollständiger Ordnerpfad` eintragen.
 3. Optional ein Standardprojekt festlegen.
 4. Für den Einstieg `workspace-write`, Netzwerk aus und ephemere Läufe verwenden.
+
+Unter `Einstellungen > Harnesses` legt die Agentenmatrix fest, welche
+Trinity-Agenten Codex ausfuehren darf. Unter `Einstellungen > Agenten` werden
+Reifegrad, Rechte, Freigaben, erlaubte Pfade und Laufgrenzen gepflegt.
 
 Der Trigger muss ausdrücklich genannt werden, beispielsweise:
 

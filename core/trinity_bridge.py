@@ -38,6 +38,7 @@ SETTINGS_SECTIONS = {
     "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
     "audio_routing", "telegram", "codex", "opencode", "pi", "comfyui",
     "companion", "server", "client", "control_plane", "harness_routing",
+    "agent_catalog",
 }
 
 
@@ -316,8 +317,16 @@ class TrinityBridge:
         if not isinstance(payload, dict):
             raise ValueError("Harness-Test erwartet ein Objekt.")
         harness_id = str(payload.get("harness") or "").strip().lower()
-        if harness_id not in {"codex", "pi", "opencode"}:
+        if harness_id not in {"trinity", "codex", "pi", "opencode"}:
             raise ValueError("Unbekanntes Harness.")
+
+        if harness_id == "trinity":
+            return {
+                "ok": True,
+                "harness": "trinity",
+                "found": True,
+                "message": "Trinity ist die integrierte Control Plane.",
+            }
 
         config = load_config(self.config_path)
         raw_executable = str(
@@ -326,7 +335,12 @@ class TrinityBridge:
             or harness_id
         ).strip()
         resolved = self._resolve_harness_executable(harness_id, raw_executable)
-        label = {"codex": "Codex", "pi": "Pi", "opencode": "OpenCode"}[harness_id]
+        label = {
+            "trinity": "Trinity",
+            "codex": "Codex",
+            "pi": "Pi",
+            "opencode": "OpenCode",
+        }[harness_id]
         if not resolved:
             return {
                 "ok": False,

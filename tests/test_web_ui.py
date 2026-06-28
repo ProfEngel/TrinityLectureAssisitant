@@ -5,10 +5,12 @@ def test_web_settings_group_harness_frameworks_together():
     html = render_web_ui()
 
     assert "Agenten-Frameworks" in html
-    assert "Rollen je Framework (JSON)" in html
+    assert "Rollen je Framework inkl. Trinity (JSON)" in html
     assert "Agenten-Ausfuehrung je Framework (JSON)" in html
+    assert "Agentenkatalog: Reifegrad, Rechte, Freigaben, Limits (JSON)" in html
     assert "addHarnessTestButtons" in html
     assert "'/harness/test'" in html
+    assert "['trinity','Trinity']" in html
     assert "title:'Codex'" not in html
     assert "title:'OpenCode'" not in html
     assert "title:'Pi'" not in html

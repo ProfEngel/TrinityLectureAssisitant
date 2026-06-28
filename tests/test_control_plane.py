@@ -60,8 +60,11 @@ def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
     assert result["adapters"]["builder"]["ok"] is True
 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    assert catalog["schema_version"] == 1
+    assert catalog["schema_version"] == 2
     assert "agents" in catalog
+    by_id = {agent["agent_id"]: agent for agent in catalog["agents"]}
+    assert by_id["trinity-core"]["quality_status"] == "stable"
+    assert "allowed_tools" in by_id["trinity-core"]
 
 
 def test_control_plane_registers_artifacts_in_vault(tmp_path):

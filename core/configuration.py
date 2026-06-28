@@ -136,8 +136,44 @@ def default_config(platform_name=None):
             "builder_harness": "codex",
             "catalog_include_legacy": True,
         },
+        "agent_catalog": {
+            "default_quality_status": "unverified",
+            "default_max_attempts": 2,
+            "default_parallel_runs": 1,
+            "agents": {
+                "trinity-core": {
+                    "quality_status": "stable",
+                    "allowed_tools": ["llm", "memory", "stt", "tts", "payloads"],
+                    "allowed_paths": ["core", "memory", "RAG", "TrinityRuntime"],
+                    "requires_approval": [
+                        "send_mail",
+                        "delete",
+                        "external_upload",
+                        "publish",
+                    ],
+                    "max_attempts": 1,
+                    "parallel_runs": 1,
+                },
+                "agent-builder": {
+                    "quality_status": "testing",
+                    "allowed_tools": ["filesystem", "tests", "harness", "job_manager"],
+                    "allowed_paths": ["skills/staging", "TrinityRuntime/jobs"],
+                    "requires_approval": ["activate_skill", "write_code"],
+                    "max_attempts": 3,
+                    "parallel_runs": 1,
+                },
+            },
+        },
         "harness_routing": {
             "frameworks": {
+                "trinity": {
+                    "label": "Trinity",
+                    "roles": {
+                        "agent_builder": False,
+                        "complex_cases": True,
+                        "agent_execution": True,
+                    },
+                },
                 "codex": {
                     "label": "Codex",
                     "roles": {
@@ -164,9 +200,11 @@ def default_config(platform_name=None):
                 },
             },
             "agent_assignments": {
-                "codex_agent": ["codex"],
-                "pi_agent": ["pi"],
-                "opencode_agent": ["opencode"],
+                "trinity-core": ["trinity"],
+                "agent-builder": ["trinity", "codex"],
+                "legacy-codex-agent": ["trinity", "codex"],
+                "legacy-pi-agent": ["trinity", "pi"],
+                "legacy-opencode-agent": ["trinity", "opencode"],
             },
         },
     }

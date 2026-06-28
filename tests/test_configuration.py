@@ -19,6 +19,13 @@ def test_missing_config_uses_independent_defaults(tmp_path):
     assert first["system"]["classic_ui_enabled"] is True
     assert first["companion"]["enabled"] is False
     assert first["companion"]["port"] == 8765
+    assert first["harness_routing"]["frameworks"]["trinity"]["roles"][
+        "agent_execution"
+    ] is True
+    assert first["harness_routing"]["agent_assignments"]["trinity-core"] == [
+        "trinity"
+    ]
+    assert first["agent_catalog"]["agents"]["agent-builder"]["quality_status"] == "testing"
 
 
 def test_config_round_trip_and_dotted_setting(tmp_path):
@@ -62,6 +69,7 @@ def test_legacy_enabled_harnesses_seed_roles_once(tmp_path):
 
     assert frameworks["codex"]["roles"]["agent_builder"] is True
     assert frameworks["codex"]["roles"]["agent_execution"] is True
+    assert frameworks["trinity"]["roles"]["agent_execution"] is True
     assert frameworks["opencode"]["roles"]["agent_execution"] is True
     assert frameworks["pi"]["roles"]["agent_execution"] is True
 

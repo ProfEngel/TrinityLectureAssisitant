@@ -67,6 +67,11 @@ Wichtige Unterordner:
 - `07_exports/`
 - `99_archive/`
 
+Der Agentenkatalog wird seit v0.15.2 als Schema v2 exportiert und enthaelt
+dieselbe Agentenbasis wie ClassicUI/WebUI: Trinity, Agentenbuilder,
+Shared/Personal/Staging-Skills und Legacy-Agenten mit Reifegrad, Rechten,
+Freigaben, Pfaden, Laufgrenzen und Jobzaehlern.
+
 Nicht in den Vault gehoeren API-Keys, Secrets, aktive SQLite-Datenbanken,
 laufende Sessions, temporaere ComfyUI-Dateien oder aktive Job-Workspaces.
 
@@ -217,7 +222,7 @@ Implementiert ist Phase 1 als Fundament:
 - Runtime-/Vault-Pfadmodell.
 - CLI-Befehl `control-plane`.
 - Vault-Layout inklusive Registry, Policies und Model-Profilen.
-- Export von `agent_catalog.json`.
+- Export von `agent_catalog.json` im Schema v2.
 - Artefakt-Index in `03_results/artifact_index.jsonl`.
 - Harness-Adapter-Basisvertrag.
 - ScriptWorkflowAdapter.
