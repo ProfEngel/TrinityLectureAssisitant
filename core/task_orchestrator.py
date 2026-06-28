@@ -25,6 +25,7 @@ COMPLEX_MARKERS = (
     "test",
     "agent",
     "codex",
+    "pi",
     "open code",
     "opencode",
 )
@@ -125,7 +126,7 @@ class TaskOrchestrator:
             self._title(text),
             source=source,
             route=selected_route,
-            risk_level="medium" if selected_route in {"codex", "opencode"} else "low",
+                risk_level="medium" if selected_route in {"codex", "opencode", "pi"} else "low",
             plan=self._plan_steps(selected_route),
             metadata={"query": text},
         )
@@ -203,6 +204,8 @@ class TaskOrchestrator:
             return "opencode"
         if re.search(r"\b(codex|kodeks)\b", normalized):
             return "codex"
+        if re.search(r"\b(?:nutze|starte|frage|verwende)\s+pi\b|\bpi[- ]agent\b", normalized):
+            return "pi"
         if "agent forge" in normalized or "neuen agent" in normalized:
             return "agent_forge"
         return "local"
@@ -210,7 +213,7 @@ class TaskOrchestrator:
     @staticmethod
     def _requires_plan(text: str, route: str) -> bool:
         normalized = text.casefold()
-        if route in {"codex", "opencode", "agent_forge"}:
+        if route in {"codex", "opencode", "pi", "agent_forge"}:
             return True
         return len(normalized.split()) >= 18 and any(
             marker in normalized for marker in COMPLEX_MARKERS
@@ -249,7 +252,7 @@ class TaskOrchestrator:
                 {
                     "title": (
                         "Delegierten Agenten ausfuehren"
-                        if route in {"codex", "opencode"}
+                        if route in {"codex", "opencode", "pi"}
                         else "Lokalen Workflow ausfuehren"
                     ),
                     "quality_gate": False,

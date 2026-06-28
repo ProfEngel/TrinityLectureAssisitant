@@ -94,7 +94,48 @@ Standardanschluss typischerweise http://localhost:1234/v1/chat/completions.
 Erst wenn trinity doctor den LLM-Zugang bestaetigt, sollte STT, Medien oder
 Proaktivitaet aktiviert werden.
 
-## 3. Oberflaechen und Terminal
+## 3. MainHub, Cloud-Vault und lokale Runtime
+
+Beim ersten `trinity onboarding` fragt Trinity nach zwei Speicherorten:
+
+| Ort | Aufgabe | Darf in die Cloud? |
+|---|---|---|
+| **Lokale Runtime** | laufende Jobs, Queues, aktive Workspaces, SQLite-Datenbanken, Cache, temporaere Dateien, Logs, Locks und Secrets | Nein |
+| **Cloud-Vault / MainHub** | freigegebene Agenten, Projekte, Ergebnisse, Vorlagen, Wissensbestaende, Audit und Exporte | Ja |
+
+Der Grund ist schlicht: Synchronisierte Cloud-Ordner koennen Dateien sperren,
+umbenennen, verzögert schreiben oder auf einem anderen Gerät gleichzeitig
+anfassen. Fuer laufende Jobs und SQLite-Datenbanken ist das eine schlechte Idee.
+Der Vault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox oder
+einem anderen Sync-Ordner liegen.
+
+Beispiel fuer Mathias' Setup:
+
+~~~bash
+trinity control-plane init \
+  --runtime-root /Users/matmax/Trinity_Assistant/TrinityRuntime \
+  --vault-root "/Users/matmax/Library/Mobile Documents/com~apple~CloudDocs/BrainVault/MainHub/TrinityVault"
+~~~
+
+Status pruefen:
+
+~~~bash
+trinity control-plane status
+~~~
+
+Eine gesunde Ausgabe zeigt `warnings: []`, `catalog_exists: true`, den lokalen
+Runtime-Pfad und den Cloud-Vault-Pfad. Wenn eine Warnung sagt, dass die Runtime
+in iCloud/OneDrive/Google Drive liegt, sollte der Runtime-Pfad auf einen lokalen
+Ordner umgestellt werden.
+
+Rueckrollen ist einfach: Die bestehende Trinity-Version bleibt als GitHub-Release
+erreichbar. Lokal kann die Control Plane deaktiviert werden, indem
+`control_plane.enabled` in den Einstellungen ausgeschaltet oder die Installation
+auf einen aelteren Release-Tag zurueckgesetzt wird. Der Vault enthaelt keine
+aktiven Datenbanken und kann daher liegen bleiben, bis man ihn wirklich nicht
+mehr braucht.
+
+## 4. Oberflaechen und Terminal
 
 In Einstellungen -> System -> Bedienoberflaechen koennen Oberflaechen frei
 kombiniert werden:
@@ -117,7 +158,7 @@ Einstellungen fuer LLM, Persona, Sprache, TTS, Telegram und Betriebsmodus werden
 bei neuen Anfragen neu eingelesen. Ein Neustart ist nur fuer eine geaenderte
 Oberflaechenkombination oder die Companion Bridge erforderlich.
 
-## 4. Betriebsmodi und Einsatzstufen
+## 5. Betriebsmodi und Einsatzstufen
 
 ### Lecture-Modus: Vorlesung und Praesentation
 
@@ -156,7 +197,7 @@ Er verarbeitet Text und Anlagen gezielt; der Heartbeat wird nicht gestartet.
 Agenten bleiben moeglich, werden aber nur durch klare Auftraege ausgeloest. Das
 ist der beste Modus, um LLM-, Anlagen- und Code-Integrationen einzeln zu testen.
 
-## 5. Companion: iPhone und iPad
+## 6. Companion: iPhone und iPad
 
 Die Companion-App ist absichtlich nicht Teil der Desktop-Installer. Sie ist ein
 separates iOS/iPadOS-Projekt und verbindet sich mit einer laufenden
@@ -193,7 +234,7 @@ oder Split-View-Betrieb ist fuer laengere Vortraege robuster.
 Android Tablet/Phone ist als zukuenftige Companion-Variante vorgesehen. Es gibt
 in diesem Repository noch keinen Android-Installer oder Android-Client.
 
-## 6. Lokale Codex- und OpenCode-Agenten
+## 7. Lokale Codex-, OpenCode- und Pi-Agenten
 
 Diese Integrationen sind absichtlich keine allgemeinen Fernsteuerungen des
 Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegebene
@@ -209,7 +250,7 @@ Rechte des jeweiligen Projekts gebunden.
    Testprojekt = /vollstaendiger/Pfad/zum/Testprojekt
    ~~~
 
-3. Auftraege immer mit Codex beziehungsweise OpenCode und dem Projektnamen
+3. Auftraege immer mit Codex, OpenCode oder Pi und dem Projektnamen
    ansprechen. Das verhindert versehentliche Agentenstarts.
 4. Externe Aktionen nur vorbereiten: keine E-Mails senden, keine Kaeufe, keine
    Deployments, keine Pushes und keine Loeschungen ohne eigene, spaetere
@@ -340,7 +381,37 @@ Testlaeufen sollte ein produktiver Alias aktiviert werden.
 Die neue dreigeteilte Agentenkiste, geplante Jobs und Freigaben sind im
 [Agenten-Oekosystem](AGENT_ECOSYSTEM.md) beschrieben.
 
-## 7. Server-Client, Telegram und Memory
+### Pi einrichten
+
+Pi ist aktuell als generischer CLI-/Wrapper-Agent eingebunden, weil lokale
+Pi-Setups unterschiedlich aussehen koennen. Voraussetzung ist daher ein
+ausfuehrbares Programm oder Skript, das Trinity starten darf. Ohne
+`{prompt}`-Platzhalter wird der Auftrag per stdin uebergeben; mit `{prompt}`
+wird der Auftrag als Argument eingesetzt.
+
+Beispiele fuer Einstellungen:
+
+~~~text
+Programm: /Users/NAME/bin/pi-wrapper
+Argumente: chat --stdin
+~~~
+
+oder:
+
+~~~text
+Programm: /Users/NAME/bin/pi-wrapper
+Argumente: ask {prompt}
+~~~
+
+Sicherer Test:
+
+> Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.
+
+Wichtig: Eine normale Frage wie "Was ist die Kreiszahl Pi?" startet den
+Pi-Agenten nicht. Trinity reagiert nur auf ausdrueckliche Formulierungen wie
+"nutze Pi", "frage Pi" oder "Pi-Agent".
+
+## 8. Server-Client, Telegram und Memory
 
 ### Desktop als Client eines Trinity-Servers
 
@@ -368,12 +439,13 @@ trinity tui bietet Sessions, Kontextverdichtung und lokales Memory. Wichtige
 Kommandos sind /session new, /context, /remember, /memory bake, /memory dream
 und /graph. Die Daten liegen lokal in memory/trinity_memory.sqlite3.
 
-## 8. Diagnose und Fehlerbilder
+## 9. Diagnose und Fehlerbilder
 
 | Symptom | Pruefung |
 |---|---|
 | Trinity antwortet nicht | trinity doctor; LLM-URL/Modell testen; ClassicUI-Live-Log lesen. |
 | Codex/OpenCode wird nicht gefunden | CLI im gleichen Benutzerkonto installieren; command -v beziehungsweise Get-Command nutzen; vollen Pfad eintragen. |
+| Pi wird nicht gefunden | Eigenen Pi-Wrapper anlegen, ausfuehrbar machen und den vollstaendigen Pfad in Einstellungen -> Pi eintragen. |
 | Agent waehlt falsches Projekt | Alias im Auftrag nennen und exakt wie im Feld Standardprojekt schreiben. |
 | Code-Agent kann nicht schreiben | Codex-Sandbox pruefen; bei OpenCode die projektlokale opencode.json und den konkreten edit-Pfad pruefen. |
 | Companion verbindet nicht | Tailscale-IP, Bridge-Port, Bearer-Token und lokale Firewall pruefen; Bridge nach Einstellungswechsel neu starten. |
@@ -383,7 +455,7 @@ Fuer den ersten Fehlerbericht immer diese Angaben sammeln: Betriebssystem,
 Trinity-Version, gewaehlte Oberflaeche, Betriebsmodus, die sichtbare Fehlermeldung
 und die Ausgabe von trinity doctor. Zugangsdaten gehoeren nicht in den Bericht.
 
-## 9. Empfohlene Reihenfolge
+## 10. Empfohlene Reihenfolge
 
 1. LLM und ClassicUI im Chat-Modus testen.
 2. Eine Datei oder PDF anhaengen und die Antwort pruefen.

@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.15.0:** MainHub-/Control-Plane-Fundament mit getrenntem lokalem TrinityRuntime-Ordner und synchronisiertem TrinityVault, Onboarding fuer Cloud-Vault/Runtime-Pfade, Artifact-Index, Builder-Harness und generischem Pi-CLI-Agenten.
 > - **v0.14.1:** Vollwertige WebUI-Einstellungen fuer LLM, Persona, Sprache, Oberflaechen, Agentenprojekte, Companion, Server und Profile; gesichert durch lokale, Token- oder Admin-Berechtigung.
 > - **v0.14.0:** Dreigeteilte Agentenkiste mit Shared/Personal/Staging, persistenter Plan-/Job-Verwaltung, Quality Gates sowie lokalen Freigaben inklusive Eltern-/Kind-Bezug fuer Codex-, OpenCode- und kuenftige Agent-Forge-Workflows.
 > - **v0.13.3:** Zentrales Onboarding fuer Desktop, Linux-Server, iPhone/iPad-Companion, Betriebsstufen und sichere Codex-/OpenCode-Projekte; OpenCode findet auf macOS/Linux nun auch projektlokale Agenten-Konfigurationen zuverlaessig.
@@ -47,7 +48,11 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
 > sichere Codex-/OpenCode-Einstellungen und eine empfohlene Testreihenfolge.
 > Die technische Einordnung der neuen Agentenkiste steht im
-> **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**.
+> **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Der neue
+> MainHub-Unterbau fuer Trinity als harness-agnostisches Agenten-Betriebssystem
+> ist in **[Control Plane und MainHub](docs/CONTROL_PLANE_MAINHUB.md)**
+> dokumentiert; das Erstsetup fuer lokalen Runtime-Ordner und Cloud-Vault steht
+> im **[Onboarding: MainHub](docs/ONBOARDING.md#3-mainhub-cloud-vault-und-lokale-runtime)**.
 
 ---
 
@@ -139,6 +144,10 @@ Trinity_Assistant/
 ├── README.md
 ├── core/
 │   ├── brain.py               ← KI-Logik, Agentic Router, RAG, Tools
+│   ├── control_plane.py       ← Harness-agnostische Job-, Policy- und Vault-Schicht
+│   ├── artifact_store.py      ← Vault-Index für Medien, Reports und Agentenergebnisse
+│   ├── trinity_paths.py       ← Trennung von lokaler Runtime und iCloud-Vault
+│   ├── harness_adapters/      ← Einheitlicher Adaptervertrag für Worker-Harnesses
 │   ├── memory_store.py        ← SQLite-Memory, Sessions, Tags, Self-Bake, Graph
 │   ├── configuration.py       ← Gemeinsame Konfiguration für GUI und CLI
 │   ├── doctor.py              ← Installations- und Konfigurationsdiagnose
@@ -421,7 +430,7 @@ Memory-Treffer automatisch als zusätzlichen Kontext beim Antworten.
 
 Die Schritt-fuer-Schritt-Einrichtung inklusive Pfadsuche, Projekt-Allowlist,
 Sandbox-Wahl, sicheren Testauftraegen und Grenzen steht im
-[Onboarding: lokale Codex- und OpenCode-Agenten](docs/ONBOARDING.md#6-lokale-codex--und-opencode-agenten).
+[Onboarding: lokale Codex-, OpenCode- und Pi-Agenten](docs/ONBOARDING.md#7-lokale-codex--opencode--und-pi-agenten).
 
 Trinity kann Aufgaben per Sprache, Chat oder Telegram an eine lokal installierte und
 angemeldete Codex CLI übergeben. Codex arbeitet dabei ausschließlich in Projektordnern,
@@ -447,7 +456,7 @@ stehen in der offiziellen Dokumentation zu
 
 Die Schritt-fuer-Schritt-Einrichtung inklusive projektlokalem Agenten,
 Rechte-Policy und sicheren Testauftraegen steht im
-[Onboarding: lokale Codex- und OpenCode-Agenten](docs/ONBOARDING.md#6-lokale-codex--und-opencode-agenten).
+[Onboarding: lokale Codex-, OpenCode- und Pi-Agenten](docs/ONBOARDING.md#7-lokale-codex--opencode--und-pi-agenten).
 
 Trinity kann alternativ Aufgaben an eine lokal installierte OpenCode CLI übergeben.
 Der Agent nutzt `opencode run` im freigegebenen Projektordner und eignet sich für
@@ -466,6 +475,21 @@ Beispiel:
 
 Fernausgelöste OpenCode-Läufe sollen Entwürfe und lokale Dateien vorbereiten, aber
 nichts versenden, löschen, veröffentlichen oder deployen.
+
+### Pi als lokaler CLI-Hintergrundagent
+
+Pi kann ueber einen eigenen lokalen CLI-Wrapper angebunden werden. Trinity startet
+ihn nur bei ausdruecklichen Formulierungen wie „nutze Pi“, „frage Pi“ oder
+„Pi-Agent“. Eine normale Frage zur Kreiszahl Pi loest den Agenten nicht aus.
+
+Einrichtung: **Einstellungen → Pi** oeffnen, Agent aktivieren, `Programm` auf den
+Pi-Wrapper setzen und optional Argumente eintragen. Ohne `{prompt}` uebergibt
+Trinity den Auftrag per stdin; mit `{prompt}` wird der Auftrag als Argument
+eingesetzt.
+
+Beispiel:
+
+> „Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.“
 
 ---
 

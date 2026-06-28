@@ -55,6 +55,19 @@ def test_codex_capability_is_detected_on_any_supported_host(monkeypatch):
     assert "codex_cli" in detected
 
 
+def test_pi_capability_is_detected_with_user_wrapper(monkeypatch):
+    monkeypatch.setattr(
+        capabilities.shutil,
+        "which",
+        lambda name: "/usr/local/bin/pi" if name == "pi" else None,
+    )
+    monkeypatch.setattr(capabilities, "_module_available", lambda _name: False)
+
+    detected = capabilities.detect_capabilities("Linux")
+
+    assert "pi_cli" in detected
+
+
 def test_codex_finder_checks_desktop_launcher_locations(monkeypatch):
     expected = str(capabilities.Path("/opt/homebrew/bin/codex"))
     monkeypatch.setattr(capabilities.shutil, "which", lambda _name: None)

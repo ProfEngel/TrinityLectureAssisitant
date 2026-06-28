@@ -137,6 +137,18 @@ def test_orchestrator_creates_plan_and_blocks_risky_execution(tmp_path):
     assert blocked.job["status"] == "WAITING_FOR_APPROVAL"
 
 
+def test_orchestrator_routes_explicit_pi_but_not_math_pi(tmp_path):
+    orchestrator = TaskOrchestrator(tmp_path)
+
+    planned = orchestrator.prepare("Trinity, nutze Pi und erklaere diese Idee.")
+    plain = orchestrator.prepare("Trinity, was ist die Kreiszahl Pi?")
+
+    assert planned.route == "pi"
+    assert planned.requires_plan is True
+    assert plain.route == "local"
+    assert plain.requires_plan is False
+
+
 def test_policy_blocks_package_installation_and_requires_mail_approval():
     policy = PolicyEngine()
 

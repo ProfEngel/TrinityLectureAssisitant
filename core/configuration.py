@@ -98,6 +98,13 @@ def default_config(platform_name=None):
             "timeout_seconds": 900,
             "max_output_chars": 3200,
         },
+        "pi": {
+            "enabled": False,
+            "executable": "pi",
+            "arguments": [],
+            "timeout_seconds": 600,
+            "max_output_chars": 3200,
+        },
         "comfyui": {
             "enabled": False,
             "server_url": "http://YOUR_TAILSCALE_NODE:8188",
@@ -120,6 +127,14 @@ def default_config(platform_name=None):
             "server_url": "",
             "username": "",
             "token": "",
+        },
+        "control_plane": {
+            "enabled": True,
+            "runtime_root": "",
+            "vault_root": "",
+            "default_mode": "guided",
+            "builder_harness": "codex",
+            "catalog_include_legacy": True,
         },
     }
 

@@ -10,6 +10,7 @@ CAPABILITY_LABELS = {
     "mail_automation": "lokale Mail-Automation",
     "codex_cli": "lokale Codex CLI",
     "opencode_cli": "lokale OpenCode CLI",
+    "pi_cli": "lokale Pi CLI",
     "native_macos_speech": "native macOS-Spracherkennung",
     "powerpoint_automation": "PowerPoint-Automation",
     "speech_input": "Whisper-Spracherkennung",
@@ -26,6 +27,8 @@ def detect_capabilities(system: Optional[str] = None) -> Set[str]:
         capabilities.add("codex_cli")
     if find_opencode_executable():
         capabilities.add("opencode_cli")
+    if find_pi_executable():
+        capabilities.add("pi_cli")
 
     if _module_available("faster_whisper") and _module_available("sounddevice"):
         capabilities.add("speech_input")
@@ -136,6 +139,43 @@ def find_opencode_executable() -> Optional[str]:
             [
                 Path(local_appdata) / "npm" / "opencode.cmd",
                 Path(local_appdata) / "Programs" / "OpenCode" / "opencode.exe",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def find_pi_executable() -> Optional[str]:
+    """Locate a user-provided Pi CLI wrapper."""
+    for name in ("pi", "pi.exe", "pi.cmd"):
+        found = shutil.which(name)
+        if found:
+            return found
+
+    candidates = [
+        Path("/opt/homebrew/bin/pi"),
+        Path("/usr/local/bin/pi"),
+        Path.home() / ".local" / "bin" / "pi",
+    ]
+
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.extend(
+            [
+                Path(appdata) / "npm" / "pi.cmd",
+                Path(appdata) / "npm" / "pi.exe",
+            ]
+        )
+
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        candidates.extend(
+            [
+                Path(local_appdata) / "npm" / "pi.cmd",
+                Path(local_appdata) / "Programs" / "Pi" / "pi.exe",
             ]
         )
 

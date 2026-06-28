@@ -5,6 +5,7 @@ from .capabilities import (
     detect_capabilities,
     find_codex_executable,
     find_opencode_executable,
+    find_pi_executable,
 )
 from .tts import create_tts_backend
 
@@ -14,4 +15,5 @@ __all__ = [
     "detect_capabilities",
     "find_codex_executable",
     "find_opencode_executable",
+    "find_pi_executable",
 ]

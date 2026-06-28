@@ -22,8 +22,18 @@ def _modules():
 def test_cli_exposes_requested_commands():
     parser = trinity_cli.build_parser()
 
-    for command in ("start", "settings", "onboarding", "tui", "doctor", "bridge", "server"):
-        parsed = parser.parse_args([command])
+    for command in (
+        "start",
+        "settings",
+        "onboarding",
+        "tui",
+        "doctor",
+        "bridge",
+        "server",
+        "control-plane",
+    ):
+        arguments = [command, "status"] if command == "control-plane" else [command]
+        parsed = parser.parse_args(arguments)
         assert parsed.command == command
 
 
@@ -46,6 +56,23 @@ def test_surface_settings_accept_web_ui_without_terminal():
 
     assert config["system"]["web_ui_enabled"] is True
     assert config["system"]["terminal_cli_enabled"] is False
+
+
+def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
+    runtime = tmp_path / "local-runtime"
+    vault = tmp_path / "cloud-vault"
+    config = {}
+    answers = iter(["ja", str(runtime), str(vault)])
+
+    trinity_cli._configure_control_plane(
+        config,
+        tmp_path,
+        input_fn=lambda _prompt: next(answers),
+    )
+
+    assert config["control_plane"]["enabled"] is True
+    assert config["control_plane"]["runtime_root"] == str(runtime)
+    assert config["control_plane"]["vault_root"] == str(vault)
 
 
 def test_direct_cli_setting_updates_shared_config(tmp_path, monkeypatch):

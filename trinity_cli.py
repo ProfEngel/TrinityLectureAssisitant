@@ -4,12 +4,13 @@ import argparse
 import getpass
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
 
 
-VERSION = "0.14.1"
+VERSION = "0.15.0"
 
 
 def find_trinity_home(explicit=None):
@@ -106,6 +107,95 @@ def _configure_surfaces(config, input_fn=input):
     system["show_terminal"] = "terminal" in selected
 
 
+def _configure_control_plane(config, home, input_fn=input):
+    core_dir = str(Path(home) / "core")
+    if core_dir not in sys.path:
+        sys.path.insert(0, core_dir)
+    from trinity_paths import (  # pylint: disable=import-outside-toplevel
+        TrinityPaths,
+        default_runtime_root,
+        default_vault_root,
+    )
+
+    print("\nMainHub / Control Plane")
+    print("=======================")
+    print(
+        "Trinity trennt lokale Runtime und synchronisierten Vault. Die Runtime "
+        "enthaelt laufende Jobs, Datenbanken, Cache, temporaere Dateien und "
+        "Secrets und sollte nicht in iCloud, OneDrive oder Google Drive liegen. "
+        "Der Vault ist die Cloud- oder Sync-Ablage fuer freigegebene Agenten, "
+        "Projekte, Ergebnisse, Vorlagen, Wissen und Audit."
+    )
+    control = config.setdefault("control_plane", {})
+    runtime_default = control.get("runtime_root") or str(
+        default_runtime_root(home=home)
+    )
+    vault_default = control.get("vault_root") or str(default_vault_root())
+    control["enabled"] = (
+        _prompt_choice(
+            "Control Plane/MainHub aktivieren",
+            ("ja", "nein"),
+            "ja" if control.get("enabled", True) else "nein",
+            input_fn,
+        )
+        == "ja"
+    )
+    control["runtime_root"] = _prompt(
+        "Lokaler Runtime-Ordner",
+        runtime_default,
+        input_fn,
+    )
+    control["vault_root"] = _prompt(
+        "Synchronisierter Cloud-Vault-Ordner",
+        vault_default,
+        input_fn,
+    )
+    paths = TrinityPaths.from_config(home, config)
+    warnings = paths.separation_warnings()
+    if warnings:
+        print("\nWarnung:")
+        for warning in warnings:
+            print(f"- {warning}")
+        print("Passe die Pfade an, falls die Runtime versehentlich im Cloud-Ordner liegt.")
+
+
+def _configure_pi(config, input_fn=input):
+    pi = config.setdefault("pi", {})
+    pi["enabled"] = (
+        _prompt_choice(
+            "Pi-Agent aktivieren",
+            ("nein", "ja"),
+            "ja" if pi.get("enabled") else "nein",
+            input_fn,
+        )
+        == "ja"
+    )
+    pi["executable"] = _prompt(
+        "Pi-Programm oder Wrapper",
+        pi.get("executable", "pi"),
+        input_fn,
+    )
+    raw_args = pi.get("arguments", [])
+    if isinstance(raw_args, list):
+        default_args = " ".join(str(item) for item in raw_args)
+    else:
+        default_args = str(raw_args or "")
+    arguments = _prompt(
+        "Pi-Argumente (optional, {prompt} setzt den Prompt als Argument)",
+        default_args,
+        input_fn,
+    )
+    try:
+        pi["arguments"] = shlex.split(arguments) if arguments else []
+    except ValueError:
+        pi["arguments"] = arguments.split() if arguments else []
+    try:
+        timeout = int(_prompt("Pi-Zeitlimit Sekunden", pi.get("timeout_seconds", 600), input_fn))
+    except (TypeError, ValueError):
+        timeout = 600
+    pi["timeout_seconds"] = max(30, min(timeout, 3600))
+
+
 def _configure_llm(config, input_fn=input, secret_fn=getpass.getpass):
     llm = config.setdefault("llm", {})
     slot = _prompt_choice(
@@ -149,7 +239,9 @@ def interactive_settings(home, input_fn=input, secret_fn=getpass.getpass):
         print(f"3  LLM-Provider ({config.get('llm', {}).get('active_slot', 'local')})")
         print("4  Codex")
         print("5  OpenCode")
-        print("6  Telegram")
+        print("6  Pi")
+        print("7  MainHub / Control Plane")
+        print("8  Telegram")
         print("s  Speichern und beenden")
         print("q  Verwerfen")
         choice = input_fn("Auswahl: ").strip().casefold()
@@ -203,6 +295,10 @@ def interactive_settings(home, input_fn=input, secret_fn=getpass.getpass):
                 input_fn,
             )
         elif choice == "6":
+            _configure_pi(config, input_fn)
+        elif choice == "7":
+            _configure_control_plane(config, home, input_fn)
+        elif choice == "8":
             telegram = config.setdefault("telegram", {})
             telegram["enabled"] = (
                 _prompt_choice(
@@ -258,6 +354,7 @@ def run_onboarding(home, input_fn=input, secret_fn=getpass.getpass):
         input_fn,
     )
     _configure_surfaces(config, input_fn)
+    _configure_control_plane(config, home, input_fn)
     _configure_llm(config, input_fn, secret_fn)
     modules["save_config"](config_path, config)
 
@@ -530,6 +627,40 @@ def run_approvals_command(home, args):
     raise ValueError("Unbekannte Freigabe-Aktion.")
 
 
+def run_control_plane_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from configuration import load_config, save_config  # pylint: disable=import-outside-toplevel
+    from control_plane import TrinityControlPlane  # pylint: disable=import-outside-toplevel
+
+    config_path = Path(home) / "core" / "config.json"
+    config = load_config(config_path)
+    control = config.setdefault("control_plane", {})
+    changed = False
+    if args.runtime_root:
+        control["runtime_root"] = args.runtime_root
+        changed = True
+    if args.vault_root:
+        control["vault_root"] = args.vault_root
+        changed = True
+    if changed:
+        save_config(config_path, config)
+        config = load_config(config_path)
+
+    plane = TrinityControlPlane(home, config)
+    if args.control_action == "init":
+        result = plane.ensure_foundation()
+    elif args.control_action == "status":
+        result = plane.status()
+    elif args.control_action == "catalog":
+        result = plane.export_agent_catalog()
+    else:
+        raise ValueError("Unbekannte Control-Plane-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -627,6 +758,14 @@ def build_parser():
     approvals.add_argument("--parent-approval-id", default="")
     approvals.add_argument("--child-action", action="append", default=[])
     approvals.add_argument("--actor", default="local-user")
+
+    control = subparsers.add_parser(
+        "control-plane",
+        help="Harness-agnostische Control Plane und MainHub/Vault verwalten",
+    )
+    control.add_argument("control_action", choices=("init", "status", "catalog"))
+    control.add_argument("--runtime-root", default="", help="Lokaler TrinityRuntime-Pfad")
+    control.add_argument("--vault-root", default="", help="Synchronisierter TrinityVault-Pfad")
     return parser
 
 
@@ -668,6 +807,8 @@ def main(argv=None):
             return run_jobs_command(home, args)
         if args.command == "approvals":
             return run_approvals_command(home, args)
+        if args.command == "control-plane":
+            return run_control_plane_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

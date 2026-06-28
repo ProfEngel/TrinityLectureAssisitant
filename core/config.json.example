@@ -70,5 +70,20 @@
     "model": "",
     "timeout_seconds": 900,
     "max_output_chars": 3200
+  },
+  "pi": {
+    "enabled": false,
+    "executable": "pi",
+    "arguments": [],
+    "timeout_seconds": 600,
+    "max_output_chars": 3200
+  },
+  "control_plane": {
+    "enabled": true,
+    "runtime_root": "",
+    "vault_root": "",
+    "default_mode": "guided",
+    "builder_harness": "codex",
+    "catalog_include_legacy": true
   }
 }

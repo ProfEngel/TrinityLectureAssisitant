@@ -33,8 +33,8 @@ MAX_EVENTS = 200
 MAX_SETTINGS_TEXT_BYTES = 100 * 1024
 SETTINGS_SECTIONS = {
     "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
-    "audio_routing", "telegram", "codex", "opencode", "comfyui", "companion",
-    "server", "client",
+    "audio_routing", "telegram", "codex", "opencode", "pi", "comfyui",
+    "companion", "server", "client", "control_plane",
 }
 
 

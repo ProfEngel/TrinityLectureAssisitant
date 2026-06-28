@@ -1,6 +1,7 @@
 import sys
 import os
 import platform
+import shlex
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -10,9 +11,15 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QScrollArea, QFrame, QMessageBox, QRadioButton,
                              QButtonGroup, QSizePolicy)
 
-from platform_adapters import create_tts_backend, find_codex_executable, find_opencode_executable
+from platform_adapters import (
+    create_tts_backend,
+    find_codex_executable,
+    find_opencode_executable,
+    find_pi_executable,
+)
 from configuration import DEFAULT_CONFIG, load_config, save_config
 from skill_registry import SkillRegistry
+from trinity_paths import default_runtime_root, default_vault_root
 from ui_modes import resolve_ui_modes
 
 
@@ -223,6 +230,34 @@ class SettingsWindow(QMainWindow):
             )
             self.config["opencode"]["max_output_chars"] = (
                 self.opencode_output_spin.value()
+            )
+
+        # Pi
+        if "pi" not in self.config:
+            self.config["pi"] = {}
+        if hasattr(self, "pi_cb"):
+            self.config["pi"]["enabled"] = self.pi_cb.isChecked()
+            self.config["pi"]["executable"] = (
+                self.pi_executable_edit.text().strip() or "pi"
+            )
+            arguments = self.pi_arguments_edit.text().strip()
+            try:
+                self.config["pi"]["arguments"] = shlex.split(arguments) if arguments else []
+            except ValueError:
+                self.config["pi"]["arguments"] = arguments.split() if arguments else []
+            self.config["pi"]["timeout_seconds"] = self.pi_timeout_spin.value()
+            self.config["pi"]["max_output_chars"] = self.pi_output_spin.value()
+
+        # Control Plane / MainHub
+        if "control_plane" not in self.config:
+            self.config["control_plane"] = {}
+        if hasattr(self, "control_plane_cb"):
+            self.config["control_plane"]["enabled"] = self.control_plane_cb.isChecked()
+            self.config["control_plane"]["runtime_root"] = (
+                self.runtime_root_edit.text().strip()
+            )
+            self.config["control_plane"]["vault_root"] = (
+                self.vault_root_edit.text().strip()
             )
 
         # ComfyUI
@@ -442,6 +477,8 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_codex_tab(), "⌨️ Codex")
         tabs.addTab(self._create_opencode_tab(), "🛠️ OpenCode")
+        tabs.addTab(self._create_pi_tab(), "π Pi")
+        tabs.addTab(self._scrollable_tab(self._create_mainhub_tab()), "🗂 MainHub")
         tabs.addTab(self._create_agent_ecosystem_tab(), "🧰 Agenten")
         tabs.addTab(self._scrollable_tab(self._create_system_tab()), "🖥️ System")
         tabs.addTab(self._create_soul_tab(), "📝 Soul")
@@ -823,6 +860,127 @@ class SettingsWindow(QMainWindow):
         security_hint.setWordWrap(True)
         security_hint.setStyleSheet("color: #d29922; font-size: 11px;")
         form.addRow("", security_hint)
+
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
+    # --- TAB: Pi ---
+    def _create_pi_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        group = QGroupBox("Lokaler Pi-CLI-Agent")
+        form = QFormLayout()
+        pi_conf = self.config.get("pi", {})
+
+        self.pi_cb = QCheckBox(
+            "Pi-Aufträge per Sprache, Chat, Telegram und Companion erlauben"
+        )
+        self.pi_cb.setChecked(pi_conf.get("enabled", False))
+        form.addRow(self.pi_cb)
+
+        detected = find_pi_executable()
+        status_text = (
+            f"Pi gefunden: {detected}"
+            if detected
+            else "Pi wurde im Systempfad noch nicht gefunden."
+        )
+        status = QLabel(status_text)
+        status.setWordWrap(True)
+        status.setStyleSheet(
+            "color: #7ee787; font-size: 11px;"
+            if detected
+            else "color: #d29922; font-size: 11px;"
+        )
+        form.addRow("Status:", status)
+
+        self.pi_executable_edit = QLineEdit(pi_conf.get("executable", "pi"))
+        self.pi_executable_edit.setPlaceholderText(
+            "pi oder vollständiger Pfad zu Deinem Pi-Wrapper"
+        )
+        form.addRow("Programm:", self.pi_executable_edit)
+
+        raw_arguments = pi_conf.get("arguments", [])
+        if isinstance(raw_arguments, list):
+            arguments_text = " ".join(str(item) for item in raw_arguments)
+        else:
+            arguments_text = str(raw_arguments or "")
+        self.pi_arguments_edit = QLineEdit(arguments_text)
+        self.pi_arguments_edit.setPlaceholderText(
+            "optional, z.B. chat --stdin oder ask {prompt}"
+        )
+        form.addRow("Argumente:", self.pi_arguments_edit)
+
+        self.pi_timeout_spin = QSpinBox()
+        self.pi_timeout_spin.setRange(30, 3600)
+        self.pi_timeout_spin.setSuffix(" Sekunden")
+        self.pi_timeout_spin.setValue(int(pi_conf.get("timeout_seconds", 600)))
+        form.addRow("Zeitlimit:", self.pi_timeout_spin)
+
+        self.pi_output_spin = QSpinBox()
+        self.pi_output_spin.setRange(500, 12000)
+        self.pi_output_spin.setSingleStep(500)
+        self.pi_output_spin.setSuffix(" Zeichen")
+        self.pi_output_spin.setValue(int(pi_conf.get("max_output_chars", 3200)))
+        form.addRow("Antwortlänge:", self.pi_output_spin)
+
+        hint = QLabel(
+            "Trinity startet Pi nur auf ausdrückliche Formulierungen wie "
+            "„nutze Pi“ oder „frage Pi“. Ohne {prompt} wird der Auftrag per stdin "
+            "an den Wrapper übergeben."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", hint)
+
+        group.setLayout(form)
+        layout.addWidget(group)
+        layout.addStretch()
+        return widget
+
+    # --- TAB: MainHub ---
+    def _create_mainhub_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        group = QGroupBox("Trinity Control Plane: Runtime und Cloud-Vault")
+        form = QFormLayout()
+        control_conf = self.config.get("control_plane", {})
+
+        self.control_plane_cb = QCheckBox(
+            "Control Plane und MainHub aktivieren"
+        )
+        self.control_plane_cb.setChecked(control_conf.get("enabled", True))
+        form.addRow(self.control_plane_cb)
+
+        runtime_default = control_conf.get("runtime_root") or str(
+            default_runtime_root(home=os.path.dirname(CORE_DIR))
+        )
+        self.runtime_root_edit = QLineEdit(runtime_default)
+        self.runtime_root_edit.setPlaceholderText(
+            "/lokaler/Pfad/TrinityRuntime"
+        )
+        form.addRow("Lokale Runtime:", self.runtime_root_edit)
+
+        vault_default = control_conf.get("vault_root") or str(default_vault_root())
+        self.vault_root_edit = QLineEdit(vault_default)
+        self.vault_root_edit.setPlaceholderText(
+            "/Cloud/Pfad/BrainVault/MainHub/TrinityVault"
+        )
+        form.addRow("Cloud-Vault:", self.vault_root_edit)
+
+        hint = QLabel(
+            "Runtime: laufende Jobs, Queue, aktive Workspaces, Datenbanken, "
+            "Cache, Temp und Secrets. Dieser Ordner sollte lokal bleiben und "
+            "nicht in iCloud, OneDrive oder Google Drive liegen.\n\n"
+            "Cloud-Vault: freigegebene Agenten, Projekte, Ergebnisse, Vorlagen, "
+            "Wissen, Audit und Exporte. Dieser Ordner darf synchronisiert werden."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", hint)
 
         group.setLayout(form)
         layout.addWidget(group)
