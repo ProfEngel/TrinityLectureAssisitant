@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.2:** Externe Harness-Agenten: bestehende Projekt-, Markdown-, HTML- und Script-Agenten koennen ohne Duplikation per `agentctl register` in `BrainVault/.agents` katalogisiert werden; die Settings haben nun einen expliziten Pfad fuer die externe Harness-Agentenbasis.
 > - **v0.16.1:** BrainVault-Agentenimport: bestehende CampusHub-Skills koennen nach `BrainVault/.agents` uebernommen, validiert, katalogisiert und in den Einstellungen per BrainVault-Pfad sowie Standard-Harness (standardmaessig Codex) live in die Harness-Matrix geladen werden.
 > - **v0.16.0:** BrainVault-Agentenbasis: externe Fachagenten werden direkt unter `BrainVault/.agents` als `draft` angelegt, per `agent.yaml` katalogisiert, ueber `agentctl` verwaltet und fuer Trinity, Codex, Pi, OpenCode, Claude Code und Antigravity harness-agnostisch vorbereitet.
 > - **v0.15.6:** Harness-Einstellungen besser lesbar: kontrastreiche Status-Badges, groessere Projektfelder und eine nach unten wachsende Agentenmatrix. Pi-Importlaeufe duerfen explizit genannte Quellordner read-only analysieren und schreiben weiterhin nur in freigegebene Projektordner.
@@ -536,18 +537,21 @@ BrainVault-Agenten koennen auch ohne Trinity-UI gepflegt werden:
 agentctl init
 agentctl create research thesis-reviewer --name "Thesis Reviewer"
 agentctl import "/vollstaendiger/Pfad/zum/bestehenden-Agentenordner" --area skills --preferred-harness codex --status active
+agentctl register "/vollstaendiger/Pfad/zum/Projekt-oder-Agentenfile" --area projects --agent-id mein-agent --preferred-harness codex
 agentctl list
 agentctl inspect research.thesis_reviewer
 agentctl validate research.thesis_reviewer
 agentctl catalog build
 ```
 
-In den Desktop-Einstellungen liegt das unter **MainHub**:
-`BrainVault-Agentenbasis` zeigt auf den uebergeordneten BrainVault-Root, also
-den Ordner, in dem `.agents` liegt. `Standard-Harness fuer BrainVault-Agenten`
-steht initial auf `codex`; ueber **BrainVault-Agenten aktualisieren** liest
-Trinity `.agents` neu ein und traegt neue Agenten direkt in die Harness-Matrix
-ein.
+In den Desktop-Einstellungen liegt das unter **MainHub**. `BrainVault-Agentenbasis`
+und `Externe Harness-Agentenbasis (.agents)` zeigen auf den uebergeordneten
+BrainVault-Root, also den Ordner, in dem `.agents` liegt. Der zweite Pfad ist
+der explizite Ort, den Trinity fuer Codex, Pi, OpenCode, Antigravity und weitere
+Harnesses als externe Agentenquelle nutzt. `Standard-Harness fuer
+BrainVault-Agenten` steht initial auf `codex`; ueber **BrainVault-Agenten
+aktualisieren** liest Trinity `.agents` neu ein und traegt neue Agenten direkt
+in die Harness-Matrix ein.
 
 ---
 

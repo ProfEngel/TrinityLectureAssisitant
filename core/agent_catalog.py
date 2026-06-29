@@ -236,6 +236,7 @@ def _brainvault_records(
                     examples=_string_list(agent.get("examples")),
                     forbidden=_string_list(agent.get("forbidden")),
                     last_validated=str(agent.get("last_validated") or ""),
+                    parent_agent=str(agent.get("parent_agent") or ""),
                     **stats.get(agent_id, {}),
                 ),
                 overrides,

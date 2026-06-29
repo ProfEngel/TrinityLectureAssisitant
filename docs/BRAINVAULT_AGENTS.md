@@ -92,6 +92,7 @@ agentctl validate <agent-id>
 agentctl catalog build
 agentctl create <bereich> <agent-id>
 agentctl import <bestehender-agentenordner> --area skills --preferred-harness codex --status active
+agentctl register <projekt-oder-dateipfad> --area projects --agent-id mein-agent --preferred-harness codex
 agentctl audit <suchpfad> --output BRAINVAULT_AGENT_AUDIT.md
 ```
 
@@ -100,6 +101,7 @@ Beispiel:
 ```bash
 agentctl create research thesis-reviewer --name "Thesis Reviewer"
 agentctl import "/pfad/zu/CampusHub/.agents/skills/thesis-reviewer" --area skills --preferred-harness codex --status active
+agentctl register "/pfad/zu/CampusHub/projects/Automatismen/Mail" --area projects --agent-id campushub-mail-automation --preferred-harness codex
 agentctl validate research.thesis_reviewer
 agentctl catalog build
 ```
@@ -110,12 +112,22 @@ virtuelle Umgebungen, Caches und Build-Artefakte aber aus. Aus dem `SKILL.md`
 werden Name und Beschreibung uebernommen; `preferred_harness` ist beim Import
 standardmaessig `codex`.
 
+`register` ist fuer heterogene Quellen gedacht: vorhandene Projektordner,
+einzelne Markdown-Agenten, HTML-Werkzeuge, Python-Skripte oder Harness-Konfigs.
+Dabei wird eine saubere `agent.yaml`, `SKILL.md` und `README.md` in
+`BrainVault/.agents` erzeugt. Grosse Projektordner bleiben am Ursprungspfad und
+werden ueber `origin.source_paths`, `workspace` und `permissions` referenziert.
+Mit `--copy-source` kann eine einzelne Quelle oder ein kleiner Agentenordner
+zusaetzlich als Snapshot unter `source/` abgelegt werden.
+
 ## Einstellungen
 
 In **Einstellungen -> MainHub** kann ein expliziter
-`BrainVault-Agentenbasis`-Pfad gesetzt werden. Dieser Pfad zeigt auf den
-BrainVault-Root, also den Ordner, der `.agents`, `.catalog`, `.ai`, `AGENTS.md`
-und `CLAUDE.md` enthaelt.
+`BrainVault-Agentenbasis`-Pfad gesetzt werden. `Externe Harness-Agentenbasis
+(.agents)` ist der explizite Pfad, den Trinity fuer Codex, Pi, OpenCode,
+Antigravity und weitere externe Harnesses ausliest. Beide Pfade zeigen im
+Normalfall auf den BrainVault-Root, also den Ordner, der `.agents`, `.catalog`,
+`.ai`, `AGENTS.md` und `CLAUDE.md` enthaelt.
 
 Der `Standard-Harness fuer BrainVault-Agenten` steht initial auf `codex`. Mit
 **BrainVault-Agenten aktualisieren** wird `.agents` erneut gelesen, der Katalog

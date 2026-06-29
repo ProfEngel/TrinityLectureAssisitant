@@ -334,6 +334,9 @@ class SettingsWindow(QMainWindow):
             self.config["control_plane"]["brainvault_root"] = (
                 self.brainvault_root_edit.text().strip()
             )
+            self.config["control_plane"]["external_agents_root"] = (
+                self.external_agents_root_edit.text().strip()
+            )
             self.config["control_plane"]["default_brainvault_harness"] = (
                 self.brainvault_harness_combo.currentText()
             )
@@ -1299,6 +1302,9 @@ class SettingsWindow(QMainWindow):
             self.config.setdefault("control_plane", {})["brainvault_root"] = (
                 self.brainvault_root_edit.text().strip()
             )
+            self.config["control_plane"]["external_agents_root"] = (
+                self.external_agents_root_edit.text().strip()
+            )
             self.config["control_plane"]["default_brainvault_harness"] = (
                 self.brainvault_harness_combo.currentText()
             )
@@ -1763,6 +1769,13 @@ class SettingsWindow(QMainWindow):
             "/Cloud/Pfad/BrainVault"
         )
         form.addRow("BrainVault-Agentenbasis:", self.brainvault_root_edit)
+
+        external_agents_default = control_conf.get("external_agents_root") or brainvault_default
+        self.external_agents_root_edit = QLineEdit(external_agents_default)
+        self.external_agents_root_edit.setPlaceholderText(
+            "/Cloud/Pfad/BrainVault"
+        )
+        form.addRow("Externe Harness-Agentenbasis (.agents):", self.external_agents_root_edit)
 
         self.brainvault_harness_combo = QComboBox()
         self.brainvault_harness_combo.addItems(self._harness_ids())

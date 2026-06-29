@@ -47,7 +47,11 @@ def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None)
     """Resolve the shared BrainVault root without forcing a TrinityVault nesting."""
 
     control = (config or {}).get("control_plane", {})
-    explicit = control.get("brainvault_root") or os.environ.get("TRINITY_BRAINVAULT")
+    explicit = (
+        control.get("external_agents_root")
+        or control.get("brainvault_root")
+        or os.environ.get("TRINITY_BRAINVAULT")
+    )
     if explicit:
         return Path(str(explicit)).expanduser().resolve()
 
@@ -233,6 +237,118 @@ def import_agent_directory(
     }
 
 
+def register_external_agent(
+    root: str | Path,
+    source_path: str | Path,
+    *,
+    area: str = "external",
+    agent_id: str = "",
+    name: str = "",
+    description: str = "",
+    preferred_harness: str = "codex",
+    status: str = "active",
+    enabled: bool = True,
+    kind: str = "project",
+    workspace: str = "",
+    entrypoint: str = "",
+    parent_agent: str = "",
+    tags: Optional[list[str]] = None,
+    copy_source: bool = False,
+) -> dict:
+    """Register an existing external file or project as a BrainVault agent.
+
+    Unlike import_agent_directory, this can keep large project folders in place
+    and only stores a clean BrainVault manifest plus optional source snapshot.
+    """
+
+    root_path = Path(root).expanduser().resolve()
+    source = Path(source_path).expanduser().resolve()
+    if not source.exists():
+        raise FileNotFoundError(f"Quelle nicht gefunden: {source}")
+    ensure_brainvault_layout(root_path)
+    clean_area = slugify(area or "external")
+    clean_slug = slugify(agent_id or source.stem or source.name)
+    full_id = f"{clean_area}.{clean_slug.replace('-', '_')}"
+    target = root_path / ".agents" / clean_area / clean_slug
+    target.mkdir(parents=True, exist_ok=True)
+
+    copied: list[str] = []
+    if copy_source:
+        copied = _copy_source_snapshot(source, target / "source")
+
+    display_name = name or _display_name(clean_slug)
+    desc = description or f"Externer Harness-Agent aus {source}"
+    workspace_value = str(Path(workspace).expanduser().resolve()) if workspace else str(source if source.is_dir() else source.parent)
+    source_relative = ""
+    if copied:
+        source_relative = copied[0] if len(copied) == 1 else "source"
+    entrypoints = {}
+    if entrypoint:
+        entrypoints["primary"] = entrypoint
+    elif source.is_file():
+        entrypoints["primary"] = source.name
+    if source.suffix == ".py":
+        entrypoints["script"] = source.name
+    elif source.suffix in {".html", ".htm"}:
+        entrypoints["html"] = source.name
+    elif source.suffix.lower() == ".md":
+        entrypoints["markdown"] = source.name
+    if source_relative:
+        entrypoints["source_snapshot"] = source_relative
+
+    natural = [display_name, clean_slug.replace("-", " ")]
+    if parent_agent:
+        natural.append(parent_agent)
+    data = {
+        "id": full_id,
+        "name": display_name,
+        "version": "1.0.0",
+        "source": "brainvault",
+        "execution_scope": "shared_harness",
+        "status": status,
+        "enabled": bool(enabled),
+        "created_at": _now_date(),
+        "description": desc,
+        "path": f".agents/{clean_area}/{clean_slug}",
+        "workspace": workspace_value,
+        "kind": kind,
+        "parent_agent": parent_agent,
+        "triggers": {
+            "natural": natural,
+            "slash": [],
+            "examples": [f"Trinity, nutze den {display_name} Agenten."],
+        },
+        "tags": list(dict.fromkeys([clean_area, kind, *(tags or [])])),
+        "compatible_harnesses": list(DEFAULT_HARNESSES),
+        "preferred_harness": preferred_harness or "auto",
+        "entrypoints": entrypoints,
+        "permissions": {
+            "read": [str(source)],
+            "write": [workspace_value],
+            "approval_required": ["external_write"] if status == "active" else ["activate_skill"],
+            "forbidden": ["destructive_changes_without_approval", "secret_logging"],
+        },
+        "secrets": [],
+        "outputs": [],
+        "resources": {"max_parallel_runs": 1},
+        "validation": {"tests_required": False, "last_validated": _now_date() if status == "active" else None},
+        "origin": {"source_paths": [str(source)]},
+    }
+    write_agent_yaml(target / "agent.yaml", data)
+    (target / "README.md").write_text(_external_readme(display_name, desc, source, copied), encoding="utf-8")
+    (target / "SKILL.md").write_text(
+        _external_skill(display_name, desc, source, kind, parent_agent, entrypoints),
+        encoding="utf-8",
+    )
+    catalog = build_catalog(root_path)
+    return {
+        "agent_id": full_id,
+        "path": str(target),
+        "copied_files": copied,
+        "catalog": catalog["path"],
+    }
+
+
 def build_catalog(root: str | Path) -> dict:
     root_path = Path(root).expanduser().resolve()
     ensure_brainvault_layout(root_path)
@@ -290,6 +406,10 @@ def validate_agent(root: str | Path, agent_id: str) -> dict:
     validation = data.get("validation") or {}
     if validation.get("tests_required") and not (agent_dir / "tests").is_dir():
         warnings.append("tests_required ist aktiv, aber tests/ fehlt.")
+    origin = data.get("origin") if isinstance(data.get("origin"), dict) else {}
+    for source_path in origin.get("source_paths") or []:
+        if source_path and not Path(str(source_path)).expanduser().exists():
+            errors.append(f"Ursprungspfad fehlt: {source_path}")
     for script in agent_dir.rglob("*.py"):
         if any(part in {".venv", "__pycache__"} for part in script.parts):
             continue
@@ -417,6 +537,8 @@ def _catalog_record(root: Path, yaml_path: Path, data: dict) -> dict:
         "compatible_harnesses": data.get("compatible_harnesses") or [],
         "preferred_harness": data.get("preferred_harness", "auto"),
         "entrypoints": data.get("entrypoints") or {},
+        "kind": data.get("kind", ""),
+        "parent_agent": data.get("parent_agent", ""),
         "permissions": permissions,
         "approval_required": permissions.get("approval_required", []),
         "forbidden": permissions.get("forbidden", []),
@@ -615,6 +737,18 @@ def _copy_agent_tree(source: Path, target: Path) -> list[str]:
     return copied
 
 
+def _copy_source_snapshot(source: Path, target: Path) -> list[str]:
+    if target.exists():
+        shutil.rmtree(target)
+    if source.is_file():
+        target.mkdir(parents=True, exist_ok=True)
+        destination = target / source.name
+        shutil.copy2(source, destination)
+        return [destination.relative_to(target.parent).as_posix()]
+    target.mkdir(parents=True, exist_ok=True)
+    return [f"source/{item}" for item in _copy_agent_tree(source, target)]
+
+
 def _skill_metadata(path: Path) -> dict:
     if not path.is_file():
         return {}
@@ -635,6 +769,58 @@ def _skill_metadata(path: Path) -> dict:
                 metadata["name"] = stripped[2:].strip()
                 break
     return metadata
+
+
+def _external_readme(display_name: str, description: str, source: Path, copied: list[str]) -> str:
+    lines = [
+        f"# {display_name}",
+        "",
+        description,
+        "",
+        f"- Ursprung: `{source}`",
+        f"- Snapshot: {'ja' if copied else 'nein, Quelle bleibt am Ursprungspfad'}",
+    ]
+    if copied:
+        lines.extend(["", "## Kopierte Dateien", ""])
+        lines.extend(f"- `{item}`" for item in copied[:80])
+        if len(copied) > 80:
+            lines.append(f"- ... {len(copied) - 80} weitere Dateien")
+    return "\n".join(lines) + "\n"
+
+
+def _external_skill(
+    display_name: str,
+    description: str,
+    source: Path,
+    kind: str,
+    parent_agent: str,
+    entrypoints: dict,
+) -> str:
+    lines = [
+        f"# {display_name}",
+        "",
+        "## Zweck",
+        "",
+        description,
+        "",
+        "## Harness-Nutzung",
+        "",
+        "- Lies zuerst `agent.yaml`.",
+        "- Arbeite innerhalb der dort genannten `permissions` und Ursprungspfade.",
+        "- Keine destruktiven Aenderungen ohne ausdrueckliche Freigabe.",
+        "- Ergebnisse und Berichte im freigegebenen Workspace oder Ergebnisordner ablegen.",
+        "",
+        "## Quelle",
+        "",
+        f"- Typ: `{kind}`",
+        f"- Ursprung: `{source}`",
+    ]
+    if parent_agent:
+        lines.append(f"- Uebergeordneter Agent: `{parent_agent}`")
+    if entrypoints:
+        lines.extend(["", "## Einstiegspunkte", ""])
+        lines.extend(f"- `{key}`: `{value}`" for key, value in entrypoints.items())
+    return "\n".join(lines) + "\n"
 
 
 def _audit_markdown(candidates: list[dict]) -> str:

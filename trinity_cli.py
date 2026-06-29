@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.1"
+VERSION = "0.16.2"
 
 
 def find_trinity_home(explicit=None):
@@ -157,6 +157,12 @@ def _configure_control_plane(config, home, input_fn=input):
     control["brainvault_root"] = _prompt(
         "BrainVault-Agentenbasis",
         brainvault_default,
+        input_fn,
+    )
+    external_default = control.get("external_agents_root") or control["brainvault_root"]
+    control["external_agents_root"] = _prompt(
+        "Externe Harness-Agentenbasis (.agents)",
+        external_default,
         input_fn,
     )
     control["default_brainvault_harness"] = _prompt_choice(

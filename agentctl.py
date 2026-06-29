@@ -26,6 +26,7 @@ def _load_core():
         inspect_agent,
         import_agent_directory,
         list_agents,
+        register_external_agent,
         validate_agent,
     )
     from configuration import load_config  # pylint: disable=import-outside-toplevel
@@ -40,6 +41,7 @@ def _load_core():
         "import_agent_directory": import_agent_directory,
         "list_agents": list_agents,
         "load_config": load_config,
+        "register_external_agent": register_external_agent,
         "validate_agent": validate_agent,
     }
 
@@ -130,6 +132,29 @@ def cmd_import(args) -> int:
     return 0
 
 
+def cmd_register(args) -> int:
+    core = _load_core()
+    result = core["register_external_agent"](
+        _vault_root(args),
+        args.source_path,
+        area=args.area,
+        agent_id=args.agent_id,
+        name=args.name,
+        description=args.description,
+        preferred_harness=args.preferred_harness,
+        status=args.status,
+        enabled=not args.disabled,
+        kind=args.kind,
+        workspace=args.workspace,
+        entrypoint=args.entrypoint,
+        parent_agent=args.parent_agent,
+        tags=[item.strip() for item in args.tags.split(",") if item.strip()],
+        copy_source=args.copy_source,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_audit(args) -> int:
     core = _load_core()
     root = _vault_root(args)
@@ -179,6 +204,23 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd.add_argument("--status", default="active", choices=["draft", "active", "disabled", "archived"])
     import_cmd.add_argument("--disabled", action="store_true")
     import_cmd.set_defaults(func=cmd_import)
+
+    register = sub.add_parser("register", help="Register an external file or project as a BrainVault agent")
+    register.add_argument("source_path")
+    register.add_argument("--area", default="external")
+    register.add_argument("--agent-id", default="")
+    register.add_argument("--name", default="")
+    register.add_argument("--description", default="")
+    register.add_argument("--preferred-harness", default="codex")
+    register.add_argument("--status", default="active", choices=["draft", "active", "disabled", "archived"])
+    register.add_argument("--disabled", action="store_true")
+    register.add_argument("--kind", default="project")
+    register.add_argument("--workspace", default="")
+    register.add_argument("--entrypoint", default="")
+    register.add_argument("--parent-agent", default="")
+    register.add_argument("--tags", default="")
+    register.add_argument("--copy-source", action="store_true")
+    register.set_defaults(func=cmd_register)
 
     audit = sub.add_parser("audit", help="Audit existing folders for agent candidates")
     audit.add_argument("roots", nargs="+")

@@ -16,6 +16,7 @@ from brainvault_agents import (  # noqa: E402
     ensure_brainvault_layout,
     import_agent_directory,
     inspect_agent,
+    register_external_agent,
     validate_agent,
 )
 
@@ -57,7 +58,7 @@ def test_brainvault_catalog_records_are_visible_in_trinity_catalog(tmp_path):
 
     records = build_agent_catalog(
         home,
-        {"control_plane": {"brainvault_root": str(vault)}},
+        {"control_plane": {"external_agents_root": str(vault)}},
     )
     by_id = {record.agent_id: record for record in records}
 
@@ -77,6 +78,24 @@ def test_brainvault_root_derives_parent_when_config_points_to_trinityvault(tmp_p
     )
 
     assert resolved == tmp_path
+
+
+def test_external_agents_root_overrides_brainvault_root(tmp_path):
+    home = tmp_path / "Trinity"
+    brainvault = tmp_path / "BrainVault"
+    external = tmp_path / "ExternalAgents"
+
+    resolved = brainvault_root_from_config(
+        home,
+        {
+            "control_plane": {
+                "brainvault_root": str(brainvault),
+                "external_agents_root": str(external),
+            }
+        },
+    )
+
+    assert resolved == external.resolve()
 
 
 def test_import_agent_directory_copies_skill_and_catalogs_as_active(tmp_path):
@@ -103,3 +122,39 @@ def test_import_agent_directory_copies_skill_and_catalogs_as_active(tmp_path):
     inspected = inspect_agent(root, "skills.demo_agent")
     assert inspected["preferred_harness"] == "codex"
     assert inspected["status"] == "active"
+
+
+def test_register_external_agent_keeps_origin_and_optional_snapshot(tmp_path):
+    root = tmp_path / "BrainVault"
+    source = tmp_path / "CampusHub" / "Mail" / "agents" / "01_mail_reader.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("# Mail Reader\n\nReads mail metadata.\n", encoding="utf-8")
+
+    result = register_external_agent(
+        root,
+        source,
+        area="mail",
+        agent_id="mail-reader",
+        name="Mail Reader",
+        description="Reads mail metadata safely.",
+        parent_agent="projects.campushub_mail_automation",
+        copy_source=True,
+    )
+
+    assert result["agent_id"] == "mail.mail_reader"
+    target = root / ".agents" / "mail" / "mail-reader"
+    assert (target / "agent.yaml").is_file()
+    assert (target / "source" / "01_mail_reader.md").is_file()
+    validation = validate_agent(root, "mail.mail_reader")
+    assert validation["ok"] is True
+    inspected = inspect_agent(root, "mail.mail_reader")
+    assert inspected["workspace"] == str(source.parent)
+    assert inspected["origin"]["source_paths"] == [str(source)]
+    assert inspected["parent_agent"] == "projects.campushub_mail_automation"
+
+    records = build_agent_catalog(
+        tmp_path / "Trinity",
+        {"control_plane": {"external_agents_root": str(root)}},
+    )
+    by_id = {record.agent_id: record for record in records}
+    assert by_id["mail.mail_reader"].parent_agent == "projects.campushub_mail_automation"
