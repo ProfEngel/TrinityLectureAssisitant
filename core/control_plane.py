@@ -14,6 +14,11 @@ from typing import Optional
 
 from agent_catalog import build_agent_catalog
 from artifact_store import ArtifactStore
+from brainvault_agents import (
+    brainvault_root_from_config,
+    build_catalog as build_brainvault_catalog,
+    ensure_brainvault_layout,
+)
 from configuration import load_config
 from harness_adapters import BuilderHarnessAdapter, ScriptWorkflowAdapter
 from job_manager import JobManager
@@ -29,6 +34,7 @@ class TrinityControlPlane:
         self.home = Path(home).expanduser().resolve()
         self.config = config or load_config(self.home / "core" / "config.json")
         self.paths = TrinityPaths.from_config(self.home, self.config)
+        self.brainvault_root = brainvault_root_from_config(self.home, self.config)
         self.registry = SkillRegistry(self.home)
         self.jobs = JobManager(self.paths.runtime_root)
         self.artifacts = ArtifactStore(self.paths.vault_root)
@@ -40,6 +46,8 @@ class TrinityControlPlane:
 
     def ensure_foundation(self) -> dict:
         layout = self.paths.ensure_layout()
+        brainvault_layout = ensure_brainvault_layout(self.brainvault_root)
+        brainvault_catalog = build_brainvault_catalog(self.brainvault_root)
         self.artifacts.ensure()
         self._write_vault_readme()
         catalog = self.export_agent_catalog()
@@ -47,6 +55,11 @@ class TrinityControlPlane:
         self._write_default_model_profile()
         return {
             "layout": layout,
+            "brainvault": {
+                "root": brainvault_layout["root"],
+                "catalog": brainvault_catalog["path"],
+                "agent_count": brainvault_catalog["summary"].get("total", 0),
+            },
             "catalog": {
                 "path": str(self.agent_catalog_path),
                 "agent_count": len(catalog["agents"]),

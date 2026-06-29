@@ -36,6 +36,20 @@ RISK_MARKERS = {
     "external_upload": ("hochladen", "upload", "teile extern"),
     "install_package": ("installiere paket", "pip install", "npm install"),
 }
+AGENT_FORGE_HINTS = (
+    "hier ist ein agent",
+    "hier liegt ein agent",
+    "schau mal ein agent",
+    "agentenordner",
+    "fuer trinity moeglich",
+    "für trinity möglich",
+    "fuer trinity lauffaehig",
+    "für trinity lauffähig",
+    "fuer trinity nutzbar",
+    "für trinity nutzbar",
+    "fuer uns hier in trinity",
+    "für uns hier in trinity",
+)
 
 
 @dataclass
@@ -210,6 +224,7 @@ class TaskOrchestrator:
             "agent forge" in normalized
             or "neuen agent" in normalized
             or "agentenbuilder" in normalized
+            or TaskOrchestrator._looks_like_agent_forge_request(normalized)
             or re.search(r"\b(?:baue|erstelle|entwickle)\s+(?:einen\s+)?agenten\b", normalized)
             or re.search(r"\b(?:importiere|importier|uebernimm|übernimm|hol(?:e)?\s+dir)\s+(?:diesen\s+|den\s+|einen\s+)?agenten\b", normalized)
             or re.search(r"\bagenten?\s+(?:aendern|ändern|erweitern|verbessern|umbauen)\b", normalized)
@@ -223,6 +238,27 @@ class TaskOrchestrator:
         if re.search(r"\b(?:nutze|starte|frage|verwende)\s+pi\b|\bpi[- ]agent\b", normalized):
             return "pi"
         return "local"
+
+    @staticmethod
+    def _looks_like_agent_forge_request(normalized: str) -> bool:
+        if any(marker in normalized for marker in AGENT_FORGE_HINTS):
+            return True
+        if "agent" not in normalized or "trinity" not in normalized:
+            return False
+        return any(
+            marker in normalized
+            for marker in (
+                "mach",
+                "mache",
+                "moeglich",
+                "möglich",
+                "lauffaehig",
+                "lauffähig",
+                "nutzbar",
+                "einbinden",
+                "integrieren",
+            )
+        )
 
     @staticmethod
     def _requires_plan(text: str, route: str) -> bool:

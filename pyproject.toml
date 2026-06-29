@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trinity-assistant"
-version = "0.15.6"
+version = "0.16.0"
 description = "Local-first academic personal concierge for macOS, Windows 11, and Linux servers"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
@@ -41,10 +41,11 @@ test = [
 
 [project.scripts]
 trinity = "trinity_cli:main"
+agentctl = "agentctl:main"
 
 [tool.setuptools]
 packages = []
-py-modules = ["trinity_cli", "trinity_tui"]
+py-modules = ["trinity_cli", "trinity_tui", "agentctl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

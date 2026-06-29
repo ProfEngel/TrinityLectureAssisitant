@@ -87,6 +87,7 @@
     "enabled": true,
     "runtime_root": "",
     "vault_root": "",
+    "brainvault_root": "",
     "default_mode": "guided",
     "builder_harness": "codex",
     "catalog_include_legacy": true

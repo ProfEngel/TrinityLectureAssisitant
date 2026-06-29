@@ -17,7 +17,8 @@
 > **Aktuelles Release:** 
 > - **v0.15.6:** Harness-Einstellungen besser lesbar: kontrastreiche Status-Badges, groessere Projektfelder und eine nach unten wachsende Agentenmatrix. Pi-Importlaeufe duerfen explizit genannte Quellordner read-only analysieren und schreiben weiterhin nur in freigegebene Projektordner.
 > - **v0.15.5:** Pi-Harness auf Codex/OpenCode-Niveau fuer Projektarbeit erweitert: freigegebene Projekt-Aliasse, Standardprojekt, nicht-interaktiver `-p {prompt}`-Start, Arbeitsverzeichnis pro Projekt und WebUI/Settings/CLI-Unterstuetzung.
-> - **v0.15.4:** Jobbasierter Agentenbuilder-Loop: Agenten erstellen, importieren oder erweitern erzeugt Staging-Artefakte, Builder-Plan, Validierungsbericht, optionale Codex/Pi/OpenCode-Harness-Rueckmeldungen und sichtbare Quality-Gates im Jobmanager; Onboarding-Beispiele wurden auf neutrale Platzhalter bereinigt.
+> - **v0.16.0:** BrainVault-Agentenbasis: externe Fachagenten werden direkt unter `BrainVault/.agents` als `draft` angelegt, per `agent.yaml` katalogisiert, ueber `agentctl` verwaltet und fuer Trinity, Codex, Pi, OpenCode, Claude Code und Antigravity harness-agnostisch vorbereitet.
+> - **v0.15.4:** Jobbasierter Agentenbuilder-Loop: Agenten erstellen, importieren oder erweitern erzeugt pruefbare Artefakte, Builder-Plan, Validierungsbericht, optionale Codex/Pi/OpenCode-Harness-Rueckmeldungen und sichtbare Quality-Gates im Jobmanager; Onboarding-Beispiele wurden auf neutrale Platzhalter bereinigt.
 > - **v0.15.3:** Desktop-Settings erhalten schnelle Mikrofon-/Lautsprecher-Toggles gegen Selbstmithören; der Agentenbuilder kann vorhandene Agentenordner/Uebersichtsdateien sicher als Staging-Agent importieren und erkennt Erstellen-, Aendern- und Erweiterungsauftraege per Zuruf.
 > - **v0.15.2:** Vollstaendiger Agentenkatalog in den Einstellungen: Trinity, Agentenbuilder, Shared/Personal/Staging- und Legacy-Agenten mit Reifegrad, Rechten, Freigaben, Lauf-/Parallelitaetslimits sowie Trinity als sichtbares Harness in der Ausfuehrungsmatrix.
 > - **v0.15.1:** Gemeinsame Harness-Einstellungen fuer Codex, Pi und OpenCode mit Rollen fuer Agentenbuilder, komplexe Faelle und Agenten-Ausfuehrung sowie update-sicherer Sicherung von TrinityRuntime.
@@ -61,6 +62,8 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > ist in **[Control Plane und MainHub](docs/CONTROL_PLANE_MAINHUB.md)**
 > dokumentiert; das Erstsetup fuer lokalen Runtime-Ordner und Cloud-Vault steht
 > im **[Onboarding: MainHub](docs/ONBOARDING.md#3-mainhub-cloud-vault-und-lokale-runtime)**.
+> Die neue gemeinsame externe Agentenbasis ist in
+> **[BrainVault-Agenten](docs/BRAINVAULT_AGENTS.md)** dokumentiert.
 
 ---
 
@@ -513,17 +516,29 @@ freigabeorientiert:
 
 > „Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.“
 
-Bei Imports legt Trinity zuerst einen Staging-Skill unter `skills/staging/` an,
-kopiert relevante Markdown-/JSON-/YAML-/Python-Dateien als Snapshot, erkennt
-Subagenten aus Unterordnern und schreibt einen Importbericht. Produktiv wird der
-Agent erst nach Tests und Freigabe.
+Bei Imports legt Trinity einen BrainVault-Agenten direkt unter
+`BrainVault/.agents/<bereich>/<agent-id>/` als `draft` an, schreibt
+`agent.yaml`, `SKILL.md`, `README.md`, einen Ursprungssnapshot und einen
+Importbericht. Sichtbar ist der Agent sofort im BrainVault-Katalog; aktiv wird
+er erst nach Tests und Freigabe (`status: active`, `enabled: true`).
 
 Seit dem Builder-Loop erzeugt Trinity dazu einen sichtbaren Job mit Quality
-Gates. Im Staging-Agenten liegen dann `BUILDER_PLAN.md`,
+Gates. Im BrainVault-Draft liegen dann `BUILDER_PLAN.md`,
 `VALIDATION_REPORT.md` und, falls Codex, Pi oder OpenCode aktiviert und passend
 angefordert sind, ein `HARNESS_REPORT.md`. Der Fortschritt ist ueber
-`trinity jobs list` und `trinity jobs show JOB_ID` nachvollziehbar. Promotion
-nach `skills/personal` oder `skills/shared` bleibt eine explizite Freigabe.
+`trinity jobs list` und `trinity jobs show JOB_ID` nachvollziehbar. Eine
+Aktivierung bleibt eine explizite Freigabe.
+
+BrainVault-Agenten koennen auch ohne Trinity-UI gepflegt werden:
+
+```bash
+agentctl init
+agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl list
+agentctl inspect research.thesis_reviewer
+agentctl validate research.thesis_reviewer
+agentctl catalog build
+```
 
 ---
 

@@ -69,29 +69,30 @@ ihre Quality Gates. Ein fehlgeschlagener Lauf kann danach bewusst lokal
 wiederholt oder in einer spaeteren Phase mit einem reproduzierbaren
 Eskalationspaket an Codex uebergeben werden.
 
-## Staging und Freigaben
+## BrainVault-Drafts und Freigaben
 
-Ein von OpenCode oder Codex entwickelter neuer Agent gehoert zuerst nach:
+Ein von Trinity, Codex, Pi, OpenCode, Claude Code oder Antigravity entwickelter
+externer Fachagent gehoert ab v0.16.0 direkt nach:
 
 ~~~text
-skills/staging/<skill-id>/
+BrainVault/.agents/<bereich>/<agent-id>/
 ~~~
 
 Mindestens erforderlich:
 
 ~~~text
-manifest.json
-script.py oder workflow.yaml
-tests/
+agent.yaml
+SKILL.md
 README.md
 ~~~
 
-Staging-Skills werden nicht in die Laufzeit geladen. Der vorgesehene
-Erzeugungsauftrag soll sie ausschliesslich im Staging-Verzeichnis anlegen; die
-vollstaendige technische Abschottung ueber den Tool Broker folgt in der naechsten
-Phase. Nach erfolgreichem Testlauf erzeugt Trinity eine Freigabe. Nur eine
-freigegebene, einmalig konsumierbare Promotion verschiebt ihn nach
-skills/personal und aktiviert ihn.
+Neue Agenten werden sofort als `status: draft` und `enabled: false` im
+BrainVault-Katalog sichtbar. Sie werden nicht in `skills/staging`,
+`skills/personal` oder `skills/shared` dupliziert. Nach erfolgreichem Testlauf
+und Freigabe wird direkt in `agent.yaml` auf `status: active` und
+`enabled: true` umgestellt. Das alte Staging-/Promotion-Modell bleibt nur noch
+als Kompatibilitaetsmechanismus fuer Trinity-interne Skills und Altdaten
+erhalten.
 
 Kind-Freigaben sind fuer mehrschrittige Aufgaben vorgesehen: Eine explizite
 Eltern-Freigabe kann nur konkret benannte Folgeaktionen fuer denselben Job
@@ -112,12 +113,12 @@ Seit v0.15.2 gibt es zwei bewusst getrennte Einstellungsbereiche:
   und die Control Plane bei Trinity selbst liegen. Codex, Pi und OpenCode werden
   nur dort angehakt, wo sie wirklich passende Worker sind.
 
-Neue Shared-/Personal-/Staging-Skills und vorhandene Legacy-Agenten tauchen
-automatisch in beiden Listen auf. Das verhindert Dupletten: Der Katalog verwaltet
+BrainVault-Agenten, Trinity-interne Skills und vorhandene Legacy-Agenten tauchen
+automatisch in den Listen auf. Das verhindert Dupletten: Der Katalog verwaltet
 Status und Rechte, die Matrix verwaltet die technische Ausfuehrung.
 
-Der Agentenbuilder ist als Shared Skill vorhanden. Er ist absichtlich
-freigabeorientiert: Er formuliert Anforderung, Plan, Quality Gates, Staging-Bau,
+Der Agentenbuilder ist als Trinity-interner Skill vorhanden. Er ist absichtlich
+freigabeorientiert: Er formuliert Anforderung, Plan, Quality Gates, Draft-Bau,
 Validierung und Release-Schritt, aktiviert produktiven Code aber erst nach einer
 expliziten Freigabe.
 
@@ -132,11 +133,13 @@ Trinity, erweitere den Agenten ... um ...
 ~~~
 
 Ein Import kopiert nicht blind Code in die produktive Laufzeit. Stattdessen wird
-unter `skills/staging/<skill-id>/` ein Staging-Skill erzeugt:
+unter `BrainVault/.agents/<bereich>/<agent-id>/` ein Draft-Agent erzeugt:
 
-- `manifest.json` mit Herkunft, Rechten, Freigaben und erkannten Subagenten,
-- `source_snapshot/` mit relevanten Markdown-, JSON/YAML-, Python- und
+- `agent.yaml` als Quelle der Wahrheit,
+- `manifest.json` als Kompatibilitaetsdatei fuer bestehende Trinity-Jobs,
+- `origin_snapshot/` mit relevanten Markdown-, JSON/YAML-, Python- und
   Konfigurationsdateien,
+- `README.md` und `SKILL.md`,
 - `README_IMPORT.md` als Importbericht,
 - `BUILDER_PLAN.md` und `VALIDATION_REPORT.md` fuer den sichtbaren Builder-Loop,
 - ein Platzhalter-`script.py`, das vor produktiver Aktivierung bremst,
@@ -145,27 +148,28 @@ unter `skills/staging/<skill-id>/` ein Staging-Skill erzeugt:
 Subagenten werden als Unterordner erkannt, wenn dort typische Marker wie
 `README.md`, `agent.md`, `workflow.yaml` oder `script.py` liegen. Im
 Agentenkatalog erscheinen diese Subagenten in der Hinweis-Spalte des importierten
-Hauptagenten. Erst nach echten Tests und Freigabe wird daraus ein Personal- oder
-Shared-Agent.
+Hauptagenten. Erst nach echten Tests und Freigabe wird der Draft aktiv.
 
-Der Builder-Loop arbeitet jobbasiert. Er markiert die Staging-Erstellung,
+Der Builder-Loop arbeitet jobbasiert. Er markiert die Draft-Erstellung,
 lokale Quality-Gates, optionales Harness-Feedback und die Freigabevorbereitung
 als einzelne Schritte im Trinity-Jobmanager. Wenn Codex, Pi oder OpenCode in den
 Harness-Einstellungen aktiviert sind und fuer die passende Rolle freigegeben
-wurden, kann Trinity sie fuer Feedback oder Nacharbeit am Staging-Ordner
-aufrufen. Der Loop darf dabei nicht automatisch nach `personal` oder `shared`
-promoten; dafuer bleibt `activate_skill` als Freigabe notwendig.
+wurden, kann Trinity sie fuer Feedback oder Nacharbeit am BrainVault-Agentenordner
+aufrufen. Der Loop darf dabei nicht automatisch aktivieren; dafuer bleibt
+`activate_skill` als Freigabe notwendig.
 
 ## Terminal-Kontrolle
 
 ~~~bash
 trinity skills list
-trinity skills list --tier staging
+agentctl list
+agentctl inspect AGENT_ID
+agentctl validate AGENT_ID
+agentctl catalog build
 trinity jobs list
 trinity jobs show JOB_ID
 trinity approvals list
 trinity approvals approve APPROVAL_ID
-trinity skills promote SKILL_ID --approval-id APPROVAL_ID
 ~~~
 
 ## Noch offene vNext-Phasen

@@ -19,6 +19,9 @@ TRIGGER_PATTERNS = (
     r"\bagent builder\b",
     r"\b(?:baue|erstelle|entwickle)\s+(?:einen\s+)?agenten\b",
     r"\b(?:importiere|importier|uebernimm|übernimm|hol(?:e)?\s+dir)\s+(?:diesen\s+|den\s+|einen\s+)?agenten\b",
+    r"\b(?:hier\s+(?:ist|liegt)|schau\s+mal)\s+(?:ein\s+)?agent(?:enordner)?\b",
+    r"\bagent(?:enordner)?\b.*\b(?:trinity|lauffaehig|lauffähig|moeglich|möglich|nutzbar|einbinden|integrieren)\b",
+    r"\b(?:mach|mache)\s+(?:ihn|den|diesen|diesen\s+agenten|den\s+agenten)?\s*(?:fuer|für)\s+trinity\s+(?:moeglich|möglich|lauffaehig|lauffähig|nutzbar)\b",
     r"\bagenten?\s+(?:aendern|ändern|erweitern|verbessern|umbauen)\b",
     r"\b(?:aendere|ändere|erweitere|verbessere)\s+(?:den\s+|einen\s+)?agenten\b",
     r"\bneuen\s+agenten\b",
@@ -32,6 +35,10 @@ IMPORT_PATTERNS = (
     "hol dir",
     "hole dir",
     "vorhandenen agent",
+    "hier ist ein agent",
+    "hier liegt ein agent",
+    "schau mal ein agent",
+    "agentenordner",
 )
 EDIT_PATTERNS = ("aendere", "ändere", "erweitere", "verbessere", "umbauen")
 RELEVANT_SUFFIXES = {
@@ -67,7 +74,7 @@ def execute(query: str, context=None) -> dict:
     if action == "import":
         source_path = _source_path_from_context(query, context)
         if source_path and source_path.exists():
-            staging_result = _stage_agent_import(source_path, query, job_id)
+            staging_result = _stage_agent_import(source_path, query, job_id, context)
         else:
             staging_result = {
                 "ok": False,
@@ -82,7 +89,7 @@ def execute(query: str, context=None) -> dict:
                 "subagents": [],
             }
     else:
-        staging_result = _stage_agent_request(action, query, job_id)
+        staging_result = _stage_agent_request(action, query, job_id, context)
 
     builder_result = _run_builder_loop(query, context, action, staging_result)
     message = _direct_message(action, staging_result, builder_result)
@@ -113,11 +120,36 @@ def _short_title(query: str) -> str:
 
 def _classify_action(query: str) -> str:
     text = str(query or "").casefold()
-    if any(pattern in text for pattern in IMPORT_PATTERNS):
+    if any(pattern in text for pattern in IMPORT_PATTERNS) or _looks_like_agent_import_request(text):
         return "import"
     if any(pattern in text for pattern in EDIT_PATTERNS):
         return "edit"
     return "create"
+
+
+def _looks_like_agent_import_request(text: str) -> bool:
+    if "agent" not in text:
+        return False
+    if "agentenordner" in text:
+        return True
+    if "trinity" not in text:
+        return False
+    return any(
+        marker in text
+        for marker in (
+            "mach",
+            "mache",
+            "moeglich",
+            "möglich",
+            "lauffaehig",
+            "lauffähig",
+            "nutzbar",
+            "einbinden",
+            "integrieren",
+            "uebernehmen",
+            "übernehmen",
+        )
+    )
 
 
 def _direct_message(action: str, import_result, builder_result=None) -> str:
@@ -127,9 +159,9 @@ def _direct_message(action: str, import_result, builder_result=None) -> str:
     if action == "import" and import_result:
         if import_result.get("ok"):
             return (
-                "Ich habe den Agentenimport als Staging-Skill vorbereitet und "
+                "Ich habe den Agentenimport als BrainVault-Draft vorbereitet und "
                 f"die Quality-Gates im Builder-Loop gestartet. Skill-ID: {import_result['skill_id']}."
-                f"{job_suffix} Produktiv wird der Agent erst nach Deiner Freigabe."
+                f"{job_suffix} Aktiv wird der Agent erst nach Validierung und Deiner Freigabe."
             )
         return "Ich habe den Agentenimport vorbereitet, brauche aber noch eine eindeutige Quelle."
     if action == "edit":
@@ -139,7 +171,7 @@ def _direct_message(action: str, import_result, builder_result=None) -> str:
             "Freigabe kann daraus die produktive Agentenversion werden."
         )
     return (
-        "Ich habe den Agentenbuilder aktiviert, einen Staging-Entwurf angelegt "
+        "Ich habe den Agentenbuilder aktiviert, einen BrainVault-Draft angelegt "
         f"und die Quality-Gates vorbereitet.{job_suffix} Produktive Aktivierung "
         "passiert erst nach Deiner Freigabe."
     )
@@ -189,27 +221,36 @@ def _html_payload(
     )
 
 
-def _stage_agent_request(action: str, query: str, job_id: str) -> dict:
+def _stage_agent_request(action: str, query: str, job_id: str, context: Optional[dict] = None) -> dict:
     title = _title_from_request(query, action)
-    skill_id = _unique_skill_id(
-        _repo_root() / "skills" / "staging",
-        f"{action}-" + _slug(title),
-    )
-    target = _repo_root() / "skills" / "staging" / skill_id
+    skill_id = _unique_brainvault_agent_id(context or {}, "draft", f"{action}-" + _slug(title))
+    target = _brainvault_agents_root(context or {}) / "draft" / skill_id
     tests_dir = target / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)
+    agent_id = f"draft.{skill_id.replace('-', '_')}"
+    _write_agent_yaml(
+        target / "agent.yaml",
+        _brainvault_agent_yaml(
+            agent_id=agent_id,
+            name=f"{'Aenderung' if action == 'edit' else 'Entwurf'} {title}",
+            description=f"Agentenbuilder-Draft fuer Auftrag: {_short_title(query)}",
+            relative_path=f".agents/draft/{skill_id}",
+            source_paths=[],
+            triggers=[_slug(title).replace("-", " "), title],
+        ),
+    )
     manifest = {
-        "id": skill_id,
+        "id": agent_id,
         "name": f"{'Aenderung' if action == 'edit' else 'Entwurf'} {title}",
         "version": "0.1.0",
-        "tier": "staging",
-        "description": f"Agentenbuilder-Staging fuer Auftrag: {_short_title(query)}",
+        "tier": "brainvault",
+        "description": f"Agentenbuilder-Draft fuer Auftrag: {_short_title(query)}",
         "triggers": [_slug(title).replace("-", " "), title],
         "allowed_tools": ["filesystem", "tests"],
-        "allowed_paths": ["skills/staging", "TrinityRuntime/jobs"],
+        "allowed_paths": [".agents/draft", "TrinityRuntime/jobs"],
         "requires_approval": ["activate_skill"],
         "tests": ["tests/test_builder_placeholder.py"],
-        "status": "staging",
+        "status": "draft",
         "script": "script.py",
         "risk_level": "medium",
         "source": f"agent-builder-{action}",
@@ -229,13 +270,22 @@ def _stage_agent_request(action: str, query: str, job_id: str) -> dict:
         "    assert (Path(__file__).resolve().parents[1] / 'manifest.json').is_file()\n",
         encoding="utf-8",
     )
+    (target / "README.md").write_text(
+        f"# {manifest['name']}\n\n{manifest['description']}\n",
+        encoding="utf-8",
+    )
+    (target / "SKILL.md").write_text(
+        f"# {manifest['name']}\n\n## Auftrag\n\n{_short_title(query)}\n",
+        encoding="utf-8",
+    )
     (target / "README_BUILDER.md").write_text(
         _builder_readme(title, action, query),
         encoding="utf-8",
     )
+    _rebuild_brainvault_catalog(context or {})
     return {
         "ok": True,
-        "skill_id": skill_id,
+        "skill_id": agent_id,
         "staging_path": str(target),
         "source_path": "",
         "copied_files": [],
@@ -555,11 +605,24 @@ def _requested_harnesses(query: str, context: dict) -> list[str]:
             requested.append(harness_id)
 
     config = _config_from_context(context)
-    default_builder = str(config.get("control_plane", {}).get("builder_harness", "")).strip().casefold()
-    if default_builder in {"codex", "pi", "opencode"} and default_builder not in requested:
-        if _harness_role_enabled(config, default_builder, "agent_builder"):
-            requested.insert(0, default_builder)
+    explicit_request = bool(requested)
+    if not explicit_request:
+        for candidate in _builder_harness_candidates(config):
+            if candidate not in requested and _harness_role_enabled(config, candidate, "agent_builder"):
+                requested.append(candidate)
+                break
     return [item for item in requested if _harness_enabled(context, config, item)]
+
+
+def _builder_harness_candidates(config: dict) -> list[str]:
+    default_builder = str(config.get("control_plane", {}).get("builder_harness", "")).strip().casefold()
+    candidates = []
+    if default_builder in {"codex", "pi", "opencode"}:
+        candidates.append(default_builder)
+    for harness_id in ("pi", "codex", "opencode"):
+        if harness_id not in candidates:
+            candidates.append(harness_id)
+    return candidates
 
 
 def _harness_role_enabled(config: dict, harness_id: str, role: str) -> bool:
@@ -656,11 +719,33 @@ def _harness_query(harness_id: str, query: str, action: str, staging_path: Path,
 def _validate_staging_skill(staging_path: Path) -> dict:
     errors = []
     warnings = []
+    agent_yaml_path = staging_path / "agent.yaml"
     manifest_path = staging_path / "manifest.json"
     script_path = staging_path / "script.py"
     manifest = {}
+    if agent_yaml_path.is_file():
+        try:
+            agent_yaml = _load_agent_yaml(agent_yaml_path)
+        except Exception as exc:
+            agent_yaml = {}
+            errors.append(f"agent.yaml ist ungueltig: {exc}")
+        if agent_yaml:
+            for key in ("id", "name", "source", "execution_scope", "status", "path"):
+                if not agent_yaml.get(key):
+                    errors.append(f"agent.yaml: Feld {key} fehlt.")
+            if agent_yaml.get("source") != "brainvault":
+                errors.append("agent.yaml: source muss brainvault sein.")
+            if agent_yaml.get("execution_scope") != "shared_harness":
+                errors.append("agent.yaml: execution_scope muss shared_harness sein.")
+            if agent_yaml.get("status") not in {"draft", "active", "disabled", "archived"}:
+                errors.append("agent.yaml: status ist ungueltig.")
+        if not (staging_path / "SKILL.md").is_file():
+            warnings.append("SKILL.md fehlt im BrainVault-Agentenordner.")
+        if not (staging_path / "README.md").is_file():
+            warnings.append("README.md fehlt im BrainVault-Agentenordner.")
     if not manifest_path.is_file():
-        errors.append("manifest.json fehlt.")
+        if not agent_yaml_path.is_file():
+            errors.append("manifest.json oder agent.yaml fehlt.")
     else:
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -670,8 +755,12 @@ def _validate_staging_skill(staging_path: Path) -> dict:
         for key in ("id", "name", "tier", "status", "script"):
             if not manifest.get(key):
                 errors.append(f"manifest.json: Feld {key} fehlt.")
-        if manifest.get("tier") != "staging":
-            errors.append("manifest.json: tier muss staging sein.")
+        if manifest.get("tier") not in {"staging", "brainvault"}:
+            errors.append("manifest.json: tier muss staging oder brainvault sein.")
+        if manifest.get("tier") == "brainvault" and manifest.get("status") not in {"draft", "active", "disabled", "archived"}:
+            errors.append("manifest.json: brainvault status ist ungueltig.")
+        if manifest.get("tier") == "staging" and manifest.get("status") != "staging":
+            warnings.append("manifest.json: Staging-Skill sollte status staging haben.")
         for test_path in manifest.get("tests") or []:
             if not (staging_path / str(test_path)).is_file():
                 errors.append(f"Test fehlt: {test_path}")
@@ -778,31 +867,44 @@ def _source_path_from_context(query: str, context: dict) -> Optional[Path]:
     return None
 
 
-def _stage_agent_import(source_path: Path, query: str, job_id: str) -> dict:
+def _stage_agent_import(source_path: Path, query: str, job_id: str, context: Optional[dict] = None) -> dict:
     source_path = source_path.expanduser().resolve()
     source_root = source_path if source_path.is_dir() else source_path.parent
     title = _agent_title_from_source(source_path)
-    skill_id = _unique_skill_id(_repo_root() / "skills" / "staging", "import-" + _slug(title))
-    target = _repo_root() / "skills" / "staging" / skill_id
-    snapshot = target / "source_snapshot"
+    skill_id = _unique_brainvault_agent_id(context or {}, _area_from_source(source_path), _slug(title))
+    area = _area_from_source(source_path)
+    target = _brainvault_agents_root(context or {}) / area / skill_id
+    snapshot = target / "origin_snapshot"
     tests_dir = target / "tests"
     snapshot.mkdir(parents=True)
     tests_dir.mkdir(parents=True)
 
     copied = _copy_relevant_files(source_root, snapshot)
     subagents = _detect_subagents(source_root)
+    agent_id = f"{area}.{skill_id.replace('-', '_')}"
+    _write_agent_yaml(
+        target / "agent.yaml",
+        _brainvault_agent_yaml(
+            agent_id=agent_id,
+            name=title,
+            description=f"Importierter BrainVault-Agent aus {source_path}",
+            relative_path=f".agents/{area}/{skill_id}",
+            source_paths=[str(source_path)],
+            triggers=[_slug(title).replace("-", " "), title],
+        ),
+    )
     manifest = {
-        "id": skill_id,
+        "id": agent_id,
         "name": f"Import {title}",
         "version": "0.1.0",
-        "tier": "staging",
-        "description": f"Staging-Import aus {source_path}",
+        "tier": "brainvault",
+        "description": f"BrainVault-Draft-Import aus {source_path}",
         "triggers": [_slug(title).replace("-", " "), title],
         "allowed_tools": ["filesystem"],
         "allowed_paths": [str(source_root)],
         "requires_approval": ["activate_skill"],
         "tests": ["tests/test_import_placeholder.py"],
-        "status": "staging",
+        "status": "draft",
         "script": "script.py",
         "risk_level": "medium",
         "source": "agent-import",
@@ -822,13 +924,22 @@ def _stage_agent_import(source_path: Path, query: str, job_id: str) -> dict:
         "    assert (Path(__file__).resolve().parents[1] / 'manifest.json').is_file()\n",
         encoding="utf-8",
     )
+    (target / "README.md").write_text(
+        f"# {title}\n\nImportierter BrainVault-Agent aus `{source_path}`.\n",
+        encoding="utf-8",
+    )
+    (target / "SKILL.md").write_text(
+        f"# {title}\n\n## Herkunft\n\n`{source_path}`\n\n## Status\n\nDraft bis Validierung und Freigabe abgeschlossen sind.\n",
+        encoding="utf-8",
+    )
     (target / "README_IMPORT.md").write_text(
         _import_readme(title, source_path, copied, subagents, query),
         encoding="utf-8",
     )
+    _rebuild_brainvault_catalog(context or {})
     return {
         "ok": True,
-        "skill_id": skill_id,
+        "skill_id": agent_id,
         "staging_path": str(target),
         "source_path": str(source_path),
         "copied_files": copied,
@@ -838,6 +949,135 @@ def _stage_agent_import(source_path: Path, query: str, job_id: str) -> dict:
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def _brainvault_root(context: dict) -> Path:
+    config = _config_from_context(context)
+    try:
+        core_path = _repo_root() / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path))
+        from brainvault_agents import brainvault_root_from_config, ensure_brainvault_layout
+
+        root = brainvault_root_from_config(_repo_root(), config)
+        ensure_brainvault_layout(root)
+        return root
+    except Exception:
+        control = config.get("control_plane", {}) if isinstance(config, dict) else {}
+        value = control.get("brainvault_root") or control.get("vault_root")
+        if value:
+            path = Path(str(value)).expanduser().resolve()
+            if path.name.casefold() == "trinityvault":
+                path = path.parent
+            (path / ".agents").mkdir(parents=True, exist_ok=True)
+            return path
+        fallback = _repo_root() / "BrainVault"
+        (fallback / ".agents").mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+def _brainvault_agents_root(context: dict) -> Path:
+    root = _brainvault_root(context)
+    agents = root / ".agents"
+    agents.mkdir(parents=True, exist_ok=True)
+    return agents
+
+
+def _rebuild_brainvault_catalog(context: dict) -> None:
+    try:
+        core_path = _repo_root() / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path))
+        from brainvault_agents import build_catalog
+
+        build_catalog(_brainvault_root(context))
+    except Exception:
+        return
+
+
+def _unique_brainvault_agent_id(context: dict, area: str, base: str) -> str:
+    root = _brainvault_agents_root(context) / _slug(area)
+    root.mkdir(parents=True, exist_ok=True)
+    clean = _slug(base)
+    candidate = clean[:58]
+    counter = 2
+    while (root / candidate).exists():
+        suffix = f"-{counter}"
+        candidate = f"{clean[:58 - len(suffix)]}{suffix}"
+        counter += 1
+    return candidate
+
+
+def _area_from_source(path: Path) -> str:
+    parts = [part.casefold() for part in path.parts]
+    for marker in ("campushub", "ideaverse", "mainhub"):
+        if marker in parts:
+            return _slug(marker)
+    return "imported"
+
+
+def _brainvault_agent_yaml(
+    agent_id: str,
+    name: str,
+    description: str,
+    relative_path: str,
+    source_paths: list[str],
+    triggers: list[str],
+) -> dict:
+    return {
+        "id": agent_id,
+        "name": name,
+        "version": "0.1.0",
+        "source": "brainvault",
+        "execution_scope": "shared_harness",
+        "status": "draft",
+        "enabled": False,
+        "created_at": time.strftime("%Y-%m-%d"),
+        "description": description,
+        "path": relative_path,
+        "workspace": None,
+        "triggers": {
+            "natural": triggers,
+            "slash": [],
+            "examples": [],
+        },
+        "tags": [agent_id.split(".", 1)[0]],
+        "compatible_harnesses": ["trinity", "codex", "pi", "opencode", "claude-code", "antigravity"],
+        "preferred_harness": "auto",
+        "entrypoints": {"script": "script.py"},
+        "permissions": {
+            "read": [],
+            "write": [],
+            "approval_required": ["activate_skill"],
+            "forbidden": ["destructive_changes_without_approval", "secret_logging"],
+        },
+        "secrets": [],
+        "outputs": [],
+        "resources": {"max_parallel_runs": 1},
+        "validation": {"tests_required": True, "last_validated": None},
+        "origin": {"source_paths": source_paths},
+    }
+
+
+def _write_agent_yaml(path: Path, data: dict) -> None:
+    try:
+        core_path = _repo_root() / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path))
+        from brainvault_agents import write_agent_yaml
+
+        write_agent_yaml(path, data)
+    except Exception:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _load_agent_yaml(path: Path) -> dict:
+    core_path = _repo_root() / "core"
+    if str(core_path) not in sys.path:
+        sys.path.insert(0, str(core_path))
+    from brainvault_agents import load_agent_yaml
+
+    return load_agent_yaml(path)
 
 
 def _agent_title_from_source(path: Path) -> str:
@@ -895,7 +1135,8 @@ def _copy_relevant_files(source_root: Path, snapshot_root: Path) -> list[str]:
             break
         if not path.is_file() or path.suffix.casefold() not in RELEVANT_SUFFIXES:
             continue
-        if any(part.startswith(".") or part in {"__pycache__", "node_modules"} for part in path.parts):
+        relative = path.relative_to(source_root)
+        if any(part.startswith(".") or part in {"__pycache__", "node_modules"} for part in relative.parts):
             continue
         try:
             size = path.stat().st_size
@@ -903,7 +1144,6 @@ def _copy_relevant_files(source_root: Path, snapshot_root: Path) -> list[str]:
             continue
         if size > 256 * 1024 or total_bytes + size > MAX_SNAPSHOT_BYTES:
             continue
-        relative = path.relative_to(source_root)
         target = snapshot_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)

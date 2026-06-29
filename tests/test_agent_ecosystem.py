@@ -160,6 +160,18 @@ def test_orchestrator_routes_agent_builder_even_when_pi_is_mentioned(tmp_path):
     assert planned.requires_plan is True
 
 
+def test_orchestrator_routes_natural_agent_import_to_builder(tmp_path):
+    orchestrator = TaskOrchestrator(tmp_path)
+
+    planned = orchestrator.prepare(
+        "Trinity, hier ist ein Agent, den ich mit Antigravity erstellt habe. "
+        "Mach ihn fuer Trinity moeglich."
+    )
+
+    assert planned.route == "agent_forge"
+    assert planned.requires_plan is True
+
+
 def test_policy_blocks_package_installation_and_requires_mail_approval():
     policy = PolicyEngine()
 

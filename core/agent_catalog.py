@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
 
+from brainvault_agents import brainvault_root_from_config, list_agents
 from skill_registry import SkillRecord, SkillRegistry
 
 
@@ -41,10 +42,20 @@ class AgentCatalogRecord:
     parent_agent: str = ""
     subagents: list[str] = field(default_factory=list)
     source_agent_path: str = ""
+    enabled: bool = True
+    execution_scope: str = ""
+    workspace: str = ""
+    compatible_harnesses: list[str] = field(default_factory=list)
+    preferred_harness: str = ""
+    natural_triggers: list[str] = field(default_factory=list)
+    slash_triggers: list[str] = field(default_factory=list)
+    examples: list[str] = field(default_factory=list)
+    forbidden: list[str] = field(default_factory=list)
+    last_validated: str = ""
 
     @property
     def tier_order(self) -> int:
-        order = {"trinity": 0, "shared": 1, "personal": 2, "staging": 3, "legacy": 4}
+        order = {"trinity": 0, "brainvault": 1, "shared": 2, "personal": 3, "staging": 4, "legacy": 5}
         return order.get(self.tier, 9)
 
 
@@ -76,6 +87,8 @@ def build_agent_catalog(
     if "agent-builder" not in seen:
         records.append(_agent_builder_record(root, overrides, stats, synthetic=True))
 
+    records.extend(_brainvault_records(root, cfg, overrides, stats, seen))
+
     return sorted(records, key=lambda item: (item.tier_order, item.name.casefold(), item.agent_id))
 
 
@@ -93,6 +106,8 @@ def default_harnesses_for_agent(agent_id: str) -> list[str]:
         return ["trinity", "opencode"]
     if normalized in {"pi-agent", "legacy-pi-agent", "pi_agent"}:
         return ["trinity", "pi"]
+    if normalized.startswith("brainvault.") or "." in normalized:
+        return ["trinity", "pi", "codex", "opencode"]
     return ["trinity"]
 
 
@@ -161,7 +176,7 @@ def _agent_builder_record(root: Path, overrides: dict, stats: dict, synthetic: b
             path=str(path),
             description="Erfasst neue Agentenanforderungen, erstellt Plan/Quality-Gates und bereitet Staging-Freigaben vor.",
             allowed_tools=["filesystem", "tests", "harness", "job_manager"],
-            allowed_paths=["skills/staging", "TrinityRuntime/jobs"],
+            allowed_paths=["BrainVault/.agents", "TrinityRuntime/jobs"],
             requires_approval=["activate_skill", "write_code"],
             risk_level="medium",
             max_attempts=3,
@@ -173,6 +188,61 @@ def _agent_builder_record(root: Path, overrides: dict, stats: dict, synthetic: b
         ),
         overrides,
     )
+
+
+def _brainvault_records(
+    root: Path,
+    config: dict,
+    overrides: dict,
+    stats: dict,
+    seen: set[str],
+) -> list[AgentCatalogRecord]:
+    try:
+        brainvault_root = brainvault_root_from_config(root, config)
+        agents = list_agents(brainvault_root)
+    except Exception:
+        return []
+    records: list[AgentCatalogRecord] = []
+    for agent in agents:
+        agent_id = str(agent.get("id") or "").strip()
+        if not agent_id or agent_id in seen:
+            continue
+        status = str(agent.get("status") or "draft")
+        quality = "stable" if status == "active" and agent.get("enabled") else "testing"
+        permissions = agent.get("permissions") if isinstance(agent.get("permissions"), dict) else {}
+        records.append(
+            _apply_override(
+                AgentCatalogRecord(
+                    agent_id=agent_id,
+                    name=str(agent.get("name") or agent_id),
+                    tier="brainvault",
+                    runtime_status=status,
+                    quality_status=quality,
+                    source="brainvault",
+                    path=str(agent.get("absolute_path") or ""),
+                    description=str(agent.get("description") or ""),
+                    allowed_tools=["filesystem", "harness"],
+                    allowed_paths=_string_list(permissions.get("read")) + _string_list(permissions.get("write")),
+                    requires_approval=_string_list(agent.get("approval_required")),
+                    risk_level="medium",
+                    valid=True,
+                    enabled=bool(agent.get("enabled", False)),
+                    execution_scope=str(agent.get("execution_scope") or "shared_harness"),
+                    workspace=str(agent.get("workspace") or ""),
+                    compatible_harnesses=_string_list(agent.get("compatible_harnesses")),
+                    preferred_harness=str(agent.get("preferred_harness") or "auto"),
+                    natural_triggers=_string_list(agent.get("natural_triggers")),
+                    slash_triggers=_string_list(agent.get("slash_triggers")),
+                    examples=_string_list(agent.get("examples")),
+                    forbidden=_string_list(agent.get("forbidden")),
+                    last_validated=str(agent.get("last_validated") or ""),
+                    **stats.get(agent_id, {}),
+                ),
+                overrides,
+            )
+        )
+        seen.add(agent_id)
+    return records
 
 
 def _record_from_skill(record: SkillRecord, overrides: dict, stats: dict) -> AgentCatalogRecord:

@@ -284,17 +284,17 @@ einen Agenten dort z.B. von "Nicht erprobt" auf "Erprobt" oder "Stabil" setzen.
 
 ### Agentenbuilder nutzen
 
-Der Agentenbuilder ist ein eigener Shared Skill und steht im Agentenkatalog.
+Der Agentenbuilder ist ein Trinity-interner Skill und steht im Agentenkatalog.
 Ein sicherer Startauftrag ist:
 
 > Trinity, aktiviere den Agentenbuilder. Ich moechte einen Agenten planen, der
 > PDF-Folien auf fehlende Quellen prueft und nur einen Bericht schreibt.
 
-Trinity legt dabei keinen produktiven Agenten heimlich frei. Der Builder
-strukturiert Anforderung, Plan, Staging-Bau, Tests, Quality Gates und den
-Freigabeschritt. Erst wenn Tests und Freigabe stimmen, wird ein Agent aus
-`skills/staging/` nach `skills/personal/` oder spaeter in Shared Skills
-uebernommen.
+Trinity legt dabei keinen produktiven Agenten heimlich frei. Externe
+Fachagenten werden direkt als BrainVault-Draft unter
+`BrainVault/.agents/<bereich>/<agent-id>/` angelegt und sofort im
+BrainVault-Katalog sichtbar. Erst wenn Tests und Freigabe stimmen, wird
+`agent.yaml` auf `status: active` und `enabled: true` gesetzt.
 
 Typische Auftraege sind:
 
@@ -304,17 +304,28 @@ Trinity, hol Dir diesen Agenten "/vollstaendiger/Pfad/zum/DCM-Agenten".
 Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.
 ~~~
 
-Ein Import ist absichtlich nur ein sicherer Staging-Schritt. Trinity kopiert die
-relevanten Dateien in einen Snapshot, erkennt moegliche Subagenten aus
-Unterordnern, schreibt einen Importbericht und traegt den Agenten im Katalog als
-Staging ein. Produktiv wird er erst, wenn Tests, Rechte, Freigaben und Harness-
+Ein Import ist absichtlich nur ein sicherer Draft-Schritt. Trinity kopiert die
+relevanten Dateien in `origin_snapshot/`, erkennt moegliche Subagenten aus
+Unterordnern, schreibt einen Importbericht und traegt den Agenten im
+BrainVault-Katalog als Draft ein. Produktiv wird er erst, wenn Tests, Rechte,
+Freigaben und Harness-
 Zuordnung sauber geprueft sind.
 
 Der Builder-Loop legt dazu einen sichtbaren Job an. Mit `trinity jobs list` und
 `trinity jobs show JOB_ID` siehst Du Plan, Quality-Gates, Validierungsstatus und
-gegebenenfalls Harness-Rueckmeldungen. Im Staging-Ordner entstehen
+gegebenenfalls Harness-Rueckmeldungen. Im BrainVault-Draft entstehen
 `BUILDER_PLAN.md`, `VALIDATION_REPORT.md` und bei externem Feedback
 `HARNESS_REPORT.md`.
+
+Fuer direkte Verwaltung ohne Trinity-UI gibt es `agentctl`:
+
+~~~bash
+agentctl init
+agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl list
+agentctl validate research.thesis_reviewer
+agentctl catalog build
+~~~
 
 Wenn Du Codex, Pi oder OpenCode im Auftrag nennst und die jeweilige Anbindung in
 Einstellungen -> Harnesses aktiv ist, kann Trinity diese Harnesses in den
