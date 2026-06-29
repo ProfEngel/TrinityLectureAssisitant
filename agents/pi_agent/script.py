@@ -64,6 +64,7 @@ def execute(query: str, context: dict = None) -> dict:
             prompt=prompt,
             timeout=timeout,
             project_path=project_path,
+            project_alias=alias,
         )
     except subprocess.TimeoutExpired:
         return _result(f"Pi hat das Zeitlimit von {timeout} Sekunden überschritten.")
@@ -151,7 +152,9 @@ def _normalize_arguments(value) -> list[str]:
 
 def _build_prompt(query: str, alias: str = "", project_path: Path = None) -> str:
     project_line = (
-        f"Projekt: {alias}\nArbeitsordner: {project_path}\n\n"
+        f"Projekt: {alias}\nArbeitsordner: {project_path}\n"
+        "Du wurdest bereits mit diesem Arbeitsordner als current working "
+        "directory gestartet.\n\n"
         if alias and project_path
         else ""
     )
@@ -164,12 +167,27 @@ Auftrag des Nutzers:
 Arbeite im angegebenen Projektordner, falls einer genannt ist. Nutze dort
 Projektregeln, vorhandene Agenten, Tests und Dateien. Antworte auf Deutsch.
 
+Wichtig fuer Dateizugriff:
+- Nutze bevorzugt relative Pfade ab dem Arbeitsordner, z.B. `AGENTS.md`,
+  `.agents/mail/...` oder `.catalog/...`.
+- Vermeide absolute iCloud-/OneDrive-Pfade mit Leerzeichen in internen
+  Read-Tools. Wenn ein Tool absolute Pfade falsch quotet, lies Dateien per
+  Shell aus dem aktuellen Arbeitsordner, z.B. `pwd`, `ls -la`, `find .agents
+  -maxdepth 3 -name agent.yaml`, `sed -n '1,160p' AGENTS.md` oder `python3`.
+- Wenn Du einen absoluten Pfad brauchst, quote ihn nur im Shell-Kommando selbst
+  und baue ihn nicht in ein internes Read-Tool ein.
+
 Sicherheitsregeln fuer diesen fernausgeloesten Lauf:
 - Arbeite nur im freigegebenen Projektordner.
 - Wenn der freigegebene Projektordner ein BrainVault-Agentenpool ist
   (`.agents` und `AGENTS.md` vorhanden), darfst Du dort Agenten lesen, anlegen,
   ueberarbeiten, testen, katalogisieren und passende Reports ablegen, soweit der
   Nutzer das beauftragt.
+- Mail-Auftraege: Du darfst lokale Mail-Agenten, Apple-Mail-Automationen oder
+  Skripte nutzen, wenn der Nutzer es ausdruecklich beauftragt. Standard ist:
+  Antworten als Entwurf vorbereiten und transparent berichten. Senden, Loeschen
+  oder Verschieben von Mails ist nur erlaubt, wenn der Nutzer diese konkrete
+  Aktion ausdruecklich freigibt.
 - Fuer Import-Auftraege darfst Du explizit vom Nutzer genannte Quellpfade
   read-only analysieren. Schreibe, kopiere oder normalisiere Ergebnisse aber
   nur in den freigegebenen Projektordner.
@@ -193,6 +211,7 @@ def _run_pi(
     prompt: str,
     timeout: int,
     project_path: Path = None,
+    project_alias: str = "",
 ) -> str:
     replaced = False
     command = [executable]
@@ -208,6 +227,16 @@ def _run_pi(
     run_command = subprocess.list2cmdline(command) if use_shell else command
     creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
 
+    env = {
+        **os.environ,
+        "NO_COLOR": "1",
+        "TRINITY_PROJECT_ALIAS": str(project_alias or ""),
+    }
+    if project_path:
+        env["TRINITY_PROJECT_ROOT"] = str(project_path)
+        if (project_path / ".agents").is_dir():
+            env["TRINITY_BRAINVAULT_ROOT"] = str(project_path)
+
     completed = subprocess.run(
         run_command,
         input=input_text,
@@ -217,7 +246,7 @@ def _run_pi(
         check=False,
         shell=use_shell,
         cwd=str(project_path) if project_path else None,
-        env={**os.environ, "NO_COLOR": "1"},
+        env=env,
         creationflags=creation_flags,
     )
     if completed.returncode != 0:

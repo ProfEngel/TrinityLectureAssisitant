@@ -40,6 +40,7 @@ def test_run_pi_uses_stdin_when_no_prompt_placeholder(monkeypatch):
         prompt="Frage",
         timeout=120,
         project_path=None,
+        project_alias="",
     )
 
     assert answer == "Pi antwortet."
@@ -65,6 +66,7 @@ def test_run_pi_can_pass_prompt_as_argument(monkeypatch):
         prompt="Frage als Argument",
         timeout=120,
         project_path=None,
+        project_alias="",
     )
 
     assert answer == "Argument erledigt."
@@ -99,8 +101,39 @@ def test_pi_selects_project_and_runs_in_project_cwd(monkeypatch, tmp_path):
 
     assert result["direct_answer"] == "Pi Projekt ok."
     assert captured["project_path"] == project.resolve()
+    assert captured["project_alias"] == "SandboxVault"
     assert captured["arguments"] == ["-p", "{prompt}"]
     assert "Projekt: SandboxVault" in captured["prompt"]
+    assert "relative Pfade" in captured["prompt"]
+
+
+def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
+    agent = _load_agent()
+    project = tmp_path / "BrainVault"
+    (project / ".agents").mkdir(parents=True)
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(agent.subprocess, "run", fake_run)
+
+    answer = agent._run_pi(
+        executable="/usr/local/bin/pi",
+        arguments=["-p", "{prompt}"],
+        prompt="Frage",
+        timeout=120,
+        project_path=project,
+        project_alias="BrainVault",
+    )
+
+    assert answer == "ok"
+    assert captured["kwargs"]["cwd"] == str(project)
+    assert captured["kwargs"]["env"]["TRINITY_PROJECT_ROOT"] == str(project)
+    assert captured["kwargs"]["env"]["TRINITY_BRAINVAULT_ROOT"] == str(project)
+    assert captured["kwargs"]["env"]["TRINITY_PROJECT_ALIAS"] == "BrainVault"
 
 
 def test_execute_returns_pi_answer_directly(monkeypatch):

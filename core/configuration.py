@@ -190,9 +190,9 @@ def default_config(platform_name=None):
                 "pi": {
                     "label": "Pi",
                     "roles": {
-                        "agent_builder": False,
+                        "agent_builder": True,
                         "complex_cases": True,
-                        "agent_execution": False,
+                        "agent_execution": True,
                     },
                 },
                 "opencode": {
