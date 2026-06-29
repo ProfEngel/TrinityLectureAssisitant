@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,8 @@ def test_pi_requires_explicit_agent_trigger():
     assert agent.can_handle("Trinity, nutze Pi für diese Aufgabe")
     assert agent.can_handle("Trinity, frage Pi dazu")
     assert agent.can_handle("Trinity, starte den Pi-Agent")
+    assert agent.can_handle("Hi Trinity, welche Fähigkeiten hast Du?")
+    assert agent.can_handle("Trinity, gibt es einen Mail-Agenten?")
     assert not agent.can_handle("Trinity, was ist die Kreiszahl Pi?")
 
 
@@ -149,3 +152,56 @@ def test_execute_returns_pi_answer_directly(monkeypatch):
     assert result["direct_answer"] == "Pi hat geantwortet."
     assert result["has_payload"] is True
     assert "Pi hat geantwortet" in result["html_payload"]
+
+
+def test_capability_request_lists_brainvault_agents_without_explicit_pi(monkeypatch, tmp_path):
+    agent = _load_agent()
+    brainvault = tmp_path / "BrainVault"
+    catalog_dir = brainvault / ".catalog"
+    catalog_dir.mkdir(parents=True)
+    (brainvault / ".agents").mkdir()
+    (catalog_dir / "agent_catalog.json").write_text(
+        json.dumps(
+            {
+                "agents": [
+                    {
+                        "id": "skills.mail_agent",
+                        "name": "Mail-Agent",
+                        "status": "active",
+                        "enabled": True,
+                        "description": "Bereitet Mailentwuerfe und Rundlaeufe vor.",
+                    },
+                    {
+                        "id": "draft.hidden",
+                        "name": "Draft",
+                        "status": "draft",
+                        "enabled": False,
+                        "description": "Noch nicht sichtbar.",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_run_pi(**_kwargs):
+        raise AssertionError("Faehigkeitslisten sollen keinen Pi-Lauf starten.")
+
+    monkeypatch.setattr(agent, "_run_pi", fail_run_pi)
+
+    result = agent.execute(
+        "Hi Trinity, welche Fähigkeiten hast Du?",
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"BrainVault": str(brainvault)},
+                "default_project": "BrainVault",
+            }
+        },
+    )
+
+    answer = result["direct_answer"]
+    assert "Trinity direkt" in answer
+    assert "Mail-Agent" in answer
+    assert "Pi nicht nennen" in answer
+    assert "Codex und Antigravity" in answer

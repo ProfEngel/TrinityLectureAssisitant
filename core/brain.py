@@ -20,6 +20,7 @@ class TrinityBrain:
         self.config_path = os.path.join(os.path.dirname(__file__), "config.json")
         self.soul_path = os.path.join(os.path.dirname(__file__), "Soul.md")
         self.user_path = os.path.join(os.path.dirname(__file__), "User.md")
+        self.config = {}
         self._runtime_signature = {}
         self.gen_images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "gen_images")
         os.makedirs(self.gen_images_dir, exist_ok=True)
@@ -54,6 +55,7 @@ class TrinityBrain:
 
             with open(self.config_path, "r") as f:
                 config = json.load(f)
+            self.config = config
             
             # LLM-Konfiguration (3 Slots Support)
             llm_conf = config.get("llm", {})

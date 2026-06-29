@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import html
+import json
 import os
 import re
 import shlex
 import shutil
 import subprocess
 from pathlib import Path
+
+try:
+    from brainvault_agents import brainvault_root_from_config
+except Exception:  # pragma: no cover - optional during isolated script use
+    brainvault_root_from_config = None
 
 from platform_adapters import find_pi_executable
 
@@ -21,15 +27,43 @@ TRIGGER_PATTERNS = (
     r"\bpi[- ]cli\b",
 )
 
+CAPABILITY_PATTERNS = (
+    r"\bwelche\s+(?:faehigkeiten|fähigkeiten|skills|agenten)\b",
+    r"\bwas\s+kannst\s+du\b",
+    r"\bwas\s+kann\s+trinity\b",
+    r"\bzeig(?:e)?\s+(?:mir\s+)?(?:deine\s+)?(?:faehigkeiten|fähigkeiten|skills|agenten)\b",
+)
+
+AGENT_POOL_PATTERNS = (
+    r"\bbrainvault[- ]?agent",
+    r"\bagentenpool\b",
+    r"\bcloud[- ]?agent",
+    r"\bexterne(?:n|r|s)?\s+agent",
+    r"\bnutze\s+(?:den|die|das)?\s*.+agent",
+    r"\bstarte\s+(?:den|die|das)?\s*.+agent",
+    r"\bmail[- ]?agent",
+    r"\bmail(?:rundlauf|entwurf|entwuerf|entwürf|triage)\b",
+    r"\bgutachten(?:agent)?\b",
+    r"\bbewertung(?:sagent)?\b",
+    r"\bhtml[- ]?praesentation|\bhtml[- ]?präsentation",
+)
+
 
 def can_handle(query: str) -> bool:
     text = query.casefold()
-    return any(re.search(pattern, text) for pattern in TRIGGER_PATTERNS)
+    return any(
+        re.search(pattern, text)
+        for pattern in (*TRIGGER_PATTERNS, *CAPABILITY_PATTERNS, *AGENT_POOL_PATTERNS)
+    )
 
 
 def execute(query: str, context: dict = None) -> dict:
     context = context or {}
     config = dict(context.get("pi_cfg") or {})
+    projects = _configured_projects(config)
+
+    if _is_capability_request(query):
+        return _capability_result(query, context, projects, config)
 
     if not config.get("enabled", False):
         return _result(
@@ -45,7 +79,6 @@ def execute(query: str, context: dict = None) -> dict:
             "Pi-Einstellungen ein."
         )
 
-    projects = _configured_projects(config)
     if _is_project_list_request(query):
         return _project_list_result(projects, config.get("default_project", ""))
 
@@ -295,6 +328,187 @@ def _project_list_result(projects: dict, default_project: str = "") -> dict:
         suffix = " (Standard)" if alias.casefold() == str(default_project).casefold() else ""
         lines.append(f"- {alias}: {path}{suffix}")
     return _result("\n".join(lines))
+
+
+def _is_capability_request(query: str) -> bool:
+    text = query.casefold()
+    return any(re.search(pattern, text) for pattern in CAPABILITY_PATTERNS)
+
+
+def _capability_result(query: str, context: dict, projects: dict, config: dict) -> dict:
+    brainvault_alias, brainvault_path = _default_project(projects, config)
+    if not brainvault_path:
+        brainvault_alias, brainvault_path = _project_from_control_plane(context)
+    external_agents = _load_brainvault_agent_summary(brainvault_path) if brainvault_path else []
+    local_items = _local_capabilities(context)
+    default_harness = _default_harness_label(context)
+    builder = _builder_harness_label(context)
+
+    lines = [
+        "Ich habe zwei Fähigkeitsebenen:",
+        "",
+        "1. Trinity direkt",
+    ]
+    for item in local_items:
+        lines.append(f"- {item}")
+
+    lines.extend(
+        [
+            "",
+            f"2. Erweiterungen aus dem BrainVault-Agentenpool ({default_harness} als Standard-Harness)",
+        ]
+    )
+    if brainvault_path:
+        lines.append(f"- Agentenpool: {brainvault_alias or 'BrainVault'}")
+        if external_agents:
+            for agent in external_agents[:12]:
+                suffix = f" ({agent['status']})" if agent.get("status") and agent.get("status") != "active" else ""
+                lines.append(f"- {agent['name']}{suffix}: {agent['description']}")
+            if len(external_agents) > 12:
+                lines.append(f"- ... plus {len(external_agents) - 12} weitere katalogisierte Agenten.")
+        else:
+            lines.append("- Noch keine aktiven externen Agenten im Katalog gefunden.")
+    else:
+        lines.append("- Noch kein BrainVault-Projekt fuer Pi freigegeben.")
+
+    lines.extend(
+        [
+            "",
+            "Wichtig:",
+            f"- Normale bestehende BrainVault-Agentenarbeit laeuft automatisch ueber {default_harness}.",
+            f"- Neue Agenten, Imports, Refactorings und Quality-Gates gehen ueber {builder}.",
+            "- Du musst Pi nicht nennen. Sag einfach, was passieren soll.",
+            "- Codex und Antigravity duerfen denselben BrainVault-Agentenpool weiterhin direkt nutzen; die Regeln beschraenken den Pool nicht auf Pi.",
+            "",
+            "Beispiele:",
+            "- Trinity, welche Faehigkeiten hast Du?",
+            "- Trinity, gibt es einen Mail-Agenten und was kann der?",
+            "- Trinity, erstelle mir Mailentwuerfe fuer die heutigen Rueckfragen.",
+            "- Trinity, welche Gutachten- oder Bewertungsagenten gibt es?",
+            "- Trinity, baue einen neuen Agenten fuer Steuerdaten.  (Dann nimmt Trinity den Builder-Harness.)",
+        ]
+    )
+    return _result("\n".join(lines), brainvault_alias)
+
+
+def _default_project(projects: dict, config: dict):
+    if not projects:
+        return "", None
+    default_alias = str(config.get("default_project", "")).strip()
+    for alias, path in projects.items():
+        if alias.casefold() == default_alias.casefold():
+            return alias, path
+    for alias, path in projects.items():
+        if alias.casefold() == "brainvault":
+            return alias, path
+    if len(projects) == 1:
+        return next(iter(projects.items()))
+    return "", None
+
+
+def _project_from_control_plane(context: dict):
+    brain = (context or {}).get("brain")
+    config = getattr(brain, "config", {}) if brain is not None else {}
+    if not isinstance(config, dict):
+        return "", None
+    if brainvault_root_from_config is not None:
+        try:
+            repo_root = Path(__file__).resolve().parents[2]
+            path = brainvault_root_from_config(repo_root, config)
+            if path.is_dir() and (path / ".agents").is_dir():
+                return "BrainVault", path
+        except Exception:
+            pass
+    control = config.get("control_plane") or {}
+    for key in ("external_agents_root", "brainvault_root", "vault_root"):
+        raw_path = str(control.get(key) or "").strip()
+        if not raw_path:
+            continue
+        path = Path(os.path.expandvars(os.path.expanduser(raw_path))).resolve()
+        if path.is_dir() and (path / ".agents").is_dir():
+            return "BrainVault", path
+    return "", None
+
+
+def _load_brainvault_agent_summary(root: Path) -> list[dict]:
+    if not root:
+        return []
+    catalog = root / ".catalog" / "agent_catalog.json"
+    try:
+        data = json.loads(catalog.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    agents = data.get("agents") if isinstance(data, dict) else []
+    if not isinstance(agents, list):
+        return []
+
+    result = []
+    for agent in agents:
+        if not isinstance(agent, dict) or not agent.get("enabled", True):
+            continue
+        status = str(agent.get("status") or "").strip()
+        if status not in {"", "active", "validated", "stable", "testing"}:
+            continue
+        name = str(agent.get("name") or agent.get("id") or "Agent").strip()
+        if name.startswith("---"):
+            continue
+        if name.startswith("/") and " - " in name:
+            name = name.split(" - ", 1)[1].strip()
+        description = str(agent.get("description") or "").strip()
+        if description in {"$ARGUMENTS", ""}:
+            description = "katalogisierte BrainVault-Faehigkeit"
+        if len(description) > 120:
+            description = description[:117].rstrip() + "..."
+        result.append(
+            {
+                "name": name,
+                "description": description or "katalogisierte BrainVault-Faehigkeit",
+                "status": status or "active",
+            }
+        )
+    def sort_key(item: dict):
+        text = f"{item['name']} {item['description']}".casefold()
+        priority = 5
+        for index, marker in enumerate(("mail", "gutachten", "bewertung", "praesentation", "präsentation", "research")):
+            if marker in text:
+                priority = index
+                break
+        return (priority, item["name"].casefold())
+
+    return sorted(result, key=sort_key)
+
+
+def _local_capabilities(context: dict) -> list[str]:
+    default_items = [
+        "Zuhoeren per STT, Chat/Fluestern, iPad/iPhone-Companion und Desktop-UI.",
+        "Vortrag/Web/Alltag/Chat mit Mitschrift, Medien-Overlays und Payload-Verlauf.",
+        "Dokumente, PDFs, Bilder, Memory, RAG und lokale Agenten wie Recherche, Sandbox, Simulation oder ComfyUI-Medien.",
+    ]
+    brain = (context or {}).get("brain")
+    skills = getattr(brain, "live_skills", []) if brain is not None else []
+    names = []
+    for skill in skills:
+        module_name = str(getattr(skill, "__name__", "")).split(".")[-1]
+        if not module_name or module_name in {"pi_agent", "codex_agent", "opencode_agent"}:
+            continue
+        clean = module_name.replace("_agent", "").replace("_", " ").strip()
+        if clean and clean not in names:
+            names.append(clean)
+    if names:
+        default_items.append("Aktive lokale Skills: " + ", ".join(names[:12]) + ".")
+    return default_items
+
+
+def _default_harness_label(context: dict) -> str:
+    config = getattr((context or {}).get("brain"), "config", {}) if (context or {}).get("brain") else {}
+    control = config.get("control_plane", {}) if isinstance(config, dict) else {}
+    return str(control.get("default_brainvault_harness") or "pi")
+
+
+def _builder_harness_label(context: dict) -> str:
+    config = getattr((context or {}).get("brain"), "config", {}) if (context or {}).get("brain") else {}
+    control = config.get("control_plane", {}) if isinstance(config, dict) else {}
+    return str(control.get("builder_harness") or "codex")
 
 
 def _bounded_int(value, default: int, minimum: int, maximum: int) -> int:

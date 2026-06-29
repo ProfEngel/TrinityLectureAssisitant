@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.6:** Natuerliche Agentenpool-Nutzung: Fragen wie `Trinity, welche Faehigkeiten hast Du?` listen nun Trinitys lokale Faehigkeiten und den BrainVault-Agentenpool, ohne dass Pi oder Pfade genannt werden muessen. Bestehende BrainVault-Agenten laufen weiter standardmaessig ueber Pi; Codex/Antigravity duerfen denselben Agentenpool direkt nutzen.
 > - **v0.16.5:** Pi ist nun der Standard-Extern-Harness fuer laufende BrainVault-Agentenarbeit; Codex bleibt der Builder-Harness fuer neue Agenten, Imports, Refactorings und Quality-Gates. BrainVaults direkte `AGENTS.md`-/`harnesses.yaml`-Regeln wurden entsprechend gesetzt.
 > - **v0.16.4:** Pi-Harness robuster fuer BrainVault/iCloud-Pfade: Trinity startet Pi mit Projekt-CWD, relativen Pfadregeln und `TRINITY_PROJECT_*`-Umgebung; Pi darf Mail-Agenten fuer Entwuerfe nutzen, sendet/loescht/verschiebt aber nur nach expliziter Freigabe.
 > - **v0.16.3:** Settings-Aufraeumen fuer den zentralen BrainVault-Agentenpool: MainHub zeigt nur noch lokale Runtime, Cloud-Agentenpool und Standard-Extern-Harness; die Agentenkiste trennt lokale Trinity-Agenten und externe Cloud-Agenten; Codex, Pi und OpenCode erhalten `BrainVault` automatisch als gemeinsames Standardprojekt.
