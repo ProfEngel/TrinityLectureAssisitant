@@ -74,7 +74,12 @@
   "pi": {
     "enabled": false,
     "executable": "pi",
-    "arguments": [],
+    "default_project": "SandboxVault",
+    "projects": {
+      "SandboxVault": "/FULL/PATH/TO/YOUR/SANDBOX_VAULT",
+      "TrinityVault": "/FULL/PATH/TO/YOUR/TRINITY_VAULT"
+    },
+    "arguments": ["-p", "{prompt}"],
     "timeout_seconds": 600,
     "max_output_chars": 3200
   },
@@ -130,9 +135,9 @@
       "pi": {
         "label": "Pi",
         "roles": {
-          "agent_builder": false,
+          "agent_builder": true,
           "complex_cases": true,
-          "agent_execution": false
+          "agent_execution": true
         }
       },
       "opencode": {
@@ -146,7 +151,7 @@
     },
     "agent_assignments": {
       "trinity-core": ["trinity"],
-      "agent-builder": ["trinity", "codex"],
+      "agent-builder": ["trinity", "codex", "pi"],
       "legacy-codex-agent": ["trinity", "codex"],
       "legacy-pi-agent": ["trinity", "pi"],
       "legacy-opencode-agent": ["trinity", "opencode"]

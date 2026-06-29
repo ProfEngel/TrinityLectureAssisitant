@@ -39,6 +39,7 @@ def test_run_pi_uses_stdin_when_no_prompt_placeholder(monkeypatch):
         arguments=["chat", "--stdin"],
         prompt="Frage",
         timeout=120,
+        project_path=None,
     )
 
     assert answer == "Pi antwortet."
@@ -63,11 +64,43 @@ def test_run_pi_can_pass_prompt_as_argument(monkeypatch):
         arguments=["ask", "{prompt}"],
         prompt="Frage als Argument",
         timeout=120,
+        project_path=None,
     )
 
     assert answer == "Argument erledigt."
     assert captured["command"] == ["/usr/local/bin/pi", "ask", "Frage als Argument"]
     assert captured["kwargs"]["input"] is None
+
+
+def test_pi_selects_project_and_runs_in_project_cwd(monkeypatch, tmp_path):
+    agent = _load_agent()
+    project = tmp_path / "SandboxVault"
+    project.mkdir()
+    monkeypatch.setattr(agent, "_resolve_executable", lambda _value: "/bin/pi")
+    captured = {}
+
+    def fake_run_pi(**kwargs):
+        captured.update(kwargs)
+        return "Pi Projekt ok."
+
+    monkeypatch.setattr(agent, "_run_pi", fake_run_pi)
+
+    result = agent.execute(
+        "Trinity, nutze Pi im Projekt SandboxVault und pruefe hello-agent.",
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"SandboxVault": str(project)},
+                "default_project": "SandboxVault",
+                "arguments": ["-p", "{prompt}"],
+            }
+        },
+    )
+
+    assert result["direct_answer"] == "Pi Projekt ok."
+    assert captured["project_path"] == project.resolve()
+    assert captured["arguments"] == ["-p", "{prompt}"]
+    assert "Projekt: SandboxVault" in captured["prompt"]
 
 
 def test_execute_returns_pi_answer_directly(monkeypatch):

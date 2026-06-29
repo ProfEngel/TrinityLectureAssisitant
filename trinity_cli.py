@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.15.4"
+VERSION = "0.15.5"
 
 
 def find_trinity_home(explicit=None):
@@ -175,6 +175,31 @@ def _configure_pi(config, input_fn=input):
         pi.get("executable", "pi"),
         input_fn,
     )
+    projects = pi.get("projects", {})
+    if not isinstance(projects, dict):
+        projects = {}
+    default_projects = "\n".join(f"{alias} = {path}" for alias, path in projects.items())
+    projects_text = _prompt(
+        "Pi-Projekte (Alias = Pfad; mehrere mit Semikolon trennen)",
+        default_projects.replace("\n", "; "),
+        input_fn,
+    )
+    parsed_projects = {}
+    for item in projects_text.replace("\n", ";").split(";"):
+        stripped = item.strip()
+        if not stripped or "=" not in stripped:
+            continue
+        alias, path = stripped.split("=", 1)
+        alias = alias.strip()
+        path = path.strip()
+        if alias and path:
+            parsed_projects[alias] = path
+    pi["projects"] = parsed_projects
+    pi["default_project"] = _prompt(
+        "Pi-Standardprojekt",
+        pi.get("default_project", next(iter(parsed_projects), "")),
+        input_fn,
+    )
     raw_args = pi.get("arguments", [])
     if isinstance(raw_args, list):
         default_args = " ".join(str(item) for item in raw_args)
@@ -182,7 +207,7 @@ def _configure_pi(config, input_fn=input):
         default_args = str(raw_args or "")
     arguments = _prompt(
         "Pi-Argumente (optional, {prompt} setzt den Prompt als Argument)",
-        default_args,
+        default_args or "-p {prompt}",
         input_fn,
     )
     try:

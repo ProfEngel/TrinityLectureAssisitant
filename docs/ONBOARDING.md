@@ -455,22 +455,27 @@ Die neue dreigeteilte Agentenkiste, geplante Jobs und Freigaben sind im
 
 ### Pi einrichten
 
-Pi ist aktuell als generischer CLI-/Wrapper-Agent eingebunden, weil lokale
-Pi-Setups unterschiedlich aussehen koennen. Voraussetzung ist daher ein
-ausfuehrbares Programm oder Skript, das Trinity starten darf. Ohne
-`{prompt}`-Platzhalter wird der Auftrag per stdin uebergeben; mit `{prompt}`
-wird der Auftrag als Argument eingesetzt.
+Pi ist als CLI-/Wrapper-Harness eingebunden. Trinity kann ihm genau wie Codex
+oder OpenCode freigegebene Projekt-Aliasse uebergeben, z.B. SandboxVault und
+TrinityVault. Voraussetzung ist ein ausfuehrbares Programm oder Skript, das
+Trinity starten darf. Fuer die Pi-CLI ist nicht-interaktiv meist `-p {prompt}`
+richtig. Ohne `{prompt}`-Platzhalter wird der Auftrag per stdin uebergeben; das
+kann bei interaktiven CLIs haengen.
 
 Beispiele fuer Einstellungen:
 
 In Einstellungen -> Harnesses -> Pi:
 
 ~~~text
-Programm: /pfad/zu/pi-wrapper
-Argumente: chat --stdin
+Programm: pi
+Freigegebene Projekte:
+SandboxVault = /vollstaendiger/Pfad/zur/Sandbox
+TrinityVault = /vollstaendiger/Pfad/zum/Vault
+Standardprojekt: SandboxVault
+Argumente: -p {prompt}
 ~~~
 
-oder:
+Ein eigener Wrapper ist weiterhin moeglich:
 
 ~~~text
 Programm: /pfad/zu/pi-wrapper
@@ -479,7 +484,7 @@ Argumente: ask {prompt}
 
 Sicherer Test:
 
-> Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.
+> Trinity, nutze Pi im Projekt SandboxVault und erklaere in drei Saetzen, wie Du angebunden bist.
 
 Wichtig: Eine normale Frage wie "Was ist die Kreiszahl Pi?" startet den
 Pi-Agenten nicht. Trinity reagiert nur auf ausdrueckliche Formulierungen wie

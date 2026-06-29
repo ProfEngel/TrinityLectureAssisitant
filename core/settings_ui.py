@@ -244,9 +244,24 @@ class SettingsWindow(QMainWindow):
         if "pi" not in self.config:
             self.config["pi"] = {}
         if hasattr(self, "pi_cb"):
+            projects = {}
+            for line in self.pi_projects_edit.toPlainText().splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
+                    continue
+                alias, path = stripped.split("=", 1)
+                alias = alias.strip()
+                path = path.strip()
+                if alias and path:
+                    projects[alias] = path
+
             self.config["pi"]["enabled"] = self.pi_cb.isChecked()
             self.config["pi"]["executable"] = (
                 self.pi_executable_edit.text().strip() or "pi"
+            )
+            self.config["pi"]["projects"] = projects
+            self.config["pi"]["default_project"] = (
+                self.pi_default_project_edit.text().strip()
             )
             arguments = self.pi_arguments_edit.text().strip()
             try:
@@ -1060,13 +1075,25 @@ class SettingsWindow(QMainWindow):
         self.pi_executable_edit = QLineEdit(pi_conf.get("executable", "pi"))
         form.addRow("Programm oder Wrapper:", self.pi_executable_edit)
 
+        self.pi_projects_edit = QTextEdit()
+        self.pi_projects_edit.setPlainText(self._projects_to_text(pi_conf.get("projects", {})))
+        self.pi_projects_edit.setPlaceholderText(
+            "SandboxVault = /vollstaendiger/Pfad/zur/Sandbox\n"
+            "TrinityVault = /vollstaendiger/Pfad/zum/Vault"
+        )
+        self.pi_projects_edit.setMinimumHeight(90)
+        form.addRow("Freigegebene Projekte:", self.pi_projects_edit)
+
+        self.pi_default_project_edit = QLineEdit(pi_conf.get("default_project", ""))
+        form.addRow("Standardprojekt:", self.pi_default_project_edit)
+
         raw_arguments = pi_conf.get("arguments", [])
         if isinstance(raw_arguments, list):
             arguments_text = " ".join(str(item) for item in raw_arguments)
         else:
             arguments_text = str(raw_arguments or "")
         self.pi_arguments_edit = QLineEdit(arguments_text)
-        self.pi_arguments_edit.setPlaceholderText("optional, z.B. chat --stdin oder ask {prompt}")
+        self.pi_arguments_edit.setPlaceholderText("-p {prompt}")
         form.addRow("Argumente:", self.pi_arguments_edit)
 
         self.pi_timeout_spin = QSpinBox()
@@ -1083,8 +1110,9 @@ class SettingsWindow(QMainWindow):
         form.addRow("Antwortlaenge:", self.pi_output_spin)
 
         hint = QLabel(
-            "Ohne {prompt} uebergibt Trinity den Auftrag per stdin. Mit {prompt} "
-            "wird der Auftrag als Argument eingesetzt."
+            "Fuer die Pi-CLI ist meist '-p {prompt}' richtig. Ohne {prompt} "
+            "uebergibt Trinity den Auftrag per stdin; das kann bei interaktiven "
+            "CLIs haengen."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #d29922; font-size: 11px;")

@@ -101,7 +101,9 @@ def default_config(platform_name=None):
         "pi": {
             "enabled": False,
             "executable": "pi",
-            "arguments": [],
+            "default_project": "",
+            "projects": {},
+            "arguments": ["-p", "{prompt}"],
             "timeout_seconds": 600,
             "max_output_chars": 3200,
         },
