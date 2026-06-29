@@ -166,6 +166,9 @@ Projektregeln, vorhandene Agenten, Tests und Dateien. Antworte auf Deutsch.
 
 Sicherheitsregeln fuer diesen fernausgeloesten Lauf:
 - Arbeite nur im freigegebenen Projektordner.
+- Fuer Import-Auftraege darfst Du explizit vom Nutzer genannte Quellpfade
+  read-only analysieren. Schreibe, kopiere oder normalisiere Ergebnisse aber
+  nur in den freigegebenen Projektordner.
 - Versende, veroeffentliche oder uebermittle nichts an Dritte.
 - Fuehre keine Kaeufe, Loeschungen, Pushes, Deployments oder sonstigen
   irreversiblen externen Aktionen aus.

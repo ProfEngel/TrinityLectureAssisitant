@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.15.6:** Harness-Einstellungen besser lesbar: kontrastreiche Status-Badges, groessere Projektfelder und eine nach unten wachsende Agentenmatrix. Pi-Importlaeufe duerfen explizit genannte Quellordner read-only analysieren und schreiben weiterhin nur in freigegebene Projektordner.
 > - **v0.15.5:** Pi-Harness auf Codex/OpenCode-Niveau fuer Projektarbeit erweitert: freigegebene Projekt-Aliasse, Standardprojekt, nicht-interaktiver `-p {prompt}`-Start, Arbeitsverzeichnis pro Projekt und WebUI/Settings/CLI-Unterstuetzung.
 > - **v0.15.4:** Jobbasierter Agentenbuilder-Loop: Agenten erstellen, importieren oder erweitern erzeugt Staging-Artefakte, Builder-Plan, Validierungsbericht, optionale Codex/Pi/OpenCode-Harness-Rueckmeldungen und sichtbare Quality-Gates im Jobmanager; Onboarding-Beispiele wurden auf neutrale Platzhalter bereinigt.
 > - **v0.15.3:** Desktop-Settings erhalten schnelle Mikrofon-/Lautsprecher-Toggles gegen Selbstmithören; der Agentenbuilder kann vorhandene Agentenordner/Uebersichtsdateien sicher als Staging-Agent importieren und erkennt Erstellen-, Aendern- und Erweiterungsauftraege per Zuruf.

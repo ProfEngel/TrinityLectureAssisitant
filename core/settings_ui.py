@@ -479,6 +479,7 @@ class SettingsWindow(QMainWindow):
 
             QTableWidget {{
                 background: {colors["field_bg"]};
+                alternate-background-color: {colors["raised_bg"]};
                 color: {colors["text"]};
                 border: 1px solid {colors["border"]};
                 border-radius: 8px;
@@ -902,8 +903,7 @@ class SettingsWindow(QMainWindow):
         layout.addWidget(self._create_codex_harness_group())
         layout.addWidget(self._create_pi_harness_group())
         layout.addWidget(self._create_opencode_harness_group())
-        layout.addWidget(self._create_harness_agent_matrix_group())
-        layout.addStretch()
+        layout.addWidget(self._create_harness_agent_matrix_group(), 1)
         return widget
 
     @staticmethod
@@ -926,6 +926,23 @@ class SettingsWindow(QMainWindow):
             "complex_cases": "Harte komplexe Faelle",
             "agent_execution": "Ausfuehrung der Agenten",
         }
+
+    @staticmethod
+    def _set_status_label_style(label, ok=True):
+        if ok:
+            label.setStyleSheet(
+                "color: #d1fae5; background: rgba(34, 197, 94, 0.18); "
+                "border: 1px solid rgba(74, 222, 128, 0.45); "
+                "border-radius: 8px; padding: 8px 10px; font-size: 12px; "
+                "font-weight: 600;"
+            )
+        else:
+            label.setStyleSheet(
+                "color: #fef3c7; background: rgba(217, 119, 6, 0.18); "
+                "border: 1px solid rgba(251, 191, 36, 0.45); "
+                "border-radius: 8px; padding: 8px 10px; font-size: 12px; "
+                "font-weight: 600;"
+            )
 
     def _role_enabled(self, harness_id, role):
         routing = self.config.get("harness_routing", {})
@@ -953,7 +970,7 @@ class SettingsWindow(QMainWindow):
             "Routing, Memory, Payloads, UI-Events und lokale Orchestrierung aus."
         )
         status.setWordWrap(True)
-        status.setStyleSheet("color: #7ee787; font-size: 11px;")
+        self._set_status_label_style(status, True)
         form.addRow("Status:", status)
         self._add_harness_roles(form, "trinity")
         hint = QLabel(
@@ -988,11 +1005,7 @@ class SettingsWindow(QMainWindow):
             f"Codex gefunden: {detected}" if detected else "Codex wurde noch nicht gefunden."
         )
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "codex")
 
@@ -1005,7 +1018,7 @@ class SettingsWindow(QMainWindow):
             "Automatismen = /vollstaendiger/Pfad/zum/Projekt\n"
             "Lehre = C:\\Users\\Name\\Projekte\\Lehre"
         )
-        self.codex_projects_edit.setMinimumHeight(90)
+        self.codex_projects_edit.setMinimumHeight(150)
         form.addRow("Freigegebene Projekte:", self.codex_projects_edit)
 
         self.codex_default_project_edit = QLineEdit(codex_conf.get("default_project", ""))
@@ -1064,11 +1077,7 @@ class SettingsWindow(QMainWindow):
             f"Pi gefunden: {detected}" if detected else "Pi wurde noch nicht gefunden."
         )
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "pi")
 
@@ -1081,7 +1090,7 @@ class SettingsWindow(QMainWindow):
             "SandboxVault = /vollstaendiger/Pfad/zur/Sandbox\n"
             "TrinityVault = /vollstaendiger/Pfad/zum/Vault"
         )
-        self.pi_projects_edit.setMinimumHeight(90)
+        self.pi_projects_edit.setMinimumHeight(150)
         form.addRow("Freigegebene Projekte:", self.pi_projects_edit)
 
         self.pi_default_project_edit = QLineEdit(pi_conf.get("default_project", ""))
@@ -1143,11 +1152,7 @@ class SettingsWindow(QMainWindow):
             f"OpenCode gefunden: {detected}" if detected else "OpenCode wurde noch nicht gefunden."
         )
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "opencode")
 
@@ -1160,7 +1165,7 @@ class SettingsWindow(QMainWindow):
             "Automatismen = /vollstaendiger/Pfad/zum/Projekt\n"
             "Mail = C:\\Users\\Name\\Projekte\\MailAutomationen"
         )
-        self.opencode_projects_edit.setMinimumHeight(90)
+        self.opencode_projects_edit.setMinimumHeight(150)
         form.addRow("Freigegebene Projekte:", self.opencode_projects_edit)
 
         self.opencode_default_project_edit = QLineEdit(opencode_conf.get("default_project", ""))
@@ -1190,6 +1195,7 @@ class SettingsWindow(QMainWindow):
 
     def _create_harness_agent_matrix_group(self):
         group = QGroupBox("Welche Agenten darf welches Framework ausfuehren?")
+        group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout = QVBoxLayout(group)
         hint = QLabel(
             "Links stehen alle bekannten Trinity-Agenten inklusive Trinity selbst, "
@@ -1206,7 +1212,10 @@ class SettingsWindow(QMainWindow):
         table = QTableWidget(len(records), len(harness_ids) + 1)
         table.setHorizontalHeaderLabels(["Agent", *[self._harness_labels()[item] for item in harness_ids]])
         table.verticalHeader().setVisible(False)
-        table.setMinimumHeight(260)
+        table.setMinimumHeight(520)
+        table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        table.setAlternatingRowColors(True)
+        table.setWordWrap(False)
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         for column in range(1, len(harness_ids) + 1):
             table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeToContents)
@@ -1235,7 +1244,8 @@ class SettingsWindow(QMainWindow):
                 table.setItem(row, col, check_item)
 
         self.harness_agent_table = table
-        layout.addWidget(table)
+        table.resizeRowsToContents()
+        layout.addWidget(table, 1)
         return group
 
     def _harness_agent_records(self):
@@ -1362,11 +1372,7 @@ class SettingsWindow(QMainWindow):
         )
         status = QLabel(status_text)
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
 
         self.codex_executable_edit = QLineEdit(
@@ -1485,11 +1491,7 @@ class SettingsWindow(QMainWindow):
         )
         status = QLabel(status_text)
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
 
         self.opencode_executable_edit = QLineEdit(
@@ -1595,11 +1597,7 @@ class SettingsWindow(QMainWindow):
         )
         status = QLabel(status_text)
         status.setWordWrap(True)
-        status.setStyleSheet(
-            "color: #7ee787; font-size: 11px;"
-            if detected
-            else "color: #d29922; font-size: 11px;"
-        )
+        self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
 
         self.pi_executable_edit = QLineEdit(pi_conf.get("executable", "pi"))
