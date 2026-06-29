@@ -53,7 +53,9 @@ def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None)
         or os.environ.get("TRINITY_BRAINVAULT")
     )
     if explicit:
-        return Path(str(explicit)).expanduser().resolve()
+        explicit_path = Path(str(explicit)).expanduser().resolve()
+        migrated = _migrate_legacy_agent_pool_root(explicit_path)
+        return migrated or explicit_path
 
     paths = TrinityPaths.from_config(home, config or {})
     vault = paths.vault_root
@@ -64,6 +66,22 @@ def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None)
     if vault.name.casefold() == "mainhub":
         return vault.parent.resolve()
     return vault.resolve()
+
+
+def _migrate_legacy_agent_pool_root(path: Path) -> Optional[Path]:
+    """Map older MainHub/TrinityVault settings to the cleaned BrainVault root."""
+    candidates: list[Path] = []
+    if (path / ".agents").is_dir():
+        return path
+    if path.name.casefold() == "trinityvault":
+        candidates.extend([path.parent.parent, path.parent])
+    elif path.name.casefold() == "mainhub":
+        candidates.append(path.parent)
+    candidates.extend([path.parent, path.parent.parent])
+    for candidate in candidates:
+        if candidate and (candidate / ".agents").is_dir():
+            return candidate.resolve()
+    return None
 
 
 def ensure_brainvault_layout(root: str | Path) -> dict:

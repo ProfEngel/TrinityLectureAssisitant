@@ -171,6 +171,9 @@ Codex-Skills und, wenn ausdrücklich verlangt oder im Projekt vorgesehen, Subage
 Beachte alle AGENTS.md- und Projektregeln. Prüfe dein Ergebnis, bevor du abschließt.
 
 Sicherheitsregeln für diesen fernausgelösten Lauf:
+- Wenn das Projekt ein BrainVault-Agentenpool ist (`.agents` und `AGENTS.md`
+  vorhanden), darfst Du dort Agenten lesen, anlegen, überarbeiten, testen,
+  katalogisieren und passende Reports ablegen, soweit der Nutzer das beauftragt.
 - Versende, veröffentliche oder übermittle nichts an Dritte.
 - Erstelle E-Mails und Nachrichten ausschließlich als Entwurf.
 - Führe keine Käufe, Löschungen, Pushes, Deployments oder sonstigen irreversiblen

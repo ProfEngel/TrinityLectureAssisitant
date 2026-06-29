@@ -8,6 +8,7 @@ import time
 
 from platform_adapters import capability_message, detect_capabilities
 from chat_attachments import prepare_attachment_content
+from brainvault_agents import brainvault_root_from_config
 from memory_store import MemoryStore
 from skill_registry import SkillRegistry
 from task_orchestrator import TaskOrchestrator
@@ -93,14 +94,31 @@ class TrinityBrain:
             
             # Telegram-Config (für Skill-Context-Weitergabe)
             self._telegram_cfg = config.get("telegram", {})
-            self._codex_cfg = config.get("codex", {})
-            self._opencode_cfg = config.get("opencode", {})
-            self._pi_cfg = config.get("pi", {})
+            self._codex_cfg = self._with_agent_pool_project(config.get("codex", {}), config)
+            self._opencode_cfg = self._with_agent_pool_project(config.get("opencode", {}), config)
+            self._pi_cfg = self._with_agent_pool_project(config.get("pi", {}), config)
             
             print("⚙️ Konfiguration geladen ✓")
 
         except Exception as e:
             print(f"⚠️ Fehler beim Laden der config.json: {e}")
+
+    def _with_agent_pool_project(self, harness_config, full_config):
+        """Expose the shared BrainVault pool as a default project for external harnesses."""
+        cfg = dict(harness_config or {})
+        projects = dict(cfg.get("projects") or {})
+        try:
+            root = brainvault_root_from_config(
+                os.path.dirname(os.path.dirname(__file__)),
+                full_config,
+            )
+        except Exception:
+            root = None
+        if root and os.path.isdir(root) and os.path.isdir(os.path.join(root, ".agents")):
+            projects.setdefault("BrainVault", str(root))
+            cfg["default_project"] = "BrainVault"
+        cfg["projects"] = projects
+        return cfg
 
     def _file_signature(self, path):
         try:

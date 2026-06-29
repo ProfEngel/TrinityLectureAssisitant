@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.3:** Settings-Aufraeumen fuer den zentralen BrainVault-Agentenpool: MainHub zeigt nur noch lokale Runtime, Cloud-Agentenpool und Standard-Extern-Harness; die Agentenkiste trennt lokale Trinity-Agenten und externe Cloud-Agenten; Codex, Pi und OpenCode erhalten `BrainVault` automatisch als gemeinsames Standardprojekt.
 > - **v0.16.2:** Externe Harness-Agenten: bestehende Projekt-, Markdown-, HTML- und Script-Agenten koennen ohne Duplikation per `agentctl register` in `BrainVault/.agents` katalogisiert werden; die Settings haben nun einen expliziten Pfad fuer die externe Harness-Agentenbasis.
 > - **v0.16.1:** BrainVault-Agentenimport: bestehende CampusHub-Skills koennen nach `BrainVault/.agents` uebernommen, validiert, katalogisiert und in den Einstellungen per BrainVault-Pfad sowie Standard-Harness (standardmaessig Codex) live in die Harness-Matrix geladen werden.
 > - **v0.16.0:** BrainVault-Agentenbasis: externe Fachagenten werden direkt unter `BrainVault/.agents` als `draft` angelegt, per `agent.yaml` katalogisiert, ueber `agentctl` verwaltet und fuer Trinity, Codex, Pi, OpenCode, Claude Code und Antigravity harness-agnostisch vorbereitet.
@@ -544,14 +545,20 @@ agentctl validate research.thesis_reviewer
 agentctl catalog build
 ```
 
-In den Desktop-Einstellungen liegt das unter **MainHub**. `BrainVault-Agentenbasis`
-und `Externe Harness-Agentenbasis (.agents)` zeigen auf den uebergeordneten
-BrainVault-Root, also den Ordner, in dem `.agents` liegt. Der zweite Pfad ist
-der explizite Ort, den Trinity fuer Codex, Pi, OpenCode, Antigravity und weitere
-Harnesses als externe Agentenquelle nutzt. `Standard-Harness fuer
-BrainVault-Agenten` steht initial auf `codex`; ueber **BrainVault-Agenten
-aktualisieren** liest Trinity `.agents` neu ein und traegt neue Agenten direkt
-in die Harness-Matrix ein.
+In den Desktop-Einstellungen liegt das unter **MainHub**. Sichtbar bleiben nur
+die lokale **Runtime**, der **Cloud-Agentenpool** und der
+**Standard-Extern-Harness**. Der Cloud-Agentenpool ist der uebergeordnete
+BrainVault-Root, also der Ordner, in dem `.agents` und `AGENTS.md` liegen.
+Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
+`BrainVault` bereit. Aeltere Einstellungen, die noch auf
+`MainHub/TrinityVault` zeigen, werden beim Lesen auf den BrainVault-Root
+gemappt, sofern dort `.agents` existiert.
+
+Unter **Agenten** gibt es zwei kurze Tabellen: lokale Trinity-Agenten und
+externe Cloud-Agenten. Rechte, Skripte und Detailregeln bleiben in der
+jeweiligen `agent.yaml`, damit die UI lesbar bleibt. Ueber
+**Cloud-Agentenpool aktualisieren** liest Trinity `.agents` neu ein und weist
+neue Cloud-Agenten dem gewaehlten Standard-Harness zu.
 
 ---
 

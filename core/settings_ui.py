@@ -300,25 +300,12 @@ class SettingsWindow(QMainWindow):
                     assignments[agent_id] = selected
             routing["agent_assignments"] = assignments
 
-        # Agent catalog metadata: maturity, rights and run limits
-        if hasattr(self, "agent_catalog_table"):
-            agents = {}
-            for row, agent_id in enumerate(getattr(self, "agent_catalog_agent_ids", [])):
-                quality_combo = self.agent_catalog_table.cellWidget(row, 3)
-                quality_status = (
-                    quality_combo.currentData()
-                    if isinstance(quality_combo, QComboBox)
-                    else "unverified"
-                )
-                agents[agent_id] = {
-                    "quality_status": quality_status,
-                    "allowed_tools": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 5)),
-                    "allowed_paths": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 6)),
-                    "requires_approval": self._csv_to_list(self._table_text(self.agent_catalog_table, row, 7)),
-                    "max_attempts": self._table_int(self.agent_catalog_table, row, 8, 2),
-                    "parallel_runs": self._table_int(self.agent_catalog_table, row, 9, 1),
-                }
-            self.config.setdefault("agent_catalog", {})["agents"] = normalize_catalog_overrides(agents)
+        # Agent catalog metadata: maturity. Rights stay in agent.yaml/config and
+        # are deliberately not exposed in the simplified settings tables.
+        if hasattr(self, "agent_catalog_tables"):
+            self.config.setdefault("agent_catalog", {})["agents"] = (
+                self._collect_agent_catalog_overrides()
+            )
 
         # Control Plane / MainHub
         if "control_plane" not in self.config:
@@ -328,18 +315,14 @@ class SettingsWindow(QMainWindow):
             self.config["control_plane"]["runtime_root"] = (
                 self.runtime_root_edit.text().strip()
             )
-            self.config["control_plane"]["vault_root"] = (
-                self.vault_root_edit.text().strip()
-            )
-            self.config["control_plane"]["brainvault_root"] = (
-                self.brainvault_root_edit.text().strip()
-            )
-            self.config["control_plane"]["external_agents_root"] = (
-                self.external_agents_root_edit.text().strip()
-            )
+            cloud_root = self.external_agents_root_edit.text().strip()
+            self.config["control_plane"]["vault_root"] = cloud_root
+            self.config["control_plane"]["brainvault_root"] = cloud_root
+            self.config["control_plane"]["external_agents_root"] = cloud_root
             self.config["control_plane"]["default_brainvault_harness"] = (
                 self.brainvault_harness_combo.currentText()
             )
+            self._sync_cloud_agent_pool_projects()
 
         # ComfyUI
         if "comfyui" not in self.config:
@@ -653,11 +636,9 @@ class SettingsWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         description = QLabel(
-            "Die Agentenkiste trennt gepruefte Shared Skills, persoenliche Skills "
-            "und noch nicht produktive Staging Skills. Staging wird erst nach "
-            "Tests und expliziter Freigabe aktiviert. Diese Liste wird aus der "
-            "Agenten-Registry und den Legacy-Agenten aufgebaut und wächst mit "
-            "jedem neuen Agenten automatisch mit."
+            "Trinity trennt lokale Trinity-Agenten von externen Agenten im "
+            "Cloud-Agentenpool. Der Cloud-Agentenpool wird laufend aus dem "
+            "konfigurierten BrainVault/.agents gelesen."
         )
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -666,43 +647,28 @@ class SettingsWindow(QMainWindow):
         self.agent_ecosystem_summary.setWordWrap(True)
         layout.addWidget(self.agent_ecosystem_summary)
 
-        self.agent_catalog_agent_ids = []
-        self.agent_catalog_table = QTableWidget(0, 12)
-        self.agent_catalog_table.setHorizontalHeaderLabels(
-            [
-                "Agent",
-                "Ebene",
-                "Runtime",
-                "Reifegrad",
-                "Quelle/Risiko",
-                "Tools/Rechte",
-                "Pfade",
-                "Freigaben",
-                "Max Läufe",
-                "Parallel",
-                "Jobs",
-                "Hinweise",
-            ]
-        )
-        self.agent_catalog_table.verticalHeader().setVisible(False)
-        self.agent_catalog_table.setMinimumHeight(420)
-        self.agent_catalog_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        for column in range(1, 12):
-            self.agent_catalog_table.horizontalHeader().setSectionResizeMode(
-                column,
-                QHeaderView.ResizeToContents,
-            )
-        layout.addWidget(self.agent_catalog_table)
+        self.agent_catalog_tables = []
+        self.local_agent_table = self._create_agent_summary_table()
+        self.cloud_agent_table = self._create_agent_summary_table()
+        self.agent_catalog_tables.extend([self.local_agent_table, self.cloud_agent_table])
+
+        local_group = QGroupBox("Lokale Trinity-Agenten")
+        local_layout = QVBoxLayout(local_group)
+        local_layout.addWidget(self.local_agent_table)
+        layout.addWidget(local_group)
+
+        cloud_group = QGroupBox("Cloud-Agentenpool")
+        cloud_layout = QVBoxLayout(cloud_group)
+        cloud_layout.addWidget(self.cloud_agent_table)
+        layout.addWidget(cloud_group, 1)
 
         reload_button = QPushButton("Agentenkiste auf Datenträger prüfen")
         reload_button.clicked.connect(self._refresh_agent_ecosystem)
         layout.addWidget(reload_button)
 
         hint = QLabel(
-            "Reifegrad und Rechte sind bewusst manuell editierbar: Nicht erprobte "
-            "Agenten koennen nach Tests auf 'erprobt' oder 'stabil' gesetzt werden. "
-            "Produktive Freigaben bleiben trotzdem explizit und auditierbar. "
-            "Terminal: trinity skills list | trinity jobs list | trinity approvals list."
+            "Details wie Rechte, Ursprungspfade und Skripte stehen in der jeweiligen "
+            "agent.yaml. Diese Ansicht bleibt bewusst knapp."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
@@ -714,25 +680,41 @@ class SettingsWindow(QMainWindow):
     def _refresh_agent_ecosystem(self):
         home = os.path.dirname(CORE_DIR)
         records = build_agent_catalog(home, self.config)
-        counts = {}
-        for record in records:
-            counts[record.tier] = counts.get(record.tier, 0) + 1
+        local_records = [
+            record for record in records
+            if record.tier != "brainvault"
+        ]
+        cloud_records = [
+            record for record in records
+            if record.tier == "brainvault"
+        ]
         self.agent_ecosystem_summary.setText(
-            "Agenten gesamt: {total} | Trinity: {trinity} | Shared: {shared} | "
-            "Personal: {personal} | Staging: {staging} | Legacy: {legacy}".format(
+            "Agenten gesamt: {total} | lokal: {local} | Cloud-Agentenpool: {cloud}".format(
                 total=len(records),
-                trinity=counts.get("trinity", 0),
-                shared=counts.get("shared", 0),
-                personal=counts.get("personal", 0),
-                staging=counts.get("staging", 0),
-                legacy=counts.get("legacy", 0),
+                local=len(local_records),
+                cloud=len(cloud_records),
             )
         )
-        table = self.agent_catalog_table
+        self._populate_agent_summary_table(self.local_agent_table, local_records)
+        self._populate_agent_summary_table(self.cloud_agent_table, cloud_records)
+
+    def _create_agent_summary_table(self):
+        table = QTableWidget(0, 5)
+        table.setHorizontalHeaderLabels(["Agent", "Status", "Reifegrad", "Harness", "Hinweis"])
+        table.verticalHeader().setVisible(False)
+        table.setMinimumHeight(220)
+        table.setAlternatingRowColors(True)
+        table.setWordWrap(False)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        for column in range(1, 5):
+            table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeToContents)
+        return table
+
+    def _populate_agent_summary_table(self, table, records):
         table.setRowCount(len(records))
-        self.agent_catalog_agent_ids = []
+        table.agent_ids = []
         for row, record in enumerate(records):
-            self.agent_catalog_agent_ids.append(record.agent_id)
+            table.agent_ids.append(record.agent_id)
             self._set_readonly_cell(
                 table,
                 row,
@@ -740,45 +722,59 @@ class SettingsWindow(QMainWindow):
                 f"{record.name}\n{record.agent_id}",
                 record.description or record.path,
             )
-            self._set_readonly_cell(table, row, 1, record.tier)
-            self._set_readonly_cell(table, row, 2, record.runtime_status)
+            self._set_readonly_cell(table, row, 1, record.runtime_status)
 
             quality_combo = QComboBox()
             for status in QUALITY_STATUSES:
                 quality_combo.addItem(self._quality_label(status), status)
             current_index = quality_combo.findData(record.quality_status)
             quality_combo.setCurrentIndex(max(0, current_index))
-            table.setCellWidget(row, 3, quality_combo)
+            table.setCellWidget(row, 2, quality_combo)
 
-            source_risk = f"{record.source}\nRisiko: {record.risk_level}"
-            self._set_readonly_cell(table, row, 4, source_risk)
-            table.setItem(row, 5, QTableWidgetItem(self._list_to_csv(record.allowed_tools)))
-            table.setItem(row, 6, QTableWidgetItem(self._list_to_csv(record.allowed_paths)))
-            table.setItem(row, 7, QTableWidgetItem(self._list_to_csv(record.requires_approval)))
-            table.setItem(row, 8, QTableWidgetItem(str(record.max_attempts)))
-            table.setItem(row, 9, QTableWidgetItem(str(record.parallel_runs)))
-            job_summary = (
-                f"gesamt {record.job_total}\n"
-                f"offen {record.job_open}\n"
-                f"Fehler {record.job_failed}"
-            )
-            self._set_readonly_cell(table, row, 10, job_summary)
+            harness = record.preferred_harness or "trinity"
+            if record.tier == "brainvault" and harness == "auto":
+                harness = self._default_brainvault_harness()
+            self._set_readonly_cell(table, row, 3, harness)
+
             notes = []
             if record.synthetic:
-                notes.append("synthetisch")
+                notes.append("verwaltet")
             if record.legacy:
                 notes.append("Legacy")
             if record.parent_agent:
                 notes.append(f"Parent: {record.parent_agent}")
-            if record.subagents:
-                notes.append("Subagenten: " + ", ".join(record.subagents))
-            if record.source_agent_path:
-                notes.append(f"Quelle: {record.source_agent_path}")
             if not record.valid:
                 notes.append("ungueltig")
             notes.extend(record.errors)
-            self._set_readonly_cell(table, row, 11, "\n".join(notes) or "OK")
+            self._set_readonly_cell(table, row, 4, "; ".join(notes) or "OK")
         table.resizeRowsToContents()
+
+    def _collect_agent_catalog_overrides(self):
+        existing = (
+            self.config.get("agent_catalog", {})
+            .get("agents", {})
+            if isinstance(self.config.get("agent_catalog", {}).get("agents", {}), dict)
+            else {}
+        )
+        agents = {}
+        for table in getattr(self, "agent_catalog_tables", []):
+            for row, agent_id in enumerate(getattr(table, "agent_ids", [])):
+                quality_combo = table.cellWidget(row, 2)
+                quality_status = (
+                    quality_combo.currentData()
+                    if isinstance(quality_combo, QComboBox)
+                    else existing.get(agent_id, {}).get("quality_status", "unverified")
+                )
+                previous = existing.get(agent_id, {})
+                agents[agent_id] = {
+                    "quality_status": quality_status,
+                    "allowed_tools": previous.get("allowed_tools", []),
+                    "allowed_paths": previous.get("allowed_paths", []),
+                    "requires_approval": previous.get("requires_approval", []),
+                    "max_attempts": previous.get("max_attempts", 2),
+                    "parallel_runs": previous.get("parallel_runs", 1),
+                }
+        return normalize_catalog_overrides(agents)
 
     @staticmethod
     def _quality_label(status):
@@ -943,20 +939,31 @@ class SettingsWindow(QMainWindow):
 
     @staticmethod
     def _set_status_label_style(label, ok=True):
+        label.setMinimumHeight(28)
+        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         if ok:
             label.setStyleSheet(
-                "color: #d1fae5; background: rgba(34, 197, 94, 0.18); "
-                "border: 1px solid rgba(74, 222, 128, 0.45); "
-                "border-radius: 8px; padding: 8px 10px; font-size: 12px; "
+                "color: #bbf7d0; background: rgba(22, 101, 52, 0.38); "
+                "border: 1px solid rgba(34, 197, 94, 0.65); "
+                "border-radius: 7px; padding: 4px 8px; font-size: 11px; "
                 "font-weight: 600;"
             )
         else:
             label.setStyleSheet(
                 "color: #fef3c7; background: rgba(217, 119, 6, 0.18); "
                 "border: 1px solid rgba(251, 191, 36, 0.45); "
-                "border-radius: 8px; padding: 8px 10px; font-size: 12px; "
+                "border-radius: 7px; padding: 4px 8px; font-size: 11px; "
                 "font-weight: 600;"
             )
+
+    @staticmethod
+    def _tidy_form(form):
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setFormAlignment(Qt.AlignTop)
+        form.setHorizontalSpacing(14)
+        form.setVerticalSpacing(8)
 
     def _role_enabled(self, harness_id, role):
         routing = self.config.get("harness_routing", {})
@@ -979,11 +986,8 @@ class SettingsWindow(QMainWindow):
     def _create_trinity_harness_group(self):
         group = QGroupBox("Trinity")
         form = QFormLayout()
-        status = QLabel(
-            "Trinity ist immer vorhanden und fuehrt die Standard-Agenten, "
-            "Routing, Memory, Payloads, UI-Events und lokale Orchestrierung aus."
-        )
-        status.setWordWrap(True)
+        self._tidy_form(form)
+        status = QLabel("Aktiv: Control Plane, Routing, Memory, Payloads und UI.")
         self._set_status_label_style(status, True)
         form.addRow("Status:", status)
         self._add_harness_roles(form, "trinity")
@@ -1000,6 +1004,7 @@ class SettingsWindow(QMainWindow):
     def _create_codex_harness_group(self):
         group = QGroupBox("Codex")
         form = QFormLayout()
+        self._tidy_form(form)
         codex_conf = self.config.get("codex", {})
 
         top_row = QWidget()
@@ -1015,10 +1020,9 @@ class SettingsWindow(QMainWindow):
         form.addRow(top_row)
 
         detected = find_codex_executable()
-        status = QLabel(
-            f"Codex gefunden: {detected}" if detected else "Codex wurde noch nicht gefunden."
-        )
-        status.setWordWrap(True)
+        status = QLabel("Gefunden" if detected else "Nicht gefunden")
+        if detected:
+            status.setToolTip(str(detected))
         self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "codex")
@@ -1072,6 +1076,7 @@ class SettingsWindow(QMainWindow):
     def _create_pi_harness_group(self):
         group = QGroupBox("Pi")
         form = QFormLayout()
+        self._tidy_form(form)
         pi_conf = self.config.get("pi", {})
 
         top_row = QWidget()
@@ -1087,10 +1092,9 @@ class SettingsWindow(QMainWindow):
         form.addRow(top_row)
 
         detected = find_pi_executable()
-        status = QLabel(
-            f"Pi gefunden: {detected}" if detected else "Pi wurde noch nicht gefunden."
-        )
-        status.setWordWrap(True)
+        status = QLabel("Gefunden" if detected else "Nicht gefunden")
+        if detected:
+            status.setToolTip(str(detected))
         self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "pi")
@@ -1147,6 +1151,7 @@ class SettingsWindow(QMainWindow):
     def _create_opencode_harness_group(self):
         group = QGroupBox("OpenCode")
         form = QFormLayout()
+        self._tidy_form(form)
         opencode_conf = self.config.get("opencode", {})
 
         top_row = QWidget()
@@ -1162,10 +1167,9 @@ class SettingsWindow(QMainWindow):
         form.addRow(top_row)
 
         detected = find_opencode_executable()
-        status = QLabel(
-            f"OpenCode gefunden: {detected}" if detected else "OpenCode wurde noch nicht gefunden."
-        )
-        status.setWordWrap(True)
+        status = QLabel("Gefunden" if detected else "Nicht gefunden")
+        if detected:
+            status.setToolTip(str(detected))
         self._set_status_label_style(status, bool(detected))
         form.addRow("Status:", status)
         self._add_harness_roles(form, "opencode")
@@ -1315,7 +1319,7 @@ class SettingsWindow(QMainWindow):
             self._apply_default_brainvault_assignments(records)
             if hasattr(self, "harness_agent_table"):
                 self._populate_harness_agent_table(self.harness_agent_table, records)
-            if hasattr(self, "agent_catalog_table"):
+            if hasattr(self, "agent_catalog_tables"):
                 self._refresh_agent_ecosystem()
             if hasattr(self, "brainvault_status_label"):
                 summary = catalog.get("summary", {})
@@ -1335,6 +1339,27 @@ class SettingsWindow(QMainWindow):
                 "BrainVault konnte nicht aktualisiert werden",
                 str(exc),
             )
+
+    def _sync_cloud_agent_pool_projects(self):
+        """Expose the configured Cloud-Agentenpool as BrainVault project to each harness."""
+        root = ""
+        if hasattr(self, "external_agents_root_edit"):
+            root = self.external_agents_root_edit.text().strip()
+        if not root:
+            try:
+                root = str(brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config))
+            except Exception:
+                root = ""
+        if not root or not os.path.isdir(os.path.expanduser(root)):
+            return
+
+        root = os.path.abspath(os.path.expanduser(root))
+        for harness_id in ("codex", "pi", "opencode"):
+            harness_conf = self.config.setdefault(harness_id, {})
+            projects = harness_conf.setdefault("projects", {})
+            if isinstance(projects, dict):
+                projects.setdefault("BrainVault", root)
+            harness_conf["default_project"] = "BrainVault"
 
     @staticmethod
     def _projects_to_text(projects):
@@ -1730,15 +1755,13 @@ class SettingsWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        group = QGroupBox("Trinity Control Plane: Runtime und Cloud-Vault")
+        group = QGroupBox("Trinity: Runtime und Cloud-Agentenpool")
         form = QFormLayout()
+        self._tidy_form(form)
         control_conf = self.config.get("control_plane", {})
 
-        self.control_plane_cb = QCheckBox(
-            "Control Plane und MainHub aktivieren"
-        )
+        self.control_plane_cb = QCheckBox("Control Plane aktiv")
         self.control_plane_cb.setChecked(control_conf.get("enabled", True))
-        form.addRow(self.control_plane_cb)
 
         runtime_default = control_conf.get("runtime_root") or str(
             default_runtime_root(home=os.path.dirname(CORE_DIR))
@@ -1749,33 +1772,24 @@ class SettingsWindow(QMainWindow):
         )
         form.addRow("Lokale Runtime:", self.runtime_root_edit)
 
-        vault_default = control_conf.get("vault_root") or str(default_vault_root())
-        self.vault_root_edit = QLineEdit(vault_default)
-        self.vault_root_edit.setPlaceholderText(
-            "/Cloud/Pfad/BrainVault/MainHub/TrinityVault"
-        )
-        form.addRow("Cloud-Vault:", self.vault_root_edit)
-
-        brainvault_default = control_conf.get("brainvault_root")
-        if not brainvault_default:
-            try:
-                brainvault_default = str(
-                    brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config)
-                )
-            except Exception:
-                brainvault_default = ""
-        self.brainvault_root_edit = QLineEdit(brainvault_default)
-        self.brainvault_root_edit.setPlaceholderText(
-            "/Cloud/Pfad/BrainVault"
-        )
-        form.addRow("BrainVault-Agentenbasis:", self.brainvault_root_edit)
-
-        external_agents_default = control_conf.get("external_agents_root") or brainvault_default
-        self.external_agents_root_edit = QLineEdit(external_agents_default)
+        try:
+            cloud_default = str(
+                brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config)
+            )
+        except Exception:
+            cloud_default = (
+                control_conf.get("external_agents_root")
+                or control_conf.get("brainvault_root")
+                or control_conf.get("vault_root")
+                or str(default_vault_root())
+            )
+        self.external_agents_root_edit = QLineEdit(cloud_default)
         self.external_agents_root_edit.setPlaceholderText(
             "/Cloud/Pfad/BrainVault"
         )
-        form.addRow("Externe Harness-Agentenbasis (.agents):", self.external_agents_root_edit)
+        form.addRow("Cloud-Agentenpool:", self.external_agents_root_edit)
+        self.vault_root_edit = self.external_agents_root_edit
+        self.brainvault_root_edit = self.external_agents_root_edit
 
         self.brainvault_harness_combo = QComboBox()
         self.brainvault_harness_combo.addItems(self._harness_ids())
@@ -1784,12 +1798,12 @@ class SettingsWindow(QMainWindow):
             self.brainvault_harness_combo.setCurrentText(default_harness)
         else:
             self.brainvault_harness_combo.setCurrentText("codex")
-        form.addRow("Standard-Harness fuer BrainVault-Agenten:", self.brainvault_harness_combo)
+        form.addRow("Standard-Extern-Harness:", self.brainvault_harness_combo)
 
         refresh_row = QWidget()
         refresh_layout = QHBoxLayout(refresh_row)
         refresh_layout.setContentsMargins(0, 0, 0, 0)
-        refresh_btn = QPushButton("BrainVault-Agenten aktualisieren")
+        refresh_btn = QPushButton("Cloud-Agentenpool aktualisieren")
         refresh_btn.clicked.connect(self._refresh_brainvault_agents)
         refresh_layout.addWidget(refresh_btn)
         self.brainvault_status_label = QLabel("")
@@ -1799,14 +1813,10 @@ class SettingsWindow(QMainWindow):
         form.addRow("", refresh_row)
 
         hint = QLabel(
-            "Runtime: laufende Jobs, Queue, aktive Workspaces, Datenbanken, "
-            "Cache, Temp und Secrets. Dieser Ordner sollte lokal bleiben und "
-            "nicht in iCloud, OneDrive oder Google Drive liegen.\n\n"
-            "Cloud-Vault: freigegebene Agenten, Projekte, Ergebnisse, Vorlagen, "
-            "Wissen, Audit und Exporte. Dieser Ordner darf synchronisiert werden.\n\n"
-            "BrainVault-Agentenbasis: gemeinsamer Root mit .agents, .catalog, .ai, "
-            "AGENTS.md und CLAUDE.md. Neue externe Fachagenten werden daraus "
-            "gelesen und standardmaessig dem gewaehlten Harness zugewiesen."
+            "Die Runtime bleibt lokal und enthaelt Jobs, Queue, Cache, Temp und Secrets.\n\n"
+            "Der Cloud-Agentenpool ist der gemeinsame Ordner fuer externe Agenten. "
+            "Dort muessen `.agents` und `AGENTS.md` liegen. Trinity stellt diesen "
+            "Ordner Codex, Pi und OpenCode automatisch als Projekt `BrainVault` bereit."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #d29922; font-size: 11px;")

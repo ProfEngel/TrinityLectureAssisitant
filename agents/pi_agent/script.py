@@ -166,6 +166,10 @@ Projektregeln, vorhandene Agenten, Tests und Dateien. Antworte auf Deutsch.
 
 Sicherheitsregeln fuer diesen fernausgeloesten Lauf:
 - Arbeite nur im freigegebenen Projektordner.
+- Wenn der freigegebene Projektordner ein BrainVault-Agentenpool ist
+  (`.agents` und `AGENTS.md` vorhanden), darfst Du dort Agenten lesen, anlegen,
+  ueberarbeiten, testen, katalogisieren und passende Reports ablegen, soweit der
+  Nutzer das beauftragt.
 - Fuer Import-Auftraege darfst Du explizit vom Nutzer genannte Quellpfade
   read-only analysieren. Schreibe, kopiere oder normalisiere Ergebnisse aber
   nur in den freigegebenen Projektordner.

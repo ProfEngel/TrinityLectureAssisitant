@@ -247,20 +247,24 @@ Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegeben
 Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
 Rechte des jeweiligen Projekts gebunden.
 
-Seit v0.15.2 liegen Trinity, Codex, Pi und OpenCode gemeinsam unter
-Einstellungen -> Harnesses. Dort hat jedes Framework dieselben Rollen:
-Agentenbuilder, harte komplexe Faelle und Ausfuehrung der Agenten. Darunter
-steht eine Agenten-Matrix, in der pro Trinity-Agent ausgewaehlt werden kann,
-welches Harness-Framework ihn ausfuehren darf. Trinity ist dort bewusst
-sichtbar: Die Standard-Agenten, Memory, Payloads und die Control Plane laufen
-zunaechst ueber Trinity selbst. Codex/OpenCode/Pi werden nur fuer passende
-Agenten zusaetzlich angehakt.
+Seit v0.16.3 ist das Standardmodell deutlich einfacher: Unter
+Einstellungen -> MainHub stehen nur die lokale Runtime, der Cloud-Agentenpool
+und der Standard-Extern-Harness. Der Cloud-Agentenpool zeigt auf den
+uebergeordneten BrainVault-Ordner, in dem `.agents` und `AGENTS.md` liegen.
+Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
+`BrainVault` bereit.
 
-Unter Einstellungen -> Agenten steht der eigentliche Agentenkatalog. Er zeigt
-Trinity, den Agentenbuilder, Shared/Personal/Staging-Skills und Legacy-Agenten
-mit Reifegrad, Runtime-Status, erlaubten Tools/Rechten, Pfaden, Freigaben,
-maximalen Wiederholungen, parallelen Laeufen und Jobzahlen. Nach Tests kannst Du
-einen Agenten dort z.B. von "Nicht erprobt" auf "Erprobt" oder "Stabil" setzen.
+Codex, Pi und OpenCode liegen unter Einstellungen -> Harnesses. Dort wird
+aktiviert, welche Programme erreichbar sind und welche Rollen sie uebernehmen:
+Agentenbuilder, harte komplexe Faelle oder Ausfuehrung der Agenten. Der
+Standard-Extern-Harness aus MainHub entscheidet, wer neue Cloud-Agenten zuerst
+bekommt; initial ist das `codex`.
+
+Unter Einstellungen -> Agenten steht der Agentenkatalog in zwei Tabellen:
+lokale Trinity-Agenten und externe Cloud-Agenten aus BrainVault. Sichtbar
+bleiben Name, Status, Reifegrad, Harness und ein kurzer Hinweis. Rechte,
+Skripte, Ursprungspfade und Detailregeln stehen in der jeweiligen `agent.yaml`,
+damit die UI nicht ueberlaedt.
 
 ### Gemeinsame Sicherheitsgrundsaetze
 
@@ -271,16 +275,17 @@ einen Agenten dort z.B. von "Nicht erprobt" auf "Erprobt" oder "Stabil" setzen.
    Testprojekt = /vollstaendiger/Pfad/zum/Testprojekt
    ~~~
 
-3. Auftraege immer mit Codex, OpenCode oder Pi und dem Projektnamen
-   ansprechen. Das verhindert versehentliche Agentenstarts.
+3. Fuer normale BrainVault-Arbeit reicht der Harness-Name: `Trinity, nutze
+   Codex ...` oder `Trinity, nutze Pi ...`. Trinity verwendet dann automatisch
+   das Projekt `BrainVault`. Andere Projekte nur nennen, wenn bewusst nicht im
+   zentralen Agentenpool gearbeitet werden soll.
 4. Externe Aktionen nur vorbereiten: keine E-Mails senden, keine Kaeufe, keine
    Deployments, keine Pushes und keine Loeschungen ohne eigene, spaetere
    Bestaetigung.
 5. Projektregeln sind entscheidend: Trinity kann ein Projekt mit absichtlich
    weitreichenden Shell-/Netzwerkrechten nicht automatisch unschaedlich machen.
-6. Neue Agenten zuerst im Katalog pruefen: Reifegrad, erlaubte Pfade,
-   Freigaben, maximale Laeufe und Harness-Haekchen sollten zum Einsatzzweck
-   passen.
+6. Neue Agenten zuerst im Katalog pruefen: Reifegrad und Harness sollten zum
+   Einsatzzweck passen; Rechte und Spezialregeln liegen in `agent.yaml`.
 
 ### Agentenbuilder nutzen
 
