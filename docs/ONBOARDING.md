@@ -257,8 +257,9 @@ Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
 Codex, Pi und OpenCode liegen unter Einstellungen -> Harnesses. Dort wird
 aktiviert, welche Programme erreichbar sind und welche Rollen sie uebernehmen:
 Agentenbuilder, harte komplexe Faelle oder Ausfuehrung der Agenten. Der
-Standard-Extern-Harness aus MainHub entscheidet, wer neue Cloud-Agenten zuerst
-bekommt; initial ist das `codex`.
+Standard-Extern-Harness aus MainHub entscheidet, wer laufende Cloud-Agentenarbeit
+zuerst bekommt; initial ist das `pi`. Codex bleibt der Builder-Harness fuer neue
+Agenten, Imports, Refactorings, Tests und Quality-Gates.
 
 Unter Einstellungen -> Agenten steht der Agentenkatalog in zwei Tabellen:
 lokale Trinity-Agenten und externe Cloud-Agenten aus BrainVault. Sichtbar

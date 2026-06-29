@@ -64,7 +64,7 @@ def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
     brainvault = tmp_path / "brainvault"
     external_agents = tmp_path / "external-agents"
     config = {}
-    answers = iter(["ja", str(runtime), str(vault), str(brainvault), str(external_agents), "codex"])
+    answers = iter(["ja", str(runtime), str(vault), str(brainvault), str(external_agents), "pi"])
 
     trinity_cli._configure_control_plane(
         config,
@@ -77,7 +77,7 @@ def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
     assert config["control_plane"]["vault_root"] == str(vault)
     assert config["control_plane"]["brainvault_root"] == str(brainvault)
     assert config["control_plane"]["external_agents_root"] == str(external_agents)
-    assert config["control_plane"]["default_brainvault_harness"] == "codex"
+    assert config["control_plane"]["default_brainvault_harness"] == "pi"
 
 
 def test_direct_cli_setting_updates_shared_config(tmp_path, monkeypatch):

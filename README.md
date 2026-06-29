@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.5:** Pi ist nun der Standard-Extern-Harness fuer laufende BrainVault-Agentenarbeit; Codex bleibt der Builder-Harness fuer neue Agenten, Imports, Refactorings und Quality-Gates. BrainVaults direkte `AGENTS.md`-/`harnesses.yaml`-Regeln wurden entsprechend gesetzt.
 > - **v0.16.4:** Pi-Harness robuster fuer BrainVault/iCloud-Pfade: Trinity startet Pi mit Projekt-CWD, relativen Pfadregeln und `TRINITY_PROJECT_*`-Umgebung; Pi darf Mail-Agenten fuer Entwuerfe nutzen, sendet/loescht/verschiebt aber nur nach expliziter Freigabe.
 > - **v0.16.3:** Settings-Aufraeumen fuer den zentralen BrainVault-Agentenpool: MainHub zeigt nur noch lokale Runtime, Cloud-Agentenpool und Standard-Extern-Harness; die Agentenkiste trennt lokale Trinity-Agenten und externe Cloud-Agenten; Codex, Pi und OpenCode erhalten `BrainVault` automatisch als gemeinsames Standardprojekt.
 > - **v0.16.2:** Externe Harness-Agenten: bestehende Projekt-, Markdown-, HTML- und Script-Agenten koennen ohne Duplikation per `agentctl register` in `BrainVault/.agents` katalogisiert werden; die Settings haben nun einen expliziten Pfad fuer die externe Harness-Agentenbasis.
@@ -551,7 +552,9 @@ die lokale **Runtime**, der **Cloud-Agentenpool** und der
 **Standard-Extern-Harness**. Der Cloud-Agentenpool ist der uebergeordnete
 BrainVault-Root, also der Ordner, in dem `.agents` und `AGENTS.md` liegen.
 Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
-`BrainVault` bereit. Aeltere Einstellungen, die noch auf
+`BrainVault` bereit. Pi ist der Standard fuer laufende BrainVault-Agentenarbeit;
+Codex bleibt fuer neue Agenten, Imports, Refactorings, Tests und Quality-Gates
+vorgesehen. Aeltere Einstellungen, die noch auf
 `MainHub/TrinityVault` zeigen, werden beim Lesen auf den BrainVault-Root
 gemappt, sofern dort `.agents` existiert.
 

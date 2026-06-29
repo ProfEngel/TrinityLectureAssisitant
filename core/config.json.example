@@ -89,7 +89,7 @@
     "vault_root": "",
     "brainvault_root": "",
     "external_agents_root": "",
-    "default_brainvault_harness": "codex",
+    "default_brainvault_harness": "pi",
     "default_mode": "guided",
     "builder_harness": "codex",
     "catalog_include_legacy": true
@@ -138,7 +138,7 @@
       "pi": {
         "label": "Pi",
         "roles": {
-          "agent_builder": true,
+          "agent_builder": false,
           "complex_cases": true,
           "agent_execution": true
         }
@@ -154,7 +154,7 @@
     },
     "agent_assignments": {
       "trinity-core": ["trinity"],
-      "agent-builder": ["trinity", "codex", "pi"],
+      "agent-builder": ["trinity", "codex"],
       "legacy-codex-agent": ["trinity", "codex"],
       "legacy-pi-agent": ["trinity", "pi"],
       "legacy-opencode-agent": ["trinity", "opencode"]

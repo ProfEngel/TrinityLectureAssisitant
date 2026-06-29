@@ -1282,9 +1282,9 @@ class SettingsWindow(QMainWindow):
     def _default_brainvault_harness(self):
         value = (
             self.config.get("control_plane", {})
-            .get("default_brainvault_harness", "codex")
+            .get("default_brainvault_harness", "pi")
         )
-        return value if value in self._harness_ids() else "codex"
+        return value if value in self._harness_ids() else "pi"
 
     def _apply_default_brainvault_assignments(self, records=None):
         records = records or self._harness_agent_records()
@@ -1793,11 +1793,11 @@ class SettingsWindow(QMainWindow):
 
         self.brainvault_harness_combo = QComboBox()
         self.brainvault_harness_combo.addItems(self._harness_ids())
-        default_harness = control_conf.get("default_brainvault_harness", "codex")
+        default_harness = control_conf.get("default_brainvault_harness", "pi")
         if default_harness in self._harness_ids():
             self.brainvault_harness_combo.setCurrentText(default_harness)
         else:
-            self.brainvault_harness_combo.setCurrentText("codex")
+            self.brainvault_harness_combo.setCurrentText("pi")
         form.addRow("Standard-Extern-Harness:", self.brainvault_harness_combo)
 
         refresh_row = QWidget()

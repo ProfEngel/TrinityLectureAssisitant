@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.4"
+VERSION = "0.16.5"
 
 
 def find_trinity_home(explicit=None):
@@ -168,7 +168,7 @@ def _configure_control_plane(config, home, input_fn=input):
     control["default_brainvault_harness"] = _prompt_choice(
         "Standard-Harness fuer BrainVault-Agenten",
         ("codex", "pi", "opencode", "trinity"),
-        control.get("default_brainvault_harness", "codex"),
+        control.get("default_brainvault_harness", "pi"),
         input_fn,
     )
     paths = TrinityPaths.from_config(home, config)

@@ -894,11 +894,25 @@ BrainVault-Agenten zuerst AGENTS.md und die jeweilige agent.yaml lesen.
 def _default_harnesses_yaml() -> str:
     return """harnesses:
   - id: trinity
-  - id: codex
+    role: control-plane
+    default_for: [routing, user-facing-orchestration]
   - id: pi
+    role: default-agent-runtime
+    default_for: [brainvault-agent-execution, analysis, drafts, reports]
+    path_policy: relative-first
+  - id: codex
+    role: agent-builder
+    default_for: [new-agent-creation, agent-refactoring, tests, quality-gates]
   - id: opencode
+    role: optional-runtime
   - id: claude-code
+    role: optional-builder
   - id: antigravity
+    role: direct-human-workbench
+defaults:
+  external_agent_runtime: pi
+  agent_builder: codex
+  direct_workbench: antigravity
 """
 
 

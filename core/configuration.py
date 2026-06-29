@@ -136,7 +136,7 @@ def default_config(platform_name=None):
             "vault_root": "",
             "brainvault_root": "",
             "external_agents_root": "",
-            "default_brainvault_harness": "codex",
+            "default_brainvault_harness": "pi",
             "default_mode": "guided",
             "builder_harness": "codex",
             "catalog_include_legacy": True,
@@ -190,7 +190,7 @@ def default_config(platform_name=None):
                 "pi": {
                     "label": "Pi",
                     "roles": {
-                        "agent_builder": True,
+                        "agent_builder": False,
                         "complex_cases": True,
                         "agent_execution": True,
                     },

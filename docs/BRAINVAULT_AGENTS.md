@@ -129,7 +129,9 @@ Antigravity und weitere externe Harnesses ausliest. Beide Pfade zeigen im
 Normalfall auf den BrainVault-Root, also den Ordner, der `.agents`, `.catalog`,
 `.ai`, `AGENTS.md` und `CLAUDE.md` enthaelt.
 
-Der `Standard-Harness fuer BrainVault-Agenten` steht initial auf `codex`. Mit
+Der `Standard-Harness fuer BrainVault-Agenten` steht initial auf `pi`. Codex
+bleibt der Builder-Harness fuer neue Agenten, Imports, Refactorings, Tests und
+Quality-Gates. Mit
 **BrainVault-Agenten aktualisieren** wird `.agents` erneut gelesen, der Katalog
 neu aufgebaut und jeder neue BrainVault-Agent ohne bestehende manuelle Zuordnung
 diesem Standard-Harness zugewiesen. Die sichtbare Harness-Matrix wird dabei
