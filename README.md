@@ -15,9 +15,10 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.1:** BrainVault-Agentenimport: bestehende CampusHub-Skills koennen nach `BrainVault/.agents` uebernommen, validiert, katalogisiert und in den Einstellungen per BrainVault-Pfad sowie Standard-Harness (standardmaessig Codex) live in die Harness-Matrix geladen werden.
+> - **v0.16.0:** BrainVault-Agentenbasis: externe Fachagenten werden direkt unter `BrainVault/.agents` als `draft` angelegt, per `agent.yaml` katalogisiert, ueber `agentctl` verwaltet und fuer Trinity, Codex, Pi, OpenCode, Claude Code und Antigravity harness-agnostisch vorbereitet.
 > - **v0.15.6:** Harness-Einstellungen besser lesbar: kontrastreiche Status-Badges, groessere Projektfelder und eine nach unten wachsende Agentenmatrix. Pi-Importlaeufe duerfen explizit genannte Quellordner read-only analysieren und schreiben weiterhin nur in freigegebene Projektordner.
 > - **v0.15.5:** Pi-Harness auf Codex/OpenCode-Niveau fuer Projektarbeit erweitert: freigegebene Projekt-Aliasse, Standardprojekt, nicht-interaktiver `-p {prompt}`-Start, Arbeitsverzeichnis pro Projekt und WebUI/Settings/CLI-Unterstuetzung.
-> - **v0.16.0:** BrainVault-Agentenbasis: externe Fachagenten werden direkt unter `BrainVault/.agents` als `draft` angelegt, per `agent.yaml` katalogisiert, ueber `agentctl` verwaltet und fuer Trinity, Codex, Pi, OpenCode, Claude Code und Antigravity harness-agnostisch vorbereitet.
 > - **v0.15.4:** Jobbasierter Agentenbuilder-Loop: Agenten erstellen, importieren oder erweitern erzeugt pruefbare Artefakte, Builder-Plan, Validierungsbericht, optionale Codex/Pi/OpenCode-Harness-Rueckmeldungen und sichtbare Quality-Gates im Jobmanager; Onboarding-Beispiele wurden auf neutrale Platzhalter bereinigt.
 > - **v0.15.3:** Desktop-Settings erhalten schnelle Mikrofon-/Lautsprecher-Toggles gegen Selbstmithören; der Agentenbuilder kann vorhandene Agentenordner/Uebersichtsdateien sicher als Staging-Agent importieren und erkennt Erstellen-, Aendern- und Erweiterungsauftraege per Zuruf.
 > - **v0.15.2:** Vollstaendiger Agentenkatalog in den Einstellungen: Trinity, Agentenbuilder, Shared/Personal/Staging- und Legacy-Agenten mit Reifegrad, Rechten, Freigaben, Lauf-/Parallelitaetslimits sowie Trinity als sichtbares Harness in der Ausfuehrungsmatrix.
@@ -534,11 +535,19 @@ BrainVault-Agenten koennen auch ohne Trinity-UI gepflegt werden:
 ```bash
 agentctl init
 agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl import "/vollstaendiger/Pfad/zum/bestehenden-Agentenordner" --area skills --preferred-harness codex --status active
 agentctl list
 agentctl inspect research.thesis_reviewer
 agentctl validate research.thesis_reviewer
 agentctl catalog build
 ```
+
+In den Desktop-Einstellungen liegt das unter **MainHub**:
+`BrainVault-Agentenbasis` zeigt auf den uebergeordneten BrainVault-Root, also
+den Ordner, in dem `.agents` liegt. `Standard-Harness fuer BrainVault-Agenten`
+steht initial auf `codex`; ueber **BrainVault-Agenten aktualisieren** liest
+Trinity `.agents` neu ein und traegt neue Agenten direkt in die Harness-Matrix
+ein.
 
 ---
 

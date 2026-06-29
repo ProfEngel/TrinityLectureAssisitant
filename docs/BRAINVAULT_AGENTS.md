@@ -91,6 +91,7 @@ agentctl inspect <agent-id>
 agentctl validate <agent-id>
 agentctl catalog build
 agentctl create <bereich> <agent-id>
+agentctl import <bestehender-agentenordner> --area skills --preferred-harness codex --status active
 agentctl audit <suchpfad> --output BRAINVAULT_AGENT_AUDIT.md
 ```
 
@@ -98,9 +99,29 @@ Beispiel:
 
 ```bash
 agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl import "/pfad/zu/CampusHub/.agents/skills/thesis-reviewer" --area skills --preferred-harness codex --status active
 agentctl validate research.thesis_reviewer
 agentctl catalog build
 ```
+
+Der Import kopiert den Agentenordner nach `BrainVault/.agents/<area>/<agent-id>/`,
+uebernimmt `SKILL.md`, `references/`, Skripte, Templates und Tests, laesst
+virtuelle Umgebungen, Caches und Build-Artefakte aber aus. Aus dem `SKILL.md`
+werden Name und Beschreibung uebernommen; `preferred_harness` ist beim Import
+standardmaessig `codex`.
+
+## Einstellungen
+
+In **Einstellungen -> MainHub** kann ein expliziter
+`BrainVault-Agentenbasis`-Pfad gesetzt werden. Dieser Pfad zeigt auf den
+BrainVault-Root, also den Ordner, der `.agents`, `.catalog`, `.ai`, `AGENTS.md`
+und `CLAUDE.md` enthaelt.
+
+Der `Standard-Harness fuer BrainVault-Agenten` steht initial auf `codex`. Mit
+**BrainVault-Agenten aktualisieren** wird `.agents` erneut gelesen, der Katalog
+neu aufgebaut und jeder neue BrainVault-Agent ohne bestehende manuelle Zuordnung
+diesem Standard-Harness zugewiesen. Die sichtbare Harness-Matrix wird dabei
+direkt aktualisiert.
 
 ## Trinity-Agentenbuilder
 

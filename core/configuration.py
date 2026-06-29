@@ -135,6 +135,7 @@ def default_config(platform_name=None):
             "runtime_root": "",
             "vault_root": "",
             "brainvault_root": "",
+            "default_brainvault_harness": "codex",
             "default_mode": "guided",
             "builder_harness": "codex",
             "catalog_include_legacy": True,

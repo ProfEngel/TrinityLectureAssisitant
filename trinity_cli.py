@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.0"
+VERSION = "0.16.1"
 
 
 def find_trinity_home(explicit=None):
@@ -116,6 +116,7 @@ def _configure_control_plane(config, home, input_fn=input):
         default_runtime_root,
         default_vault_root,
     )
+    from brainvault_agents import brainvault_root_from_config  # pylint: disable=import-outside-toplevel
 
     print("\nMainHub / Control Plane")
     print("=======================")
@@ -148,6 +149,20 @@ def _configure_control_plane(config, home, input_fn=input):
     control["vault_root"] = _prompt(
         "Synchronisierter Cloud-Vault-Ordner",
         vault_default,
+        input_fn,
+    )
+    brainvault_default = control.get("brainvault_root") or str(
+        brainvault_root_from_config(home, config)
+    )
+    control["brainvault_root"] = _prompt(
+        "BrainVault-Agentenbasis",
+        brainvault_default,
+        input_fn,
+    )
+    control["default_brainvault_harness"] = _prompt_choice(
+        "Standard-Harness fuer BrainVault-Agenten",
+        ("codex", "pi", "opencode", "trinity"),
+        control.get("default_brainvault_harness", "codex"),
         input_fn,
     )
     paths = TrinityPaths.from_config(home, config)

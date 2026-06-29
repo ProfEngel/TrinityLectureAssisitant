@@ -54,6 +54,10 @@ def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None)
     paths = TrinityPaths.from_config(home, config or {})
     vault = paths.vault_root
     if vault.name.casefold() == "trinityvault":
+        if vault.parent.name.casefold() == "mainhub":
+            return vault.parent.parent.resolve()
+        return vault.parent.resolve()
+    if vault.name.casefold() == "mainhub":
         return vault.parent.resolve()
     return vault.resolve()
 
@@ -143,6 +147,92 @@ def create_agent(
     return {"agent_id": full_id, "path": str(target), "catalog": catalog["path"]}
 
 
+def import_agent_directory(
+    root: str | Path,
+    source_path: str | Path,
+    *,
+    area: str = "skills",
+    preferred_harness: str = "codex",
+    status: str = "active",
+    enabled: bool = True,
+) -> dict:
+    root_path = Path(root).expanduser().resolve()
+    source = Path(source_path).expanduser().resolve()
+    if not source.is_dir():
+        raise FileNotFoundError(f"Agentenordner nicht gefunden: {source}")
+    ensure_brainvault_layout(root_path)
+    clean_area = slugify(area)
+    clean_slug = slugify(source.name)
+    target = root_path / ".agents" / clean_area / clean_slug
+    target.mkdir(parents=True, exist_ok=True)
+    copied = _copy_agent_tree(source, target)
+
+    skill = target / "SKILL.md"
+    metadata = _skill_metadata(skill)
+    display_name = metadata.get("name") or _display_name(clean_slug)
+    description = metadata.get("description") or f"Importierter BrainVault-Agent aus {source}"
+    agent_id = f"{clean_area}.{clean_slug.replace('-', '_')}"
+    scripts = sorted(
+        item.relative_to(target).as_posix()
+        for item in target.rglob("*.py")
+        if "__pycache__" not in item.parts and ".venv" not in item.parts
+    )
+    entrypoints = {}
+    if (target / "workflow.yaml").is_file():
+        entrypoints["workflow"] = "workflow.yaml"
+    elif (target / "workflow.yml").is_file():
+        entrypoints["workflow"] = "workflow.yml"
+    if (target / "script.py").is_file():
+        entrypoints["script"] = "script.py"
+    elif scripts:
+        entrypoints["script"] = scripts[0]
+
+    data = {
+        "id": agent_id,
+        "name": display_name,
+        "version": "1.0.0",
+        "source": "brainvault",
+        "execution_scope": "shared_harness",
+        "status": status,
+        "enabled": bool(enabled),
+        "created_at": _now_date(),
+        "description": description,
+        "path": f".agents/{clean_area}/{clean_slug}",
+        "workspace": None,
+        "triggers": {
+            "natural": [display_name, clean_slug.replace("-", " ")],
+            "slash": [],
+            "examples": [f"Trinity, nutze den {display_name} Agenten."],
+        },
+        "tags": [clean_area, "campushub"],
+        "compatible_harnesses": list(DEFAULT_HARNESSES),
+        "preferred_harness": preferred_harness or "auto",
+        "entrypoints": entrypoints,
+        "permissions": {
+            "read": [],
+            "write": [],
+            "approval_required": ["activate_skill"] if status != "active" else [],
+            "forbidden": ["destructive_changes_without_approval", "secret_logging"],
+        },
+        "secrets": [],
+        "outputs": [],
+        "resources": {"max_parallel_runs": 1},
+        "validation": {"tests_required": False, "last_validated": _now_date() if status == "active" else None},
+        "origin": {"source_paths": [str(source)]},
+    }
+    write_agent_yaml(target / "agent.yaml", data)
+    _write_if_missing(target / "README.md", f"# {display_name}\n\n{description}\n")
+    if not skill.is_file():
+        (target / "SKILL.md").write_text(f"# {display_name}\n\n{description}\n", encoding="utf-8")
+    catalog = build_catalog(root_path)
+    return {
+        "agent_id": agent_id,
+        "path": str(target),
+        "copied_files": copied,
+        "catalog": catalog["path"],
+    }
+
+
 def build_catalog(root: str | Path) -> dict:
     root_path = Path(root).expanduser().resolve()
     ensure_brainvault_layout(root_path)
@@ -200,6 +290,15 @@ def validate_agent(root: str | Path, agent_id: str) -> dict:
     validation = data.get("validation") or {}
     if validation.get("tests_required") and not (agent_dir / "tests").is_dir():
         warnings.append("tests_required ist aktiv, aber tests/ fehlt.")
+    for script in agent_dir.rglob("*.py"):
+        if any(part in {".venv", "__pycache__"} for part in script.parts):
+            continue
+        try:
+            import py_compile
+
+            py_compile.compile(str(script), doraise=True)
+        except Exception as exc:
+            errors.append(f"Python-Syntaxfehler in {script.relative_to(agent_dir)}: {exc}")
     return {
         "ok": not errors,
         "errors": errors,
@@ -324,7 +423,7 @@ def _catalog_record(root: Path, yaml_path: Path, data: dict) -> dict:
         "secrets": data.get("secrets") or [],
         "outputs": data.get("outputs") or [],
         "tests_required": bool(validation.get("tests_required", False)),
-        "last_validated": validation.get("last_validated"),
+        "last_validated": _json_scalar(validation.get("last_validated")),
         "origin": data.get("origin") or {},
         "updated_at": _json_scalar(data.get("updated_at") or data.get("created_at")),
     }
@@ -497,6 +596,45 @@ def _audit_candidate(root: Path, directory: Path) -> dict:
         "classification": "Trinity-intern" if origin == "trinity" else "BrainVault-extern",
         "recommendation": recommendation,
     }
+
+
+def _copy_agent_tree(source: Path, target: Path) -> list[str]:
+    copied = []
+    for path in sorted(source.rglob("*")):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(source)
+        if any(part in {".git", ".venv", "__pycache__", "node_modules", ".mypy_cache", ".pytest_cache"} for part in relative.parts):
+            continue
+        if any(part.startswith(".") and part not in {".obsidian"} for part in relative.parts):
+            continue
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+        copied.append(relative.as_posix())
+    return copied
+
+
+def _skill_metadata(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    metadata = {}
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "---":
+        for line in lines[1:]:
+            if line.strip() == "---":
+                break
+            if ":" in line:
+                key, value = line.split(":", 1)
+                metadata[key.strip()] = value.strip().strip('"')
+    if not metadata.get("name"):
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("# "):
+                metadata["name"] = stripped[2:].strip()
+                break
+    return metadata
 
 
 def _audit_markdown(candidates: list[dict]) -> str:

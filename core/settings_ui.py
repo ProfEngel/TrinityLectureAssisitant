@@ -26,6 +26,11 @@ from agent_catalog import (
     default_harnesses_for_agent,
     normalize_catalog_overrides,
 )
+from brainvault_agents import (
+    brainvault_root_from_config,
+    build_catalog as build_brainvault_catalog,
+    ensure_brainvault_layout,
+)
 from configuration import DEFAULT_CONFIG, load_config, save_config
 from trinity_paths import default_runtime_root, default_vault_root
 from ui_modes import resolve_ui_modes
@@ -325,6 +330,12 @@ class SettingsWindow(QMainWindow):
             )
             self.config["control_plane"]["vault_root"] = (
                 self.vault_root_edit.text().strip()
+            )
+            self.config["control_plane"]["brainvault_root"] = (
+                self.brainvault_root_edit.text().strip()
+            )
+            self.config["control_plane"]["default_brainvault_harness"] = (
+                self.brainvault_harness_combo.currentText()
             )
 
         # ComfyUI
@@ -1206,10 +1217,8 @@ class SettingsWindow(QMainWindow):
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
-        records = self._harness_agent_records()
         harness_ids = self._harness_ids()
-        assignments = self.config.get("harness_routing", {}).get("agent_assignments", {})
-        table = QTableWidget(len(records), len(harness_ids) + 1)
+        table = QTableWidget(0, len(harness_ids) + 1)
         table.setHorizontalHeaderLabels(["Agent", *[self._harness_labels()[item] for item in harness_ids]])
         table.verticalHeader().setVisible(False)
         table.setMinimumHeight(520)
@@ -1220,6 +1229,15 @@ class SettingsWindow(QMainWindow):
         for column in range(1, len(harness_ids) + 1):
             table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeToContents)
 
+        self._populate_harness_agent_table(table, self._harness_agent_records())
+        self.harness_agent_table = table
+        layout.addWidget(table, 1)
+        return group
+
+    def _populate_harness_agent_table(self, table, records):
+        harness_ids = self._harness_ids()
+        assignments = self.config.get("harness_routing", {}).get("agent_assignments", {})
+        table.setRowCount(len(records))
         self.harness_agent_ids = []
         for row, record in enumerate(records):
             agent_id = record.agent_id
@@ -1236,17 +1254,16 @@ class SettingsWindow(QMainWindow):
             if agent_id in assignments:
                 selected = set(assignments.get(agent_id, []))
             else:
-                selected = set(default_harnesses_for_agent(agent_id))
+                if getattr(record, "tier", "") == "brainvault":
+                    selected = {self._default_brainvault_harness()}
+                else:
+                    selected = set(default_harnesses_for_agent(agent_id))
             for col, harness_id in enumerate(harness_ids, start=1):
                 check_item = QTableWidgetItem()
                 check_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
                 check_item.setCheckState(Qt.Checked if harness_id in selected else Qt.Unchecked)
                 table.setItem(row, col, check_item)
-
-        self.harness_agent_table = table
         table.resizeRowsToContents()
-        layout.addWidget(table, 1)
-        return group
 
     def _harness_agent_records(self):
         try:
@@ -1254,6 +1271,64 @@ class SettingsWindow(QMainWindow):
         except Exception as exc:
             print(f"Agentenliste fuer Harness-Matrix konnte nicht geladen werden: {exc}")
             return []
+
+    def _default_brainvault_harness(self):
+        value = (
+            self.config.get("control_plane", {})
+            .get("default_brainvault_harness", "codex")
+        )
+        return value if value in self._harness_ids() else "codex"
+
+    def _apply_default_brainvault_assignments(self, records=None):
+        records = records or self._harness_agent_records()
+        default_harness = self._default_brainvault_harness()
+        assignments = self.config.setdefault("harness_routing", {}).setdefault(
+            "agent_assignments", {}
+        )
+        changed = False
+        for record in records:
+            if getattr(record, "tier", "") != "brainvault":
+                continue
+            if record.agent_id not in assignments:
+                assignments[record.agent_id] = [default_harness]
+                changed = True
+        return changed
+
+    def _refresh_brainvault_agents(self):
+        try:
+            self.config.setdefault("control_plane", {})["brainvault_root"] = (
+                self.brainvault_root_edit.text().strip()
+            )
+            self.config["control_plane"]["default_brainvault_harness"] = (
+                self.brainvault_harness_combo.currentText()
+            )
+            root = brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config)
+            ensure_brainvault_layout(root)
+            catalog = build_brainvault_catalog(root)
+            records = self._harness_agent_records()
+            self._apply_default_brainvault_assignments(records)
+            if hasattr(self, "harness_agent_table"):
+                self._populate_harness_agent_table(self.harness_agent_table, records)
+            if hasattr(self, "agent_catalog_table"):
+                self._refresh_agent_ecosystem()
+            if hasattr(self, "brainvault_status_label"):
+                summary = catalog.get("summary", {})
+                self.brainvault_status_label.setText(
+                    f"BrainVault gelesen: {root} | Agenten: {summary.get('total', 0)}"
+                )
+            QMessageBox.information(
+                self,
+                "BrainVault aktualisiert",
+                f"Agentenkatalog neu erzeugt:\n{catalog.get('path')}\n\n"
+                "Neue BrainVault-Agenten wurden dem Standard-Harness zugewiesen, "
+                "falls noch keine manuelle Zuordnung vorhanden war.",
+            )
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "BrainVault konnte nicht aktualisiert werden",
+                str(exc),
+            )
 
     @staticmethod
     def _projects_to_text(projects):
@@ -1675,12 +1750,50 @@ class SettingsWindow(QMainWindow):
         )
         form.addRow("Cloud-Vault:", self.vault_root_edit)
 
+        brainvault_default = control_conf.get("brainvault_root")
+        if not brainvault_default:
+            try:
+                brainvault_default = str(
+                    brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config)
+                )
+            except Exception:
+                brainvault_default = ""
+        self.brainvault_root_edit = QLineEdit(brainvault_default)
+        self.brainvault_root_edit.setPlaceholderText(
+            "/Cloud/Pfad/BrainVault"
+        )
+        form.addRow("BrainVault-Agentenbasis:", self.brainvault_root_edit)
+
+        self.brainvault_harness_combo = QComboBox()
+        self.brainvault_harness_combo.addItems(self._harness_ids())
+        default_harness = control_conf.get("default_brainvault_harness", "codex")
+        if default_harness in self._harness_ids():
+            self.brainvault_harness_combo.setCurrentText(default_harness)
+        else:
+            self.brainvault_harness_combo.setCurrentText("codex")
+        form.addRow("Standard-Harness fuer BrainVault-Agenten:", self.brainvault_harness_combo)
+
+        refresh_row = QWidget()
+        refresh_layout = QHBoxLayout(refresh_row)
+        refresh_layout.setContentsMargins(0, 0, 0, 0)
+        refresh_btn = QPushButton("BrainVault-Agenten aktualisieren")
+        refresh_btn.clicked.connect(self._refresh_brainvault_agents)
+        refresh_layout.addWidget(refresh_btn)
+        self.brainvault_status_label = QLabel("")
+        self.brainvault_status_label.setWordWrap(True)
+        self.brainvault_status_label.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        refresh_layout.addWidget(self.brainvault_status_label, 1)
+        form.addRow("", refresh_row)
+
         hint = QLabel(
             "Runtime: laufende Jobs, Queue, aktive Workspaces, Datenbanken, "
             "Cache, Temp und Secrets. Dieser Ordner sollte lokal bleiben und "
             "nicht in iCloud, OneDrive oder Google Drive liegen.\n\n"
             "Cloud-Vault: freigegebene Agenten, Projekte, Ergebnisse, Vorlagen, "
-            "Wissen, Audit und Exporte. Dieser Ordner darf synchronisiert werden."
+            "Wissen, Audit und Exporte. Dieser Ordner darf synchronisiert werden.\n\n"
+            "BrainVault-Agentenbasis: gemeinsamer Root mit .agents, .catalog, .ai, "
+            "AGENTS.md und CLAUDE.md. Neue externe Fachagenten werden daraus "
+            "gelesen und standardmaessig dem gewaehlten Harness zugewiesen."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #d29922; font-size: 11px;")

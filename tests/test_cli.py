@@ -61,8 +61,9 @@ def test_surface_settings_accept_web_ui_without_terminal():
 def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
     runtime = tmp_path / "local-runtime"
     vault = tmp_path / "cloud-vault"
+    brainvault = tmp_path / "brainvault"
     config = {}
-    answers = iter(["ja", str(runtime), str(vault)])
+    answers = iter(["ja", str(runtime), str(vault), str(brainvault), "codex"])
 
     trinity_cli._configure_control_plane(
         config,
@@ -73,6 +74,8 @@ def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
     assert config["control_plane"]["enabled"] is True
     assert config["control_plane"]["runtime_root"] == str(runtime)
     assert config["control_plane"]["vault_root"] == str(vault)
+    assert config["control_plane"]["brainvault_root"] == str(brainvault)
+    assert config["control_plane"]["default_brainvault_harness"] == "codex"
 
 
 def test_direct_cli_setting_updates_shared_config(tmp_path, monkeypatch):

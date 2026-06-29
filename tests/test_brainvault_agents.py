@@ -14,6 +14,7 @@ from brainvault_agents import (  # noqa: E402
     build_catalog,
     create_agent,
     ensure_brainvault_layout,
+    import_agent_directory,
     inspect_agent,
     validate_agent,
 )
@@ -75,4 +76,30 @@ def test_brainvault_root_derives_parent_when_config_points_to_trinityvault(tmp_p
         {"control_plane": {"vault_root": str(vault)}},
     )
 
-    assert resolved == tmp_path / "MainHub"
+    assert resolved == tmp_path
+
+
+def test_import_agent_directory_copies_skill_and_catalogs_as_active(tmp_path):
+    root = tmp_path / "BrainVault"
+    source = tmp_path / "CampusHub" / ".agents" / "skills" / "demo-agent"
+    source.mkdir(parents=True)
+    (source / "SKILL.md").write_text(
+        "---\nname: demo-agent\ndescription: Demo skill.\n---\n# Demo\n",
+        encoding="utf-8",
+    )
+    (source / "script.py").write_text("print('ok')\n", encoding="utf-8")
+    (source / ".venv").mkdir()
+    (source / ".venv" / "skip.py").write_text("broken python", encoding="utf-8")
+
+    result = import_agent_directory(root, source, preferred_harness="codex")
+
+    assert result["agent_id"] == "skills.demo_agent"
+    target = root / ".agents" / "skills" / "demo-agent"
+    assert (target / "SKILL.md").is_file()
+    assert (target / "script.py").is_file()
+    assert not (target / ".venv").exists()
+    validation = validate_agent(root, "skills.demo_agent")
+    assert validation["ok"] is True
+    inspected = inspect_agent(root, "skills.demo_agent")
+    assert inspected["preferred_harness"] == "codex"
+    assert inspected["status"] == "active"

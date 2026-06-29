@@ -24,6 +24,7 @@ def _load_core():
         create_agent,
         ensure_brainvault_layout,
         inspect_agent,
+        import_agent_directory,
         list_agents,
         validate_agent,
     )
@@ -36,6 +37,7 @@ def _load_core():
         "create_agent": create_agent,
         "ensure_brainvault_layout": ensure_brainvault_layout,
         "inspect_agent": inspect_agent,
+        "import_agent_directory": import_agent_directory,
         "list_agents": list_agents,
         "load_config": load_config,
         "validate_agent": validate_agent,
@@ -114,6 +116,20 @@ def cmd_create(args) -> int:
     return 0
 
 
+def cmd_import(args) -> int:
+    core = _load_core()
+    result = core["import_agent_directory"](
+        _vault_root(args),
+        args.source_path,
+        area=args.area,
+        preferred_harness=args.preferred_harness,
+        status=args.status,
+        enabled=not args.disabled,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_audit(args) -> int:
     core = _load_core()
     root = _vault_root(args)
@@ -155,6 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--name", default="")
     create.add_argument("--description", default="")
     create.set_defaults(func=cmd_create)
+
+    import_cmd = sub.add_parser("import", help="Import an existing agent folder into BrainVault/.agents")
+    import_cmd.add_argument("source_path")
+    import_cmd.add_argument("--area", default="skills")
+    import_cmd.add_argument("--preferred-harness", default="codex")
+    import_cmd.add_argument("--status", default="active", choices=["draft", "active", "disabled", "archived"])
+    import_cmd.add_argument("--disabled", action="store_true")
+    import_cmd.set_defaults(func=cmd_import)
 
     audit = sub.add_parser("audit", help="Audit existing folders for agent candidates")
     audit.add_argument("roots", nargs="+")
