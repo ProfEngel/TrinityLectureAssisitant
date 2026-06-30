@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelles Release:** 
+> - **v0.16.9:** Desktop-ClassicUI startet beim Button `Neue Session` nun ebenfalls den nicht-blockierenden Summary-Hintergrundjob fuer die vorherige Session. Auch Desktop-Sessions ohne bisherige Session-ID werden nur fuer das aktuelle App-Zeitfenster zusammengefasst.
 > - **v0.16.8:** Nicht-blockierende Session-Summaries: Beim Start einer neuen Session wird die alte Session im Hintergrund zusammengefasst, als Markdown-Asset gespeichert, in Memory/RAG uebernommen und ueber Desktop-WebUI sowie iPhone/iPad-Companion abrufbar gemacht.
 > - **v0.16.7:** Wakeword-Bugfix: Trinity erkennt iPhone-/iPad-STT-Varianten wie `Triniti`, `Trini ty`, `Tri-nity`, `Drinity` und `Trinitie` robuster, ohne nahe Alltagswoerter wie `Trend` oder `Training` als Trigger zu behandeln.
 > - **v0.16.6:** Natuerliche Agentenpool-Nutzung: Fragen wie `Trinity, welche Faehigkeiten hast Du?` listen nun Trinitys lokale Faehigkeiten und den BrainVault-Agentenpool, ohne dass Pi oder Pfade genannt werden muessen. Bestehende BrainVault-Agenten laufen weiter standardmaessig ueber Pi; Codex/Antigravity duerfen denselben Agentenpool direkt nutzen.

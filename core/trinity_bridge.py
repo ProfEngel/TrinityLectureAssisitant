@@ -226,6 +226,9 @@ class TrinityBridge:
         session_id = str(payload.get("session_id", "")).strip()
         session_name = str(payload.get("session_name", "")).strip()[:160]
         wait = bool(payload.get("wait", False) or payload.get("blocking", False))
+        include_unscoped = bool(payload.get("include_unscoped", False))
+        started_at = float(payload.get("started_at", 0) or 0)
+        ended_at = float(payload.get("ended_at", 0) or 0)
         if not session_id:
             raise ValueError("session_id fehlt.")
 
@@ -233,9 +236,14 @@ class TrinityBridge:
         events = [
             event
             for event in load_chat_events(history_path, limit=5000)
-            if str(event.get("session_id") or "") == session_id
+            if (
+                str(event.get("session_id") or "") == session_id
+                or (include_unscoped and not str(event.get("session_id") or "").strip())
+            )
             and str(event.get("role") or "") in {"user", "assistant"}
             and str(event.get("text") or "").strip()
+            and (not started_at or float(event.get("timestamp", 0) or 0) >= started_at)
+            and (not ended_at or float(event.get("timestamp", 0) or 0) <= ended_at)
         ]
         if not events:
             return {

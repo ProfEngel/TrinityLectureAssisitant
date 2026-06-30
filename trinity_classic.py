@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime
@@ -50,6 +51,7 @@ from chat_protocol import (
 from memory_store import MemoryStore, render_graph_html
 from remote_client import RemoteTrinityClient
 from configuration import load_config, save_config
+from trinity_bridge import TrinityBridge
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -266,6 +268,7 @@ class ClassicWindow(QMainWindow):
         self._lecture_path = ""
         self.session_id = ""
         self.session_name = ""
+        self.session_started_at = time.time()
         self.pending_attachments = []
         self.remote_client = self._load_remote_client()
         self.remote_events = []
@@ -930,8 +933,19 @@ class ClassicWindow(QMainWindow):
         )
         if not accepted:
             return
+        old_session_id = self.session_id
+        old_session_name = self.session_name or "Classic Desktop"
+        old_started_at = self.session_started_at
+        old_ended_at = time.time()
         self.session_id = uuid.uuid4().hex
         self.session_name = name.strip()
+        self.session_started_at = time.time()
+        self._summarize_previous_session_in_background(
+            old_session_id,
+            old_session_name,
+            old_started_at,
+            old_ended_at,
+        )
         self.remote_events = []
         self.remote_after = time.time()
         self.pending_attachments = []
@@ -940,6 +954,39 @@ class ClassicWindow(QMainWindow):
         self.chat_history.setHtml(_render_chat_html([], self.theme))
         label = self.session_name or "ohne Namen"
         self.status.setText(f"Neue Session: {label}")
+
+    def _summarize_previous_session_in_background(self, session_id, session_name, started_at, ended_at):
+        closing_session_id = session_id or f"classic-unscoped-{int(started_at)}"
+
+        def worker():
+            try:
+                TrinityBridge(BASE_DIR).end_session(
+                    {
+                        "session_id": closing_session_id,
+                        "session_name": session_name,
+                        "include_unscoped": not bool(session_id),
+                        "started_at": started_at,
+                        "ended_at": ended_at,
+                    }
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                append_chat_event(
+                    CHAT_HISTORY_FILE,
+                    {
+                        "request_id": f"session-summary-error-{closing_session_id}",
+                        "role": "assistant",
+                        "source": "session-summary",
+                        "text": f"Session-Summary konnte nicht gestartet werden: {exc}",
+                        "session_id": closing_session_id,
+                        "session_name": session_name,
+                    },
+                )
+
+        threading.Thread(
+            target=worker,
+            name=f"trinity-classic-session-summary-{closing_session_id[:12]}",
+            daemon=True,
+        ).start()
 
     def _refresh_memory_if_changed(self):
         path = os.path.join(MEMORY_DIR, "trinity_memory.sqlite3")

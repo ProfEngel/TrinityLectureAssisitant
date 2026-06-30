@@ -314,6 +314,59 @@ def test_bridge_end_session_returns_before_background_summary_finishes(tmp_path)
     assert summary_event["attachments"][0]["kind"] == "summary"
 
 
+def test_bridge_end_session_can_summarize_unscoped_desktop_window(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    history = home / "memory" / "classic_chat_history.jsonl"
+    old_event = append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "classic",
+            "text": "Alte Nachricht vor dem App-Start.",
+        },
+    )
+    started_at = old_event["timestamp"] + 0.01
+    time.sleep(0.02)
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "classic",
+            "text": "Neue Desktop-Frage zur Vorlesung.",
+        },
+    )
+    summary_path = home / "memory" / "summaries" / "Summary_unscoped.md"
+    summary_path.parent.mkdir(parents=True)
+    bridge = TrinityBridge(home)
+    captured = {}
+
+    def fake_summary_agent(**kwargs):
+        captured["transcript"] = kwargs["transcript_path"].read_text(encoding="utf-8")
+        summary_path.write_text("# Summary\n\nNeue Desktop-Frage", encoding="utf-8")
+        return {
+            "summary": "## Hauptthemen\n- Neue Desktop-Frage",
+            "summary_path": str(summary_path),
+            "html_payload": "<!-- SESSION_SUMMARY_PAYLOAD --><h2>Summary</h2>",
+        }
+
+    bridge._run_session_summary_agent = fake_summary_agent
+    result = bridge.end_session(
+        {
+            "session_id": "classic-unscoped-test",
+            "session_name": "Classic Desktop",
+            "include_unscoped": True,
+            "started_at": started_at,
+            "wait": True,
+        }
+    )
+
+    assert result["created"] is True
+    assert "Neue Desktop-Frage" in captured["transcript"]
+    assert "Alte Nachricht" not in captured["transcript"]
+
+
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
     home = tmp_path
     (home / "core").mkdir()
