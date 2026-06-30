@@ -37,7 +37,7 @@ class TrinityControlPlane:
         self.brainvault_root = brainvault_root_from_config(self.home, self.config)
         self.registry = SkillRegistry(self.home)
         self.jobs = JobManager(self.paths.runtime_root)
-        self.artifacts = ArtifactStore(self.paths.vault_root)
+        self.artifacts = ArtifactStore(self.paths.runtime_root, "artifacts")
         self.policy = PolicyEngine()
         self.adapters = {
             "script-workflow": ScriptWorkflowAdapter(),
@@ -49,7 +49,6 @@ class TrinityControlPlane:
         brainvault_layout = ensure_brainvault_layout(self.brainvault_root)
         brainvault_catalog = build_brainvault_catalog(self.brainvault_root)
         self.artifacts.ensure()
-        self._write_vault_readme()
         catalog = self.export_agent_catalog()
         self._write_default_policy()
         self._write_default_model_profile()
@@ -146,26 +145,13 @@ class TrinityControlPlane:
 
     @property
     def agent_catalog_path(self) -> Path:
-        return self.paths.vault_root / "00_registry" / "agent_catalog.json"
-
-    def _write_vault_readme(self) -> None:
-        path = self.paths.vault_root / "README.md"
-        if path.exists():
-            return
-        path.write_text(
-            "# TrinityVault\n\n"
-            "Synchronisierte Nutzerablage fuer freigegebene Trinity-Agenten, "
-            "Projekte, Ergebnisse, Vorlagen, Wissensbestaende, Audit-Berichte "
-            "und Exporte.\n\n"
-            "Nicht hier ablegen: API-Keys, Secrets, aktive Datenbanken, laufende "
-            "Sessions, temporaere Dateien oder aktive Job-Workspaces.\n",
-            encoding="utf-8",
-        )
+        return self.paths.runtime_root / "catalog" / "agent_catalog.json"
 
     def _write_default_policy(self) -> None:
-        path = self.paths.vault_root / "00_registry" / "policies" / "default_policy.json"
+        path = self.paths.runtime_root / "policies" / "default_policy.json"
         if path.exists():
             return
+        path.parent.mkdir(parents=True, exist_ok=True)
         policy = {
             "schema_version": 1,
             "green_autonomous": [
@@ -196,9 +182,10 @@ class TrinityControlPlane:
         path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     def _write_default_model_profile(self) -> None:
-        path = self.paths.vault_root / "00_registry" / "model_profiles" / "local-default.json"
+        path = self.paths.runtime_root / "model_profiles" / "local-default.json"
         if path.exists():
             return
+        path.parent.mkdir(parents=True, exist_ok=True)
         llm = self.config.get("llm", {})
         active = llm.get("active_slot", "local")
         provider = llm.get(active, {}) if isinstance(llm.get(active), dict) else {}

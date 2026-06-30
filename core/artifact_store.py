@@ -1,4 +1,4 @@
-"""Vault-backed artifact index for Trinity jobs and agent results."""
+"""Artifact index for Trinity jobs and agent results."""
 
 from __future__ import annotations
 
@@ -35,11 +35,15 @@ class ArtifactRecord:
 
 
 class ArtifactStore:
-    """Append-only artifact registry inside TrinityVault/03_results."""
+    """Append-only artifact registry.
 
-    def __init__(self, vault_root: str | Path):
-        self.vault_root = Path(vault_root).expanduser().resolve()
-        self.results_root = self.vault_root / "03_results"
+    Runtime-owned indexes stay local. BrainVault should not receive legacy
+    TrinityVault result folders during app updates.
+    """
+
+    def __init__(self, root: str | Path, subdir: str = "03_results"):
+        self.root = Path(root).expanduser().resolve()
+        self.results_root = self.root / subdir if subdir else self.root
         self.index_path = self.results_root / "artifact_index.jsonl"
 
     def ensure(self) -> Path:

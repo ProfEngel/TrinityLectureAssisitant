@@ -58,13 +58,11 @@ def test_surface_settings_accept_web_ui_without_terminal():
     assert config["system"]["terminal_cli_enabled"] is False
 
 
-def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
+def test_control_plane_onboarding_records_runtime_and_brainvault(tmp_path):
     runtime = tmp_path / "local-runtime"
-    vault = tmp_path / "cloud-vault"
     brainvault = tmp_path / "brainvault"
-    external_agents = tmp_path / "external-agents"
     config = {}
-    answers = iter(["ja", str(runtime), str(vault), str(brainvault), str(external_agents), "pi"])
+    answers = iter(["ja", str(runtime), str(brainvault), "pi"])
 
     trinity_cli._configure_control_plane(
         config,
@@ -74,9 +72,9 @@ def test_control_plane_onboarding_records_runtime_and_cloud_vault(tmp_path):
 
     assert config["control_plane"]["enabled"] is True
     assert config["control_plane"]["runtime_root"] == str(runtime)
-    assert config["control_plane"]["vault_root"] == str(vault)
+    assert config["control_plane"]["vault_root"] == str(brainvault)
     assert config["control_plane"]["brainvault_root"] == str(brainvault)
-    assert config["control_plane"]["external_agents_root"] == str(external_agents)
+    assert config["control_plane"]["external_agents_root"] == str(brainvault)
     assert config["control_plane"]["default_brainvault_harness"] == "pi"
 
 

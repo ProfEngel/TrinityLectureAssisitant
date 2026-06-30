@@ -7,7 +7,7 @@ from trinity_paths import TrinityPaths, default_runtime_root, default_vault_root
 
 def test_trinity_paths_create_separated_runtime_and_vault(tmp_path):
     runtime = tmp_path / "runtime"
-    vault = tmp_path / "vault"
+    vault = tmp_path / "BrainVault"
     config = {
         "control_plane": {
             "runtime_root": str(runtime),
@@ -23,8 +23,8 @@ def test_trinity_paths_create_separated_runtime_and_vault(tmp_path):
     assert (runtime / "jobs" / "queue").is_dir()
     assert (runtime / "harnesses" / "codex").is_dir()
     assert (runtime / "memory").is_dir()
-    assert (vault / "00_registry" / "policies").is_dir()
-    assert (vault / "01_agents").is_dir()
+    assert not (vault / "00_registry").exists()
+    assert not (vault / "01_agents").exists()
     assert not any("innerhalb" in warning for warning in summary["warnings"])
 
 
@@ -36,7 +36,7 @@ def test_platform_defaults_keep_runtime_local_and_vault_syncable(monkeypatch, tm
         "localappdata/Trinity/TrinityRuntime"
     )
     assert default_vault_root("Windows").as_posix().endswith(
-        "BrainVault/MainHub/TrinityVault"
+        "BrainVault"
     )
     assert default_runtime_root("Linux").as_posix().endswith(
         "xdg/trinity/TrinityRuntime"
@@ -45,17 +45,23 @@ def test_platform_defaults_keep_runtime_local_and_vault_syncable(monkeypatch, tm
 
 def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
     runtime = tmp_path / "TrinityRuntime"
-    vault = tmp_path / "MainHub" / "TrinityVault"
+    vault = tmp_path / "BrainVault"
     config = {"control_plane": {"runtime_root": str(runtime), "vault_root": str(vault)}}
 
     result = TrinityControlPlane(tmp_path, config).ensure_foundation()
-    catalog_path = vault / "00_registry" / "agent_catalog.json"
+    catalog_path = runtime / "catalog" / "agent_catalog.json"
 
     assert catalog_path.is_file()
-    assert (vault / "00_registry" / "policies" / "default_policy.json").is_file()
-    assert (vault / "00_registry" / "model_profiles" / "local-default.json").is_file()
-    assert (vault / "03_results" / "artifact_index.jsonl").is_file()
+    assert (runtime / "policies" / "default_policy.json").is_file()
+    assert (runtime / "model_profiles" / "local-default.json").is_file()
+    assert (runtime / "artifacts" / "artifact_index.jsonl").is_file()
     assert (runtime / "memory" / "jobs.sqlite3").is_file()
+    assert (vault / ".agents").is_dir()
+    assert (vault / ".agents" / "_meta" / "agent_catalog.json").is_file()
+    assert not (vault / "00_registry").exists()
+    assert not (vault / "03_results").exists()
+    assert not (vault / ".catalog").exists()
+    assert not (vault / ".ai").exists()
     assert result["adapters"]["script-workflow"]["ok"] is True
     assert result["adapters"]["builder"]["ok"] is True
 
@@ -69,7 +75,7 @@ def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
 
 def test_control_plane_registers_artifacts_in_vault(tmp_path):
     runtime = tmp_path / "TrinityRuntime"
-    vault = tmp_path / "MainHub" / "TrinityVault"
+    vault = tmp_path / "BrainVault"
     config = {"control_plane": {"runtime_root": str(runtime), "vault_root": str(vault)}}
     plane = TrinityControlPlane(tmp_path, config)
     plane.ensure_foundation()

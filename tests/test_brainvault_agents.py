@@ -39,8 +39,10 @@ def test_brainvault_layout_and_agentctl_primitives(tmp_path):
 
     catalog = build_catalog(root)
     assert catalog["summary"]["total"] == 1
-    assert (root / ".catalog" / "agent_catalog.json").is_file()
-    assert (root / ".catalog" / "AGENT_CATALOG.md").is_file()
+    assert (root / ".agents" / "_meta" / "agent_catalog.json").is_file()
+    assert (root / ".agents" / "_meta" / "AGENT_CATALOG.md").is_file()
+    assert not (root / ".catalog").exists()
+    assert not (root / ".ai").exists()
 
     inspected = inspect_agent(root, "research.thesis_reviewer")
     assert inspected["status"] == "draft"

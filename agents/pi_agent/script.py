@@ -433,7 +433,9 @@ def _project_from_control_plane(context: dict):
 def _load_brainvault_agent_summary(root: Path) -> list[dict]:
     if not root:
         return []
-    catalog = root / ".catalog" / "agent_catalog.json"
+    catalog = root / ".agents" / "_meta" / "agent_catalog.json"
+    if not catalog.is_file():
+        catalog = root / ".catalog" / "agent_catalog.json"
     try:
         data = json.loads(catalog.read_text(encoding="utf-8"))
     except Exception:

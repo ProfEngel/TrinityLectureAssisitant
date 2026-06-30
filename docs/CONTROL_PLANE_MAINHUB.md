@@ -55,11 +55,8 @@ Aktuelle kanonische Struktur:
 ```text
 BrainVault/
 ├── .agents/
-├── .ai/
-├── .catalog/
 ├── AGENTS.md
-├── CLAUDE.md
-└── README.md
+└── CLAUDE.md
 ```
 
 `BrainVault/.agents` ist die Quelle gemeinsamer externer Agenten. Trinity,
@@ -136,8 +133,8 @@ tests/
 fixtures/
 ```
 
-Die Quelle der Wahrheit ist `agent.yaml`; daraus werden `.catalog`-Eintraege
-und UI-Listen aufgebaut. Details stehen in
+Die Quelle der Wahrheit ist `agent.yaml`; daraus werden Eintraege unter
+`.agents/_meta` und UI-Listen aufgebaut. Details stehen in
 [BrainVault-Agenten](BRAINVAULT_AGENTS.md).
 
 ## Artefakte und Summaries

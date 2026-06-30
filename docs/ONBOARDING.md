@@ -108,10 +108,11 @@ umbenennen, verzögert schreiben oder auf einem anderen Gerät gleichzeitig
 anfassen. Fuer laufende Jobs und SQLite-Datenbanken ist das eine schlechte Idee.
 Der BrainVault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox
 oder einem anderen Sync-Ordner liegen. Massgeblich ist heute der BrainVault-Root,
-also der Ordner, der `.agents`, `.catalog`, `.ai`, `AGENTS.md` und optional
-`CLAUDE.md` enthaelt. Alte `MainHub/TrinityVault`-Strukturen sind nicht mehr der
-Normalpfad und koennen archiviert werden, sobald die Einstellungen auf den
-BrainVault-Root zeigen.
+also der Ordner, der `.agents`, `AGENTS.md` und optional `CLAUDE.md` enthaelt.
+Automatisch generierte Katalogdaten liegen unter `.agents/_meta`, nicht als
+zusaetzliche Top-Level-Ordner. Alte `MainHub/TrinityVault`-Strukturen sind nicht
+mehr der Normalpfad und koennen archiviert werden, sobald die Einstellungen auf
+den BrainVault-Root zeigen.
 
 Generisches Beispiel:
 

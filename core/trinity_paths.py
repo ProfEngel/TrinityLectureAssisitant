@@ -31,21 +31,6 @@ RUNTIME_DIRS = (
     "locks",
 )
 
-VAULT_DIRS = (
-    "00_registry/policies",
-    "00_registry/releases",
-    "00_registry/model_profiles",
-    "01_agents",
-    "02_projects",
-    "03_results",
-    "04_templates",
-    "05_knowledge",
-    "06_audit",
-    "07_exports",
-    "99_archive",
-)
-
-
 @dataclass(frozen=True)
 class TrinityPaths:
     """Runtime and vault roots plus convenience layout helpers."""
@@ -78,24 +63,27 @@ class TrinityPaths:
         )
 
     def ensure_layout(self) -> dict:
-        """Create the expected local runtime and synced vault folders."""
+        """Create the expected local runtime folders.
+
+        The synchronized BrainVault is only an external agent pool now. Updates
+        must not recreate the older TrinityVault folders such as 00_registry or
+        03_results inside the user's cloud folder.
+        """
 
         for relative in RUNTIME_DIRS:
             (self.runtime_root / relative).mkdir(parents=True, exist_ok=True)
-        for relative in VAULT_DIRS:
-            (self.vault_root / relative).mkdir(parents=True, exist_ok=True)
         return self.summary()
 
     def separation_warnings(self) -> list[str]:
         warnings: list[str] = []
         if _is_relative_to(self.runtime_root, self.vault_root):
-            warnings.append("Runtime liegt innerhalb des synchronisierten TrinityVault.")
+            warnings.append("Runtime liegt innerhalb des synchronisierten BrainVault.")
         if _is_relative_to(self.vault_root, self.runtime_root):
-            warnings.append("TrinityVault liegt innerhalb der lokalen Runtime.")
+            warnings.append("BrainVault liegt innerhalb der lokalen Runtime.")
         if _looks_like_icloud(self.runtime_root):
             warnings.append("Runtime liegt in iCloud; aktive Jobs sollten lokal bleiben.")
         if not _looks_like_icloud(self.vault_root):
-            warnings.append("TrinityVault liegt nicht in iCloud; Synchronisation ist nicht garantiert.")
+            warnings.append("BrainVault liegt nicht in iCloud; Synchronisation ist nicht garantiert.")
         return warnings
 
     def summary(self) -> dict:
@@ -127,19 +115,17 @@ def default_runtime_root(platform_name: Optional[str] = None, home: Optional[str
 def default_vault_root(platform_name: Optional[str] = None) -> Path:
     host = platform_name or platform.system()
     if host == "Windows":
-        return Path.home() / "BrainVault" / "MainHub" / "TrinityVault"
+        return Path.home() / "BrainVault"
     candidate = (
         Path.home()
         / "Library"
         / "Mobile Documents"
         / "com~apple~CloudDocs"
         / "BrainVault"
-        / "MainHub"
-        / "TrinityVault"
     )
-    if candidate.parent.exists():
+    if candidate.exists() or candidate.parent.exists():
         return candidate
-    return Path.home() / "BrainVault" / "MainHub" / "TrinityVault"
+    return Path.home() / "BrainVault"
 
 
 def _resolve_path(value: object, fallback: Path) -> Path:

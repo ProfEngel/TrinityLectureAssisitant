@@ -20,13 +20,7 @@ from trinity_paths import TrinityPaths
 
 BRAINVAULT_LAYOUT = (
     ".agents/_template",
-    ".ai/profiles",
-    ".ai/prompts",
-    ".ai/schemas",
-    ".ai/templates",
-    ".ai/env",
-    ".ai/secrets",
-    ".catalog",
+    ".agents/_meta",
 )
 DEFAULT_HARNESSES = ["trinity", "codex", "pi", "opencode", "claude-code", "antigravity"]
 AGENT_SCAN_MARKERS = {
@@ -92,13 +86,12 @@ def ensure_brainvault_layout(root: str | Path) -> dict:
     _write_if_missing(root_path / "AGENTS.md", _brainvault_agents_md())
     _write_if_missing(root_path / "CLAUDE.md", _brainvault_claude_md())
     _write_if_missing(
-        root_path / ".ai" / ".gitignore",
+        root_path / ".agents" / "_meta" / ".gitignore",
         "env/*.env\nsecrets/*\n!secrets/.gitkeep\n",
     )
-    _write_if_missing(root_path / ".ai" / "secrets" / ".gitkeep", "")
-    _write_if_missing(root_path / ".ai" / "harnesses.yaml", _default_harnesses_yaml())
-    _write_if_missing(root_path / ".ai" / "models.yaml", "profiles: []\n")
-    _write_if_missing(root_path / ".catalog" / "agent_catalog.schema.json", _catalog_schema())
+    _write_if_missing(root_path / ".agents" / "_meta" / "harnesses.yaml", _default_harnesses_yaml())
+    _write_if_missing(root_path / ".agents" / "_meta" / "models.yaml", "profiles: []\n")
+    _write_if_missing(root_path / ".agents" / "_meta" / "agent_catalog.schema.json", _catalog_schema())
     return {"root": str(root_path), "agents_dir": str(root_path / ".agents")}
 
 
@@ -391,7 +384,7 @@ def build_catalog(root: str | Path) -> dict:
         },
         "agents": agents,
     }
-    catalog_dir = root_path / ".catalog"
+    catalog_dir = root_path / ".agents" / "_meta"
     catalog_dir.mkdir(parents=True, exist_ok=True)
     catalog_path = catalog_dir / "agent_catalog.json"
     catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

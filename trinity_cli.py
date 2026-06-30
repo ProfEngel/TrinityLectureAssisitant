@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.6"
+VERSION = "0.16.10"
 
 
 def find_trinity_home(explicit=None):
@@ -121,17 +121,21 @@ def _configure_control_plane(config, home, input_fn=input):
     print("\nMainHub / Control Plane")
     print("=======================")
     print(
-        "Trinity trennt lokale Runtime und synchronisierten Vault. Die Runtime "
-        "enthaelt laufende Jobs, Datenbanken, Cache, temporaere Dateien und "
-        "Secrets und sollte nicht in iCloud, OneDrive oder Google Drive liegen. "
-        "Der Vault ist die Cloud- oder Sync-Ablage fuer freigegebene Agenten, "
-        "Projekte, Ergebnisse, Vorlagen, Wissen und Audit."
+        "Trinity trennt lokale Runtime und synchronisierten BrainVault. Die "
+        "Runtime enthaelt laufende Jobs, Datenbanken, Cache, temporaere Dateien "
+        "und Secrets und sollte nicht in iCloud, OneDrive oder Google Drive "
+        "liegen. Der BrainVault ist der gemeinsame Cloud-Agentenpool mit "
+        ".agents und AGENTS.md."
     )
     control = config.setdefault("control_plane", {})
     runtime_default = control.get("runtime_root") or str(
         default_runtime_root(home=home)
     )
-    vault_default = control.get("vault_root") or str(default_vault_root())
+    brainvault_default = control.get("external_agents_root") or control.get(
+        "brainvault_root"
+    ) or str(brainvault_root_from_config(home, config))
+    if not brainvault_default:
+        brainvault_default = str(default_vault_root())
     control["enabled"] = (
         _prompt_choice(
             "Control Plane/MainHub aktivieren",
@@ -146,25 +150,14 @@ def _configure_control_plane(config, home, input_fn=input):
         runtime_default,
         input_fn,
     )
-    control["vault_root"] = _prompt(
-        "Synchronisierter Cloud-Vault-Ordner",
-        vault_default,
-        input_fn,
-    )
-    brainvault_default = control.get("brainvault_root") or str(
-        brainvault_root_from_config(home, config)
-    )
-    control["brainvault_root"] = _prompt(
-        "BrainVault-Agentenbasis",
+    cloud_root = _prompt(
+        "BrainVault / Cloud-Agentenpool",
         brainvault_default,
         input_fn,
     )
-    external_default = control.get("external_agents_root") or control["brainvault_root"]
-    control["external_agents_root"] = _prompt(
-        "Externe Harness-Agentenbasis (.agents)",
-        external_default,
-        input_fn,
-    )
+    control["vault_root"] = cloud_root
+    control["brainvault_root"] = cloud_root
+    control["external_agents_root"] = cloud_root
     control["default_brainvault_harness"] = _prompt_choice(
         "Standard-Harness fuer BrainVault-Agenten",
         ("codex", "pi", "opencode", "trinity"),
@@ -689,6 +682,8 @@ def run_control_plane_command(home, args):
         changed = True
     if args.vault_root:
         control["vault_root"] = args.vault_root
+        control["brainvault_root"] = args.vault_root
+        control["external_agents_root"] = args.vault_root
         changed = True
     if changed:
         save_config(config_path, config)
@@ -811,7 +806,7 @@ def build_parser():
     )
     control.add_argument("control_action", choices=("init", "status", "catalog"))
     control.add_argument("--runtime-root", default="", help="Lokaler TrinityRuntime-Pfad")
-    control.add_argument("--vault-root", default="", help="Synchronisierter TrinityVault-Pfad")
+    control.add_argument("--vault-root", default="", help="BrainVault-/Cloud-Agentenpool-Pfad")
     return parser
 
 

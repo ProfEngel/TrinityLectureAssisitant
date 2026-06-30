@@ -30,15 +30,12 @@ BrainVault/
 │   │       ├── tests/
 │   │       ├── fixtures/
 │   │       └── adapters/
-├── .ai/
-│   ├── env/
-│   ├── secrets/
-│   ├── harnesses.yaml
-│   └── models.yaml
-├── .catalog/
-│   ├── agent_catalog.json
-│   ├── AGENT_CATALOG.md
-│   └── agent_catalog.schema.json
+│   └── _meta/
+│       ├── agent_catalog.json
+│       ├── AGENT_CATALOG.md
+│       ├── agent_catalog.schema.json
+│       ├── harnesses.yaml
+│       └── models.yaml
 ├── AGENTS.md
 └── CLAUDE.md
 ```
@@ -126,8 +123,9 @@ In **Einstellungen -> MainHub / Control Plane** kann ein expliziter
 `BrainVault-Agentenbasis`-Pfad gesetzt werden. `Externe Harness-Agentenbasis
 (.agents)` ist der explizite Pfad, den Trinity fuer Codex, Pi, OpenCode,
 Antigravity und weitere externe Harnesses ausliest. Beide Pfade zeigen im
-Normalfall auf den BrainVault-Root, also den Ordner, der `.agents`, `.catalog`,
-`.ai`, `AGENTS.md` und `CLAUDE.md` enthaelt.
+Normalfall auf den BrainVault-Root, also den Ordner, der `.agents`, `AGENTS.md`
+und optional `CLAUDE.md` enthaelt. Automatisch generierte Metadaten liegen unter
+`.agents/_meta`, damit der BrainVault-Root beim Update schlank bleibt.
 
 Der `Standard-Harness fuer BrainVault-Agenten` steht initial auf `pi`. Codex
 bleibt der Builder-Harness fuer neue Agenten, Imports, Refactorings, Tests und
@@ -170,5 +168,5 @@ Validierung und ausdrueckliches Setzen von `status: active` und `enabled: true`.
 - Keine Duplikate blind zusammenfuehren.
 - Vor Migrationen zuerst `agentctl audit` ausfuehren.
 - Secret-Werte gehoeren nie in `agent.yaml`, Kataloge, Logs oder Git.
-- `.ai/env/*.env` und `.ai/secrets/*` werden durch `.ai/.gitignore`
-  ausgeschlossen.
+- Lokale Secret-Dateien gehoeren nicht in den BrainVault-Root. Falls ein Agent
+  Secret-Referenzen braucht, dann nur als Verweis, nicht als Klartextwert.

@@ -74,7 +74,7 @@ def test_agent_builder_imports_existing_agent_as_brainvault_draft(tmp_path, monk
     assert (created[0] / "BUILDER_PLAN.md").is_file()
     assert (created[0] / "VALIDATION_REPORT.md").is_file()
     assert "Builder-Job" in result["direct_answer"]
-    assert (repo / "BrainVault" / ".catalog" / "agent_catalog.json").is_file()
+    assert (repo / "BrainVault" / ".agents" / "_meta" / "agent_catalog.json").is_file()
 
 
 def test_agent_builder_natural_import_phrase_uses_import_mode(tmp_path, monkeypatch):

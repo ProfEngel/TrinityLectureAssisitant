@@ -157,9 +157,8 @@ def test_execute_returns_pi_answer_directly(monkeypatch):
 def test_capability_request_lists_brainvault_agents_without_explicit_pi(monkeypatch, tmp_path):
     agent = _load_agent()
     brainvault = tmp_path / "BrainVault"
-    catalog_dir = brainvault / ".catalog"
+    catalog_dir = brainvault / ".agents" / "_meta"
     catalog_dir.mkdir(parents=True)
-    (brainvault / ".agents").mkdir()
     (catalog_dir / "agent_catalog.json").write_text(
         json.dumps(
             {
