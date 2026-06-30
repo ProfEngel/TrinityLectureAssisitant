@@ -184,12 +184,12 @@ Ziel: Trinity als Support-System im Büro-Alltag (Umschaltbar via Sprachbefehl/W
   - [ ] Benachrichtigung via UI-Bubbles oder Telegram.
 - [ ] **File-Drop & Document Intelligence:**
   - [ ] **Drag & Drop UI:** Lokale Dateien (PDF, Word, Excel) einfach auf das Trinity-Icon "plumpsen" lassen.
-  - [ ] **Document Parsing:** Einlesen und Interpretieren von Thesen, Seminararbeiten und Excel-Auswertungen.
-  - [ ] **Specialized Agents (Begutachtung):** Dedizierte Agenten für die Korrektur/Begutachtung von Seminararbeiten.
+  - [ ] **Document Parsing:** Einlesen und Interpretieren von Dokumenten, Projektarbeiten und Excel-Auswertungen.
+  - [ ] **Specialized Agents (Feedbackanalyse):** Dedizierte Agenten für Review und Feedbackanalyse von Projektarbeiten.
   - [ ] **Storage & Display:** Ergebnisse (Reviews/Notes) speichern und nach Abschluss im UI anzeigen.
 - [ ] **Deep Office RAG:**
   - [ ] Eigenes RAG-System für das Mail-Postfach.
-  - [ ] Ordner-Integration: Automatischer Zugriff und Indexierung von "Lehre"- und "Thesen"-Ordnern.
+  - [ ] Ordner-Integration: Automatischer Zugriff und Indexierung von "Lehre"- und Dokumentenordnern.
 
 ---
 

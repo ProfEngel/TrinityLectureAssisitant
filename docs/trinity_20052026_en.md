@@ -403,7 +403,7 @@ This document was generated entirely using an agentic AI system as part of a str
 4. **`defuddle` (optional):** Cleaned raw data extracted from web pages to discard boilerplates and navigation links for RAG searches.
 
 #### Execution Phases
-* **Phase 1: Topic and Boundaries:** Aligned the research scope, formulated the core thesis, and established the contribution profile (35% Tech/Architecture, 30% Didactics, 25% UX/Workflow, 10% Legal/GDPR).
+* **Phase 1: Topic and Boundaries:** Aligned the research scope, formulated the core argument, and established the contribution profile (35% Tech/Architecture, 30% Didactics, 25% UX/Workflow, 10% Legal/GDPR).
 * **Phase 2: Internal Deep Research:** Analyzed the Trinity codebase and configuration files across the desktop and mobile repositories, resolving iOS memory (Jetsam) thresholds.
 * **Phase 3: External Deep Research:** Identified, analyzed, and verified 24 academic, technical, and policy sources.
 * **Phase 4: Research Map & Paper Outline:** Structured the 9 core research kernels, mapped citations, and created the vector-based research map (`media/research_map_bubbles.svg`).

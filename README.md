@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.12:** GitHub-Markdown-Dokumentation neutralisiert sensible Dokumentanalyse-Beispiele. `Neue Session` schlaegt in ClassicUI, WebUI und Companion-App nun Namen im Format `JJJJMMDD_HHMM_` vor.
 > - **v0.16.11:** `Neue Session` zeigt die automatisch erzeugte Summary der vorherigen Session nun sichtbar in der neuen Session an. Das gilt fuer ClassicUI lokal, ClassicUI als Remote-Client und WebUI.
 > - **v0.16.10:** Update-Installer und `control-plane init` erzeugen im BrainVault keine historischen Zusatzordner wie `00_registry`, `01_agents` oder `03_results` mehr. Interne Kataloge, Policies und Artefakte liegen nun lokal in der Runtime; BrainVault bleibt schlank mit `.agents` und Instruktionsdateien.
-> - **v0.16.9:** Desktop-ClassicUI startet beim Button `Neue Session` nun ebenfalls den nicht-blockierenden Summary-Hintergrundjob fuer die vorherige Session. Auch Desktop-Sessions ohne bisherige Session-ID werden nur fuer das aktuelle App-Zeitfenster zusammengefasst.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
@@ -83,7 +83,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
  | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
  | **OpenCode-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale OpenCode-Projekte und Automationspipelines. |
-| **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Seminararbeiten/Thesen zur Begutachtung. |
+| **Document Intelligence**| *Office* | **NEU:** Drag & Drop von Projektarbeiten und Dokumenten zur Feedbackanalyse. |
  
  ---
  
@@ -91,7 +91,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  
  *   **AirPod Souffleur:** Private Informationen direkt ins Ohr, Umschalten auf Plenum-Speaker auf Befehl.
  *   **Proaktiver Heartbeat:** Analyse des Transkripts alle 2 Min. mit Warnungen vor logischen Fehlern.
-*   **Document Intelligence:** Lokale Dateien (Thesen, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
+*   **Document Intelligence:** Lokale Dateien (Dokumente, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
  *   **Secure Sandbox Environment:** 100% einbruchsichere Python/WASM-Umgebung (Pyodide) für wissenschaftliche Berechnungen, sympy-Algebra und interaktive Plotly-Diagramme.
  *   **Dynamic Progress Ring:** Kreisförmige Fortschrittsanzeige (Orange: Reading, Rot: Analyzing) um den Avatar.
  *   **User Telemetry:** Tracking der Zeit in Vorlesungen, Teams-Sitzungen und Mail-Bearbeitung (analog Bildschirmzeit).
@@ -490,7 +490,7 @@ freigabeorientiert:
 
 > „Trinity, hol Dir diesen Agenten `/vollstaendiger/Pfad/zum/DCM-Agenten`.“
 
-> „Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.“
+> „Trinity, erweitere den Feedback-Agenten um einen Plausibilitaetscheck.“
 
 Bei Imports legt Trinity einen BrainVault-Agenten direkt unter
 `BrainVault/.agents/<bereich>/<agent-id>/` als `draft` an, schreibt
@@ -509,12 +509,12 @@ BrainVault-Agenten koennen auch ohne Trinity-UI gepflegt werden:
 
 ```bash
 agentctl init
-agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl create research document-reviewer --name "Document Reviewer"
 agentctl import "/vollstaendiger/Pfad/zum/bestehenden-Agentenordner" --area skills --preferred-harness codex --status active
 agentctl register "/vollstaendiger/Pfad/zum/Projekt-oder-Agentenfile" --area projects --agent-id mein-agent --preferred-harness codex
 agentctl list
-agentctl inspect research.thesis_reviewer
-agentctl validate research.thesis_reviewer
+agentctl inspect research.document_reviewer
+agentctl validate research.document_reviewer
 agentctl catalog build
 ```
 

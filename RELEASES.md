@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.12:** GitHub-Markdown-Dokumentation neutralisiert sensible Dokumentanalyse-Beispiele. `Neue Session` schlaegt in ClassicUI, WebUI und Companion-App nun Namen im Format `JJJJMMDD_HHMM_` vor.
 - **v0.16.11:** `Neue Session` zeigt die automatisch erzeugte Summary der vorherigen Session nun sichtbar in der neuen Session an. Das gilt fuer ClassicUI lokal, ClassicUI als Remote-Client und WebUI.
 - **v0.16.10:** Update-Installer und `control-plane init` erzeugen im BrainVault keine historischen Zusatzordner wie `00_registry`, `01_agents` oder `03_results` mehr. Interne Kataloge, Policies und Artefakte liegen nun lokal in der Runtime; BrainVault bleibt schlank mit `.agents` und Instruktionsdateien.
 - **v0.16.9:** Desktop-ClassicUI startet beim Button `Neue Session` nun ebenfalls den nicht-blockierenden Summary-Hintergrundjob fuer die vorherige Session. Auch Desktop-Sessions ohne bisherige Session-ID werden nur fuer das aktuelle App-Zeitfenster zusammengefasst.

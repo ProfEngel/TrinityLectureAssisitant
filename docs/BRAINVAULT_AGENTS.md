@@ -49,14 +49,14 @@ werden daraus generiert.
 Minimaler neuer Agent:
 
 ```yaml
-id: research.thesis_reviewer
-name: Thesis Reviewer
+id: research.document_reviewer
+name: Document Reviewer
 version: 0.1.0
 source: brainvault
 execution_scope: shared_harness
 status: draft
 enabled: false
-path: .agents/research/thesis-reviewer
+path: .agents/research/document-reviewer
 compatible_harnesses:
   - trinity
   - codex
@@ -96,10 +96,10 @@ agentctl audit <suchpfad> --output BRAINVAULT_AGENT_AUDIT.md
 Beispiel:
 
 ```bash
-agentctl create research thesis-reviewer --name "Thesis Reviewer"
-agentctl import "/pfad/zu/CampusHub/.agents/skills/thesis-reviewer" --area skills --preferred-harness codex --status active
+agentctl create research document-reviewer --name "Document Reviewer"
+agentctl import "/pfad/zu/CampusHub/.agents/skills/document-reviewer" --area skills --preferred-harness codex --status active
 agentctl register "/pfad/zu/CampusHub/projects/Automatismen/Mail" --area projects --agent-id campushub-mail-automation --preferred-harness codex
-agentctl validate research.thesis_reviewer
+agentctl validate research.document_reviewer
 agentctl catalog build
 ```
 

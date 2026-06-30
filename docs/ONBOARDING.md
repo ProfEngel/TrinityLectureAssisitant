@@ -314,7 +314,7 @@ Typische Auftraege sind:
 ~~~text
 Trinity, baue einen neuen Agenten fuer die DCM-Auswertung.
 Trinity, hol Dir diesen Agenten "/vollstaendiger/Pfad/zum/DCM-Agenten".
-Trinity, erweitere den Gutachten-Agenten um einen Plausibilitaetscheck.
+Trinity, erweitere den Feedback-Agenten um einen Plausibilitaetscheck.
 ~~~
 
 Ein Import ist absichtlich nur ein sicherer Draft-Schritt. Trinity kopiert die
@@ -334,9 +334,9 @@ Fuer direkte Verwaltung ohne Trinity-UI gibt es `agentctl`:
 
 ~~~bash
 agentctl init
-agentctl create research thesis-reviewer --name "Thesis Reviewer"
+agentctl create research document-reviewer --name "Document Reviewer"
 agentctl list
-agentctl validate research.thesis_reviewer
+agentctl validate research.document_reviewer
 agentctl catalog build
 ~~~
 

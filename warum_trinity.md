@@ -231,7 +231,7 @@ r. Editable UI Summary: Zusammenfassungen im UI bearbeiten
 s. Eigene Notizen zu Summaries ergänzen
 t. Office-RAG für Mails und Dokumente geplant
 u. Automatischer Zugriff auf relevante Ordner geplant
-v. Automatische Indexierung von Lehre- und Thesen-Ordnern geplant
+v. Automatische Indexierung von Lehre- und Dokumentenordnern geplant
 w. Sachverhalte interaktiv klären
 x. Weniger Vortragsmodus, mehr Arbeitsdialog
 y. Unterstützung bei administrativer Arbeit
@@ -242,7 +242,7 @@ z. Unterstützung bei wissenschaftlicher und didaktischer Vorbereitung
 ## 2.4 Nutze Trinity als Analysewerkzeug — Dokumente auf die UI legen
 
 **Highlights:**
-Trinity soll lokale Dateien per Drag & Drop aufnehmen, Pfade erkennen, Dokumente lesen und mit spezialisierten Agenten analysieren. Document Intelligence, File-Drop, PDF/Word/Excel-Parsing, Begutachtungs-Agenten, Speicherung und Anzeige der Ergebnisse sind in README und ToDo beschrieben. ([GitHub](https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/README.md "raw.githubusercontent.com"))
+Trinity soll lokale Dateien per Drag & Drop aufnehmen, Pfade erkennen, Dokumente lesen und mit spezialisierten Agenten analysieren. Document Intelligence, File-Drop, PDF/Word/Excel-Parsing, Feedback-Agenten, Speicherung und Anzeige der Ergebnisse sind in README und ToDo beschrieben. ([GitHub](https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/README.md "raw.githubusercontent.com"))
 
 a. Drag & Drop lokaler Dateien auf Trinity-Icon / UI
 b. Erkennen lokaler Dateipfade
@@ -252,9 +252,9 @@ e. PDF-Analyse
 f. Word-Dokument-Analyse
 g. Excel-Auswertungen einlesen
 h. Tabellen interpretieren
-i. Thesen analysieren
-j. Seminararbeiten analysieren
-k. Begutachtung von Seminararbeiten
+i. Dokumente analysieren
+j. Projektarbeiten analysieren
+k. Feedbackanalyse von Projektarbeiten
 l. Korrektur- und Review-Agenten
 m. Fachliche Rückmeldung erzeugen
 n. Didaktische Rückmeldung erzeugen
@@ -270,7 +270,7 @@ w. Orange: Reading / Parsing
 x. Rot: Analyzing / Denken
 y. Document Intelligence als zentrale Büro-Funktion
 z. Deep Office RAG für wiederverwendbares Dokumentenwissen
-aa. Ordner-Integration für Lehre und Thesen
+aa. Ordner-Integration für Lehre und Dokumentenablagen
 ab. Lokale Analyse sensibler Prüfungs-, Lehr- und Forschungsdokumente
 ac. Agentische Auswertung statt einfachem Datei-Upload
 
@@ -341,7 +341,7 @@ h. Simulation-Agent für interaktive Simulationen
 i. PowerPoint-Agent für Präsentationssteuerung
 j. ComfyUI-Agent für lokale Bild-, Musik- und Videogenerierung
 k. Summary-Agent für Zusammenfassungen und RAG-Indexierung
-l. Document-Intelligence-Agent für Seminararbeiten, Thesen und Excel-Dateien
+l. Document-Intelligence-Agent für Projektarbeiten, Dokumente und Excel-Dateien
 m. Office-Agent für Mails, Kalender und produktiven Support
 n. Telemetrie-Agent für Arbeitszeitanalyse
 o. Heartbeat-Agent für proaktive Hinweise
@@ -377,7 +377,7 @@ n. Prüfung, ob ein Thema bereits behandelt wurde
 o. Prüfung, wann ein Thema behandelt wurde
 p. Repetitions-Check
 q. Deep Office RAG für Mail-Postfach geplant
-r. Ordner-Integration für Lehre und Thesen geplant
+r. Ordner-Integration für Lehre und Dokumente geplant
 s. Verbindung von Vorlesung, Büro, Dokumenten und Kommunikation
 t. Grundlage für langfristige persönliche Wissensassistenz
 
@@ -470,7 +470,7 @@ r. Geplant: lokaler Mail-Assistent
 s. Geplant: Writing Sample RAG
 t. Geplant: Office-Heartbeat
 u. Geplant: File-Drop und Document Intelligence
-v. Geplant: Begutachtungs-Agenten
+v. Geplant: Feedback-Agenten
 w. Geplant: Deep Office RAG
 x. Geplant: User Telemetry Dashboard
 y. Geplant: Dreaming-Funktion
@@ -505,4 +505,4 @@ Sie prüft proaktiv Mails, Kalender und Teams und meldet relevante Ereignisse pe
 Sie hilft bei Mails, Kalender, Recherche, Vorlesungsvorbereitung, Zusammenfassungen und Schreibstil.
 
 **4. Trinity wird zum Analysewerkzeug.**
-Man legt Dokumente auf die UI; Trinity erkennt Pfade, liest PDFs, Word-Dateien und Excel-Tabellen, analysiert Seminararbeiten oder Thesen und erstellt Reviews.
+Man legt Dokumente auf die UI; Trinity erkennt Pfade, liest PDFs, Word-Dateien und Excel-Tabellen, analysiert Projektarbeiten oder Dokumente und erstellt Reviews.

@@ -101,6 +101,10 @@ def _latest_transcript(memory_dir=MEMORY_DIR):
     return max(candidates, key=os.path.getmtime) if candidates else None
 
 
+def _default_session_name_prefix():
+    return datetime.now().strftime("%Y%m%d_%H%M_")
+
+
 def _format_size(size):
     value = float(size or 0)
     for unit in ("B", "KB", "MB", "GB"):
@@ -926,10 +930,12 @@ class ClassicWindow(QMainWindow):
             self.status.setText(f"Trinity-Modus: {result['mode']}")
 
     def start_new_session(self):
+        suggested_name = _default_session_name_prefix()
         name, accepted = QInputDialog.getText(
             self,
             "Neue Session",
             "Sessionname (optional):",
+            text=suggested_name,
         )
         if not accepted:
             return
@@ -938,7 +944,7 @@ class ClassicWindow(QMainWindow):
         old_started_at = self.session_started_at
         old_ended_at = time.time()
         self.session_id = uuid.uuid4().hex
-        self.session_name = name.strip()
+        self.session_name = name.strip() or suggested_name
         self.session_started_at = time.time()
         self._summarize_previous_session_in_background(
             old_session_id,
