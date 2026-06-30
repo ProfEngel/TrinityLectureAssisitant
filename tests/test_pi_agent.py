@@ -21,8 +21,11 @@ def test_pi_requires_explicit_agent_trigger():
     assert agent.can_handle("Trinity, nutze Pi für diese Aufgabe")
     assert agent.can_handle("Trinity, frage Pi dazu")
     assert agent.can_handle("Trinity, starte den Pi-Agent")
+    assert agent.can_handle("Trinity, frag Pi nach Erendria")
+    assert agent.can_handle("Bitte pi darum alle Ordner in BrainVault aufzulisten")
     assert agent.can_handle("Hi Trinity, welche Fähigkeiten hast Du?")
     assert agent.can_handle("Trinity, gibt es einen Mail-Agenten?")
+    assert agent.can_handle("Ist da auch das Projekt Erendria?")
     assert not agent.can_handle("Trinity, was ist die Kreiszahl Pi?")
 
 
@@ -110,6 +113,53 @@ def test_pi_selects_project_and_runs_in_project_cwd(monkeypatch, tmp_path):
     assert "relative Pfade" in captured["prompt"]
 
 
+def test_pi_enriches_brainvault_prompt_with_matching_agent_and_project(monkeypatch, tmp_path):
+    agent = _load_agent()
+    brainvault = tmp_path / "BrainVault"
+    erendria_agent = brainvault / ".agents" / "skills" / "erendria-orchestrator"
+    erendria_agent.mkdir(parents=True)
+    (erendria_agent / "agent.yaml").write_text(
+        "\n".join(
+            [
+                "id: skills.erendria_orchestrator",
+                "name: Erendria Buchschreib-Orchestrator",
+                "status: active",
+                "preferred_harness: pi",
+                "description: Koordiniert Buchschreiben und Erendria-Wiki.",
+                "path: .agents/skills/erendria-orchestrator",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (brainvault / "Ideaverse" / "projects" / "Erendria").mkdir(parents=True)
+    monkeypatch.setattr(agent, "_resolve_executable", lambda _value: "/bin/pi")
+    captured = {}
+
+    def fake_run_pi(**kwargs):
+        captured.update(kwargs)
+        return "Erendria ist im BrainVault vorhanden."
+
+    monkeypatch.setattr(agent, "_run_pi", fake_run_pi)
+
+    result = agent.execute(
+        "Trinity, frag Pi nach Erendria und welche Agenten dafuer genutzt werden.",
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"BrainVault": str(brainvault)},
+                "default_project": "BrainVault",
+                "arguments": ["-p", "{prompt}"],
+            }
+        },
+    )
+
+    assert result["direct_answer"] == "Erendria ist im BrainVault vorhanden."
+    assert captured["project_path"] == brainvault.resolve()
+    assert "Erendria Buchschreib-Orchestrator" in captured["prompt"]
+    assert ".agents/skills/erendria-orchestrator" in captured["prompt"]
+    assert "Ideaverse/projects/Erendria" in captured["prompt"]
+
+
 def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     agent = _load_agent()
     project = tmp_path / "BrainVault"
@@ -137,6 +187,19 @@ def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     assert captured["kwargs"]["env"]["TRINITY_PROJECT_ROOT"] == str(project)
     assert captured["kwargs"]["env"]["TRINITY_BRAINVAULT_ROOT"] == str(project)
     assert captured["kwargs"]["env"]["TRINITY_PROJECT_ALIAS"] == "BrainVault"
+
+
+def test_clean_pi_answer_removes_leaked_thinking():
+    agent = _load_agent()
+    raw = """Here's a thinking process:
+1. Analyse.
+2. Draft.
+
+Final Answer:
+Erendria ist vorhanden und nutzt den Orchestrator.
+"""
+
+    assert agent._clean_pi_answer(raw) == "Erendria ist vorhanden und nutzt den Orchestrator."
 
 
 def test_execute_returns_pi_answer_directly(monkeypatch):

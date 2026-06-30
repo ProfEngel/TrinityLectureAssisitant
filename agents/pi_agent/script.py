@@ -22,7 +22,8 @@ from platform_adapters import find_pi_executable
 PRIORITY = 97
 
 TRIGGER_PATTERNS = (
-    r"\b(?:nutze|starte|frage|verwende)\s+pi\b",
+    r"\b(?:nutze|starte|frage|frag|verwende)\s+pi\b",
+    r"\bpi\s+(?:nach|zu|ueber|über)\b",
     r"\bpi[- ]agent\b",
     r"\bpi[- ]cli\b",
 )
@@ -35,6 +36,7 @@ CAPABILITY_PATTERNS = (
 )
 
 AGENT_POOL_PATTERNS = (
+    r"\bbrainvault\b",
     r"\bbrainvault[- ]?agent",
     r"\bagentenpool\b",
     r"\bcloud[- ]?agent",
@@ -46,6 +48,7 @@ AGENT_POOL_PATTERNS = (
     r"\bgutachten(?:agent)?\b",
     r"\bbewertung(?:sagent)?\b",
     r"\bhtml[- ]?praesentation|\bhtml[- ]?präsentation",
+    r"\berendria\b",
 )
 
 
@@ -62,7 +65,7 @@ def execute(query: str, context: dict = None) -> dict:
     config = dict(context.get("pi_cfg") or {})
     projects = _configured_projects(config)
 
-    if _is_capability_request(query):
+    if _is_capability_request(query) and not _is_explicit_pi_request(query):
         return _capability_result(query, context, projects, config)
 
     if not config.get("enabled", False):
@@ -105,7 +108,7 @@ def execute(query: str, context: dict = None) -> dict:
         return _result(f"Pi konnte nicht gestartet werden: {exc}")
 
     max_chars = _bounded_int(config.get("max_output_chars"), 3200, 500, 12000)
-    answer = _truncate(answer.strip(), max_chars)
+    answer = _truncate(_clean_pi_answer(answer).strip(), max_chars)
     if not answer:
         answer = "Pi hat den Lauf beendet, aber keine Antwort zurückgegeben."
     return _result(answer, alias)
@@ -184,6 +187,7 @@ def _normalize_arguments(value) -> list[str]:
 
 
 def _build_prompt(query: str, alias: str = "", project_path: Path = None) -> str:
+    brainvault_context = _brainvault_query_context(project_path, query)
     project_line = (
         f"Projekt: {alias}\nArbeitsordner: {project_path}\n"
         "Du wurdest bereits mit diesem Arbeitsordner als current working "
@@ -194,6 +198,7 @@ def _build_prompt(query: str, alias: str = "", project_path: Path = None) -> str
     return f"""Du wurdest von Trinity als externer Pi-Hintergrundagent gestartet.
 
 {project_line}
+{brainvault_context}
 Auftrag des Nutzers:
 {query.strip()}
 
@@ -232,6 +237,149 @@ Sicherheitsregeln fuer diesen fernausgeloesten Lauf:
 - Berichte am Ende: erledigte Schritte, erzeugte oder geaenderte Dateien,
   Pruefstatus und Blocker.
 """
+
+
+def _brainvault_query_context(project_path: Path = None, query: str = "") -> str:
+    if not project_path or not (project_path / ".agents").is_dir():
+        return ""
+    terms = _query_terms(query)
+    if not terms:
+        return ""
+
+    lines = []
+    agent_hits = _matching_brainvault_agents(project_path, terms)
+    project_hits = _matching_brainvault_projects(project_path, terms)
+    if agent_hits:
+        lines.append("Vorab aus Trinitys BrainVault-Agentenindex gefundene Treffer:")
+        lines.extend(f"- {item}" for item in agent_hits[:8])
+    if project_hits:
+        if not lines:
+            lines.append("Vorab aus Trinitys BrainVault-Projektindex gefundene Treffer:")
+        else:
+            lines.append("Passende BrainVault-Projektordner:")
+        lines.extend(f"- {item}" for item in project_hits[:8])
+    if not lines:
+        return ""
+    lines.append(
+        "Nutze diese Treffer aktiv als Startpunkt und pruefe bei Bedarf die "
+        "genannten Dateien relativ zum Arbeitsordner."
+    )
+    return "\n".join(lines) + "\n\n"
+
+
+def _query_terms(query: str) -> list[str]:
+    stopwords = {
+        "trinity",
+        "bitte",
+        "frage",
+        "frag",
+        "nach",
+        "dazu",
+        "darum",
+        "welche",
+        "agenten",
+        "projekt",
+        "projekte",
+        "brainvault",
+        "nutze",
+        "zeige",
+        "hier",
+        "dann",
+        "alle",
+        "ordner",
+    }
+    result = []
+    for raw in re.findall(r"[A-Za-zÄÖÜäöüß0-9_-]{4,}", str(query or "").casefold()):
+        term = raw.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+        if term in stopwords or term in result:
+            continue
+        result.append(term)
+    return result[:8]
+
+
+def _matching_brainvault_agents(root: Path, terms: list[str]) -> list[str]:
+    hits = []
+    agents_dir = root / ".agents"
+    for agent_yaml in sorted(agents_dir.rglob("agent.yaml")):
+        try:
+            raw = agent_yaml.read_text(encoding="utf-8", errors="ignore")[:12000]
+        except OSError:
+            continue
+        haystack = _normalize_for_search(f"{agent_yaml.relative_to(root).as_posix()}\n{raw}")
+        if not any(term in haystack for term in terms):
+            continue
+        name = _yaml_scalar(raw, "name") or agent_yaml.parent.name
+        agent_id = _yaml_scalar(raw, "id") or agent_yaml.parent.name
+        status = _yaml_scalar(raw, "status") or "unbekannt"
+        preferred = _yaml_scalar(raw, "preferred_harness") or "auto"
+        workspace = _yaml_scalar(raw, "workspace")
+        description = _yaml_scalar(raw, "description")
+        relative = agent_yaml.parent.relative_to(root).as_posix()
+        item = f"{name} ({agent_id}, {status}, Harness: {preferred}) unter {relative}"
+        if workspace and workspace.casefold() not in {"null", "none"}:
+            item += f"; Workspace: {workspace}"
+        if description:
+            item += f"; Zweck: {_truncate(description, 180)}"
+        hits.append(item)
+    return hits
+
+
+def _matching_brainvault_projects(root: Path, terms: list[str]) -> list[str]:
+    hits = []
+    for relative_base in (
+        Path("Ideaverse") / "projects",
+        Path("CampusHub") / "projects",
+        Path("MainHub"),
+    ):
+        base = root / relative_base
+        if not base.is_dir():
+            continue
+        for child in sorted(base.iterdir()):
+            if not child.is_dir():
+                continue
+            haystack = _normalize_for_search(child.name)
+            if any(term in haystack for term in terms):
+                hits.append(child.relative_to(root).as_posix())
+    return hits
+
+
+def _yaml_scalar(raw: str, key: str) -> str:
+    match = re.search(rf"(?m)^{re.escape(key)}:\s*(.+?)\s*$", raw)
+    if not match:
+        return ""
+    value = match.group(1).strip()
+    if value in {"|", ">"}:
+        return ""
+    return value.strip("\"'")
+
+
+def _normalize_for_search(value: str) -> str:
+    text = str(value or "").casefold()
+    return text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+
+
+def _clean_pi_answer(answer: str) -> str:
+    text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", str(answer or "")).strip()
+    if not text:
+        return ""
+    if text[:300].casefold().startswith("here's a thinking process"):
+        markers = (
+            "\nTrinity:",
+            "\nAntwort:",
+            "\nFinal Answer:",
+            "\nFinal:",
+        )
+        for marker in markers:
+            if marker in text:
+                return text.rsplit(marker, 1)[-1].strip()
+        quoted = [
+            item.strip()
+            for item in re.findall(r'"([^"]{40,})"', text, flags=re.DOTALL)
+            if item.strip()
+        ]
+        if quoted:
+            return quoted[-1]
+    return text
 
 
 def _needs_windows_shell(executable: str, host_os=None) -> bool:
@@ -335,6 +483,11 @@ def _is_capability_request(query: str) -> bool:
     return any(re.search(pattern, text) for pattern in CAPABILITY_PATTERNS)
 
 
+def _is_explicit_pi_request(query: str) -> bool:
+    text = query.casefold()
+    return any(re.search(pattern, text) for pattern in TRIGGER_PATTERNS)
+
+
 def _capability_result(query: str, context: dict, projects: dict, config: dict) -> dict:
     brainvault_alias, brainvault_path = _default_project(projects, config)
     if not brainvault_path:
@@ -384,7 +537,7 @@ def _capability_result(query: str, context: dict, projects: dict, config: dict) 
             "- Trinity, welche Faehigkeiten hast Du?",
             "- Trinity, gibt es einen Mail-Agenten und was kann der?",
             "- Trinity, erstelle mir Mailentwuerfe fuer die heutigen Rueckfragen.",
-            "- Trinity, welche Gutachten- oder Bewertungsagenten gibt es?",
+            "- Trinity, welche Review- oder Bewertungsagenten gibt es?",
             "- Trinity, baue einen neuen Agenten fuer Steuerdaten.  (Dann nimmt Trinity den Builder-Harness.)",
         ]
     )
