@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import importlib.util
 import json
 import mimetypes
 import os
@@ -22,9 +23,10 @@ from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
+from memory_store import MemoryStore
 from platform_adapters import find_codex_executable, find_opencode_executable, find_pi_executable
 from server_auth import ServerAuth
-from tenant_context import tenant_history_path, tenant_upload_dir
+from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from web_ui import render_web_ui
 
 
@@ -108,6 +110,7 @@ class TrinityBridge:
         self.auth_enabled = bool(auth_enabled)
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
         self._lock = threading.Lock()
+        self._summary_jobs = set()
 
     @property
     def media_roots(self):
@@ -218,6 +221,165 @@ class TrinityBridge:
                 },
             )
         return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
+
+    def end_session(self, payload, user=None):
+        session_id = str(payload.get("session_id", "")).strip()
+        session_name = str(payload.get("session_name", "")).strip()[:160]
+        wait = bool(payload.get("wait", False) or payload.get("blocking", False))
+        if not session_id:
+            raise ValueError("session_id fehlt.")
+
+        history_path = self.history_path_for(user)
+        events = [
+            event
+            for event in load_chat_events(history_path, limit=5000)
+            if str(event.get("session_id") or "") == session_id
+            and str(event.get("role") or "") in {"user", "assistant"}
+            and str(event.get("text") or "").strip()
+        ]
+        if not events:
+            return {
+                "ok": True,
+                "created": False,
+                "message": "Keine Inhalte fuer diese Session gefunden.",
+            }
+
+        transcript_path = self._write_session_transcript(session_id, session_name, events)
+        if wait:
+            record = self._create_session_summary_record(
+                transcript_path=transcript_path,
+                session_id=session_id,
+                session_name=session_name,
+                history_path=history_path,
+                user=user,
+            )
+            return {
+                "ok": True,
+                "accepted": False,
+                "created": True,
+                "event": record,
+                "summary": record.get("text", ""),
+                "summary_path": (record.get("attachments") or [{}])[0].get("path", ""),
+                "memory_id": record.get("metadata", {}).get("memory_id", ""),
+            }
+
+        job_key = f"{self._tenant_id(user)}:{session_id}"
+        with self._lock:
+            if job_key in self._summary_jobs:
+                return {
+                    "ok": True,
+                    "accepted": True,
+                    "created": False,
+                    "job_id": job_key,
+                    "message": "Session-Summary laeuft bereits im Hintergrund.",
+                }
+            self._summary_jobs.add(job_key)
+
+        thread = threading.Thread(
+            target=self._run_session_summary_job,
+            args=(job_key, transcript_path, session_id, session_name, history_path, user),
+            name=f"trinity-session-summary-{session_id[:12]}",
+            daemon=True,
+        )
+        thread.start()
+        return {
+            "ok": True,
+            "accepted": True,
+            "created": False,
+            "job_id": job_key,
+            "message": "Session-Summary wird im Hintergrund erstellt.",
+        }
+
+    def _create_session_summary_record(self, *, transcript_path, session_id, session_name, history_path, user=None):
+        summary_result = self._run_session_summary_agent(
+            transcript_path=transcript_path,
+            session_id=session_id,
+            session_name=session_name,
+            user=user,
+        )
+        summary = str(summary_result.get("summary") or "").strip()
+        if not summary:
+            raise RuntimeError(
+                summary_result.get("search_context")
+                or "Session-Summary konnte nicht erstellt werden."
+            )
+        if not summary_result.get("memory_id"):
+            summary_result["memory_id"] = self._remember_session_summary(
+                summary=summary,
+                session_id=session_id,
+                session_name=session_name,
+                summary_path=summary_result.get("summary_path"),
+                transcript_path=transcript_path,
+                user=user,
+            )
+
+        summary_path = Path(str(summary_result.get("summary_path") or "")).resolve()
+        html_payload = str(summary_result.get("html_payload") or "")
+        if html_payload:
+            self.payload_path.write_text(html_payload, encoding="utf-8")
+
+        attachments = []
+        if summary_path.is_file():
+            attachments.append(
+                {
+                    "name": summary_path.name,
+                    "path": str(summary_path),
+                    "kind": "summary",
+                    "mime": "text/markdown",
+                    "size": summary_path.stat().st_size,
+                }
+            )
+
+        record = append_chat_event(
+            history_path,
+            {
+                "request_id": f"session-summary-{session_id}",
+                "role": "assistant",
+                "source": "session-summary",
+                "text": summary,
+                "payload_html": html_payload,
+                "attachments": attachments,
+                "session_id": session_id,
+                "session_name": session_name,
+                "metadata": {
+                    "memory_id": summary_result.get("memory_id", ""),
+                    "summary_path": str(summary_path) if summary_path else "",
+                    "transcript_path": str(transcript_path),
+                    "background": True,
+                },
+            },
+        )
+        return record
+
+    def _run_session_summary_job(self, job_key, transcript_path, session_id, session_name, history_path, user=None):
+        try:
+            self._create_session_summary_record(
+                transcript_path=transcript_path,
+                session_id=session_id,
+                session_name=session_name,
+                history_path=history_path,
+                user=user,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            append_chat_event(
+                history_path,
+                {
+                    "request_id": f"session-summary-error-{session_id}",
+                    "role": "assistant",
+                    "source": "session-summary",
+                    "text": f"Session-Summary konnte nicht erstellt werden: {exc}",
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "metadata": {
+                        "background": True,
+                        "error": str(exc),
+                        "transcript_path": str(transcript_path),
+                    },
+                },
+            )
+        finally:
+            with self._lock:
+                self._summary_jobs.discard(job_key)
 
     def get_mode(self):
         config = self._read_config()
@@ -433,6 +595,91 @@ class TrinityBridge:
                 }
             )
         return saved
+
+    def _write_session_transcript(self, session_id, session_name, events):
+        safe_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", session_id).strip("._") or uuid.uuid4().hex
+        transcript_dir = self.memory_dir / "session_transcripts"
+        transcript_dir.mkdir(parents=True, exist_ok=True)
+        transcript_path = transcript_dir / f"Session_{safe_id}.md"
+        lines = [
+            f"# Trinity Session {session_name or session_id}",
+            "",
+            f"- Session-ID: `{session_id}`",
+            f"- Erstellt: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+        ]
+        for event in events:
+            timestamp = float(event.get("timestamp", 0) or 0)
+            stamp = time.strftime("%H:%M:%S", time.localtime(timestamp)) if timestamp else "--:--:--"
+            role = str(event.get("role") or "event")
+            source = str(event.get("source") or "unknown")
+            text = str(event.get("text") or "").strip()
+            lines.append(f"[{stamp}] {role} ({source}): {text}")
+        transcript_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return transcript_path
+
+    def _run_session_summary_agent(self, transcript_path, session_id, session_name, user=None):
+        agent_path = self.home / "agents" / "session_summarizer_agent" / "script.py"
+        if not agent_path.is_file():
+            raise RuntimeError("Session-Summarizer-Agent nicht gefunden.")
+        spec = importlib.util.spec_from_file_location("trinity_session_summarizer_agent", agent_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Session-Summarizer-Agent konnte nicht geladen werden.")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        from brain import TrinityBrain
+
+        tenant_id = self._tenant_id(user)
+        result = module.execute(
+            "session abschließen",
+            context={
+                "brain": TrinityBrain(),
+                "transcript_file": str(transcript_path),
+                "session_id": session_id,
+                "session_name": session_name,
+                "tenant_id": tenant_id,
+            },
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("Session-Summarizer-Agent lieferte kein Ergebnis.")
+        if result.get("memory_id"):
+            return result
+
+        summary = str(result.get("summary") or "").strip()
+        if summary:
+            result["memory_id"] = self._remember_session_summary(
+                summary=summary,
+                session_id=session_id,
+                session_name=session_name,
+                summary_path=result.get("summary_path"),
+                transcript_path=transcript_path,
+                user=user,
+            )
+        return result
+
+    def _remember_session_summary(self, *, summary, session_id, session_name, summary_path, transcript_path, user=None):
+        tenant_id = self._tenant_id(user)
+        store = MemoryStore(
+            str(tenant_memory_db_path(self.home, tenant_id))
+            if tenant_id
+            else str(self.memory_dir / "trinity_memory.sqlite3")
+        )
+        store.ensure_session(session_id, session_name or "Trinity Session")
+        return store.remember(
+            summary,
+            tags=["session", "summary", "trinity"],
+            kind="session-summary",
+            source="session-summary-agent",
+            session_id=session_id,
+            weight=0.82,
+            baked=True,
+            metadata={
+                "summary_path": str(summary_path or ""),
+                "transcript_file": str(transcript_path),
+                "session_name": session_name,
+            },
+        )
 
     def events_since(
         self,
@@ -790,6 +1037,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
+                elif parsed.path == "/session/end":
+                    _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/runtime":

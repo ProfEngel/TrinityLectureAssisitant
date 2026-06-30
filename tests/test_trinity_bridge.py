@@ -1,11 +1,13 @@
 import json
 import base64
 import sys
+import time
 
 from trinity_bridge import TrinityBridge, _local_path_value
 from web_ui import render_web_ui
 from chat_protocol import append_chat_event, load_chat_events, parse_command
 from external_stt_feed import pop_external_stt_events
+from memory_store import MemoryStore
 
 
 def test_bridge_writes_ios_message_to_command_file(tmp_path):
@@ -199,6 +201,117 @@ def test_bridge_writes_live_stt_feed(tmp_path):
     assert history[0]["role"] == "user"
     assert history[0]["source"] == "ios-stt"
     assert history[0]["text"] == "Trinity kannst du das erklaeren"
+
+
+def test_bridge_end_session_creates_summary_asset_and_memory(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "ios",
+            "text": "Trinity, erklaere Spieltheorie.",
+            "session_id": "session-1",
+            "session_name": "Testsession",
+        },
+    )
+    append_chat_event(
+        history,
+        {
+            "role": "assistant",
+            "source": "runtime",
+            "text": "Spieltheorie analysiert strategische Entscheidungen.",
+            "session_id": "session-1",
+            "session_name": "Testsession",
+        },
+    )
+    summary_path = home / "memory" / "summaries" / "Summary_Session_session-1.md"
+    summary_path.parent.mkdir(parents=True)
+    summary_path.write_text("# Summary\n\n## Hauptthemen\nSpieltheorie", encoding="utf-8")
+    bridge = TrinityBridge(home)
+
+    def fake_summary_agent(**kwargs):
+        return {
+            "summary": "## Hauptthemen\n- Spieltheorie\n\n## Key-Takeaways\n- Strategisches Verhalten.",
+            "summary_path": str(summary_path),
+            "html_payload": "<!-- SESSION_SUMMARY_PAYLOAD --><h2>Summary</h2>",
+        }
+
+    bridge._run_session_summary_agent = fake_summary_agent
+
+    result = bridge.end_session({"session_id": "session-1", "session_name": "Testsession", "wait": True})
+
+    assert result["ok"] is True
+    assert result["created"] is True
+    events = load_chat_events(history, limit=10)
+    summary_event = events[-1]
+    assert summary_event["source"] == "session-summary"
+    assert summary_event["session_id"] == "session-1"
+    assert "Spieltheorie" in summary_event["text"]
+    assert summary_event["payload_html"].startswith("<!-- SESSION_SUMMARY_PAYLOAD")
+    assert summary_event["attachments"][0]["kind"] == "summary"
+    assert (home / "core" / "payload.html").read_text(encoding="utf-8").startswith(
+        "<!-- SESSION_SUMMARY_PAYLOAD"
+    )
+    memories = MemoryStore(home / "memory" / "trinity_memory.sqlite3").search(
+        "Spieltheorie", tags=["summary"], limit=5
+    )
+    assert memories[0]["kind"] == "session-summary"
+
+
+def test_bridge_end_session_returns_before_background_summary_finishes(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "ios",
+            "text": "Trinity, fasse den Vortrag zu Decision Trees zusammen.",
+            "session_id": "session-bg",
+            "session_name": "Background",
+        },
+    )
+    summary_path = home / "memory" / "summaries" / "Summary_Session_session-bg.md"
+    summary_path.parent.mkdir(parents=True)
+    bridge = TrinityBridge(home)
+
+    def slow_summary_agent(**kwargs):
+        time.sleep(0.08)
+        summary_path.write_text("# Summary\n\nDecision Trees", encoding="utf-8")
+        return {
+            "summary": "## Hauptthemen\n- Decision Trees",
+            "summary_path": str(summary_path),
+            "html_payload": "<!-- SESSION_SUMMARY_PAYLOAD --><h2>Summary</h2>",
+        }
+
+    bridge._run_session_summary_agent = slow_summary_agent
+    started = time.monotonic()
+    result = bridge.end_session({"session_id": "session-bg", "session_name": "Background"})
+
+    assert result["ok"] is True
+    assert result["accepted"] is True
+    assert result["created"] is False
+    assert time.monotonic() - started < 0.05
+
+    summary_event = None
+    for _ in range(30):
+        events = load_chat_events(history, limit=10)
+        matches = [event for event in events if event.get("source") == "session-summary"]
+        if matches:
+            summary_event = matches[-1]
+            break
+        time.sleep(0.02)
+
+    assert summary_event is not None
+    assert summary_event["session_id"] == "session-bg"
+    assert "Decision Trees" in summary_event["text"]
+    assert summary_event["attachments"][0]["kind"] == "summary"
 
 
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):

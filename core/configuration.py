@@ -63,7 +63,8 @@ def default_config(platform_name=None):
             "bubbles_enabled": False,
             "visuals_enabled": False,
             "interval_minutes": 2,
-            "auto_rag_indexing": False,
+            "auto_rag_indexing": True,
+            "session_summary_auto_rag_indexing": True,
         },
         "system": {
             "show_terminal": windows,

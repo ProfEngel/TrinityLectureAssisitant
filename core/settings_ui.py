@@ -335,6 +335,7 @@ class SettingsWindow(QMainWindow):
         # Proactive Additions
         if hasattr(self, 'auto_rag_cb'):
             self.config["proactive"]["auto_rag_indexing"] = self.auto_rag_cb.isChecked()
+            self.config["proactive"]["session_summary_auto_rag_indexing"] = self.auto_rag_cb.isChecked()
         
         # Config-Datei speichern
         save_config(self.config_path, self.config)
@@ -858,7 +859,10 @@ class SettingsWindow(QMainWindow):
         form.addRow(self.visual_cb)
         
         self.auto_rag_cb = QCheckBox("Deep Memory: Session-Summaries automatisch ins RAG indexieren")
-        self.auto_rag_cb.setChecked(proactive_conf.get("auto_rag_indexing", False))
+        self.auto_rag_cb.setChecked(proactive_conf.get(
+            "session_summary_auto_rag_indexing",
+            proactive_conf.get("auto_rag_indexing", True),
+        ))
         form.addRow(self.auto_rag_cb)
         
         hint = QLabel("Achtung: Heartbeat verursacht im Hintergrund Traffic zum LLM.\nNur bei performanten Modellen/APIs empfohlen!")

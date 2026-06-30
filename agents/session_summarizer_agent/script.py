@@ -1,6 +1,8 @@
 import os
 import time
 import glob
+import subprocess
+import sys
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
@@ -57,13 +59,7 @@ def execute(query: str, context: dict = None) -> dict:
 
     print(f"📊 Generiere Abschluss-Zusammenfassung für: {os.path.basename(transcript_file)}")
     
-    prompt = (
-        f"Du bist ein professioneller Protokollant. Erstelle eine strukturierte Zusammenfassung der folgenden Vorlesungssitzung.\n"
-        f"Extrahiere:\n"
-        f"1. Hauptthemen\n2. Key-Takeaways\n3. Offene Fragen / To-Dos\n\n"
-        f"Hier ist das Transkript:\n---\n{content}\n---\n"
-        f"Antworte auf Deutsch im Markdown-Format."
-    )
+    prompt = build_summary_prompt(content)
     
     summary = brain.ask_llm([{"role": "user", "content": prompt}])
     
@@ -81,10 +77,57 @@ def execute(query: str, context: dict = None) -> dict:
     
     print(f"✅ Summary gespeichert: {summary_path}")
 
+    memory_id = ""
+    try:
+        from memory_store import MemoryStore
+        from tenant_context import tenant_memory_db_path
+
+        project_dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        tenant_id = str(context.get("tenant_id") or "").strip()
+        store = MemoryStore(
+            str(tenant_memory_db_path(project_dir_path, tenant_id))
+            if tenant_id
+            else None
+        )
+        session_id = str(context.get("session_id") or file_basename).strip()
+        session_name = str(context.get("session_name") or file_basename).strip()
+        store.ensure_session(session_id, session_name or "Trinity Session")
+        memory_id = store.remember(
+            summary,
+            tags=["session", "summary", "vorlesung", "trinity"],
+            kind="session-summary",
+            source="session-summary-agent",
+            session_id=session_id,
+            weight=0.82,
+            baked=True,
+            metadata={
+                "summary_path": summary_path,
+                "transcript_file": transcript_file,
+                "session_name": session_name,
+            },
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        print(f"⚠️ Summary-Memory konnte nicht gespeichert werden: {exc}")
+
+    try:
+        config_path = os.path.join(project_dir, "core", "config.json")
+        import json
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as handle:
+                config = json.load(handle)
+            proactive = config.get("proactive", {})
+            if proactive.get("session_summary_auto_rag_indexing", True):
+                rag_script = os.path.join(project_dir, "RAG", "build_index.py")
+                subprocess.Popen([sys.executable, rag_script], cwd=project_dir)
+                print("🚀 Auto-RAG: Reindex für Session-Summary gestartet.")
+    except Exception as exc:  # pylint: disable=broad-except
+        print(f"⚠️ Auto-RAG konnte nicht gestartet werden: {exc}")
+
     # 4. HTML Payload erstellen (Editierbar)
     formatted_summary = summary.replace('\n', '<br>')
     html_payload = f"""
     <!-- KEEP_OPEN -->
+    <!-- SESSION_SUMMARY_PAYLOAD -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
         <h2 style="margin: 0; font-weight: 300; font-size: 18px;">📋 Abschluss-Zusammenfassung</h2>
         <span style="font-size: 12px; opacity: 0.5;">Datei: {summary_filename}</span>
@@ -108,5 +151,25 @@ def execute(query: str, context: dict = None) -> dict:
     return {
         "has_payload": True,
         "html_payload": html_payload,
-        "search_context": search_context
+        "search_context": search_context,
+        "summary": summary,
+        "summary_path": summary_path,
+        "memory_id": memory_id,
+        "transcript_file": transcript_file,
+        "summary_filename": summary_filename,
     }
+
+
+def build_summary_prompt(content: str) -> str:
+    return (
+        "Du bist ein professioneller Protokollant. Erstelle eine strukturierte "
+        "Zusammenfassung der folgenden Trinity-Session.\n\n"
+        "Extrahiere diese Abschnitte:\n"
+        "1. Hauptthemen\n"
+        "2. Key-Takeaways\n"
+        "3. Entscheidungen oder konkrete Ergebnisse\n"
+        "4. Offene Fragen / To-Dos\n"
+        "5. Relevante erzeugte Artefakte oder Medien, falls im Verlauf genannt\n\n"
+        f"Hier ist das Transkript:\n---\n{content}\n---\n"
+        "Antworte auf Deutsch im Markdown-Format."
+    )
