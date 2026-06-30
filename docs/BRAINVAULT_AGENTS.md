@@ -122,7 +122,7 @@ zusaetzlich als Snapshot unter `source/` abgelegt werden.
 
 ## Einstellungen
 
-In **Einstellungen -> MainHub** kann ein expliziter
+In **Einstellungen -> MainHub / Control Plane** kann ein expliziter
 `BrainVault-Agentenbasis`-Pfad gesetzt werden. `Externe Harness-Agentenbasis
 (.agents)` ist der explizite Pfad, den Trinity fuer Codex, Pi, OpenCode,
 Antigravity und weitere externe Harnesses ausliest. Beide Pfade zeigen im

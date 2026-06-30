@@ -3,7 +3,7 @@
 Dieses Dokument ist der zentrale Einstieg fuer Trinity auf macOS, Windows 11,
 Linux-Servern sowie mit der optionalen iPhone/iPad-Companion-App. Es fuehrt von
 der ersten lokalen Antwort bis zu proaktiven Vorlesungs-Workflows und lokalen
-Codex-/OpenCode-Projekten.
+Codex-/Pi-/OpenCode-Projekten.
 
 ## 1. Vor dem Start
 
@@ -27,8 +27,8 @@ Lecture-Modus mit Augen-UI, ClassicUI, WebUI oder iPad-Companion stattfinden.
 - Ein Mikrofon nur fuer Sprachbetrieb; fuer ClassicUI, WebUI und TUI reicht Text.
 - Fuer die Companion-App: iPhone/iPad, Desktop- oder Server-Trinity und im
   empfohlenen Fall Tailscale auf beiden Geraeten.
-- Optional: Tavily fuer Webrecherche, fal.ai oder ComfyUI fuer Medien, Codex CLI
-  und/oder OpenCode CLI fuer lokale Projekt-Automationen.
+- Optional: Tavily fuer Webrecherche, fal.ai oder ComfyUI fuer Medien, Codex CLI,
+  Pi CLI und/oder OpenCode CLI fuer lokale Projekt-Automationen.
 
 Nach jeder Installation pruefen:
 
@@ -46,7 +46,7 @@ Chats, Issues oder Git-Repositories.
 ### macOS
 
 ~~~bash
-curl -sSL https://raw.githubusercontent.com/OWNER/REPO/main/install_mac.sh | bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_mac.sh | bash
 trinity onboarding
 trinity doctor
 trinity start
@@ -58,7 +58,7 @@ In PowerShell:
 
 ~~~powershell
 Set-ExecutionPolicy -Scope Process Bypass
-irm https://raw.githubusercontent.com/OWNER/REPO/main/install_windows.ps1 | iex
+irm https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_windows.ps1 | iex
 trinity onboarding
 trinity doctor
 trinity start
@@ -70,7 +70,7 @@ Weitere Hinweise stehen in [Deployment Windows 11](Deployment_Windows11.md).
 ### Linux / Ubuntu Server
 
 ~~~bash
-curl -sSL https://raw.githubusercontent.com/OWNER/REPO/main/install_linux.sh | bash
+curl -sSL https://raw.githubusercontent.com/ProfEngel/TrinityLectureAssisitant/main/install_linux.sh | bash
 ~/.local/bin/trinity onboarding
 ~/.local/bin/trinity doctor
 ~/.local/bin/trinity server --host 127.0.0.1 --port 8765
@@ -94,46 +94,52 @@ Standardanschluss typischerweise http://localhost:1234/v1/chat/completions.
 Erst wenn trinity doctor den LLM-Zugang bestaetigt, sollte STT, Medien oder
 Proaktivitaet aktiviert werden.
 
-## 3. MainHub, Cloud-Vault und lokale Runtime
+## 3. Lokale Runtime und BrainVault-Agentenpool
 
 Beim ersten `trinity onboarding` fragt Trinity nach zwei Speicherorten:
 
 | Ort | Aufgabe | Darf in die Cloud? |
 |---|---|---|
 | **Lokale Runtime** | laufende Jobs, Queues, aktive Workspaces, SQLite-Datenbanken, Cache, temporaere Dateien, Logs, Locks und Secrets | Nein |
-| **Cloud-Vault / MainHub** | freigegebene Agenten, Projekte, Ergebnisse, Vorlagen, Wissensbestaende, Audit und Exporte | Ja |
+| **BrainVault / Cloud-Agentenpool** | freigegebene externe Agenten, Kataloge, Harness-Regeln, Vorlagen, Wissensbestaende und Ergebnisse | Ja |
 
 Der Grund ist schlicht: Synchronisierte Cloud-Ordner koennen Dateien sperren,
 umbenennen, verzögert schreiben oder auf einem anderen Gerät gleichzeitig
 anfassen. Fuer laufende Jobs und SQLite-Datenbanken ist das eine schlechte Idee.
-Der Vault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox oder
-einem anderen Sync-Ordner liegen.
+Der BrainVault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox
+oder einem anderen Sync-Ordner liegen. Massgeblich ist heute der BrainVault-Root,
+also der Ordner, der `.agents`, `.catalog`, `.ai`, `AGENTS.md` und optional
+`CLAUDE.md` enthaelt. Alte `MainHub/TrinityVault`-Strukturen sind nicht mehr der
+Normalpfad und koennen archiviert werden, sobald die Einstellungen auf den
+BrainVault-Root zeigen.
 
 Generisches Beispiel:
 
 ~~~bash
 trinity control-plane init \
   --runtime-root "/lokaler/pfad/zu/TrinityRuntime" \
-  --vault-root "/cloud/pfad/zu/TrinityVault"
+  --vault-root "/cloud/pfad/zu/BrainVault"
 ~~~
 
-Status pruefen:
+Status und Agentenpool pruefen:
 
 ~~~bash
 trinity control-plane status
+agentctl list
 ~~~
 
-Eine gesunde Ausgabe zeigt `warnings: []`, `catalog_exists: true`, den lokalen
-Runtime-Pfad und den Cloud-Vault-Pfad. Wenn eine Warnung sagt, dass die Runtime
-in iCloud/OneDrive/Google Drive liegt, sollte der Runtime-Pfad auf einen lokalen
+Eine gesunde Ausgabe zeigt `warnings: []`, den lokalen Runtime-Pfad und den
+BrainVault-Pfad. `agentctl list` sollte die externen Agenten aus
+`BrainVault/.agents` anzeigen. Wenn eine Warnung sagt, dass die Runtime in
+iCloud/OneDrive/Google Drive liegt, sollte der Runtime-Pfad auf einen lokalen
 Ordner umgestellt werden.
 
 Rueckrollen ist einfach: Die bestehende Trinity-Version bleibt als GitHub-Release
 erreichbar. Lokal kann die Control Plane deaktiviert werden, indem
 `control_plane.enabled` in den Einstellungen ausgeschaltet oder die Installation
-auf einen aelteren Release-Tag zurueckgesetzt wird. Der Vault enthaelt keine
-aktiven Datenbanken und kann daher liegen bleiben, bis man ihn wirklich nicht
-mehr braucht.
+auf einen aelteren Release-Tag zurueckgesetzt wird. Der BrainVault enthaelt
+keine aktiven Runtime-Datenbanken und kann daher liegen bleiben, bis man ihn
+wirklich nicht mehr braucht.
 
 ## 4. Oberflaechen und Terminal
 
@@ -248,8 +254,8 @@ Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
 Rechte des jeweiligen Projekts gebunden.
 
 Seit v0.16.3 ist das Standardmodell deutlich einfacher: Unter
-Einstellungen -> MainHub stehen nur die lokale Runtime, der Cloud-Agentenpool
-und der Standard-Extern-Harness. Der Cloud-Agentenpool zeigt auf den
+Einstellungen -> MainHub / Control Plane stehen nur die lokale Runtime, der
+Cloud-Agentenpool und der Standard-Extern-Harness. Der Cloud-Agentenpool zeigt auf den
 uebergeordneten BrainVault-Ordner, in dem `.agents` und `AGENTS.md` liegen.
 Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
 `BrainVault` bereit.
@@ -257,7 +263,7 @@ Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
 Codex, Pi und OpenCode liegen unter Einstellungen -> Harnesses. Dort wird
 aktiviert, welche Programme erreichbar sind und welche Rollen sie uebernehmen:
 Agentenbuilder, harte komplexe Faelle oder Ausfuehrung der Agenten. Der
-Standard-Extern-Harness aus MainHub entscheidet, wer laufende Cloud-Agentenarbeit
+Standard-Extern-Harness aus der Control Plane entscheidet, wer laufende Cloud-Agentenarbeit
 zuerst bekommt; initial ist das `pi`. Codex bleibt der Builder-Harness fuer neue
 Agenten, Imports, Refactorings, Tests und Quality-Gates.
 
@@ -473,8 +479,8 @@ Die neue dreigeteilte Agentenkiste, geplante Jobs und Freigaben sind im
 ### Pi einrichten
 
 Pi ist als CLI-/Wrapper-Harness eingebunden. Trinity kann ihm genau wie Codex
-oder OpenCode freigegebene Projekt-Aliasse uebergeben, z.B. SandboxVault und
-TrinityVault. Voraussetzung ist ein ausfuehrbares Programm oder Skript, das
+oder OpenCode freigegebene Projekt-Aliasse uebergeben, z.B. `BrainVault` und
+separate Sandbox-/Projektordner. Voraussetzung ist ein ausfuehrbares Programm oder Skript, das
 Trinity starten darf. Fuer die Pi-CLI ist nicht-interaktiv meist `-p {prompt}`
 richtig. Ohne `{prompt}`-Platzhalter wird der Auftrag per stdin uebergeben; das
 kann bei interaktiven CLIs haengen.
@@ -487,7 +493,7 @@ In Einstellungen -> Harnesses -> Pi:
 Programm: pi
 Freigegebene Projekte:
 SandboxVault = /vollstaendiger/Pfad/zur/Sandbox
-TrinityVault = /vollstaendiger/Pfad/zum/Vault
+BrainVault = /vollstaendiger/Pfad/zum/BrainVault
 Standardprojekt: SandboxVault
 Argumente: -p {prompt}
 ~~~
