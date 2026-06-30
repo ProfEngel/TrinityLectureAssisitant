@@ -945,6 +945,8 @@ class ClassicWindow(QMainWindow):
             old_session_name,
             old_started_at,
             old_ended_at,
+            self.session_id,
+            self.session_name,
         )
         self.remote_events = []
         self.remote_after = time.time()
@@ -955,20 +957,32 @@ class ClassicWindow(QMainWindow):
         label = self.session_name or "ohne Namen"
         self.status.setText(f"Neue Session: {label}")
 
-    def _summarize_previous_session_in_background(self, session_id, session_name, started_at, ended_at):
+    def _summarize_previous_session_in_background(
+        self,
+        session_id,
+        session_name,
+        started_at,
+        ended_at,
+        display_session_id,
+        display_session_name,
+    ):
         closing_session_id = session_id or f"classic-unscoped-{int(started_at)}"
 
         def worker():
+            payload = {
+                "session_id": closing_session_id,
+                "session_name": session_name,
+                "display_session_id": display_session_id,
+                "display_session_name": display_session_name,
+                "include_unscoped": not bool(session_id),
+                "started_at": started_at,
+                "ended_at": ended_at,
+            }
             try:
-                TrinityBridge(BASE_DIR).end_session(
-                    {
-                        "session_id": closing_session_id,
-                        "session_name": session_name,
-                        "include_unscoped": not bool(session_id),
-                        "started_at": started_at,
-                        "ended_at": ended_at,
-                    }
-                )
+                if self.remote_client:
+                    self.remote_client.end_session(payload)
+                else:
+                    TrinityBridge(BASE_DIR).end_session(payload)
             except Exception as exc:  # pylint: disable=broad-except
                 append_chat_event(
                     CHAT_HISTORY_FILE,
@@ -977,8 +991,12 @@ class ClassicWindow(QMainWindow):
                         "role": "assistant",
                         "source": "session-summary",
                         "text": f"Session-Summary konnte nicht gestartet werden: {exc}",
-                        "session_id": closing_session_id,
-                        "session_name": session_name,
+                        "session_id": display_session_id,
+                        "session_name": display_session_name,
+                        "metadata": {
+                            "original_session_id": closing_session_id,
+                            "original_session_name": session_name,
+                        },
                     },
                 )
 

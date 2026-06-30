@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.11:** `Neue Session` zeigt die automatisch erzeugte Summary der vorherigen Session nun sichtbar in der neuen Session an. Das gilt fuer ClassicUI lokal, ClassicUI als Remote-Client und WebUI.
 > - **v0.16.10:** Update-Installer und `control-plane init` erzeugen im BrainVault keine historischen Zusatzordner wie `00_registry`, `01_agents` oder `03_results` mehr. Interne Kataloge, Policies und Artefakte liegen nun lokal in der Runtime; BrainVault bleibt schlank mit `.agents` und Instruktionsdateien.
 > - **v0.16.9:** Desktop-ClassicUI startet beim Button `Neue Session` nun ebenfalls den nicht-blockierenden Summary-Hintergrundjob fuer die vorherige Session. Auch Desktop-Sessions ohne bisherige Session-ID werden nur fuer das aktuelle App-Zeitfenster zusammengefasst.
-> - **v0.16.8:** Nicht-blockierende Session-Summaries: Beim Start einer neuen Session wird die alte Session im Hintergrund zusammengefasst, als Markdown-Asset gespeichert, in Memory/RAG uebernommen und ueber Desktop-WebUI sowie iPhone/iPad-Companion abrufbar gemacht.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

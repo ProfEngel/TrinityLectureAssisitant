@@ -367,6 +367,51 @@ def test_bridge_end_session_can_summarize_unscoped_desktop_window(tmp_path):
     assert "Alte Nachricht" not in captured["transcript"]
 
 
+def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "classic",
+            "text": "Bitte erklaere Spieltheorie.",
+            "session_id": "old-session",
+            "session_name": "Alte Session",
+        },
+    )
+    summary_path = home / "memory" / "summaries" / "Summary_old-session.md"
+    summary_path.parent.mkdir(parents=True)
+    bridge = TrinityBridge(home)
+
+    def fake_summary_agent(**kwargs):
+        summary_path.write_text("# Summary\n\nSpieltheorie", encoding="utf-8")
+        return {
+            "summary": "## Hauptthemen\n- Spieltheorie",
+            "summary_path": str(summary_path),
+        }
+
+    bridge._run_session_summary_agent = fake_summary_agent
+    result = bridge.end_session(
+        {
+            "session_id": "old-session",
+            "session_name": "Alte Session",
+            "display_session_id": "new-session",
+            "display_session_name": "Neue Session",
+            "wait": True,
+        }
+    )
+
+    event = result["event"]
+    assert event["session_id"] == "new-session"
+    assert event["session_name"] == "Neue Session"
+    assert event["metadata"]["original_session_id"] == "old-session"
+    assert event["metadata"]["original_session_name"] == "Alte Session"
+    assert "Spieltheorie" in event["text"]
+
+
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

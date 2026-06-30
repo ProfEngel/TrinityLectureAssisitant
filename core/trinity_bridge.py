@@ -225,6 +225,8 @@ class TrinityBridge:
     def end_session(self, payload, user=None):
         session_id = str(payload.get("session_id", "")).strip()
         session_name = str(payload.get("session_name", "")).strip()[:160]
+        display_session_id = str(payload.get("display_session_id", "")).strip()
+        display_session_name = str(payload.get("display_session_name", "")).strip()[:160]
         wait = bool(payload.get("wait", False) or payload.get("blocking", False))
         include_unscoped = bool(payload.get("include_unscoped", False))
         started_at = float(payload.get("started_at", 0) or 0)
@@ -258,6 +260,8 @@ class TrinityBridge:
                 transcript_path=transcript_path,
                 session_id=session_id,
                 session_name=session_name,
+                display_session_id=display_session_id,
+                display_session_name=display_session_name,
                 history_path=history_path,
                 user=user,
             )
@@ -285,7 +289,16 @@ class TrinityBridge:
 
         thread = threading.Thread(
             target=self._run_session_summary_job,
-            args=(job_key, transcript_path, session_id, session_name, history_path, user),
+            args=(
+                job_key,
+                transcript_path,
+                session_id,
+                session_name,
+                display_session_id,
+                display_session_name,
+                history_path,
+                user,
+            ),
             name=f"trinity-session-summary-{session_id[:12]}",
             daemon=True,
         )
@@ -298,7 +311,17 @@ class TrinityBridge:
             "message": "Session-Summary wird im Hintergrund erstellt.",
         }
 
-    def _create_session_summary_record(self, *, transcript_path, session_id, session_name, history_path, user=None):
+    def _create_session_summary_record(
+        self,
+        *,
+        transcript_path,
+        session_id,
+        session_name,
+        history_path,
+        display_session_id="",
+        display_session_name="",
+        user=None,
+    ):
         summary_result = self._run_session_summary_agent(
             transcript_path=transcript_path,
             session_id=session_id,
@@ -338,6 +361,8 @@ class TrinityBridge:
                 }
             )
 
+        visible_session_id = str(display_session_id or session_id)
+        visible_session_name = str(display_session_name or session_name)
         record = append_chat_event(
             history_path,
             {
@@ -347,24 +372,38 @@ class TrinityBridge:
                 "text": summary,
                 "payload_html": html_payload,
                 "attachments": attachments,
-                "session_id": session_id,
-                "session_name": session_name,
+                "session_id": visible_session_id,
+                "session_name": visible_session_name,
                 "metadata": {
                     "memory_id": summary_result.get("memory_id", ""),
                     "summary_path": str(summary_path) if summary_path else "",
                     "transcript_path": str(transcript_path),
+                    "original_session_id": session_id,
+                    "original_session_name": session_name,
                     "background": True,
                 },
             },
         )
         return record
 
-    def _run_session_summary_job(self, job_key, transcript_path, session_id, session_name, history_path, user=None):
+    def _run_session_summary_job(
+        self,
+        job_key,
+        transcript_path,
+        session_id,
+        session_name,
+        display_session_id,
+        display_session_name,
+        history_path,
+        user=None,
+    ):
         try:
             self._create_session_summary_record(
                 transcript_path=transcript_path,
                 session_id=session_id,
                 session_name=session_name,
+                display_session_id=display_session_id,
+                display_session_name=display_session_name,
                 history_path=history_path,
                 user=user,
             )
@@ -376,12 +415,14 @@ class TrinityBridge:
                     "role": "assistant",
                     "source": "session-summary",
                     "text": f"Session-Summary konnte nicht erstellt werden: {exc}",
-                    "session_id": session_id,
-                    "session_name": session_name,
+                    "session_id": str(display_session_id or session_id),
+                    "session_name": str(display_session_name or session_name),
                     "metadata": {
                         "background": True,
                         "error": str(exc),
                         "transcript_path": str(transcript_path),
+                        "original_session_id": session_id,
+                        "original_session_name": session_name,
                     },
                 },
             )

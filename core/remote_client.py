@@ -54,6 +54,9 @@ class RemoteTrinityClient:
     def set_runtime(self, updates):
         return self._request("/runtime", dict(updates or {}))
 
+    def end_session(self, payload):
+        return self._request("/session/end", dict(payload or {}))
+
     def create_user(self, username, password, role="user"):
         return self._request(
             "/auth/users",
