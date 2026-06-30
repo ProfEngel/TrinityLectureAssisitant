@@ -8,6 +8,7 @@ import re
 import subprocess
 import threading
 import tempfile
+import unicodedata
 import warnings
 
 # Warnings unterdrücken (faster-whisper matmul + urllib3 SSL)
@@ -38,13 +39,107 @@ SILENCE_THRESHOLD = 0.05
 INITIAL_PROMPT = "Trinity, Spieltheorie, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
 
 # Fuzzy Wake-Word Varianten (Fallback, wird aus config.json überschrieben)
-TRIGGER_VARIANTS = ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trenty", "trendy"]
+TRIGGER_VARIANTS = [
+    "trinity",
+    "triniti",
+    "trindy",
+    "trinnity",
+    "trinitiy",
+    "trinitys",
+    "trinitie",
+    "drinity",
+    "trinidi",
+    "trenty",
+    "trendy",
+]
+
+
+def _normalize_trigger_text(value):
+    """Normalize STT text for wake-word checks without changing the prompt itself."""
+    decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
+    asciiish = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    asciiish = asciiish.replace("ß", "ss")
+    return re.sub(r"[^a-z0-9]+", " ", asciiish).strip()
+
+
+def _bounded_levenshtein(left, right, max_distance=1):
+    """Small edit-distance helper for short wake words."""
+    if left == right:
+        return 0
+    if abs(len(left) - len(right)) > max_distance:
+        return max_distance + 1
+
+    previous = list(range(len(right) + 1))
+    for i, left_char in enumerate(left, start=1):
+        current = [i]
+        row_min = current[0]
+        for j, right_char in enumerate(right, start=1):
+            insert = current[j - 1] + 1
+            delete = previous[j] + 1
+            replace = previous[j - 1] + (left_char != right_char)
+            value = min(insert, delete, replace)
+            current.append(value)
+            row_min = min(row_min, value)
+        if row_min > max_distance:
+            return max_distance + 1
+        previous = current
+    return previous[-1]
+
+
+def _trigger_candidates(variants=None):
+    candidates = []
+    for item in variants or TRIGGER_VARIANTS:
+        normalized = _normalize_trigger_text(item).replace(" ", "")
+        if len(normalized) >= 5 and normalized not in candidates:
+            candidates.append(normalized)
+    return candidates
+
+
+def _expanded_wakeword_forms(candidate):
+    forms = {candidate}
+    if candidate.endswith("y"):
+        forms.add(f"{candidate[:-1]}i")
+        forms.add(f"{candidate[:-1]}ie")
+    if candidate.endswith("i"):
+        forms.add(f"{candidate}e")
+    return forms
+
+
+def _is_fuzzy_wakeword_candidate(candidate):
+    # Historical variants like "trendy"/"trenty" should only match exactly;
+    # edit-distance matching them would make ordinary words like "Trend" wake Trinity.
+    return candidate.startswith("trini") or candidate.startswith("drini")
 
 def has_trigger(text, variants=None):
     """Prüft ob das Wake-Word (oder eine Variante) im Text vorkommt."""
-    lower = text.lower()
-    check_list = variants or TRIGGER_VARIANTS
-    return any(v in lower for v in check_list)
+    normalized = _normalize_trigger_text(text)
+    if not normalized:
+        return False
+
+    compact = normalized.replace(" ", "")
+    tokens = normalized.split()
+    check_list = _trigger_candidates(variants)
+
+    for candidate in check_list:
+        forms = _expanded_wakeword_forms(candidate)
+        if any(form in compact for form in forms):
+            return True
+        if not _is_fuzzy_wakeword_candidate(candidate):
+            continue
+
+        for token in tokens:
+            if len(token) < 5:
+                continue
+            token_forms = _expanded_wakeword_forms(token)
+            if forms & token_forms:
+                return True
+            if any(token.startswith(form) and abs(len(token) - len(form)) <= 2 for form in forms):
+                return True
+            for form in forms:
+                max_distance = 1 if len(form) < 8 else 2
+                if _bounded_levenshtein(token, form, max_distance=max_distance) <= max_distance:
+                    return True
+    return False
 
 
 def is_affection_directed_at_trinity(text, agent_name=TRIGGER_WORD):

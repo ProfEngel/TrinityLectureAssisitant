@@ -13,7 +13,7 @@
   },
   "persona": {
     "agent_name": "Trinity",
-    "trigger_variants": ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trenty", "trendy"]
+    "trigger_variants": ["trinity", "triniti", "trindy", "trinnity", "trinitiy", "trinitys", "trinitie", "drinity", "trinidi", "trenty", "trendy"]
   },
   "image": {
     "primary_model": "fal-ai/nano-banana-2",

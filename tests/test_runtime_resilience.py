@@ -17,6 +17,25 @@ from chat_protocol import build_chat_request, encode_chat_request
 from external_stt_feed import append_external_stt_event
 
 
+def test_wake_word_recognizes_common_ios_stt_variants():
+    variants = ["trinity"]
+
+    assert transcriber.has_trigger("Trinity, erklär mir Spieltheorie", variants)
+    assert transcriber.has_trigger("Triniti erklär mir Spieltheorie", variants)
+    assert transcriber.has_trigger("Trini ty erklär mir Spieltheorie", variants)
+    assert transcriber.has_trigger("Drinity erklär mir Spieltheorie", variants)
+    assert transcriber.has_trigger("Trinitie erklär mir Spieltheorie", variants)
+    assert transcriber.has_trigger("Tri-nity erklär mir Spieltheorie", variants)
+
+
+def test_wake_word_does_not_trigger_on_nearby_regular_words():
+    variants = ["trinity", "trendy"]
+
+    assert not transcriber.has_trigger("Der Trend geht zu mehr Übungen", variants)
+    assert not transcriber.has_trigger("Das ist ein Training zur Spieltheorie", variants)
+    assert not transcriber.has_trigger("Die Strategie ist nicht trivial", variants)
+
+
 def test_windows_config_disables_speech_input_by_default(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
     config_path.write_text(
