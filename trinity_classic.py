@@ -41,6 +41,7 @@ if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 
 from settings_ui import SettingsWindow
+from agent_catalog import build_agent_catalog
 from chat_attachments import stage_attachment
 from chat_protocol import (
     append_chat_event,
@@ -313,7 +314,7 @@ class ClassicWindow(QMainWindow):
         title.setObjectName("title")
         self.status = QLabel("Bereit")
         self.status.setObjectName("status")
-        self.workspace_sidebar_button = QPushButton("☰")
+        self.workspace_sidebar_button = QPushButton("▥")
         self.workspace_sidebar_button.setObjectName("subtle")
         self.workspace_sidebar_button.setToolTip("Arbeitsorganisation ein- oder ausklappen")
         self.workspace_sidebar_button.clicked.connect(self.toggle_workspace_sidebar)
@@ -351,12 +352,12 @@ class ClassicWindow(QMainWindow):
         header.addWidget(self.logo)
         header.addWidget(title)
         header.addWidget(self.workspace_sidebar_button)
+        header.addWidget(self.listen_button)
+        header.addWidget(self.new_session_button)
         header.addStretch()
         header.addWidget(self.status)
-        header.addWidget(self.listen_button)
-        header.addWidget(self.audio_source_button)
-        header.addWidget(self.new_session_button)
         header.addWidget(self.mode_combo)
+        header.addWidget(self.audio_source_button)
         header.addWidget(self.tts_button)
         header.addWidget(self.theme_button)
         header.addWidget(settings_button)
@@ -497,6 +498,7 @@ class ClassicWindow(QMainWindow):
         self.main_tabs.addTab(control_tab, "Control")
         self.main_tabs.addTab(chat_tab, "Chat")
         self.main_tabs.addTab(live_tab, "Live")
+        self.main_tabs.currentChanged.connect(lambda _index: self._refresh_workspace_views(force=True))
 
         workspace_shell = QWidget()
         workspace_shell_layout = QHBoxLayout(workspace_shell)
@@ -1178,7 +1180,58 @@ class ClassicWindow(QMainWindow):
         </style></head><body><main><h1>{html.escape(title)}</h1>
         <p class='sub'>{html.escape(subtitle)}</p><section class='grid'>{''.join(cards_html)}</section></main></body></html>"""
 
-    def _agents_html(self):
+    def _dashboard_snapshot(self):
+        config = load_config(CONFIG_FILE)
+        try:
+            catalog = build_agent_catalog(BASE_DIR, config)
+        except Exception:
+            catalog = []
+        try:
+            workspaces = self.workspace_manager.list_workspaces()
+            sessions = self.workspace_manager.list_sessions(limit=20)
+            notes = self.workspace_manager.list_notes(limit=20)
+        except (OSError, ValueError):
+            workspaces, sessions, notes = [], [], []
+        events = []
+        try:
+            events = load_chat_events(CHAT_HISTORY_FILE, limit=240)
+        except OSError:
+            events = []
+        payload_events = [
+            event for event in events
+            if event.get("payload_html") or event.get("attachments")
+        ]
+        active_agents = [
+            record for record in catalog
+            if record.enabled or record.runtime_status == "active"
+        ]
+        triggerable = [
+            record for record in active_agents
+            if record.tier in {"brainvault", "shared", "personal", "legacy"}
+            and not record.parent_agent
+        ]
+        open_jobs = sum(int(record.job_open) for record in catalog)
+        failed_jobs = sum(int(record.job_failed) for record in catalog)
+        return {
+            "agents_total": len(catalog),
+            "agents_active": len(active_agents),
+            "triggerable": len(triggerable),
+            "open_jobs": open_jobs,
+            "failed_jobs": failed_jobs,
+            "jobs_total": sum(int(record.job_total) for record in catalog),
+            "workspaces": len(workspaces),
+            "sessions": len(sessions),
+            "notes": len(notes),
+            "payloads": len(payload_events),
+            "latest_session": sessions[0].title if sessions else "",
+            "latest_result": str(payload_events[-1].get("text") or payload_events[-1].get("source") or "")[:120] if payload_events else "",
+            "top_agents": triggerable[:5],
+        }
+
+    def _agents_html(self, snapshot=None):
+        snapshot = snapshot or self._dashboard_snapshot()
+        top_agents = snapshot.get("top_agents", [])
+        agent_names = ", ".join(record.name for record in top_agents[:3]) if top_agents else "Noch keine startbaren Hauptagenten erkannt."
         return self._panel_html(
             "Agents",
             "Zentrale Sicht auf laufende Aufträge, direkt startbare Hauptagenten und geplante Automatismen.",
@@ -1186,25 +1239,26 @@ class ClassicWindow(QMainWindow):
                 {
                     "icon": "▶",
                     "title": "Laufende Aufträge",
-                    "body": "Hier erscheinen aktive Pi-, Codex- oder Trinity-Jobs mit Status, Ergebnis und Log.",
+                    "body": f"Offen: {snapshot['open_jobs']} · Fehlgeschlagen: {snapshot['failed_jobs']} · Gesamt: {snapshot['jobs_total']}",
                     "badge": "Jobs",
                 },
                 {
-                    "icon": "⚙",
+                    "icon": "◉",
                     "title": "Startbare Hauptagenten",
-                    "body": "Später lassen sich Mailrundlauf, Recherche, Medienjobs oder eigene BrainVault-Agenten direkt starten.",
-                    "badge": "Trigger",
+                    "body": f"{snapshot['triggerable']} Hauptagenten bereit. Beispiele: {agent_names}",
+                    "badge": f"{snapshot['agents_active']}/{snapshot['agents_total']}",
                 },
                 {
                     "icon": "◷",
                     "title": "Geplante Automatismen",
-                    "body": "Wiederkehrende Abläufe wie Morgen-Mailzusammenfassung oder Tagesbriefing werden hier verwaltet.",
+                    "body": "Automationen werden hier als nächste Ausbaustufe sichtbar: Zeitplan, letzter Lauf und Ergebnis.",
                     "badge": "Planung",
                 },
             ],
         )
 
-    def _control_html(self):
+    def _control_html(self, snapshot=None):
+        snapshot = snapshot or self._dashboard_snapshot()
         return self._panel_html(
             "Control",
             "Arbeitsnahe Steuerung fuer Memory, RAG, Skills, Sessions, Prompts und Diagnose.",
@@ -1212,25 +1266,25 @@ class ClassicWindow(QMainWindow):
                 {
                     "icon": "◎",
                     "title": "Übersicht",
-                    "body": "Systemzustand, aktive Verbindung, Runtime und wichtige Hinweise.",
+                    "body": f"Arbeitsraeume: {snapshot['workspaces']} · Sessions: {snapshot['sessions']} · Notizen: {snapshot['notes']}",
                     "badge": "Status",
                 },
                 {
                     "icon": "▦",
                     "title": "RAG und Dateien",
-                    "body": "Index, Wissensquellen und geladene Dateien werden hier gebündelt.",
+                    "body": f"Chat-/History-Events und {snapshot['payloads']} Ergebnis-Payloads sind fuer Suche und Zusammenfassung sichtbar.",
                     "badge": "Wissen",
                 },
                 {
                     "icon": "✦",
                     "title": "Dreaming und Memory",
-                    "body": "Memory-Graph, Zusammenfassungen und Hintergrundverdichtung wandern aus der Arbeitsansicht hierher.",
+                    "body": "Memory-Graph, Zusammenfassungen und Hintergrundverdichtung liegen in Settings/Memory und werden hier zusammengefuehrt.",
                     "badge": "Memory",
                 },
                 {
                     "icon": "✎",
                     "title": "System- und Userprompt",
-                    "body": "Persona, Arbeitsregeln und persönliche Hinweise bleiben sichtbar, aber getrennt von harten API-Settings.",
+                    "body": f"Aktuelle Session: {snapshot['latest_session'] or 'keine aktive Workspace-Session'}",
                     "badge": "Prompts",
                 },
             ],
@@ -1248,8 +1302,9 @@ class ClassicWindow(QMainWindow):
             payload,
         )
         self.daily_workspace.setHtml(daily_html, base_url)
-        self.agents_workspace.setHtml(self._agents_html(), base_url)
-        self.control_workspace.setHtml(self._control_html(), base_url)
+        snapshot = self._dashboard_snapshot()
+        self.agents_workspace.setHtml(self._agents_html(snapshot), base_url)
+        self.control_workspace.setHtml(self._control_html(snapshot), base_url)
 
     def choose_lecture_pdf(self):
         path, _ = QFileDialog.getOpenFileName(

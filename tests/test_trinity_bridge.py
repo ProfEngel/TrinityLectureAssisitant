@@ -52,7 +52,7 @@ def test_web_ui_contains_file_upload_and_token_login():
     assert 'id="microphoneToggle"' in page
     assert 'id="ttsToggle"' in page
     assert "'/runtime'" in page
-    for view in ("Alltag", "Vortrag", "Web", "Presenter", "Chat", "Live"):
+    for view in ("Talk", "Vortrag", "Web", "Chat", "Live"):
         assert view in page
     assert 'id="lectureFrame"' in page
     assert 'id="presenterFrame"' in page

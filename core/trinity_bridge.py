@@ -10,6 +10,7 @@ import mimetypes
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import threading
 import time
@@ -19,6 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import url2pathname
 
+from agent_catalog import build_agent_catalog
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from configuration import load_config, save_config
@@ -28,6 +30,7 @@ from platform_adapters import find_codex_executable, find_opencode_executable, f
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from web_ui import render_web_ui
+from workspace_manager import TrinityWorkspaceManager
 
 
 DEFAULT_HOST = "127.0.0.1"
@@ -461,6 +464,95 @@ class TrinityBridge:
             "audio_capture_mode": str(system.get("audio_capture_mode", "mic_only") or "mic_only"),
             "tts_enabled": bool(system.get("tts_enabled", True)),
         }
+
+    def dashboard(self, user=None):
+        """Return lightweight dashboard data for Agents and Control pages."""
+
+        config = load_config(self.config_path)
+        try:
+            catalog = build_agent_catalog(self.home, config)
+        except Exception:
+            catalog = []
+
+        agents = [
+            {
+                "id": record.agent_id,
+                "name": record.name,
+                "tier": record.tier,
+                "status": record.runtime_status,
+                "quality": record.quality_status,
+                "enabled": bool(record.enabled),
+                "preferred_harness": record.preferred_harness,
+                "job_total": int(record.job_total),
+                "job_open": int(record.job_open),
+                "job_failed": int(record.job_failed),
+            }
+            for record in catalog
+        ]
+        try:
+            manager = TrinityWorkspaceManager(str(self.home), config)
+            workspaces = manager.list_workspaces()
+            sessions = manager.list_sessions(limit=12)
+            notes = manager.list_notes(limit=12)
+        except Exception:
+            workspaces, sessions, notes = [], [], []
+
+        events = load_chat_events(self.history_path_for(user), limit=MAX_EVENTS)
+        payload_events = [
+            event for event in events
+            if event.get("payload_html") or event.get("attachments")
+        ]
+        runtime = self.get_runtime()
+        runtime.pop("ok", None)
+        return {
+            "ok": True,
+            "runtime": runtime,
+            "agents": {
+                "total": len(agents),
+                "enabled": sum(1 for item in agents if item["enabled"] or item["status"] == "active"),
+                "running_jobs": sum(item["job_open"] for item in agents),
+                "failed_jobs": sum(item["job_failed"] for item in agents),
+                "items": agents[:80],
+            },
+            "jobs": {
+                "open": sum(item["job_open"] for item in agents),
+                "failed": sum(item["job_failed"] for item in agents),
+                "total": sum(item["job_total"] for item in agents),
+                "recent": self._recent_jobs(),
+            },
+            "control": {
+                "workspaces": len(workspaces),
+                "sessions": len(sessions),
+                "notes": len(notes),
+                "memory_db": str(self.memory_dir / "trinity_memory.sqlite3"),
+                "history_events": len(events),
+                "payload_results": len(payload_events),
+                "latest_session": sessions[0].title if sessions else "",
+                "latest_result": str(payload_events[-1].get("text") or payload_events[-1].get("source") or "")[:140] if payload_events else "",
+            },
+        }
+
+    def _recent_jobs(self, limit=8):
+        db_path = self.memory_dir / "jobs.sqlite3"
+        if not db_path.is_file():
+            return []
+        try:
+            with sqlite3.connect(db_path) as conn:
+                columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+                select_columns = [
+                    name for name in ("job_id", "route", "status", "created_at", "updated_at", "title")
+                    if name in columns
+                ]
+                if not select_columns:
+                    return []
+                order = "updated_at" if "updated_at" in columns else ("created_at" if "created_at" in columns else "rowid")
+                rows = conn.execute(
+                    f"SELECT {', '.join(select_columns)} FROM jobs ORDER BY {order} DESC LIMIT ?",
+                    (int(limit),),
+                ).fetchall()
+        except sqlite3.Error:
+            return []
+        return [dict(zip(select_columns, row)) for row in rows]
 
     def set_runtime(self, payload):
         if not isinstance(payload, dict):
@@ -1025,6 +1117,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.get_mode())
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.get_runtime())
+                elif parsed.path == "/dashboard":
+                    _json_response(self, 200, bridge.dashboard(user=user))
                 elif parsed.path == "/settings":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
