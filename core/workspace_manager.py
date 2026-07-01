@@ -73,6 +73,7 @@ class SessionRecord:
     status: str
     summary_status: str
     path: Path
+    pinned: bool = False
 
     def as_dict(self) -> dict:
         return {
@@ -81,6 +82,25 @@ class SessionRecord:
             "title": self.title,
             "status": self.status,
             "summary_status": self.summary_status,
+            "pinned": self.pinned,
+            "path": str(self.path),
+        }
+
+
+@dataclass(frozen=True)
+class NoteRecord:
+    id: str
+    workspace_id: str
+    title: str
+    path: Path
+    status: str = "active"
+
+    def as_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "workspace_id": self.workspace_id,
+            "title": self.title,
+            "status": self.status,
             "path": str(self.path),
         }
 
@@ -114,6 +134,7 @@ class TrinityWorkspaceManager:
                 },
             )
         (inbox / "sessions").mkdir(parents=True, exist_ok=True)
+        (inbox / "notes").mkdir(parents=True, exist_ok=True)
         return {
             "runtime_root": str(self.paths.runtime_root),
             "workspaces_root": str(self.root),
@@ -141,6 +162,7 @@ class TrinityWorkspaceManager:
         }
         self._write_workspace(workspace_id, data)
         (self.root / workspace_id / "sessions").mkdir(parents=True, exist_ok=True)
+        (self.root / workspace_id / "notes").mkdir(parents=True, exist_ok=True)
         return self._workspace_record(workspace_id)
 
     def list_workspaces(self) -> list[WorkspaceRecord]:
@@ -163,6 +185,8 @@ class TrinityWorkspaceManager:
         self.ensure_layout()
         if not (self.root / workspace_id / "workspace.json").exists():
             raise ValueError(f"Arbeitsraum nicht gefunden: {workspace_id}")
+        (self.root / workspace_id / "sessions").mkdir(parents=True, exist_ok=True)
+        (self.root / workspace_id / "notes").mkdir(parents=True, exist_ok=True)
         return self._workspace_record(workspace_id)
 
     def create_session(
@@ -188,6 +212,7 @@ class TrinityWorkspaceManager:
             "last_opened_at": _now_iso(),
             "media_count": 0,
             "job_count": 0,
+            "pinned": False,
             "tags": [],
         }
         _write_json(session_dir / "session.json", data)
@@ -215,6 +240,44 @@ class TrinityWorkspaceManager:
         )
         return records[:limit] if limit else records
 
+    def get_session(self, session_id: str) -> SessionRecord:
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        return self._session_record(session_dir)
+
+    def update_session_summary_status(self, session_id: str, status: str) -> SessionRecord:
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        data = _read_json(session_dir / "session.json", {})
+        data["summary_status"] = status or "none"
+        data["updated_at"] = _now_iso()
+        _write_json(session_dir / "session.json", data)
+        return self._session_record(session_dir)
+
+    def update_workspace_pinned(self, workspace_id: str, pinned: bool) -> WorkspaceRecord:
+        self.ensure_layout()
+        workspace = self.get_workspace(workspace_id)
+        data = _read_json(workspace.path / "workspace.json", {})
+        data["pinned"] = bool(pinned)
+        data["updated_at"] = _now_iso()
+        _write_json(workspace.path / "workspace.json", data)
+        return self._workspace_record(workspace.id)
+
+    def update_session_pinned(self, session_id: str, pinned: bool) -> SessionRecord:
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        data = _read_json(session_dir / "session.json", {})
+        data["pinned"] = bool(pinned)
+        data["updated_at"] = _now_iso()
+        _write_json(session_dir / "session.json", data)
+        return self._session_record(session_dir)
+
     def move_session(self, session_id: str, target_workspace_id: str) -> SessionRecord:
         self.ensure_layout()
         target = self.get_workspace(target_workspace_id)
@@ -235,11 +298,69 @@ class TrinityWorkspaceManager:
         _write_json(target_dir / "session.json", data)
         return self._session_record(target_dir)
 
+    def create_note(self, workspace_id: str, title: str | None = None, body: str = "") -> NoteRecord:
+        self.ensure_layout()
+        workspace = self.get_workspace(workspace_id)
+        safe_title = (title or session_name_prefix() + "Notiz").strip() or session_name_prefix() + "Notiz"
+        note_id = f"note_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        note_path = workspace.path / "notes" / f"{note_id}.md"
+        heading = safe_title.lstrip("# ").strip() or note_id
+        content = body.strip()
+        if content:
+            note_text = f"# {heading}\n\n{content}\n"
+        else:
+            note_text = f"# {heading}\n\n"
+        note_path.parent.mkdir(parents=True, exist_ok=True)
+        note_path.write_text(note_text, encoding="utf-8")
+        metadata = {
+            "id": note_id,
+            "workspace_id": workspace.id,
+            "title": safe_title,
+            "status": "active",
+            "created_at": _now_iso(),
+            "updated_at": _now_iso(),
+            "path": str(note_path),
+        }
+        _write_json(workspace.path / "notes" / f"{note_id}.json", metadata)
+        return NoteRecord(
+            id=note_id,
+            workspace_id=workspace.id,
+            title=safe_title,
+            status="active",
+            path=note_path,
+        )
+
+    def list_notes(self, workspace_id: str | None = None, limit: int | None = None) -> list[NoteRecord]:
+        self.ensure_layout()
+        if workspace_id:
+            workspace = self.get_workspace(workspace_id)
+            note_files = (workspace.path / "notes").glob("*.json")
+        else:
+            note_files = self.root.glob("*/notes/*.json")
+        records = [self._note_record(path) for path in note_files]
+        records.sort(
+            key=lambda item: _read_json(item.path.with_suffix(".json"), {}).get("updated_at", ""),
+            reverse=True,
+        )
+        return records[:limit] if limit else records
+
     def _find_session_dir(self, session_id: str) -> Path | None:
         for path in self.root.glob("*/sessions/*/session.json"):
             if path.parent.name == session_id:
                 return path.parent
         return None
+
+    @staticmethod
+    def _note_record(metadata_path: Path) -> NoteRecord:
+        data = _read_json(metadata_path, {})
+        path = Path(str(data.get("path") or metadata_path.with_suffix(".md")))
+        return NoteRecord(
+            id=str(data.get("id") or metadata_path.stem),
+            workspace_id=str(data.get("workspace_id") or metadata_path.parent.parent.name),
+            title=str(data.get("title") or metadata_path.stem),
+            status=str(data.get("status") or "active"),
+            path=path,
+        )
 
     def _write_workspace(self, workspace_id: str, data: dict) -> None:
         workspace_dir = self.root / workspace_id
@@ -266,5 +387,6 @@ class TrinityWorkspaceManager:
             title=str(data.get("title") or session_dir.name),
             status=str(data.get("status") or "active"),
             summary_status=str(data.get("summary_status") or "none"),
+            pinned=bool(data.get("pinned", False)),
             path=session_dir,
         )

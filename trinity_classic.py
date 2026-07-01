@@ -281,6 +281,8 @@ class ClassicWindow(QMainWindow):
         self._remote_next_poll = 0.0
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
         self.workspace_manager = TrinityWorkspaceManager(BASE_DIR, load_config(CONFIG_FILE))
+        self.selected_workspace_id = INBOX_WORKSPACE_ID
+        self.selected_workspace_title = "Schnellsessions"
         self.theme = self._load_theme()
         self.workspace_sidebar_visible = True
         self.setAcceptDrops(True)
@@ -543,7 +545,7 @@ class ClassicWindow(QMainWindow):
         self.sidebar_dynamic_layout = QVBoxLayout()
         self.sidebar_dynamic_layout.setContentsMargins(0, 0, 0, 0)
         self.sidebar_dynamic_layout.setSpacing(8)
-        layout.addWidget(self._sidebar_button("＋ Neue Session", self.start_new_session))
+        layout.addWidget(self._sidebar_button("＋ Neue Session im Arbeitsraum", self.start_new_session))
         layout.addWidget(self._sidebar_button("⌕ Suche", self._show_sidebar_placeholder))
         layout.addLayout(self.sidebar_dynamic_layout)
         self._refresh_workspace_sidebar()
@@ -563,11 +565,17 @@ class ClassicWindow(QMainWindow):
                 widget.deleteLater()
             child_layout = item.layout()
             if child_layout is not None:
-                while child_layout.count():
-                    nested = child_layout.takeAt(0)
-                    nested_widget = nested.widget()
-                    if nested_widget is not None:
-                        nested_widget.deleteLater()
+                self._clear_layout(child_layout)
+
+    def _clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+            child_layout = item.layout()
+            if child_layout is not None:
+                self._clear_layout(child_layout)
 
     def _refresh_workspace_sidebar(self):
         if not hasattr(self, "sidebar_dynamic_layout"):
@@ -575,7 +583,10 @@ class ClassicWindow(QMainWindow):
         self._clear_sidebar_dynamic_layout()
         try:
             workspaces = self.workspace_manager.list_workspaces()
-            sessions = self.workspace_manager.list_sessions(limit=8)
+            selected_workspace = self.workspace_manager.get_workspace(self.selected_workspace_id)
+            self.selected_workspace_title = selected_workspace.title
+            sessions = self.workspace_manager.list_sessions(self.selected_workspace_id, limit=8)
+            notes = self.workspace_manager.list_notes(self.selected_workspace_id, limit=5)
         except (OSError, ValueError) as exc:
             self._add_sidebar_group(
                 self.sidebar_dynamic_layout,
@@ -584,40 +595,29 @@ class ClassicWindow(QMainWindow):
             )
             return
 
-        workspace_items = [
-            (
-                item.title,
-                lambda checked=False, record=item: self._select_workspace_sidebar_item(record),
-            )
-            for item in workspaces[:8]
-        ] or [("Schnellsessions", self._show_sidebar_placeholder)]
-        pinned_items = [
-            (
-                item.title,
-                lambda checked=False, record=item: self._select_workspace_sidebar_item(record),
-            )
-            for item in workspaces
-            if item.pinned
-        ][:5] or [("Aktuelle Session", self._show_sidebar_placeholder)]
+        workspace_items = workspaces[:8]
+        pinned_workspaces = [item for item in workspaces if item.pinned]
+        pinned_sessions = [item for item in self.workspace_manager.list_sessions(limit=20) if item.pinned]
         session_items = [
+            item
+            for item in sessions[:8]
+        ]
+        note_items = [
             (
                 item.title,
-                lambda checked=False, record=item: self._select_session_sidebar_item(record),
+                lambda checked=False, record=item: self._open_note_sidebar_item(record),
             )
-            for item in sessions[:8]
-        ] or [("Noch keine Sessions", self._show_sidebar_placeholder)]
+            for item in notes
+        ]
 
-        self._add_sidebar_group(self.sidebar_dynamic_layout, "Arbeitsräume", workspace_items)
-        self._add_sidebar_group(self.sidebar_dynamic_layout, "Angeheftet", pinned_items)
+        self._add_workspace_sidebar_group(self.sidebar_dynamic_layout, "Arbeitsräume", workspace_items)
+        self._add_pinned_sidebar_group(self.sidebar_dynamic_layout, "Angeheftet", pinned_workspaces, pinned_sessions)
         self._add_sidebar_group(
             self.sidebar_dynamic_layout,
-            "Notizen",
-            [
-                ("Notiz-Inbox", self._show_sidebar_placeholder),
-                ("Entscheidungen", self._show_sidebar_placeholder),
-            ],
+            f"Notizen · {self.selected_workspace_title}",
+            [("＋ Neue Notiz", self.create_note_for_selected_workspace)] + note_items,
         )
-        self._add_sidebar_group(self.sidebar_dynamic_layout, "Sessions", session_items)
+        self._add_session_sidebar_group(self.sidebar_dynamic_layout, "Sessions", session_items)
         self._add_sidebar_group(
             self.sidebar_dynamic_layout,
             "Summaries",
@@ -628,7 +628,10 @@ class ClassicWindow(QMainWindow):
         )
 
     def _select_workspace_sidebar_item(self, record):
+        self.selected_workspace_id = record.id
+        self.selected_workspace_title = record.title
         self.status.setText(f"Arbeitsraum: {record.title}")
+        self._refresh_workspace_sidebar()
 
     def _select_session_sidebar_item(self, record):
         self.session_id = record.id
@@ -636,6 +639,98 @@ class ClassicWindow(QMainWindow):
         self._chat_signature = None
         self._refresh_chat_history()
         self.status.setText(f"Session geöffnet: {record.title}")
+
+    def _workspace_label(self, record):
+        marker = "▾ " if record.id == self.selected_workspace_id else ""
+        return f"{marker}{record.title}"
+
+    def _open_note_sidebar_item(self, record):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(record.path)))
+        self.status.setText(f"Notiz geöffnet: {record.title}")
+
+    def create_note_for_selected_workspace(self):
+        suggested = _default_session_name_prefix() + "Notiz"
+        title, accepted = QInputDialog.getText(
+            self,
+            "Neue Notiz",
+            f"Notiz fuer {self.selected_workspace_title}:",
+            text=suggested,
+        )
+        if not accepted:
+            return
+        try:
+            note = self.workspace_manager.create_note(
+                self.selected_workspace_id,
+                title.strip() or suggested,
+            )
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Notiz konnte nicht erstellt werden: {exc}")
+            return
+        self._refresh_workspace_sidebar()
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(note.path)))
+        self.status.setText(f"Notiz erstellt: {note.title}")
+
+    def summarize_session_from_sidebar(self, record):
+        try:
+            record = self.workspace_manager.update_session_summary_status(record.id, "queued")
+            started_at = self._session_started_timestamp(record)
+            display_session_id = self.session_id or record.id
+            display_session_name = self.session_name or record.title
+            self._summarize_previous_session_in_background(
+                record.id,
+                record.title,
+                started_at,
+                time.time(),
+                display_session_id,
+                display_session_name,
+            )
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Summary konnte nicht gestartet werden: {exc}")
+            return
+        self._refresh_workspace_sidebar()
+        self.status.setText(f"Zusammenfassung gestartet: {record.title}")
+
+    def start_session_for_workspace(self, record):
+        self.selected_workspace_id = record.id
+        self.selected_workspace_title = record.title
+        self._refresh_workspace_sidebar()
+        self.start_new_session()
+
+    def toggle_workspace_pinned(self, record):
+        try:
+            updated = self.workspace_manager.update_workspace_pinned(record.id, not record.pinned)
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Anheften fehlgeschlagen: {exc}")
+            return
+        self._refresh_workspace_sidebar()
+        self.status.setText(
+            f"Arbeitsraum angeheftet: {updated.title}"
+            if updated.pinned
+            else f"Arbeitsraum gelöst: {updated.title}"
+        )
+
+    def toggle_session_pinned(self, record):
+        try:
+            updated = self.workspace_manager.update_session_pinned(record.id, not record.pinned)
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Anheften fehlgeschlagen: {exc}")
+            return
+        self._refresh_workspace_sidebar()
+        self.status.setText(
+            f"Session angeheftet: {updated.title}"
+            if updated.pinned
+            else f"Session gelöst: {updated.title}"
+        )
+
+    def _session_started_timestamp(self, record):
+        try:
+            data = json.loads((record.path / "session.json").read_text(encoding="utf-8"))
+            started_at = str(data.get("started_at") or "")
+            if started_at:
+                return datetime.fromisoformat(started_at).timestamp()
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+        return self.session_started_at
 
     def _sidebar_button(self, label, callback):
         button = QPushButton(label)
@@ -650,6 +745,107 @@ class ClassicWindow(QMainWindow):
         layout.addWidget(label)
         for item_label, callback in items:
             layout.addWidget(self._sidebar_button(item_label, callback))
+
+    def _sidebar_icon_button(self, label, tooltip, callback):
+        button = QPushButton(label)
+        button.setObjectName("sidebarIconButton")
+        button.setToolTip(tooltip)
+        button.setCursor(Qt.PointingHandCursor)
+        button.clicked.connect(callback)
+        return button
+
+    def _add_workspace_sidebar_group(self, layout, title, workspaces):
+        label = QLabel(title)
+        label.setObjectName("sidebarGroup")
+        layout.addWidget(label)
+        if not workspaces:
+            layout.addWidget(self._sidebar_button("Schnellsessions", self._show_sidebar_placeholder))
+            return
+        for record in workspaces:
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            row.setSpacing(4)
+            row.addWidget(
+                self._sidebar_button(
+                    self._workspace_label(record),
+                    lambda checked=False, item=record: self._select_workspace_sidebar_item(item),
+                ),
+                1,
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "＋",
+                    "Neue Session in diesem Arbeitsraum",
+                    lambda checked=False, item=record: self.start_session_for_workspace(item),
+                )
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "★" if record.pinned else "☆",
+                    "Arbeitsraum anheften oder lösen",
+                    lambda checked=False, item=record: self.toggle_workspace_pinned(item),
+                )
+            )
+            layout.addLayout(row)
+
+    def _add_pinned_sidebar_group(self, layout, title, workspaces, sessions):
+        label = QLabel(title)
+        label.setObjectName("sidebarGroup")
+        layout.addWidget(label)
+        if not workspaces and not sessions:
+            layout.addWidget(self._sidebar_button("Noch nichts angeheftet", self._show_sidebar_placeholder))
+            return
+        for record in workspaces[:4]:
+            layout.addWidget(
+                self._sidebar_button(
+                    f"📁 {record.title}",
+                    lambda checked=False, item=record: self._select_workspace_sidebar_item(item),
+                )
+            )
+        for record in sessions[:4]:
+            layout.addWidget(
+                self._sidebar_button(
+                    f"📄 {record.title}",
+                    lambda checked=False, item=record: self._select_session_sidebar_item(item),
+                )
+            )
+
+    def _add_session_sidebar_group(self, layout, title, sessions):
+        label = QLabel(title)
+        label.setObjectName("sidebarGroup")
+        layout.addWidget(label)
+        if not sessions:
+            layout.addWidget(self._sidebar_button("Noch keine Sessions", self._show_sidebar_placeholder))
+            return
+        for record in sessions:
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            row.setSpacing(4)
+            session_label = record.title
+            if record.summary_status not in {"", "none"}:
+                session_label = f"{session_label} · {record.summary_status}"
+            row.addWidget(
+                self._sidebar_button(
+                    session_label,
+                    lambda checked=False, item=record: self._select_session_sidebar_item(item),
+                ),
+                1,
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "★" if record.pinned else "☆",
+                    "Session anheften oder lösen",
+                    lambda checked=False, item=record: self.toggle_session_pinned(item),
+                )
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "Σ",
+                    "Diese Session im Hintergrund zusammenfassen",
+                    lambda checked=False, item=record: self.summarize_session_from_sidebar(item),
+                )
+            )
+            layout.addLayout(row)
 
     def _show_sidebar_placeholder(self):
         self.status.setText("Diese Arbeitsorga-Gruppe wird im nächsten Schritt vertieft.")
@@ -824,6 +1020,20 @@ class ClassicWindow(QMainWindow):
             }}
             QPushButton#sidebarButton:hover {{
                 background: {colors["hover_bg"]};
+            }}
+            QPushButton#sidebarIconButton {{
+                background: transparent;
+                border: 1px solid {colors["border"]};
+                border-radius: 8px;
+                color: {colors["muted"]};
+                min-width: 26px;
+                max-width: 30px;
+                padding: 6px 0;
+                font-weight: 700;
+            }}
+            QPushButton#sidebarIconButton:hover {{
+                background: {colors["hover_bg"]};
+                color: {colors["text"]};
             }}
             QTabWidget::pane {{
                 border: 1px solid {colors["border"]}; border-radius: 10px;
@@ -1105,7 +1315,7 @@ class ClassicWindow(QMainWindow):
         old_ended_at = time.time()
         session = self.workspace_manager.create_session(
             name.strip() or suggested_name,
-            workspace_id=INBOX_WORKSPACE_ID,
+            workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
             mode=self.mode_combo.currentText(),
         )
         self.session_id = session.id
