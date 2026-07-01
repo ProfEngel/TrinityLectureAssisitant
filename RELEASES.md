@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.19:** Arbeitsorga-Leiste weiter aufgeraeumt: Arbeitsraeume koennen angelegt werden, Platzhaltergruppen verschwinden und die Bedienung rueckt naeher an die Codex-Seitenleiste mit subtilen Icon-Aktionen.
 - **v0.16.18:** Arbeitsorga-Leiste verfeinert: Arbeitsraeume starten Sessions im gewaehlten Kontext, erzeugen Notizen pro Arbeitsraum und Sessions haben direkte Aktionen fuer Anheften und Zusammenfassen.
 - **v0.16.17:** Arbeitsraeume/Sessions beginnen als neue Ordnungsschicht: lokale Runtime-Metadaten, CLI-Kommandos, ClassicUI-Arbeitsleiste, Memory in den Einstellungen und Roadmap fuer iPad/iPhone/WebUI.
 - **v0.16.16:** Agentenbau und Agenten-Ueberarbeitung nutzen standardmaessig Codex als Builder-Harness mit HITL-Regeln, Plan, Tests und Rueckfrage-/Freigabebericht; Pi bleibt Standard fuer bestehende BrainVault-Agentenarbeit.

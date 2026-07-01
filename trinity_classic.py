@@ -539,22 +539,28 @@ class ClassicWindow(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        title = QLabel("Arbeitsansicht")
+        title = QLabel("Arbeitsräume")
         title.setObjectName("sidebarTitle")
-        layout.addWidget(title)
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(4)
+        title_row.addWidget(title, 1)
+        title_row.addWidget(
+            self._sidebar_icon_button("＋", "Neuen Arbeitsraum anlegen", self.create_workspace_from_sidebar)
+        )
+        title_row.addWidget(
+            self._sidebar_icon_button("◰", "Neue Session im gewählten Arbeitsraum", self.start_new_session)
+        )
+        title_row.addWidget(
+            self._sidebar_icon_button("✎", "Neue Notiz im gewählten Arbeitsraum", self.create_note_for_selected_workspace)
+        )
+        layout.addLayout(title_row)
         self.sidebar_dynamic_layout = QVBoxLayout()
         self.sidebar_dynamic_layout.setContentsMargins(0, 0, 0, 0)
-        self.sidebar_dynamic_layout.setSpacing(8)
-        layout.addWidget(self._sidebar_button("＋ Neue Session im Arbeitsraum", self.start_new_session))
-        layout.addWidget(self._sidebar_button("⌕ Suche", self._show_sidebar_placeholder))
+        self.sidebar_dynamic_layout.setSpacing(4)
         layout.addLayout(self.sidebar_dynamic_layout)
         self._refresh_workspace_sidebar()
         layout.addStretch()
-
-        hint = QLabel("Arbeitsorganisation lokal aktiv · Details wachsen mit den nächsten Schritten")
-        hint.setObjectName("sidebarHint")
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
         return sidebar
 
     def _clear_sidebar_dynamic_layout(self):
@@ -590,7 +596,7 @@ class ClassicWindow(QMainWindow):
         except (OSError, ValueError) as exc:
             self._add_sidebar_group(
                 self.sidebar_dynamic_layout,
-                "Arbeitsräume",
+                "Fehler",
                 [(f"Nicht geladen: {exc}", self._show_sidebar_placeholder)],
             )
             return
@@ -610,22 +616,12 @@ class ClassicWindow(QMainWindow):
             for item in notes
         ]
 
-        self._add_workspace_sidebar_group(self.sidebar_dynamic_layout, "Arbeitsräume", workspace_items)
         self._add_pinned_sidebar_group(self.sidebar_dynamic_layout, "Angeheftet", pinned_workspaces, pinned_sessions)
-        self._add_sidebar_group(
-            self.sidebar_dynamic_layout,
-            f"Notizen · {self.selected_workspace_title}",
-            [("＋ Neue Notiz", self.create_note_for_selected_workspace)] + note_items,
-        )
-        self._add_session_sidebar_group(self.sidebar_dynamic_layout, "Sessions", session_items)
-        self._add_sidebar_group(
-            self.sidebar_dynamic_layout,
-            "Summaries",
-            [
-                ("Offen", self._show_sidebar_placeholder),
-                ("Erstellt", self._show_sidebar_placeholder),
-            ],
-        )
+        self._add_workspace_sidebar_group(self.sidebar_dynamic_layout, "", workspace_items)
+        if note_items:
+            self._add_sidebar_group(self.sidebar_dynamic_layout, "Notizen", note_items)
+        if session_items:
+            self._add_session_sidebar_group(self.sidebar_dynamic_layout, "Sessions", session_items)
 
     def _select_workspace_sidebar_item(self, record):
         self.selected_workspace_id = record.id
@@ -669,6 +665,29 @@ class ClassicWindow(QMainWindow):
         self._refresh_workspace_sidebar()
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(note.path)))
         self.status.setText(f"Notiz erstellt: {note.title}")
+
+    def create_workspace_from_sidebar(self):
+        title, accepted = QInputDialog.getText(
+            self,
+            "Neuer Arbeitsraum",
+            "Name:",
+            text="",
+        )
+        if not accepted:
+            return
+        title = title.strip()
+        if not title:
+            self.status.setText("Arbeitsraum braucht einen Namen.")
+            return
+        try:
+            workspace = self.workspace_manager.create_workspace(title)
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Arbeitsraum konnte nicht erstellt werden: {exc}")
+            return
+        self.selected_workspace_id = workspace.id
+        self.selected_workspace_title = workspace.title
+        self._refresh_workspace_sidebar()
+        self.status.setText(f"Arbeitsraum erstellt: {workspace.title}")
 
     def summarize_session_from_sidebar(self, record):
         try:
@@ -755,11 +774,11 @@ class ClassicWindow(QMainWindow):
         return button
 
     def _add_workspace_sidebar_group(self, layout, title, workspaces):
-        label = QLabel(title)
-        label.setObjectName("sidebarGroup")
-        layout.addWidget(label)
+        if title:
+            label = QLabel(title)
+            label.setObjectName("sidebarGroup")
+            layout.addWidget(label)
         if not workspaces:
-            layout.addWidget(self._sidebar_button("Schnellsessions", self._show_sidebar_placeholder))
             return
         for record in workspaces:
             row = QHBoxLayout()
@@ -789,12 +808,11 @@ class ClassicWindow(QMainWindow):
             layout.addLayout(row)
 
     def _add_pinned_sidebar_group(self, layout, title, workspaces, sessions):
+        if not workspaces and not sessions:
+            return
         label = QLabel(title)
         label.setObjectName("sidebarGroup")
         layout.addWidget(label)
-        if not workspaces and not sessions:
-            layout.addWidget(self._sidebar_button("Noch nichts angeheftet", self._show_sidebar_placeholder))
-            return
         for record in workspaces[:4]:
             layout.addWidget(
                 self._sidebar_button(
@@ -994,15 +1012,17 @@ class ClassicWindow(QMainWindow):
             }}
             QLabel#sidebarTitle {{
                 color: {colors["text"]};
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 700;
-                padding: 2px 2px 8px;
+                padding: 2px 2px 6px;
             }}
             QLabel#sidebarGroup {{
                 color: {colors["muted"]};
-                font-size: 11px;
+                background: transparent;
+                font-size: 10px;
                 font-weight: 700;
-                padding: 13px 2px 2px;
+                letter-spacing: 0.5px;
+                padding: 12px 2px 2px;
             }}
             QLabel#sidebarHint {{
                 color: {colors["muted"]};
@@ -1016,7 +1036,7 @@ class ClassicWindow(QMainWindow):
                 color: {colors["text"]};
                 font-weight: 500;
                 text-align: left;
-                padding: 8px 10px;
+                padding: 7px 9px;
             }}
             QPushButton#sidebarButton:hover {{
                 background: {colors["hover_bg"]};
@@ -1024,11 +1044,11 @@ class ClassicWindow(QMainWindow):
             QPushButton#sidebarIconButton {{
                 background: transparent;
                 border: 1px solid {colors["border"]};
-                border-radius: 8px;
+                border-radius: 7px;
                 color: {colors["muted"]};
-                min-width: 26px;
-                max-width: 30px;
-                padding: 6px 0;
+                min-width: 25px;
+                max-width: 28px;
+                padding: 5px 0;
                 font-weight: 700;
             }}
             QPushButton#sidebarIconButton:hover {{
