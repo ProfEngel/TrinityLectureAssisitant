@@ -98,7 +98,7 @@ def test_agent_builder_natural_import_phrase_uses_import_mode(tmp_path, monkeypa
     assert manifest["source_agent_path"] == str(source.resolve())
 
 
-def test_agent_builder_selects_configured_builder_harness_without_explicit_name(monkeypatch):
+def test_agent_builder_prefers_codex_builder_without_explicit_name(monkeypatch):
     skill = _load_agent_builder()
     config = {
         "control_plane": {"builder_harness": "pi"},
@@ -116,8 +116,44 @@ def test_agent_builder_selects_configured_builder_harness_without_explicit_name(
     assert skill._requested_harnesses(
         "Trinity, hier ist ein Agent. Mach ihn fuer Trinity moeglich.",
         {},
+    ) == ["codex"]
+    assert skill._builder_harness_candidates(config)[0] == "codex"
+
+
+def test_agent_builder_can_still_use_explicit_pi(monkeypatch):
+    skill = _load_agent_builder()
+    config = {
+        "control_plane": {"builder_harness": "codex"},
+        "harness_routing": {
+            "frameworks": {
+                "pi": {"roles": {"agent_builder": True}},
+                "codex": {"roles": {"agent_builder": True}},
+            }
+        },
+        "pi": {"enabled": True},
+        "codex": {"enabled": True, "projects": {"SandboxVault": "/tmp/sandbox"}},
+    }
+    monkeypatch.setattr(skill, "_config_from_context", lambda context: config)
+
+    assert skill._requested_harnesses(
+        "Trinity, baue einen neuen Agenten fuer Steuern mit Pi.",
+        {},
     ) == ["pi"]
-    assert skill._builder_harness_candidates(config)[0] == "pi"
+
+
+def test_agent_builder_codex_query_contains_hitl_rules(tmp_path):
+    skill = _load_agent_builder()
+    query = skill._harness_query(
+        "codex",
+        "Trinity, verbessere den Mail-Agenten um Priorisierung.",
+        "edit",
+        tmp_path / "BrainVault" / ".agents" / "draft" / "mail-prio",
+        {"ok": True, "errors": [], "warnings": []},
+    )
+
+    assert "HITL-Regeln fuer Codex" in query
+    assert "Rueckfragen im Abschlussbericht" in query
+    assert "Schreibe nur in den Staging-Pfad" in query
 
 
 def test_agent_builder_edit_creates_brainvault_draft_with_parent(tmp_path, monkeypatch):

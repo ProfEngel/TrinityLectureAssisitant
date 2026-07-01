@@ -617,9 +617,14 @@ def _requested_harnesses(query: str, context: dict) -> list[str]:
 def _builder_harness_candidates(config: dict) -> list[str]:
     default_builder = str(config.get("control_plane", {}).get("builder_harness", "")).strip().casefold()
     candidates = []
-    if default_builder in {"codex", "pi", "opencode"}:
+    # Agent construction/refactoring should be handled by the coding harness by
+    # default. Pi remains the normal BrainVault execution harness; Codex is the
+    # safer default for building, tests and reviewable diffs.
+    if _harness_role_enabled(config, "codex", "agent_builder"):
+        candidates.append("codex")
+    if default_builder in {"codex", "pi", "opencode"} and default_builder not in candidates:
         candidates.append(default_builder)
-    for harness_id in ("pi", "codex", "opencode"):
+    for harness_id in ("codex", "opencode", "pi"):
         if harness_id not in candidates:
             candidates.append(harness_id)
     return candidates
@@ -710,7 +715,16 @@ def _harness_query(harness_id: str, query: str, action: str, staging_path: Path,
         "personal/shared und keine externen Aktionen."
     )
     if harness_id == "codex":
-        return "Trinity, nutze Codex. " + base
+        return (
+            "Trinity, nutze Codex. "
+            + base
+            + "\n\nHITL-Regeln fuer Codex:\n"
+            "- Arbeite wie ein Builder im Review-Modus: erst Plan, dann kleine nachvollziehbare Aenderungen.\n"
+            "- Wenn fachliche Entscheidungen, Rechteerweiterungen, produktive Aktivierung oder riskante Aktionen noetig waeren, stelle Rueckfragen im Abschlussbericht statt sie eigenmaechtig umzusetzen.\n"
+            "- Fuehre lokale Tests aus, soweit sie ohne externe Freigabe moeglich sind.\n"
+            "- Schreibe nur in den Staging-Pfad und passende Builder-/Report-Dateien dort.\n"
+            "- Markiere klar, was der Nutzer als naechstes freigeben oder entscheiden muss.\n"
+        )
     if harness_id == "opencode":
         return "Trinity, nutze OpenCode. " + base
     return "Trinity, nutze Pi. " + base
