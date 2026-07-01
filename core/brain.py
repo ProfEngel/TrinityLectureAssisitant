@@ -434,25 +434,29 @@ class TrinityBrain:
         # --- DYNAMIC SKILL DISPATCH (T2I / I2I / alle anderen) ---
         if not has_payload and not search_context:
             for skill in getattr(self, 'live_skills', []):
+                skill_context = {
+                    "brain": self,
+                    "from_telegram": from_telegram,
+                    "telegram_cfg": getattr(self, '_telegram_cfg', {}),
+                    "codex_cfg": getattr(self, '_codex_cfg', {}),
+                    "opencode_cfg": getattr(self, '_opencode_cfg', {}),
+                    "pi_cfg": getattr(self, '_pi_cfg', {}),
+                    "image_path": primary_image_path,
+                    "attachments": attachments or [],
+                    "task_decision": task_decision,
+                }
                 if primary_image_path and not self._skill_allowed_for_image_upload(skill, router_text):
                     print(
                         f"🖼️ Überspringe {getattr(skill, '__name__', 'Skill')} "
                         "für normale Bildanalyse."
                     )
                     continue
-                if skill.can_handle(router_text):
+                handles_query = skill.can_handle(router_text)
+                if not handles_query and hasattr(skill, "can_handle_with_context"):
+                    handles_query = skill.can_handle_with_context(router_text, skill_context)
+                if handles_query:
                     try:
-                        result = skill.execute(user_query, context={
-                            "brain": self,
-                            "from_telegram": from_telegram,
-                            "telegram_cfg": getattr(self, '_telegram_cfg', {}),
-                            "codex_cfg": getattr(self, '_codex_cfg', {}),
-                            "opencode_cfg": getattr(self, '_opencode_cfg', {}),
-                            "pi_cfg": getattr(self, '_pi_cfg', {}),
-                            "image_path": primary_image_path,
-                            "attachments": attachments or [],
-                            "task_decision": task_decision,
-                        })
+                        result = skill.execute(user_query, context=skill_context)
                         if result.get("has_payload"):
                             payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
                             with open(payload_path, "w", encoding="utf-8") as f:

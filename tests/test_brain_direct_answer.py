@@ -48,6 +48,56 @@ def test_brain_returns_skill_direct_answer_without_llm(tmp_path, monkeypatch):
     assert has_payload is False
 
 
+def test_brain_dispatches_skill_via_context_handler_without_llm(tmp_path, monkeypatch):
+    class ContextSkill:
+        PRIORITY = 100
+
+        @staticmethod
+        def can_handle(_query):
+            return False
+
+        @staticmethod
+        def can_handle_with_context(query, context=None):
+            return "eldoria" in query and bool((context or {}).get("pi_cfg", {}).get("enabled"))
+
+        @staticmethod
+        def execute(_query, context=None):
+            return {
+                "has_payload": False,
+                "html_payload": "",
+                "search_context": "",
+                "direct_answer": "Kontextskill hat Eldoria an Pi delegiert.",
+            }
+
+    brain = TrinityBrain.__new__(TrinityBrain)
+    brain.api_key = ""
+    brain.url = "http://unused"
+    brain.model = "unused"
+    brain.live_skills = [ContextSkill]
+    brain.unavailable_skills = []
+    brain._telegram_cfg = {}
+    brain._codex_cfg = {}
+    brain._opencode_cfg = {}
+    brain._pi_cfg = {"enabled": True}
+    brain._soul_cache = ""
+    brain._user_cache = ""
+
+    def fail_request(*_args, **_kwargs):
+        raise AssertionError("Das LLM darf bei contextbasiertem Skill-Routing nicht aufgerufen werden.")
+
+    monkeypatch.setattr("core.brain.requests.post", fail_request)
+    transcript = tmp_path / "transcript.md"
+    transcript.write_text("", encoding="utf-8")
+
+    answer, has_payload = brain.ask(
+        "Trinity, welches Kapitel ist aktuell in Eldoria?",
+        str(transcript),
+    )
+
+    assert answer == "Kontextskill hat Eldoria an Pi delegiert."
+    assert has_payload is False
+
+
 def test_brain_sends_image_attachment_as_multimodal_content(tmp_path, monkeypatch):
     brain = TrinityBrain.__new__(TrinityBrain)
     brain.api_key = "key"

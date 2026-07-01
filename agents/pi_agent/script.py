@@ -60,6 +60,18 @@ def can_handle(query: str) -> bool:
     )
 
 
+def can_handle_with_context(query: str, context: dict = None) -> bool:
+    if can_handle(query):
+        return True
+    context = context or {}
+    config = dict(context.get("pi_cfg") or {})
+    projects = _configured_projects(config)
+    _alias, brainvault_path = _default_project(projects, config)
+    if not brainvault_path:
+        _alias, brainvault_path = _project_from_control_plane(context)
+    return _matches_brainvault_index(brainvault_path, query)
+
+
 def execute(query: str, context: dict = None) -> dict:
     context = context or {}
     config = dict(context.get("pi_cfg") or {})
@@ -265,6 +277,78 @@ def _brainvault_query_context(project_path: Path = None, query: str = "") -> str
         "genannten Dateien relativ zum Arbeitsordner."
     )
     return "\n".join(lines) + "\n\n"
+
+
+def _matches_brainvault_index(root: Path, query: str = "") -> bool:
+    if not root or not (root / ".agents").is_dir():
+        return False
+    terms = _query_terms(query)
+    if not terms:
+        return False
+    index_terms = _brainvault_index_terms(root)
+    if not index_terms:
+        return False
+    matches = [term for term in terms if term in index_terms]
+    if len(matches) >= 2:
+        return True
+    return any(len(term) >= 6 for term in matches)
+
+
+def _brainvault_index_terms(root: Path) -> set[str]:
+    terms = set()
+    agents_dir = root / ".agents"
+    for agent_yaml in sorted(agents_dir.rglob("agent.yaml")):
+        try:
+            raw = agent_yaml.read_text(encoding="utf-8", errors="ignore")[:12000]
+        except OSError:
+            continue
+        values = [
+            agent_yaml.relative_to(root).as_posix(),
+            _yaml_scalar(raw, "id"),
+            _yaml_scalar(raw, "name"),
+            _yaml_scalar(raw, "path"),
+            _yaml_scalar(raw, "workspace"),
+            _yaml_scalar(raw, "parent_agent"),
+        ]
+        for value in values:
+            terms.update(_index_tokens(value))
+
+    for relative_base in (
+        Path("Ideaverse") / "projects",
+        Path("CampusHub") / "projects",
+        Path("MainHub"),
+    ):
+        base = root / relative_base
+        if not base.is_dir():
+            continue
+        for child in sorted(base.iterdir()):
+            if child.is_dir():
+                terms.update(_index_tokens(child.name))
+                terms.update(_index_tokens(child.relative_to(root).as_posix()))
+    return terms
+
+
+def _index_tokens(value: str) -> set[str]:
+    stopwords = {
+        "agent",
+        "agents",
+        "skills",
+        "workflow",
+        "workflows",
+        "projects",
+        "project",
+        "brainvault",
+        "campushub",
+        "ideaverse",
+        "mainhub",
+    }
+    result = set()
+    normalized = _normalize_for_search(value)
+    for token in re.findall(r"[a-z0-9_/-]{4,}", normalized):
+        for part in re.split(r"[_/\-]+", token):
+            if len(part) >= 4 and part not in stopwords:
+                result.add(part)
+    return result
 
 
 def _query_terms(query: str) -> list[str]:

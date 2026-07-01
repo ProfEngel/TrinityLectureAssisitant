@@ -160,6 +160,45 @@ def test_pi_enriches_brainvault_prompt_with_matching_agent_and_project(monkeypat
     assert "Ideaverse/projects/Erendria" in captured["prompt"]
 
 
+def test_pi_context_routes_known_brainvault_project_without_saying_pi(tmp_path):
+    agent = _load_agent()
+    brainvault = tmp_path / "BrainVault"
+    (brainvault / ".agents").mkdir(parents=True)
+    (brainvault / "Ideaverse" / "projects" / "Eldoria").mkdir(parents=True)
+
+    query = "Trinity, welches Kapitel ist aktuell in Eldoria und fasse es kurz zusammen?"
+
+    assert not agent.can_handle(query)
+    assert agent.can_handle_with_context(
+        query,
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"BrainVault": str(brainvault)},
+                "default_project": "BrainVault",
+            }
+        },
+    )
+
+
+def test_pi_context_does_not_route_general_knowledge_question(tmp_path):
+    agent = _load_agent()
+    brainvault = tmp_path / "BrainVault"
+    (brainvault / ".agents").mkdir(parents=True)
+    (brainvault / "Ideaverse" / "projects" / "Eldoria").mkdir(parents=True)
+
+    assert not agent.can_handle_with_context(
+        "Trinity, erklaere mir kurz die Spieltheorie.",
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"BrainVault": str(brainvault)},
+                "default_project": "BrainVault",
+            }
+        },
+    )
+
+
 def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     agent = _load_agent()
     project = tmp_path / "BrainVault"

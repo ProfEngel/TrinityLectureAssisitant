@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.15:** BrainVault-Auto-Routing: Trinity kann bekannte externe BrainVault-Projekte und Agenten nun kontextbasiert an den Standard-Harness (aktuell Pi) delegieren, ohne dass der Nutzer Pi explizit nennen muss.
 - **v0.16.14:** Pi-Desktop-Start stabilisiert: Trinity startet Homebrew-/Node-basierte Pi-CLIs nun auch aus macOS- und Windows-Launchern mit erweitertem Unterprozess-PATH, sodass `env: node: No such file or directory` nicht mehr den Pi-Harness blockiert.
 - **v0.16.13:** Pi-Routing fuer BrainVault-Projektfragen verbessert: Imperativ `frag Pi`, allgemeine BrainVault-Fragen und Erendria-Treffer werden jetzt an Pi geleitet und mit passenden Agenten-/Projektkontexten angereichert.
 - **v0.16.12:** GitHub-Markdown-Dokumentation neutralisiert sensible Dokumentanalyse-Beispiele. `Neue Session` schlaegt in ClassicUI, WebUI und Companion-App nun Namen im Format `JJJJMMDD_HHMM_` vor.
