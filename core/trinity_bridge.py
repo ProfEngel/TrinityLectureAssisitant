@@ -512,7 +512,7 @@ class TrinityBridge:
                 "enabled": sum(1 for item in agents if item["enabled"] or item["status"] == "active"),
                 "running_jobs": sum(item["job_open"] for item in agents),
                 "failed_jobs": sum(item["job_failed"] for item in agents),
-                "items": agents[:80],
+                "items": agents,
             },
             "jobs": {
                 "open": sum(item["job_open"] for item in agents),
@@ -596,6 +596,26 @@ class TrinityBridge:
                 "user": self._read_text_file(self.core_dir / "User.md"),
             },
         }
+
+    def get_prompts(self):
+        return {
+            "ok": True,
+            "soul": self._read_text_file(self.core_dir / "Soul.md"),
+            "user": self._read_text_file(self.core_dir / "User.md"),
+        }
+
+    def save_prompts(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Prompts erwarten ein Objekt.")
+        self.core_dir.mkdir(parents=True, exist_ok=True)
+        for name, value in {"Soul.md": payload.get("soul"), "User.md": payload.get("user")}.items():
+            if value is None:
+                continue
+            encoded = str(value).encode("utf-8")
+            if len(encoded) > MAX_SETTINGS_TEXT_BYTES:
+                raise ValueError(f"{name} ist zu gross.")
+            (self.core_dir / name).write_text(str(value), encoding="utf-8")
+        return self.get_prompts()
 
     def save_web_settings(self, payload):
         if not isinstance(payload, dict) or not isinstance(payload.get("config"), dict):
@@ -1119,6 +1139,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/dashboard":
                     _json_response(self, 200, bridge.dashboard(user=user))
+                elif parsed.path == "/prompts":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Prompts sind nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.get_prompts())
                 elif parsed.path == "/settings":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
@@ -1192,6 +1218,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.set_runtime(_read_json(self)))
+                elif parsed.path == "/prompts":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Prompts sind nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.save_prompts(_read_json(self)))
                 elif parsed.path == "/settings":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
