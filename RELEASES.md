@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.14:** Pi-Desktop-Start stabilisiert: Trinity startet Homebrew-/Node-basierte Pi-CLIs nun auch aus macOS- und Windows-Launchern mit erweitertem Unterprozess-PATH, sodass `env: node: No such file or directory` nicht mehr den Pi-Harness blockiert.
 - **v0.16.13:** Pi-Routing fuer BrainVault-Projektfragen verbessert: Imperativ `frag Pi`, allgemeine BrainVault-Fragen und Erendria-Treffer werden jetzt an Pi geleitet und mit passenden Agenten-/Projektkontexten angereichert.
 - **v0.16.12:** GitHub-Markdown-Dokumentation neutralisiert sensible Dokumentanalyse-Beispiele. `Neue Session` schlaegt in ClassicUI, WebUI und Companion-App nun Namen im Format `JJJJMMDD_HHMM_` vor.
 - **v0.16.11:** `Neue Session` zeigt die automatisch erzeugte Summary der vorherigen Session nun sichtbar in der neuen Session an. Das gilt fuer ClassicUI lokal, ClassicUI als Remote-Client und WebUI.

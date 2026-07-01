@@ -165,6 +165,7 @@ def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     project = tmp_path / "BrainVault"
     (project / ".agents").mkdir(parents=True)
     captured = {}
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
 
     def fake_run(command, **kwargs):
         captured["command"] = command
@@ -187,6 +188,14 @@ def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     assert captured["kwargs"]["env"]["TRINITY_PROJECT_ROOT"] == str(project)
     assert captured["kwargs"]["env"]["TRINITY_BRAINVAULT_ROOT"] == str(project)
     assert captured["kwargs"]["env"]["TRINITY_PROJECT_ALIAS"] == "BrainVault"
+    env_path = captured["kwargs"]["env"]["PATH"].split(agent.os.pathsep)
+    assert env_path[:4] == [
+        "/usr/local/bin",
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/sbin",
+    ]
+    assert "/usr/bin" in env_path
 
 
 def test_clean_pi_answer_removes_leaked_thinking():

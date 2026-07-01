@@ -386,6 +386,45 @@ def _needs_windows_shell(executable: str, host_os=None) -> bool:
     return (host_os or os.name) == "nt" and str(executable).casefold().endswith((".cmd", ".bat"))
 
 
+def _subprocess_env(executable: str, project_path: Path = None, project_alias: str = "") -> dict:
+    path_entries = []
+    executable_dir = os.path.dirname(str(executable or ""))
+    if executable_dir:
+        path_entries.append(executable_dir)
+    path_entries.extend(
+        [
+            "/opt/homebrew/bin",
+            "/opt/homebrew/sbin",
+            "/usr/local/bin",
+            "/usr/local/sbin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ]
+    )
+    path_entries.extend(os.environ.get("PATH", "").split(os.pathsep))
+
+    clean_path = []
+    seen = set()
+    for entry in path_entries:
+        if entry and entry not in seen:
+            seen.add(entry)
+            clean_path.append(entry)
+
+    env = {
+        **os.environ,
+        "NO_COLOR": "1",
+        "PATH": os.pathsep.join(clean_path),
+        "TRINITY_PROJECT_ALIAS": str(project_alias or ""),
+    }
+    if project_path:
+        env["TRINITY_PROJECT_ROOT"] = str(project_path)
+        if (project_path / ".agents").is_dir():
+            env["TRINITY_BRAINVAULT_ROOT"] = str(project_path)
+    return env
+
+
 def _run_pi(
     executable: str,
     arguments: list[str],
@@ -407,16 +446,7 @@ def _run_pi(
     use_shell = _needs_windows_shell(executable)
     run_command = subprocess.list2cmdline(command) if use_shell else command
     creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-
-    env = {
-        **os.environ,
-        "NO_COLOR": "1",
-        "TRINITY_PROJECT_ALIAS": str(project_alias or ""),
-    }
-    if project_path:
-        env["TRINITY_PROJECT_ROOT"] = str(project_path)
-        if (project_path / ".agents").is_dir():
-            env["TRINITY_BRAINVAULT_ROOT"] = str(project_path)
+    env = _subprocess_env(executable, project_path, project_alias)
 
     completed = subprocess.run(
         run_command,
