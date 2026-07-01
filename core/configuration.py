@@ -75,6 +75,7 @@ def default_config(platform_name=None):
             "mode": "chat",
             "windows_speech_enabled": False,
             "microphone_enabled": True,
+            "audio_capture_mode": "mic_only",
             "tts_enabled": True,
         },
         "audio_routing": {

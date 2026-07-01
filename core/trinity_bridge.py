@@ -458,6 +458,7 @@ class TrinityBridge:
             "ok": True,
             "mode": str(system.get("mode", "lecture") or "lecture"),
             "microphone_enabled": bool(system.get("microphone_enabled", True)),
+            "audio_capture_mode": str(system.get("audio_capture_mode", "mic_only") or "mic_only"),
             "tts_enabled": bool(system.get("tts_enabled", True)),
         }
 
@@ -475,6 +476,11 @@ class TrinityBridge:
             for key in ("microphone_enabled", "tts_enabled"):
                 if key in payload:
                     system[key] = bool(payload[key])
+            if "audio_capture_mode" in payload:
+                mode = str(payload["audio_capture_mode"] or "").strip().lower()
+                if mode not in {"mic_only", "mic_and_system"}:
+                    raise ValueError("Audioquelle muss mic_only oder mic_and_system sein.")
+                system["audio_capture_mode"] = mode
             save_config(self.config_path, config)
         result = self.get_runtime()
         result["updated_at"] = time.time()

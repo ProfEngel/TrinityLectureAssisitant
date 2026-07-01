@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.20:** ClassicUI und Companion bewegen sich Richtung gemeinsamer Arbeitsoberflaeche: `Talk`, neue `Agents`-/`Control`-Ansichten, iPhone-Bottom-Navigation und vorbereitete Audioquelle fuer eigenes Mikro vs. Meeting/System-Audio.
 > - **v0.16.19:** Arbeitsorga-Leiste weiter aufgeraeumt: Arbeitsraeume koennen angelegt werden, Platzhaltergruppen verschwinden und die Bedienung rueckt naeher an die Codex-Seitenleiste mit subtilen Icon-Aktionen.
 > - **v0.16.18:** Arbeitsorga-Leiste verfeinert: Arbeitsraeume starten Sessions im gewaehlten Kontext, erzeugen Notizen pro Arbeitsraum und Sessions haben direkte Aktionen fuer Anheften und Zusammenfassen.
-> - **v0.16.17:** Arbeitsraeume/Sessions beginnen als neue Ordnungsschicht: lokale Runtime-Metadaten, CLI-Kommandos, ClassicUI-Arbeitsleiste, Memory in den Einstellungen und Roadmap fuer iPad/iPhone/WebUI.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

@@ -319,20 +319,28 @@ class ClassicWindow(QMainWindow):
         self.workspace_sidebar_button.clicked.connect(self.toggle_workspace_sidebar)
         self.listen_button = QPushButton()
         self.listen_button.setObjectName("subtle")
+        self.listen_button.setFixedSize(46, 38)
         self.listen_button.clicked.connect(self.toggle_microphone)
-        self.new_session_button = QPushButton("Neue Session")
+        self.new_session_button = QPushButton()
         self.new_session_button.setObjectName("subtle")
+        self.new_session_button.setFixedSize(46, 38)
+        self.new_session_button.setToolTip("Neue Session")
         self.new_session_button.clicked.connect(self.start_new_session)
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["lecture", "office", "chat"])
         self.mode_combo.setToolTip("Trinity-Betriebsmodus")
         self.mode_combo.currentTextChanged.connect(self.set_runtime_mode)
+        self.audio_source_button = QPushButton()
+        self.audio_source_button.setObjectName("subtle")
+        self.audio_source_button.setFixedSize(46, 38)
+        self.audio_source_button.clicked.connect(self.toggle_audio_capture_mode)
         self.tts_button = QPushButton()
         self.tts_button.setObjectName("subtle")
+        self.tts_button.setFixedSize(46, 38)
         self.tts_button.clicked.connect(self.toggle_tts)
         self.theme_button = QPushButton()
         self.theme_button.setObjectName("theme")
-        self.theme_button.setFixedHeight(38)
+        self.theme_button.setFixedSize(46, 38)
         self.theme_button.setToolTip("Zwischen Dark Mode und Hell Mode wechseln")
         self.theme_button.clicked.connect(self.toggle_theme)
         settings_button = QPushButton("⚙")
@@ -346,6 +354,7 @@ class ClassicWindow(QMainWindow):
         header.addStretch()
         header.addWidget(self.status)
         header.addWidget(self.listen_button)
+        header.addWidget(self.audio_source_button)
         header.addWidget(self.new_session_button)
         header.addWidget(self.mode_combo)
         header.addWidget(self.tts_button)
@@ -416,6 +425,20 @@ class ClassicWindow(QMainWindow):
         web_layout.addLayout(web_toolbar)
         web_layout.addWidget(self.web_workspace, 1)
 
+        agents_tab = QWidget()
+        agents_layout = QVBoxLayout(agents_tab)
+        agents_layout.setContentsMargins(0, 0, 0, 0)
+        self.agents_workspace = QWebEngineView()
+        self._configure_web_view(self.agents_workspace)
+        agents_layout.addWidget(self.agents_workspace)
+
+        control_tab = QWidget()
+        control_layout = QVBoxLayout(control_tab)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        self.control_workspace = QWebEngineView()
+        self._configure_web_view(self.control_workspace)
+        control_layout.addWidget(self.control_workspace)
+
         chat_tab = QWidget()
         chat_tab_layout = QVBoxLayout(chat_tab)
         chat_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -467,9 +490,11 @@ class ClassicWindow(QMainWindow):
         live_layout.setContentsMargins(0, 0, 0, 0)
         live_layout.addWidget(transcript_tab)
 
-        self.main_tabs.addTab(daily_tab, "Alltag")
+        self.main_tabs.addTab(daily_tab, "Talk")
         self.main_tabs.addTab(lecture_tab, "Vortrag")
         self.main_tabs.addTab(web_tab, "Web")
+        self.main_tabs.addTab(agents_tab, "Agents")
+        self.main_tabs.addTab(control_tab, "Control")
         self.main_tabs.addTab(chat_tab, "Chat")
         self.main_tabs.addTab(live_tab, "Live")
 
@@ -1118,6 +1143,99 @@ class ClassicWindow(QMainWindow):
             @keyframes pulse {{ 50% {{ transform:scale(1.06); box-shadow:0 0 72px #a855f788; }} }}
         </style></head><body>{content}</body></html>"""
 
+    def _panel_html(self, title, subtitle, cards):
+        colors = THEMES[self.theme]
+        cards_html = []
+        for card in cards:
+            icon = html.escape(card.get("icon", "•"))
+            heading = html.escape(card.get("title", ""))
+            body = html.escape(card.get("body", ""))
+            badge = html.escape(card.get("badge", ""))
+            cards_html.append(
+                "<article class='card'>"
+                f"<div class='icon'>{icon}</div>"
+                "<div class='card-body'>"
+                f"<h3>{heading}</h3><p>{body}</p>"
+                "</div>"
+                f"<span class='badge'>{badge}</span>"
+                "</article>"
+            )
+        return f"""<!doctype html><html><head><meta charset='utf-8'><style>
+            body {{ margin:0; min-height:100vh; background:{colors['app_bg']}; color:{colors['text']}; font:15px system-ui,sans-serif; }}
+            main {{ max-width:980px; margin:0 auto; padding:34px 28px 48px; }}
+            h1 {{ margin:0; font-size:32px; letter-spacing:-0.04em; }}
+            .sub {{ color:{colors['muted']}; margin:8px 0 24px; line-height:1.5; }}
+            .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }}
+            .card {{ display:flex; align-items:center; gap:14px; min-height:86px; padding:16px;
+                border:1px solid {colors['border']}; border-radius:18px; background:{colors['panel_bg']}; }}
+            .icon {{ width:42px; height:42px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+                background:{colors['raised_bg']}; color:{colors['link']}; font-size:20px; flex:0 0 auto; }}
+            .card-body {{ flex:1; min-width:0; }}
+            h3 {{ margin:0 0 4px; font-size:16px; }}
+            p {{ margin:0; color:{colors['muted']}; line-height:1.4; }}
+            .badge {{ border:1px solid {colors['strong_border']}; border-radius:999px; padding:5px 9px;
+                color:{colors['muted']}; font-size:11px; white-space:nowrap; }}
+        </style></head><body><main><h1>{html.escape(title)}</h1>
+        <p class='sub'>{html.escape(subtitle)}</p><section class='grid'>{''.join(cards_html)}</section></main></body></html>"""
+
+    def _agents_html(self):
+        return self._panel_html(
+            "Agents",
+            "Zentrale Sicht auf laufende Aufträge, direkt startbare Hauptagenten und geplante Automatismen.",
+            [
+                {
+                    "icon": "▶",
+                    "title": "Laufende Aufträge",
+                    "body": "Hier erscheinen aktive Pi-, Codex- oder Trinity-Jobs mit Status, Ergebnis und Log.",
+                    "badge": "Jobs",
+                },
+                {
+                    "icon": "⚙",
+                    "title": "Startbare Hauptagenten",
+                    "body": "Später lassen sich Mailrundlauf, Recherche, Medienjobs oder eigene BrainVault-Agenten direkt starten.",
+                    "badge": "Trigger",
+                },
+                {
+                    "icon": "◷",
+                    "title": "Geplante Automatismen",
+                    "body": "Wiederkehrende Abläufe wie Morgen-Mailzusammenfassung oder Tagesbriefing werden hier verwaltet.",
+                    "badge": "Planung",
+                },
+            ],
+        )
+
+    def _control_html(self):
+        return self._panel_html(
+            "Control",
+            "Arbeitsnahe Steuerung fuer Memory, RAG, Skills, Sessions, Prompts und Diagnose.",
+            [
+                {
+                    "icon": "◎",
+                    "title": "Übersicht",
+                    "body": "Systemzustand, aktive Verbindung, Runtime und wichtige Hinweise.",
+                    "badge": "Status",
+                },
+                {
+                    "icon": "▦",
+                    "title": "RAG und Dateien",
+                    "body": "Index, Wissensquellen und geladene Dateien werden hier gebündelt.",
+                    "badge": "Wissen",
+                },
+                {
+                    "icon": "✦",
+                    "title": "Dreaming und Memory",
+                    "body": "Memory-Graph, Zusammenfassungen und Hintergrundverdichtung wandern aus der Arbeitsansicht hierher.",
+                    "badge": "Memory",
+                },
+                {
+                    "icon": "✎",
+                    "title": "System- und Userprompt",
+                    "body": "Persona, Arbeitsregeln und persönliche Hinweise bleiben sichtbar, aber getrennt von harten API-Settings.",
+                    "badge": "Prompts",
+                },
+            ],
+        )
+
     def _refresh_workspace_views(self, force=False):
         payload, payload_signature, base_url = self._payload_for_workspace()
         signature = (payload_signature, self._last_state, self.theme)
@@ -1125,11 +1243,13 @@ class ClassicWindow(QMainWindow):
             return
         self._workspace_payload_signature = signature
         daily_html = self._workspace_html(
-            "Trinity im Alltag",
+            "Trinity im Talk",
             "Mikrofon und Lautsprecher oben steuern. Neue Ergebnisse erscheinen hier.",
             payload,
         )
         self.daily_workspace.setHtml(daily_html, base_url)
+        self.agents_workspace.setHtml(self._agents_html(), base_url)
+        self.control_workspace.setHtml(self._control_html(), base_url)
 
     def choose_lecture_pdf(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -1270,6 +1390,7 @@ class ClassicWindow(QMainWindow):
         return {
             "mode": str(system.get("mode", "lecture") or "lecture"),
             "microphone_enabled": bool(system.get("microphone_enabled", True)),
+            "audio_capture_mode": str(system.get("audio_capture_mode", "mic_only") or "mic_only"),
             "tts_enabled": bool(system.get("tts_enabled", True)),
         }
 
@@ -1290,8 +1411,18 @@ class ClassicWindow(QMainWindow):
         values = values or self._runtime_values()
         microphone_enabled = bool(values.get("microphone_enabled", True))
         tts_enabled = bool(values.get("tts_enabled", True))
-        self.listen_button.setText("Hört zu" if microphone_enabled else "Mikro aus")
-        self.tts_button.setText("Lautsprecher an" if tts_enabled else "Lautsprecher aus")
+        audio_capture_mode = str(values.get("audio_capture_mode", "mic_only") or "mic_only")
+        self.listen_button.setText("🎙" if microphone_enabled else "🔇")
+        self.listen_button.setToolTip("Mikrofon aktiv" if microphone_enabled else "Mikrofon pausiert")
+        self.audio_source_button.setText("👥" if audio_capture_mode == "mic_and_system" else "🧑")
+        self.audio_source_button.setToolTip(
+            "Eigenes Mikro + Meeting/System-Audio (benötigt Loopback-Gerät)"
+            if audio_capture_mode == "mic_and_system"
+            else "Nur eigenes Mikro"
+        )
+        self.new_session_button.setText("＋")
+        self.tts_button.setText("🔊" if tts_enabled else "🔈")
+        self.tts_button.setToolTip("Desktop-TTS aktiv" if tts_enabled else "Desktop-TTS pausiert")
         mode = values.get("mode", "lecture")
         self.mode_combo.blockSignals(True)
         self.mode_combo.setCurrentText(mode if mode in {"lecture", "office", "chat"} else "lecture")
@@ -1305,6 +1436,19 @@ class ClassicWindow(QMainWindow):
         if result:
             self._sync_runtime_controls(result)
             self.status.setText("Mikrofon aktiviert" if result["microphone_enabled"] else "Mikrofon pausiert")
+
+    def toggle_audio_capture_mode(self):
+        values = self._runtime_values()
+        current = str(values.get("audio_capture_mode", "mic_only") or "mic_only")
+        next_mode = "mic_and_system" if current == "mic_only" else "mic_only"
+        result = self._set_runtime_values({"audio_capture_mode": next_mode})
+        if result:
+            self._sync_runtime_controls(result)
+            self.status.setText(
+                "Audioquelle: Mikro + Meeting/System (Loopback nötig)"
+                if next_mode == "mic_and_system"
+                else "Audioquelle: eigenes Mikro"
+            )
 
     def toggle_tts(self):
         values = self._runtime_values()
