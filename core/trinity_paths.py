@@ -20,6 +20,7 @@ RUNTIME_DIRS = (
     "harnesses/pi",
     "harnesses/opencode",
     "harnesses/future",
+    "workspaces",
     "sessions",
     "logs",
     "cache",

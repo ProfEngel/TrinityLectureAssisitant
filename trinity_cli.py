@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.16"
+VERSION = "0.16.17"
 
 
 def find_trinity_home(explicit=None):
@@ -702,6 +702,67 @@ def run_control_plane_command(home, args):
     return 0
 
 
+def _workspace_manager(home):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from configuration import load_config  # pylint: disable=import-outside-toplevel
+    from workspace_manager import TrinityWorkspaceManager  # pylint: disable=import-outside-toplevel
+
+    config = load_config(Path(home) / "core" / "config.json")
+    return TrinityWorkspaceManager(home, config)
+
+
+def run_workspace_command(home, args):
+    manager = _workspace_manager(home)
+    if args.workspace_action == "list":
+        result = [item.as_dict() for item in manager.list_workspaces()]
+    elif args.workspace_action == "create":
+        if not args.title:
+            raise ValueError("workspace create braucht einen Titel.")
+        result = manager.create_workspace(
+            args.title,
+            kind=args.kind,
+            pinned=args.pinned,
+        ).as_dict()
+    elif args.workspace_action == "status":
+        result = {
+            "layout": manager.ensure_layout(),
+            "workspaces": [item.as_dict() for item in manager.list_workspaces()],
+            "sessions": [item.as_dict() for item in manager.list_sessions(limit=20)],
+        }
+    else:
+        raise ValueError("Unbekannte Workspace-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_session_command(home, args):
+    manager = _workspace_manager(home)
+    if args.session_action == "new":
+        result = manager.create_session(
+            title=args.title,
+            workspace_id=args.workspace,
+            mode=args.mode,
+        ).as_dict()
+    elif args.session_action == "list":
+        result = [
+            item.as_dict()
+            for item in manager.list_sessions(
+                workspace_id=args.workspace or None,
+                limit=args.limit,
+            )
+        ]
+    elif args.session_action == "move":
+        if not args.session_id or not args.workspace:
+            raise ValueError("session move braucht SESSION_ID und --workspace.")
+        result = manager.move_session(args.session_id, args.workspace).as_dict()
+    else:
+        raise ValueError("Unbekannte Session-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -807,6 +868,26 @@ def build_parser():
     control.add_argument("control_action", choices=("init", "status", "catalog"))
     control.add_argument("--runtime-root", default="", help="Lokaler TrinityRuntime-Pfad")
     control.add_argument("--vault-root", default="", help="BrainVault-/Cloud-Agentenpool-Pfad")
+
+    workspace = subparsers.add_parser(
+        "workspace",
+        help="Arbeitsraeume und die lokale Arbeitsorganisation verwalten",
+    )
+    workspace.add_argument("workspace_action", choices=("list", "create", "status"))
+    workspace.add_argument("title", nargs="?", help="Titel bei create")
+    workspace.add_argument("--kind", default="custom", help="Art, z.B. lecture, writing, office")
+    workspace.add_argument("--pinned", action="store_true", help="Arbeitsraum anheften")
+
+    session = subparsers.add_parser(
+        "session",
+        help="Sessions in lokalen Arbeitsraeumen verwalten",
+    )
+    session.add_argument("session_action", choices=("new", "list", "move"))
+    session.add_argument("session_id", nargs="?", help="Session-ID bei move")
+    session.add_argument("--title", default="", help="Sessiontitel bei new")
+    session.add_argument("--workspace", default="_inbox", help="Arbeitsraum-ID")
+    session.add_argument("--mode", default="lecture", help="Trinity-Modus der Session")
+    session.add_argument("--limit", type=int, default=50)
     return parser
 
 
@@ -850,6 +931,10 @@ def main(argv=None):
             return run_approvals_command(home, args)
         if args.command == "control-plane":
             return run_control_plane_command(home, args)
+        if args.command == "workspace":
+            return run_workspace_command(home, args)
+        if args.command == "session":
+            return run_session_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

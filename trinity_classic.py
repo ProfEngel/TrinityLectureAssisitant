@@ -52,6 +52,7 @@ from memory_store import MemoryStore, render_graph_html
 from remote_client import RemoteTrinityClient
 from configuration import load_config, save_config
 from trinity_bridge import TrinityBridge
+from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -279,7 +280,9 @@ class ClassicWindow(QMainWindow):
         self.remote_after = 0.0
         self._remote_next_poll = 0.0
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
+        self.workspace_manager = TrinityWorkspaceManager(BASE_DIR, load_config(CONFIG_FILE))
         self.theme = self._load_theme()
+        self.workspace_sidebar_visible = True
         self.setAcceptDrops(True)
 
         self.pages = QStackedWidget()
@@ -308,6 +311,10 @@ class ClassicWindow(QMainWindow):
         title.setObjectName("title")
         self.status = QLabel("Bereit")
         self.status.setObjectName("status")
+        self.workspace_sidebar_button = QPushButton("☰")
+        self.workspace_sidebar_button.setObjectName("subtle")
+        self.workspace_sidebar_button.setToolTip("Arbeitsorganisation ein- oder ausklappen")
+        self.workspace_sidebar_button.clicked.connect(self.toggle_workspace_sidebar)
         self.listen_button = QPushButton()
         self.listen_button.setObjectName("subtle")
         self.listen_button.clicked.connect(self.toggle_microphone)
@@ -333,6 +340,7 @@ class ClassicWindow(QMainWindow):
         settings_button.clicked.connect(self.show_settings)
         header.addWidget(self.logo)
         header.addWidget(title)
+        header.addWidget(self.workspace_sidebar_button)
         header.addStretch()
         header.addWidget(self.status)
         header.addWidget(self.listen_button)
@@ -406,22 +414,6 @@ class ClassicWindow(QMainWindow):
         web_layout.addLayout(web_toolbar)
         web_layout.addWidget(self.web_workspace, 1)
 
-        presenter_tab = QWidget()
-        presenter_layout = QVBoxLayout(presenter_tab)
-        presenter_layout.setContentsMargins(0, 0, 0, 0)
-        presenter_toolbar = QHBoxLayout()
-        presenter_label = QLabel("Generierte Medien und Ergebnisse in großer Ansicht")
-        presenter_label.setObjectName("section")
-        presenter_fullscreen_button = QPushButton("Vollbild")
-        presenter_fullscreen_button.setObjectName("subtle")
-        presenter_fullscreen_button.clicked.connect(self.toggle_presenter_fullscreen)
-        presenter_toolbar.addWidget(presenter_label, 1)
-        presenter_toolbar.addWidget(presenter_fullscreen_button)
-        self.presenter_workspace = QWebEngineView()
-        self._configure_web_view(self.presenter_workspace)
-        presenter_layout.addLayout(presenter_toolbar)
-        presenter_layout.addWidget(self.presenter_workspace, 1)
-
         chat_tab = QWidget()
         chat_tab_layout = QVBoxLayout(chat_tab)
         chat_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -466,22 +458,27 @@ class ClassicWindow(QMainWindow):
         )
         memory_layout.addLayout(memory_header)
         memory_layout.addWidget(self.memory_graph, 1)
+        self.memory_panel = memory_tab
 
         live_tab = QWidget()
         live_layout = QVBoxLayout(live_tab)
         live_layout.setContentsMargins(0, 0, 0, 0)
-        live_tabs = QTabWidget()
-        live_tabs.addTab(transcript_tab, "Mitschrift")
-        live_tabs.addTab(memory_tab, "Memory")
-        live_layout.addWidget(live_tabs)
+        live_layout.addWidget(transcript_tab)
 
         self.main_tabs.addTab(daily_tab, "Alltag")
         self.main_tabs.addTab(lecture_tab, "Vortrag")
         self.main_tabs.addTab(web_tab, "Web")
-        self.main_tabs.addTab(presenter_tab, "Presenter")
         self.main_tabs.addTab(chat_tab, "Chat")
         self.main_tabs.addTab(live_tab, "Live")
-        layout.addWidget(self.main_tabs, 1)
+
+        workspace_shell = QWidget()
+        workspace_shell_layout = QHBoxLayout(workspace_shell)
+        workspace_shell_layout.setContentsMargins(0, 0, 0, 0)
+        workspace_shell_layout.setSpacing(10)
+        self.workspace_sidebar = self._build_workspace_sidebar()
+        workspace_shell_layout.addWidget(self.workspace_sidebar)
+        workspace_shell_layout.addWidget(self.main_tabs, 1)
+        layout.addWidget(workspace_shell, 1)
 
         attachment_row = QHBoxLayout()
         self.attachment_summary = QLabel("")
@@ -531,6 +528,141 @@ class ClassicWindow(QMainWindow):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(400)
         self.refresh()
+
+    def _build_workspace_sidebar(self):
+        sidebar = QWidget()
+        sidebar.setObjectName("workspaceSidebar")
+        sidebar.setFixedWidth(245)
+        layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        title = QLabel("Arbeitsansicht")
+        title.setObjectName("sidebarTitle")
+        layout.addWidget(title)
+        self.sidebar_dynamic_layout = QVBoxLayout()
+        self.sidebar_dynamic_layout.setContentsMargins(0, 0, 0, 0)
+        self.sidebar_dynamic_layout.setSpacing(8)
+        layout.addWidget(self._sidebar_button("＋ Neue Session", self.start_new_session))
+        layout.addWidget(self._sidebar_button("⌕ Suche", self._show_sidebar_placeholder))
+        layout.addLayout(self.sidebar_dynamic_layout)
+        self._refresh_workspace_sidebar()
+        layout.addStretch()
+
+        hint = QLabel("Arbeitsorganisation lokal aktiv · Details wachsen mit den nächsten Schritten")
+        hint.setObjectName("sidebarHint")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        return sidebar
+
+    def _clear_sidebar_dynamic_layout(self):
+        while self.sidebar_dynamic_layout.count():
+            item = self.sidebar_dynamic_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+            child_layout = item.layout()
+            if child_layout is not None:
+                while child_layout.count():
+                    nested = child_layout.takeAt(0)
+                    nested_widget = nested.widget()
+                    if nested_widget is not None:
+                        nested_widget.deleteLater()
+
+    def _refresh_workspace_sidebar(self):
+        if not hasattr(self, "sidebar_dynamic_layout"):
+            return
+        self._clear_sidebar_dynamic_layout()
+        try:
+            workspaces = self.workspace_manager.list_workspaces()
+            sessions = self.workspace_manager.list_sessions(limit=8)
+        except (OSError, ValueError) as exc:
+            self._add_sidebar_group(
+                self.sidebar_dynamic_layout,
+                "Arbeitsräume",
+                [(f"Nicht geladen: {exc}", self._show_sidebar_placeholder)],
+            )
+            return
+
+        workspace_items = [
+            (
+                item.title,
+                lambda checked=False, record=item: self._select_workspace_sidebar_item(record),
+            )
+            for item in workspaces[:8]
+        ] or [("Schnellsessions", self._show_sidebar_placeholder)]
+        pinned_items = [
+            (
+                item.title,
+                lambda checked=False, record=item: self._select_workspace_sidebar_item(record),
+            )
+            for item in workspaces
+            if item.pinned
+        ][:5] or [("Aktuelle Session", self._show_sidebar_placeholder)]
+        session_items = [
+            (
+                item.title,
+                lambda checked=False, record=item: self._select_session_sidebar_item(record),
+            )
+            for item in sessions[:8]
+        ] or [("Noch keine Sessions", self._show_sidebar_placeholder)]
+
+        self._add_sidebar_group(self.sidebar_dynamic_layout, "Arbeitsräume", workspace_items)
+        self._add_sidebar_group(self.sidebar_dynamic_layout, "Angeheftet", pinned_items)
+        self._add_sidebar_group(
+            self.sidebar_dynamic_layout,
+            "Notizen",
+            [
+                ("Notiz-Inbox", self._show_sidebar_placeholder),
+                ("Entscheidungen", self._show_sidebar_placeholder),
+            ],
+        )
+        self._add_sidebar_group(self.sidebar_dynamic_layout, "Sessions", session_items)
+        self._add_sidebar_group(
+            self.sidebar_dynamic_layout,
+            "Summaries",
+            [
+                ("Offen", self._show_sidebar_placeholder),
+                ("Erstellt", self._show_sidebar_placeholder),
+            ],
+        )
+
+    def _select_workspace_sidebar_item(self, record):
+        self.status.setText(f"Arbeitsraum: {record.title}")
+
+    def _select_session_sidebar_item(self, record):
+        self.session_id = record.id
+        self.session_name = record.title
+        self._chat_signature = None
+        self._refresh_chat_history()
+        self.status.setText(f"Session geöffnet: {record.title}")
+
+    def _sidebar_button(self, label, callback):
+        button = QPushButton(label)
+        button.setObjectName("sidebarButton")
+        button.setCursor(Qt.PointingHandCursor)
+        button.clicked.connect(callback)
+        return button
+
+    def _add_sidebar_group(self, layout, title, items):
+        label = QLabel(title)
+        label.setObjectName("sidebarGroup")
+        layout.addWidget(label)
+        for item_label, callback in items:
+            layout.addWidget(self._sidebar_button(item_label, callback))
+
+    def _show_sidebar_placeholder(self):
+        self.status.setText("Diese Arbeitsorga-Gruppe wird im nächsten Schritt vertieft.")
+
+    def toggle_workspace_sidebar(self):
+        self.workspace_sidebar_visible = not self.workspace_sidebar_visible
+        self.workspace_sidebar.setVisible(self.workspace_sidebar_visible)
+        self.workspace_sidebar_button.setText("☰" if self.workspace_sidebar_visible else "☷")
+        self.status.setText(
+            "Arbeitsorganisation eingeblendet"
+            if self.workspace_sidebar_visible
+            else "Arbeitsorganisation ausgeblendet"
+        )
 
     def _load_remote_client(self):
         try:
@@ -659,6 +791,40 @@ class ClassicWindow(QMainWindow):
             QPushButton#subtle {{ padding: 7px 10px; color: {colors["muted"]}; }}
             QPushButton#gear {{ font-size: 20px; padding: 0; }}
             QPushButton#theme {{ padding: 7px 13px; }}
+            QWidget#workspaceSidebar {{
+                background: {colors["panel_bg"]};
+                border: 1px solid {colors["border"]};
+                border-radius: 12px;
+            }}
+            QLabel#sidebarTitle {{
+                color: {colors["text"]};
+                font-size: 15px;
+                font-weight: 700;
+                padding: 2px 2px 8px;
+            }}
+            QLabel#sidebarGroup {{
+                color: {colors["muted"]};
+                font-size: 11px;
+                font-weight: 700;
+                padding: 13px 2px 2px;
+            }}
+            QLabel#sidebarHint {{
+                color: {colors["muted"]};
+                font-size: 11px;
+                padding: 8px 2px 0;
+            }}
+            QPushButton#sidebarButton {{
+                background: transparent;
+                border: 0;
+                border-radius: 8px;
+                color: {colors["text"]};
+                font-weight: 500;
+                text-align: left;
+                padding: 8px 10px;
+            }}
+            QPushButton#sidebarButton:hover {{
+                background: {colors["hover_bg"]};
+            }}
             QTabWidget::pane {{
                 border: 1px solid {colors["border"]}; border-radius: 10px;
                 top: -1px;
@@ -733,13 +899,7 @@ class ClassicWindow(QMainWindow):
             "Mikrofon und Lautsprecher oben steuern. Neue Ergebnisse erscheinen hier.",
             payload,
         )
-        presenter_html = self._workspace_html(
-            "Presenter bereit",
-            "Generierte Medien, Simulationen und Sandbox-Ergebnisse erscheinen hier groß.",
-            payload,
-        )
         self.daily_workspace.setHtml(daily_html, base_url)
-        self.presenter_workspace.setHtml(presenter_html, base_url)
 
     def choose_lecture_pdf(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -943,8 +1103,13 @@ class ClassicWindow(QMainWindow):
         old_session_name = self.session_name or "Classic Desktop"
         old_started_at = self.session_started_at
         old_ended_at = time.time()
-        self.session_id = uuid.uuid4().hex
-        self.session_name = name.strip() or suggested_name
+        session = self.workspace_manager.create_session(
+            name.strip() or suggested_name,
+            workspace_id=INBOX_WORKSPACE_ID,
+            mode=self.mode_combo.currentText(),
+        )
+        self.session_id = session.id
+        self.session_name = session.title
         self.session_started_at = time.time()
         self._summarize_previous_session_in_background(
             old_session_id,
@@ -960,6 +1125,7 @@ class ClassicWindow(QMainWindow):
         self._update_attachment_summary()
         self._chat_signature = None
         self.chat_history.setHtml(_render_chat_html([], self.theme))
+        self._refresh_workspace_sidebar()
         label = self.session_name or "ohne Namen"
         self.status.setText(f"Neue Session: {label}")
 

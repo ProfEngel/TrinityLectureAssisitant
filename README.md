@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.17:** Arbeitsraeume/Sessions beginnen als neue Ordnungsschicht: lokale Runtime-Metadaten, CLI-Kommandos, ClassicUI-Arbeitsleiste, Memory in den Einstellungen und Roadmap fuer iPad/iPhone/WebUI.
 > - **v0.16.16:** Agentenbau und Agenten-Ueberarbeitung nutzen standardmaessig Codex als Builder-Harness mit HITL-Regeln, Plan, Tests und Rueckfrage-/Freigabebericht; Pi bleibt Standard fuer bestehende BrainVault-Agentenarbeit.
 > - **v0.16.15:** BrainVault-Auto-Routing: Trinity kann bekannte externe BrainVault-Projekte und Agenten nun kontextbasiert an den Standard-Harness (aktuell Pi) delegieren, ohne dass der Nutzer Pi explizit nennen muss.
-> - **v0.16.14:** Pi-Desktop-Start stabilisiert: Trinity startet Homebrew-/Node-basierte Pi-CLIs nun auch aus macOS- und Windows-Launchern mit erweitertem Unterprozess-PATH, sodass `env: node: No such file or directory` nicht mehr den Pi-Harness blockiert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
@@ -39,7 +39,11 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > das Erstsetup fuer lokalen Runtime-Ordner und Cloud-Agentenpool steht im
 > **[Onboarding: Runtime und BrainVault](docs/ONBOARDING.md#3-lokale-runtime-und-brainvault-agentenpool)**.
 > Die neue gemeinsame externe Agentenbasis ist in
-> **[BrainVault-Agenten](docs/BRAINVAULT_AGENTS.md)** dokumentiert.
+> **[BrainVault-Agenten](docs/BRAINVAULT_AGENTS.md)** dokumentiert. Der naechste
+> grosse Entwicklungsschritt zu Arbeitsraeumen, Schnellsessions, Notizen und
+> manuellen Session-Summaries ist in der
+> **[Workspace-/Session-Roadmap](docs/WORKSPACES_SESSIONS_NOTES_ROADMAP.md)**
+> angelegt.
 
 ---
 

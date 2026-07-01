@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.17:** Arbeitsraeume/Sessions beginnen als neue Ordnungsschicht: lokale Runtime-Metadaten, CLI-Kommandos, ClassicUI-Arbeitsleiste, Memory in den Einstellungen und Roadmap fuer iPad/iPhone/WebUI.
 - **v0.16.16:** Agentenbau und Agenten-Ueberarbeitung nutzen standardmaessig Codex als Builder-Harness mit HITL-Regeln, Plan, Tests und Rueckfrage-/Freigabebericht; Pi bleibt Standard fuer bestehende BrainVault-Agentenarbeit.
 - **v0.16.15:** BrainVault-Auto-Routing: Trinity kann bekannte externe BrainVault-Projekte und Agenten nun kontextbasiert an den Standard-Harness (aktuell Pi) delegieren, ohne dass der Nutzer Pi explizit nennen muss.
 - **v0.16.14:** Pi-Desktop-Start stabilisiert: Trinity startet Homebrew-/Node-basierte Pi-CLIs nun auch aus macOS- und Windows-Launchern mit erweitertem Unterprozess-PATH, sodass `env: node: No such file or directory` nicht mehr den Pi-Harness blockiert.

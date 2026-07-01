@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
+from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                              QCheckBox, QComboBox, QGroupBox, QFormLayout,
@@ -32,6 +34,7 @@ from brainvault_agents import (
     ensure_brainvault_layout,
 )
 from configuration import DEFAULT_CONFIG, load_config, save_config
+from memory_store import MemoryStore, render_graph_html
 from trinity_paths import default_runtime_root, default_vault_root
 from ui_modes import resolve_ui_modes
 
@@ -571,6 +574,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
+        tabs.addTab(self._create_memory_tab(), "🧠 Memory")
         tabs.addTab(self._scrollable_tab(self._create_harnesses_tab()), "🧭 Harnesses")
         tabs.addTab(self._scrollable_tab(self._create_mainhub_tab()), "🗂 MainHub")
         tabs.addTab(self._scrollable_tab(self._create_agent_ecosystem_tab()), "🧰 Agenten")
@@ -632,6 +636,72 @@ class SettingsWindow(QMainWindow):
     def _toggle_settings_tts(self):
         values = self._settings_runtime_values()
         self._save_runtime_toggle({"tts_enabled": not values["tts_enabled"]})
+
+    def _create_memory_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        description = QLabel(
+            "Memory, Graph und Deep-Memory-Diagnose liegen hier in den "
+            "Einstellungen. Die taegliche Arbeitsansicht bleibt dadurch schlank."
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        header = QHBoxLayout()
+        self.memory_status_label = QLabel("Memory wird geladen ...")
+        self.memory_status_label.setObjectName("settingsSection")
+        bake_button = QPushButton("Memory backen")
+        bake_button.clicked.connect(self._bake_memory_from_settings)
+        refresh_button = QPushButton("Graph aktualisieren")
+        refresh_button.clicked.connect(self._refresh_memory_from_settings)
+        header.addWidget(self.memory_status_label, 1)
+        header.addWidget(bake_button)
+        header.addWidget(refresh_button)
+        layout.addLayout(header)
+
+        self.settings_memory_graph = QWebEngineView()
+        settings = self.settings_memory_graph.settings()
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        layout.addWidget(self.settings_memory_graph, 1)
+
+        self._refresh_memory_from_settings()
+        return widget
+
+    def _memory_store_for_settings(self):
+        home = os.path.dirname(CORE_DIR)
+        memory_dir = os.path.join(home, "memory")
+        return MemoryStore(os.path.join(memory_dir, "trinity_memory.sqlite3"))
+
+    def _memory_theme(self):
+        return self.config.get("system", {}).get("classic_theme", "dark")
+
+    def _refresh_memory_from_settings(self):
+        if not hasattr(self, "settings_memory_graph"):
+            return
+        store = self._memory_store_for_settings()
+        status = store.status()
+        self.memory_status_label.setText(
+            f"{status['memories']} Memories · {status['links']} Links · "
+            f"{status['unbaked']} unbaked"
+        )
+        self.settings_memory_graph.setHtml(
+            render_graph_html(store.graph_data(), self._memory_theme())
+        )
+
+    def _bake_memory_from_settings(self):
+        home = os.path.dirname(CORE_DIR)
+        chat_history = os.path.join(home, "memory", "classic_chat_history.jsonl")
+        try:
+            result = self._memory_store_for_settings().bake_chat_history(chat_history)
+            self.memory_status_label.setText(
+                f"Memory gebacken: {result['imported']} importiert, "
+                f"{result['baked']} verdichtet"
+            )
+            self._refresh_memory_from_settings()
+        except (OSError, ValueError) as exc:
+            self.memory_status_label.setText(f"Memory Bake fehlgeschlagen: {exc}")
 
     def _create_agent_ecosystem_tab(self):
         widget = QWidget()
