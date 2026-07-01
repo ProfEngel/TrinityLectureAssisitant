@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.22:** Companion-Feinschliff: iPhone-Talk-Buttons bleiben frei, Agents und Control werden anklickbar mit Favoriten, Agent-Start, RAG-/Session-/Prompt-Details; macOS-Desktop-App nutzt das Trinity-Icon nun explizit als Bundle-Icon.
 - **v0.16.21:** `Agents` und `Control` nutzen nun echte Dashboard-Daten aus der Bridge; iPhone bleibt im Hochformat schlank ohne funktionslosen `...`-Button, iPad und ClassicUI behalten die erweiterte Symbolleiste.
 - **v0.16.20:** ClassicUI und Companion bewegen sich Richtung gemeinsamer Arbeitsoberflaeche: `Talk`, neue `Agents`-/`Control`-Ansichten, iPhone-Bottom-Navigation und vorbereitete Audioquelle fuer eigenes Mikro vs. Meeting/System-Audio.
 - **v0.16.19:** Arbeitsorga-Leiste weiter aufgeraeumt: Arbeitsraeume koennen angelegt werden, Platzhaltergruppen verschwinden und die Bedienung rueckt naeher an die Codex-Seitenleiste mit subtilen Icon-Aktionen.

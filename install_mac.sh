@@ -141,10 +141,18 @@ rm /tmp/trinity_app.applescript
 
 echo "🖼️  Baue Trinity-Icon (.icns) und setze es im App-Bundle..."
 ICON_SRC="$INSTALL_DIR/core/icon.png"
+ICON_ICNS_SRC="$INSTALL_DIR/assets/trinity_icon.icns"
 ICONSET_DIR="/tmp/TrinityIcon.iconset"
-ICNS_TARGET="$APP_PATH/Contents/Resources/applet.icns"
+ICNS_TARGET="$APP_PATH/Contents/Resources/Trinity.icns"
 
-if [ -f "$ICON_SRC" ]; then
+if [ -f "$ICON_ICNS_SRC" ]; then
+    cp "$ICON_ICNS_SRC" "$ICNS_TARGET"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
+    echo "   ✅ Trinity-Icon (.icns) gesetzt."
+elif [ -f "$ICON_SRC" ]; then
     # Alle benötigten Größen erzeugen
     rm -rf "$ICONSET_DIR" && mkdir -p "$ICONSET_DIR"
     sips -z 16   16   "$ICON_SRC" --out "$ICONSET_DIR/icon_16x16.png"       &>/dev/null
@@ -160,8 +168,8 @@ if [ -f "$ICON_SRC" ]; then
     # .icns bauen und direkt ins Bundle kopieren
     iconutil -c icns "$ICONSET_DIR" -o /tmp/trinity_icon.icns
     cp /tmp/trinity_icon.icns "$ICNS_TARGET"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
     touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
     # Auch im Projekt-Assets ablegen für spätere Verwendung

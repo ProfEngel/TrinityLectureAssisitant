@@ -6,9 +6,10 @@ APP_NAME="Trinity"
 DESKTOP_DIR="$HOME/Desktop"
 APP_PATH="$DESKTOP_DIR/$APP_NAME.app"
 ICON_PNG="$PROJECT_DIR/core/icon.png"
+ICON_ICNS="$PROJECT_DIR/assets/trinity_icon.icns"
 ICONSET_DIR="/tmp/TrinityIcon.iconset"
 ICNS_TMP="/tmp/trinity_icon.icns"
-ICNS_TARGET="$APP_PATH/Contents/Resources/applet.icns"
+ICNS_TARGET="$APP_PATH/Contents/Resources/Trinity.icns"
 
 echo "🚀 Erstelle native macOS App für Trinity..."
 
@@ -46,7 +47,13 @@ echo "🖼️  Setze Icon für $APP_NAME.app..."
 
 # 3. Bundle-Icon setzen. Ein echtes .icns im App-Bundle ist zuverlässiger als
 # ein Finder-Custom-Icon und erscheint bereits vor dem ersten Start der App.
-if [ -f "$ICON_PNG" ]; then
+if [ -f "$ICON_ICNS" ]; then
+    cp "$ICON_ICNS" "$ICNS_TARGET"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
+elif [ -f "$ICON_PNG" ]; then
     rm -rf "$ICONSET_DIR" "$ICNS_TMP"
     mkdir -p "$ICONSET_DIR"
     sips -z 16   16   "$ICON_PNG" --out "$ICONSET_DIR/icon_16x16.png"       &>/dev/null
@@ -61,8 +68,8 @@ if [ -f "$ICON_PNG" ]; then
     sips -z 1024 1024 "$ICON_PNG" --out "$ICONSET_DIR/icon_512x512@2x.png"  &>/dev/null
     iconutil -c icns "$ICONSET_DIR" -o "$ICNS_TMP"
     cp "$ICNS_TMP" "$ICNS_TARGET"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName applet" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
     touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
     rm -rf "$ICONSET_DIR" "$ICNS_TMP"
