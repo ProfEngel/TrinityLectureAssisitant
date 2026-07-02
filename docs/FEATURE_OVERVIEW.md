@@ -1,0 +1,115 @@
+# Trinity Feature Overview
+
+Diese Seite ist die schnelle Orientierung fuer den aktuellen Trinity-Stand.
+Die README bleibt der Einstieg; hier steht, was die Kiste inzwischen praktisch
+kann und wo die Details liegen.
+
+## Kernidee
+
+Trinity ist keine einzelne Chatbot-Oberflaeche, sondern eine lokale Control
+Plane fuer persoenliche KI-Arbeit:
+
+- **Desktop/Server:** macOS, Windows 11 oder Linux halten Runtime, Bridge,
+  lokale Modelle, RAG, Agenten, Medienworkflows und WebUI.
+- **Companion:** iPhone und iPad dienen als Mikrofon, mobile Chatoberflaeche,
+  Presenter-Display und Offline-Client.
+- **BrainVault-Agentenpool:** externe Fachagenten liegen in einem gemeinsamen
+  Cloud-Ordner und koennen durch Pi, Codex, OpenCode oder andere Harnesses
+  genutzt werden.
+- **Arbeitsraeume und Sessions:** Arbeit wird in Arbeitsraeume, Sessions,
+  Notizen, Summaries und Assets gegliedert, statt in einen endlosen Chatstrom.
+
+```mermaid
+flowchart LR
+    User["Nutzer: Sprache, Chat, Dateien"] --> Companion["iPhone / iPad Companion"]
+    User --> DesktopUI["ClassicUI / AugenUI / WebUI"]
+    Companion --> Bridge["Trinity Bridge"]
+    DesktopUI --> Bridge
+    Bridge --> Core["Trinity Core"]
+    Core --> RAG["RAG & Memory"]
+    Core --> Agents["Trinity-Agenten"]
+    Core --> Harness["Pi / Codex / OpenCode"]
+    Harness --> BrainVault["BrainVault .agents"]
+    Core --> Media["ComfyUI / Sandbox / Medien"]
+```
+
+## Die wichtigsten Feature-Familien
+
+### Companion und Offline-Betrieb
+
+- iPhone/iPad synchronisieren Arbeitsraeume, Sessions, Notizen und Chat-Events.
+- Clients koennen dieselbe Session oder bewusst verschiedene Sessions parallel
+  nutzen.
+- Ohne Verbindung bleiben gecachte Sessions sichtbar; neue Nachrichten werden
+  gepuffert.
+- Im **Auto-Modus** geht Trinity zuerst zum Server und nutzt Apple Foundation
+  Models nur als lokalen Text-Fallback.
+- Im **Foundation-Modus** werden einfache Textantworten bewusst lokal auf dem
+  iPhone/iPad bevorzugt.
+- Offline erzeugte Antworten werden beim Reconnect in die Trinity-Session
+  zuruecksynchronisiert.
+
+Details: [Companion Offline Sync](COMPANION_OFFLINE_SYNC.md)
+
+### Vortrag, Web und Medien
+
+- iPad-Vortragsansicht fuer PDF- und HTML-Folien.
+- Stifte, Marker, Laserpointer, Zoom, Seitenleiste, Key-Commands und
+  Medien-Overlays.
+- Webansicht fuer Unterrichtsseiten, Dashboards, Mentimeter, SAP, Intranet oder
+  lokale Webdienste.
+- Generierte Bilder, Audio, Video, Simulationen, Timer und Pyodide-/Sandbox-
+  Ergebnisse erscheinen als wiederaufrufbare Assets.
+
+### Arbeitsraeume, Sessions und Notizen
+
+- Sessions koennen benannt, umbenannt, angeheftet, archiviert, geloescht und
+  zusammengefasst werden.
+- Arbeitsraeume buendeln Sessions, Notizen und Summaries nach Kontext, etwa
+  Vorlesung, Buchprojekt, Forschung oder Office.
+- Neue Sessions starten mit Zeitstempel und koennen spaeter einem Arbeitsraum
+  zugeordnet werden.
+- Summaries werden als Assets gespeichert und koennen in Memory/RAG uebernommen
+  werden.
+
+Details: [Workspace-/Session-Roadmap](WORKSPACES_SESSIONS_NOTES_ROADMAP.md)
+
+### Agenten und Harnesses
+
+- Trinity-eigene Agenten bleiben in der lokalen Runtime.
+- Externe Fachagenten liegen im BrainVault-Agentenpool unter `.agents`.
+- Pi ist der Standard-Harness fuer laufende BrainVault-Agentenarbeit.
+- Codex ist der Builder-Harness fuer neue Agenten, Imports, Refactorings, Tests
+  und Quality-Gates.
+- Agents-Ansichten zeigen Favoriten, Status, Rechte, Jobzahlen und startbare
+  Hauptagenten.
+
+Details:
+
+- [Agenten-Oekosystem](AGENT_ECOSYSTEM.md)
+- [BrainVault-Agenten](BRAINVAULT_AGENTS.md)
+- [Control Plane und BrainVault](CONTROL_PLANE_MAINHUB.md)
+
+### Oberflaechen
+
+- **ClassicUI:** Desktop-App mit Talk, Vortrag, Web, Chat, Agent, Control und
+  Live/Diagnose.
+- **AugenUI:** schwebende Minimaloberflaeche fuer Vorlesung und Zurufe.
+- **WebUI:** Browseroberflaeche fuer Headless/Linux oder Remote-Clients.
+- **Terminal/TUI:** Headless, Diagnose, Slash-Commands und Serverbetrieb.
+- **Companion:** iPhone/iPad fuer STT, TTS, Presenter, Chat, Agenten und Control.
+
+## Was offline bewusst nicht geht
+
+Apple Foundation Models sind nur ein lokaler Text-Fallback. Ohne Trinity-Server
+stehen nicht zur Verfuegung:
+
+- externe Agenten und Harness-Jobs,
+- Websuche und Online-Recherche,
+- RAG ueber serverseitige Indizes,
+- Datei-, PDF-, Bild- oder Excel-Analyse,
+- Bild-, Audio-, Video- und Simulationserzeugung,
+- serverseitige Automatismen und geplante Jobs.
+
+Das ist Absicht: Der Offline-Modus soll stabil, schnell und privat bleiben.
+

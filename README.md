@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.31:** Companion-App bekommt einen sichtbaren Antwortmodus: **Auto** nutzt Trinity Server zuerst und Apple Foundation Models als Fallback; **Foundation** bevorzugt einfache lokale Textantworten auf iPhone/iPad und synchronisiert sie spaeter zurueck.
 > - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.
 > - **v0.16.29:** Chatprompts aus ClassicUI, iPad und iPhone laufen nun ueber eine Bridge-Queue statt ueber eine einzelne Befehlsdatei; mehrere Clients/Sessions koennen parallel senden, alte Fremd-Session-Events werden strikter gefiltert, und fehlerhafte Skill-Erkennung blockiert den normalen LLM-Antwortpfad nicht mehr.
-> - **v0.16.28:** Desktop, iPad und iPhone synchronisieren Arbeitsraeume und Sessions ueber die Bridge; Clients koennen dieselbe Session gezielt laden, umbenennen, archivieren oder loeschen, und mobile Antworten erscheinen auch bei langen/parallel genutzten Session-Verlaeufen wieder zuverlaessig.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
@@ -29,6 +29,10 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > **[vollständigen Onboarding](docs/ONBOARDING.md)**. Es erklärt Installation,
 > Oberflächen, Lecture-/Office-/Chat-Modus, iPhone/iPad-Companion, Server-Client,
 > sichere Harness-Einstellungen und eine empfohlene Testreihenfolge.
+> Fuer den schnellen Gesamtueberblick gibt es die neue
+> **[Feature Overview](docs/FEATURE_OVERVIEW.md)**. Der mobile Offline-/Foundation-
+> Fallback ist in **[Companion Offline Sync](docs/COMPANION_OFFLINE_SYNC.md)**
+> beschrieben.
 > Die technische Einordnung der neuen Agentenkiste steht im
 > **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Dort ist auch beschrieben,
 > wie der neue Agentenkatalog Reifegrad, Rechte, Freigaben und Harness-Zuordnung
@@ -372,6 +376,12 @@ Aktueller Stand:
   erscheinen können.
 - **Neue Session:** Die App kann eine neue Companion-Session starten, ohne die
   Bridge neu zu starten.
+- **Offline-Cache und Foundation-Fallback:** Arbeitsraeume, Sessions, Notizen und
+  Chat-Events bleiben lokal sichtbar. Im Auto-Modus nutzt die App zuerst den
+  Trinity Server und Apple Foundation Models nur als Textfallback. Im Foundation-
+  Modus werden einfache Textantworten bewusst lokal bevorzugt und spaeter
+  synchronisiert. Details stehen in
+  [Companion Offline Sync](docs/COMPANION_OFFLINE_SYNC.md).
 
 Hinweis zu iOS-Hintergrundbetrieb: Die App nutzt den iOS-Audio-Background-Modus
 und hält ihre Audio-Session aktiv. iOS kann lokale Speech Recognition im
