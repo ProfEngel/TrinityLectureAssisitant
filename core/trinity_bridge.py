@@ -671,6 +671,53 @@ class TrinityBridge:
             raise ValueError("Nachricht wurde nicht gefunden.")
         return {"ok": True, "event_id": event_id, "deleted": True}
 
+    def import_offline_events(self, payload, user=None):
+        if not isinstance(payload, dict):
+            raise ValueError("Offline-Sync erwartet ein Objekt.")
+        incoming = payload.get("events")
+        if not isinstance(incoming, list):
+            raise ValueError("events fehlt.")
+
+        history_path = self.history_path_for(user)
+        existing_ids = {
+            str(event.get("client_event_id") or event.get("event_id") or "")
+            for event in load_chat_events(history_path, limit=5000)
+        }
+        imported = []
+        for event in incoming[:200]:
+            if not isinstance(event, dict):
+                continue
+            client_event_id = str(event.get("event_id") or event.get("eventId") or "").strip()
+            if client_event_id and client_event_id in existing_ids:
+                continue
+            role = str(event.get("role") or "").strip().lower()
+            if role not in {"user", "assistant"}:
+                continue
+            text = str(event.get("text") or "").strip()
+            if not text:
+                continue
+            source = str(event.get("source") or "companion-offline").strip()[:80]
+            if source not in {"companion-offline", "apple-foundation-offline"}:
+                source = "companion-offline"
+            session_id = str(event.get("session_id") or event.get("sessionId") or "").strip()
+            session_name = str(event.get("session_name") or event.get("sessionName") or "").strip()[:160]
+            record = append_chat_event(
+                history_path,
+                {
+                    "role": role,
+                    "source": source,
+                    "text": text,
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "client_event_id": client_event_id or None,
+                    "offline_synced": True,
+                },
+            )
+            imported.append(record)
+            if client_event_id:
+                existing_ids.add(client_event_id)
+        return {"ok": True, "imported": len(imported), "events": imported}
+
     def _recent_jobs(self, limit=8):
         db_path = self.memory_dir / "jobs.sqlite3"
         if not db_path.is_file():
@@ -1405,6 +1452,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.delete_session(_read_json(self)))
                 elif parsed.path == "/event/delete":
                     _json_response(self, 200, bridge.delete_event(_read_json(self), user=user))
+                elif parsed.path == "/offline/events":
+                    _json_response(self, 200, bridge.import_offline_events(_read_json(self), user=user))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/runtime":

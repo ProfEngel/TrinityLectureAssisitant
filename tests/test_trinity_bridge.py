@@ -173,6 +173,43 @@ def test_bridge_deletes_workspace_session(tmp_path):
     assert not created.path.exists()
 
 
+def test_bridge_imports_companion_offline_events_once(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+    payload = {
+        "events": [
+            {
+                "event_id": "local-user-1",
+                "role": "user",
+                "source": "companion-offline",
+                "text": "Hallo offline",
+                "session_id": "session-offline",
+                "session_name": "Offline Test",
+            },
+            {
+                "event_id": "local-assistant-1",
+                "role": "assistant",
+                "source": "apple-foundation-offline",
+                "text": "Lokale Antwort",
+                "session_id": "session-offline",
+                "session_name": "Offline Test",
+            },
+        ]
+    }
+
+    first = bridge.import_offline_events(payload)
+    second = bridge.import_offline_events(payload)
+    events = load_chat_events(home / "memory" / "classic_chat_history.jsonl", limit=10)
+
+    assert first["ok"] is True
+    assert first["imported"] == 2
+    assert second["imported"] == 0
+    assert [event["text"] for event in events] == ["Hallo offline", "Lokale Antwort"]
+    assert all(event["offline_synced"] is True for event in events)
+
+
 def test_bridge_exposes_and_mutates_workspace_state(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

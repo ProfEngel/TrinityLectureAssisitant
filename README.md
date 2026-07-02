@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.
 > - **v0.16.29:** Chatprompts aus ClassicUI, iPad und iPhone laufen nun ueber eine Bridge-Queue statt ueber eine einzelne Befehlsdatei; mehrere Clients/Sessions koennen parallel senden, alte Fremd-Session-Events werden strikter gefiltert, und fehlerhafte Skill-Erkennung blockiert den normalen LLM-Antwortpfad nicht mehr.
 > - **v0.16.28:** Desktop, iPad und iPhone synchronisieren Arbeitsraeume und Sessions ueber die Bridge; Clients koennen dieselbe Session gezielt laden, umbenennen, archivieren oder loeschen, und mobile Antworten erscheinen auch bei langen/parallel genutzten Session-Verlaeufen wieder zuverlaessig.
-> - **v0.16.27:** Companion-Chat-Kompatibilitaet: Mobile Antworten werden auch dann wieder angezeigt, wenn ein Runtime-Pfad eine Antwort nur ueber `request_id` und ohne `session_id` zurueckliefert; die Companion-Eingabe startet wieder kompakt einzeilig.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
