@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.34:** Telegram bekommt eine eigene persistente Session; Telegram-Text, Voice, Bilder und erzeugte Medien bleiben im Telegram-Kanal. Passend dazu werden iPhone-Statusflaechen kompakter, Talk-Kamera/Anhang liegen frei, STT nimmt nach TTS schneller wieder auf und neue Companion-Arbeitsraeume/Sessions erscheinen sofort lokal.
 - **v0.16.32:** Companion Offline-Talk verhaelt sich naeher wie online: finale STT-Chunks werden lokal in den Chat geschrieben, Wakeword-Varianten aus Trinity werden offline erkannt, Apple Foundation Models koennen direkt antworten und die spaeter synchronisierten Offline-Events umfassen nun auch Transkripte.
 - **v0.16.31:** Companion-App erhaelt einen sichtbaren Antwortmodus-Schalter: `Auto` priorisiert den Trinity Server und nutzt Apple Foundation Models als Fallback; `Foundation` bevorzugt lokale Textantworten und synchronisiert Offline-Events spaeter zurueck. README wurde aufgeraeumt und verweist auf Feature- und Offline-Dokumentation.
 - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.

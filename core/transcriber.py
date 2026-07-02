@@ -9,6 +9,7 @@ import subprocess
 import threading
 import tempfile
 import unicodedata
+import uuid
 import warnings
 
 # Warnings unterdrücken (faster-whisper matmul + urllib3 SSL)
@@ -34,6 +35,8 @@ CORE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(CORE_DIR)
 MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
+TELEGRAM_SESSION_ID = "telegram"
+TELEGRAM_SESSION_NAME = "Telegram"
 os.makedirs(MEMORY_DIR, exist_ok=True)
 SILENCE_THRESHOLD = 0.05
 INITIAL_PROMPT = "Trinity, Spieltheorie, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
@@ -177,6 +180,22 @@ def chat_history_path_for_request(chat_request=None):
     """Keep authenticated server conversations outside the local shared history."""
     tenant_id = (chat_request or {}).get("tenant_id", "")
     return str(tenant_history_path(PROJECT_DIR, tenant_id))
+
+
+def build_telegram_chat_request(text, attachments=None):
+    return {
+        "type": "chat_request",
+        "request_id": uuid.uuid4().hex,
+        "source": "telegram",
+        "silent": False,
+        "allow_tts": False,
+        "text": str(text or "").strip(),
+        "attachments": list(attachments or []),
+        "history_recorded": True,
+        "session_id": TELEGRAM_SESSION_ID,
+        "session_name": TELEGRAM_SESSION_NAME,
+        "privacy_mode": "telegram",
+    }
 
 class TrinityEar:
     def __init__(self):
@@ -460,7 +479,26 @@ class TrinityEar:
                                     
                                     # Trinity triggern, als wäre es gesprochen worden
                                     trigger_text = f"{self.agent_name}, {text}"
-                                    self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
+                                    telegram_request = build_telegram_chat_request(text)
+                                    append_chat_event(
+                                        chat_history_path_for_request(telegram_request),
+                                        {
+                                            "request_id": telegram_request["request_id"],
+                                            "role": "user",
+                                            "source": "telegram",
+                                            "text": text,
+                                            "attachments": [],
+                                            "session_id": TELEGRAM_SESSION_ID,
+                                            "session_name": TELEGRAM_SESSION_NAME,
+                                            "privacy_mode": "telegram",
+                                        },
+                                    )
+                                    self.trigger_action(
+                                        trigger_text,
+                                        silent_response=False,
+                                        from_telegram=True,
+                                        chat_request=telegram_request,
+                                    )
                                 
                                 elif message.get("photo"):
                                     # 📸 Foto empfangen → I2I-Workflow auslösen
@@ -514,7 +552,26 @@ class TrinityEar:
                                                 
                                                 # Trinity triggern, als wäre es gesprochen worden
                                                 trigger_text = f"{self.agent_name}, {voice_text}"
-                                                self.trigger_action(trigger_text, silent_response=False, from_telegram=True)
+                                                telegram_request = build_telegram_chat_request(voice_text)
+                                                append_chat_event(
+                                                    chat_history_path_for_request(telegram_request),
+                                                    {
+                                                        "request_id": telegram_request["request_id"],
+                                                        "role": "user",
+                                                        "source": "telegram",
+                                                        "text": voice_text,
+                                                        "attachments": [],
+                                                        "session_id": TELEGRAM_SESSION_ID,
+                                                        "session_name": TELEGRAM_SESSION_NAME,
+                                                        "privacy_mode": "telegram",
+                                                    },
+                                                )
+                                                self.trigger_action(
+                                                    trigger_text,
+                                                    silent_response=False,
+                                                    from_telegram=True,
+                                                    chat_request=telegram_request,
+                                                )
                                     except Exception as ex:
                                         print(f"⚠️ Fehler bei der Verarbeitung der Sprachnachricht: {ex}")
                                         # Bug Fix: Fehler-Feedback an User senden
@@ -607,12 +664,38 @@ class TrinityEar:
                     timeout=5,
                 )
                 prompt = caption or "Bitte beschreibe und interpretiere das angehängte Bild."
+                telegram_request = build_telegram_chat_request(prompt, attachments=[attachment])
+                append_chat_event(
+                    chat_history_path_for_request(telegram_request),
+                    {
+                        "request_id": telegram_request["request_id"],
+                        "role": "user",
+                        "source": "telegram",
+                        "text": prompt,
+                        "attachments": [attachment],
+                        "session_id": TELEGRAM_SESSION_ID,
+                        "session_name": TELEGRAM_SESSION_NAME,
+                        "privacy_mode": "telegram",
+                    },
+                )
                 antwort, _has_payload = self.brain.ask(
                     prompt,
                     self.transcript_file,
                     text_mode=True,
                     from_telegram=True,
                     attachments=[attachment],
+                )
+                append_chat_event(
+                    chat_history_path_for_request(telegram_request),
+                    {
+                        "request_id": telegram_request["request_id"],
+                        "role": "assistant",
+                        "source": "telegram",
+                        "text": antwort or "Ich konnte das Bild nicht auswerten.",
+                        "payload_html": "",
+                        "session_id": TELEGRAM_SESSION_ID,
+                        "session_name": TELEGRAM_SESSION_NAME,
+                    },
                 )
                 req.post(
                     f"https://api.telegram.org/bot{tg_token}/sendMessage",
@@ -695,6 +778,36 @@ class TrinityEar:
             with open(self.transcript_file, "a", encoding="utf-8") as f:
                 f.write(f"[{t_stamp}] [User (Telegram {log_mode})]: Foto hochgeladen, Prompt: '{caption}'\n")
                 f.write(f"[{t_stamp}] [Trinity (ComfyUI {log_mode})]: {log_response}\n")
+
+            telegram_request = build_telegram_chat_request(
+                caption or "Telegram-Bild verarbeitet.",
+                attachments=[attachment],
+            )
+            append_chat_event(
+                chat_history_path_for_request(telegram_request),
+                {
+                    "request_id": telegram_request["request_id"],
+                    "role": "user",
+                    "source": "telegram",
+                    "text": caption or "Telegram-Bild verarbeitet.",
+                    "attachments": [attachment],
+                    "session_id": TELEGRAM_SESSION_ID,
+                    "session_name": TELEGRAM_SESSION_NAME,
+                    "privacy_mode": "telegram",
+                },
+            )
+            append_chat_event(
+                chat_history_path_for_request(telegram_request),
+                {
+                    "request_id": telegram_request["request_id"],
+                    "role": "assistant",
+                    "source": "telegram",
+                    "text": log_response,
+                    "payload_html": "",
+                    "session_id": TELEGRAM_SESSION_ID,
+                    "session_name": TELEGRAM_SESSION_NAME,
+                },
+            )
 
         except Exception as e:
             print(f"⚠️ Fehler beim Verarbeiten des Telegram-Fotos: {e}")

@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.34:** Telegram bekommt eine eigene persistente Session; Telegram-Text, Voice, Bilder und erzeugte Medien werden sauber in diesem Kanal protokolliert, waehrend iPhone/iPad-Clients kompaktere Statusanzeigen, schnellere TTS/STT-Wiederaufnahme und sofort sichtbare neue Arbeitsraeume/Sessions erhalten.
 > - **v0.16.32:** Offline-Talk in der Companion-App reagiert nun auf Trinity-Wakewords, schreibt STT lokal in den Chat, erzeugt bei unterstuetzten Geraeten Apple-Foundation-Antworten inklusive lokaler TTS und synchronisiert Transcript/User/Assistant-Events spaeter zurueck. Die Companion-App cached dabei Soul-/Userprompt und Wakeword-Varianten vom Trinity-Server.
 > - **v0.16.31:** Companion-App bekommt einen sichtbaren Antwortmodus: **Auto** nutzt Trinity Server zuerst und Apple Foundation Models als Fallback; **Foundation** bevorzugt einfache lokale Textantworten auf iPhone/iPad und synchronisiert sie spaeter zurueck.
-> - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
