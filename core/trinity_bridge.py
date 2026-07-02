@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import url2pathname
 
-from agent_catalog import build_agent_catalog
+from agent_catalog import build_agent_catalog, normalize_catalog_overrides
 from chat_attachments import attachment_kind
 from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
 from configuration import load_config, save_config
@@ -479,10 +479,24 @@ class TrinityBridge:
                 "id": record.agent_id,
                 "name": record.name,
                 "tier": record.tier,
+                "kind": "external" if record.tier in {"brainvault", "shared", "personal", "staging"} else "trinity",
+                "kind_label": (
+                    "BrainVault-Erweiterung"
+                    if record.tier in {"brainvault", "shared", "personal", "staging"}
+                    else "Trinity-Kernagent"
+                ),
                 "status": record.runtime_status,
                 "quality": record.quality_status,
                 "enabled": bool(record.enabled),
                 "preferred_harness": record.preferred_harness,
+                "description": record.description,
+                "rights": ", ".join(record.allowed_tools[:5]) or "keine speziellen Rechte",
+                "allowed_tools": record.allowed_tools,
+                "allowed_paths": record.allowed_paths,
+                "requires_approval": record.requires_approval,
+                "risk_level": record.risk_level,
+                "path": record.path,
+                "parent_agent": record.parent_agent,
                 "job_total": int(record.job_total),
                 "job_open": int(record.job_open),
                 "job_failed": int(record.job_failed),
@@ -531,6 +545,37 @@ class TrinityBridge:
                 "latest_result": str(payload_events[-1].get("text") or payload_events[-1].get("source") or "")[:140] if payload_events else "",
             },
         }
+
+    def update_agent_display(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Agenten-Update erwartet ein Objekt.")
+        agent_id = str(payload.get("id") or payload.get("agent_id") or "").strip()
+        if not agent_id:
+            raise ValueError("agent_id fehlt.")
+        display_name = str(payload.get("display_name") or payload.get("name") or "").strip()
+        if len(display_name) > 120:
+            raise ValueError("Anzeigename ist zu lang.")
+        with self._lock:
+            config = load_config(self.config_path)
+            agents = config.setdefault("agent_catalog", {}).setdefault("agents", {})
+            entry = agents.setdefault(agent_id, {})
+            if display_name:
+                entry["display_name"] = display_name
+            else:
+                entry.pop("display_name", None)
+            config["agent_catalog"]["agents"] = normalize_catalog_overrides(agents)
+            save_config(self.config_path, config)
+        return {"ok": True, "agent_id": agent_id, "display_name": display_name}
+
+    def delete_session(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Loeschen erwartet ein Objekt.")
+        session_id = str(payload.get("session_id") or payload.get("id") or "").strip()
+        if not session_id:
+            raise ValueError("session_id fehlt.")
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        result = manager.delete_session(session_id, archive=bool(payload.get("archive", False)))
+        return {"ok": True, **result}
 
     def _recent_jobs(self, limit=8):
         db_path = self.memory_dir / "jobs.sqlite3"
@@ -1214,10 +1259,22 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
+                elif parsed.path == "/session/delete":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Sessions loeschen ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.delete_session(_read_json(self)))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.set_runtime(_read_json(self)))
+                elif parsed.path == "/agent/update":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Agentenanzeigenamen sind nur lokal oder fuer Administratoren aenderbar."
+                        )
+                    _json_response(self, 200, bridge.update_agent_display(_read_json(self)))
                 elif parsed.path == "/prompts":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(

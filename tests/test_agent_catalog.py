@@ -82,6 +82,7 @@ def test_catalog_applies_user_overrides_and_job_stats(tmp_path):
         "agent_catalog": {
             "agents": {
                 "research-helper": {
+                    "display_name": "Recherche-Hauptagent",
                     "quality_status": "validated",
                     "allowed_tools": ["web"],
                     "allowed_paths": ["projects/research", "RAG"],
@@ -97,6 +98,7 @@ def test_catalog_applies_user_overrides_and_job_stats(tmp_path):
     by_id = {record.agent_id: record for record in records}
 
     helper = by_id["research-helper"]
+    assert helper.name == "Recherche-Hauptagent"
     assert helper.quality_status == "validated"
     assert helper.allowed_tools == ["web"]
     assert helper.allowed_paths == ["projects/research", "RAG"]

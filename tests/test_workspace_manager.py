@@ -57,6 +57,24 @@ def test_workspace_session_lifecycle_and_move(tmp_path):
     assert pinned_session.pinned is True
     assert pinned_workspace.pinned is True
 
+    deleted = manager.delete_session(session.id)
+    assert deleted["deleted"] is True
+    assert manager.list_sessions(workspace.id) == []
+
+
+def test_workspace_session_delete_can_archive(tmp_path):
+    home = tmp_path / "Trinity"
+    (home / "core").mkdir(parents=True)
+    runtime = tmp_path / "Runtime"
+    manager = TrinityWorkspaceManager(home, _config(runtime))
+
+    session = manager.create_session("20260702_0815_Test")
+    result = manager.delete_session(session.id, archive=True)
+
+    assert result["archived"] is True
+    assert not session.path.exists()
+    assert (runtime / "archive" / "sessions" / session.id / "session.json").is_file()
+
 
 def test_workspace_ids_are_unique(tmp_path):
     home = tmp_path / "Trinity"

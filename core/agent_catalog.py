@@ -129,6 +129,7 @@ def normalize_catalog_overrides(raw: Optional[dict]) -> dict:
         if not clean_id:
             continue
         result[clean_id] = {
+            "display_name": str(values.get("display_name") or "").strip(),
             "quality_status": normalize_quality_status(values.get("quality_status")),
             "allowed_tools": _string_list(values.get("allowed_tools")),
             "allowed_paths": _string_list(values.get("allowed_paths")),
@@ -284,6 +285,9 @@ def _apply_override(record: AgentCatalogRecord, overrides: dict) -> AgentCatalog
         return record
     if "quality_status" in values:
         record.quality_status = normalize_quality_status(values.get("quality_status"))
+    display_name = str(values.get("display_name") or "").strip()
+    if display_name:
+        record.name = display_name[:120]
     for attr in ("allowed_tools", "allowed_paths", "requires_approval"):
         if attr in values:
             setattr(record, attr, _string_list(values.get(attr)))

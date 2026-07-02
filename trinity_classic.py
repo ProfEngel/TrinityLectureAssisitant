@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QStackedWidget,
     QTabWidget,
@@ -316,6 +317,7 @@ class ClassicWindow(QMainWindow):
         self.status.setObjectName("status")
         self.workspace_sidebar_button = QPushButton("▥")
         self.workspace_sidebar_button.setObjectName("subtle")
+        self.workspace_sidebar_button.setFixedSize(46, 38)
         self.workspace_sidebar_button.setToolTip("Arbeitsorganisation ein- oder ausklappen")
         self.workspace_sidebar_button.clicked.connect(self.toggle_workspace_sidebar)
         self.listen_button = QPushButton()
@@ -328,7 +330,9 @@ class ClassicWindow(QMainWindow):
         self.new_session_button.setToolTip("Neue Session")
         self.new_session_button.clicked.connect(self.start_new_session)
         self.mode_combo = QComboBox()
+        self.mode_combo.setObjectName("toolbarCombo")
         self.mode_combo.addItems(["lecture", "office", "chat"])
+        self.mode_combo.setFixedWidth(96)
         self.mode_combo.setToolTip("Trinity-Betriebsmodus")
         self.mode_combo.currentTextChanged.connect(self.set_runtime_mode)
         self.audio_source_button = QPushButton()
@@ -351,16 +355,29 @@ class ClassicWindow(QMainWindow):
         settings_button.clicked.connect(self.show_settings)
         header.addWidget(self.logo)
         header.addWidget(title)
-        header.addWidget(self.workspace_sidebar_button)
-        header.addWidget(self.listen_button)
-        header.addWidget(self.new_session_button)
+        header.addSpacing(10)
+        left_cluster = QWidget()
+        left_cluster.setObjectName("toolbarCluster")
+        left_cluster_layout = QHBoxLayout(left_cluster)
+        left_cluster_layout.setContentsMargins(6, 4, 6, 4)
+        left_cluster_layout.setSpacing(4)
+        left_cluster_layout.addWidget(self.workspace_sidebar_button)
+        left_cluster_layout.addWidget(self.listen_button)
+        left_cluster_layout.addWidget(self.new_session_button)
+        header.addWidget(left_cluster)
         header.addStretch()
         header.addWidget(self.status)
-        header.addWidget(self.mode_combo)
-        header.addWidget(self.audio_source_button)
-        header.addWidget(self.tts_button)
-        header.addWidget(self.theme_button)
-        header.addWidget(settings_button)
+        right_cluster = QWidget()
+        right_cluster.setObjectName("toolbarCluster")
+        right_cluster_layout = QHBoxLayout(right_cluster)
+        right_cluster_layout.setContentsMargins(6, 4, 6, 4)
+        right_cluster_layout.setSpacing(4)
+        right_cluster_layout.addWidget(self.mode_combo)
+        right_cluster_layout.addWidget(self.audio_source_button)
+        right_cluster_layout.addWidget(self.tts_button)
+        right_cluster_layout.addWidget(self.theme_button)
+        right_cluster_layout.addWidget(settings_button)
+        header.addWidget(right_cluster)
         layout.addLayout(header)
 
         self.main_tabs = QTabWidget()
@@ -527,6 +544,7 @@ class ClassicWindow(QMainWindow):
         attach_button.setToolTip("Text, PDF oder Bild hinzufügen")
         attach_button.clicked.connect(self.choose_attachments)
         self.command = ChatInput()
+        self.command.setObjectName("composerInput")
         self.command.setFixedHeight(68)
         self.command.setPlaceholderText(
             "Mit Trinity schreiben ...  Enter sendet, Shift+Enter macht eine neue Zeile"
@@ -768,6 +786,29 @@ class ClassicWindow(QMainWindow):
             else f"Session gelöst: {updated.title}"
         )
 
+    def delete_session_from_sidebar(self, record):
+        answer = QMessageBox.question(
+            self,
+            "Session löschen",
+            f"Session wirklich löschen?\n\n{record.title}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            result = self.workspace_manager.delete_session(record.id)
+        except (OSError, ValueError) as exc:
+            self.status.setText(f"Session konnte nicht gelöscht werden: {exc}")
+            return
+        if self.session_id == record.id:
+            self.session_id = ""
+            self.session_name = ""
+            self._chat_signature = None
+            self.chat_history.setHtml(_render_chat_html([], self.theme))
+        self._refresh_workspace_sidebar()
+        self.status.setText(f"Session gelöscht: {result.get('title') or record.title}")
+
     def _session_started_timestamp(self, record):
         try:
             data = json.loads((record.path / "session.json").read_text(encoding="utf-8"))
@@ -888,6 +929,13 @@ class ClassicWindow(QMainWindow):
                     "Σ",
                     "Diese Session im Hintergrund zusammenfassen",
                     lambda checked=False, item=record: self.summarize_session_from_sidebar(item),
+                )
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "⌫",
+                    "Session löschen",
+                    lambda checked=False, item=record: self.delete_session_from_sidebar(item),
                 )
             )
             layout.addLayout(row)
@@ -1013,6 +1061,11 @@ class ClassicWindow(QMainWindow):
                 border: 1px solid {colors["border"]}; border-radius: 8px;
                 padding: 10px; selection-background-color: {colors["selection"]};
             }}
+            QTextEdit#composerInput {{
+                background: {colors["panel_bg"]}; color: {colors["text"]};
+                border: 1px solid {colors["strong_border"]}; border-radius: 18px;
+                padding: 12px 14px; selection-background-color: {colors["selection"]};
+            }}
             QLineEdit {{
                 background: {colors["panel_bg"]}; color: {colors["text"]};
                 border: 1px solid {colors["border"]}; border-radius: 8px; padding: 8px;
@@ -1032,6 +1085,16 @@ class ClassicWindow(QMainWindow):
             QPushButton#subtle {{ padding: 7px 10px; color: {colors["muted"]}; }}
             QPushButton#gear {{ font-size: 20px; padding: 0; }}
             QPushButton#theme {{ padding: 7px 13px; }}
+            QWidget#toolbarCluster {{
+                background: {colors["raised_bg"]};
+                border: 1px solid {colors["border"]};
+                border-radius: 18px;
+            }}
+            QComboBox#toolbarCombo {{
+                background: transparent; color: {colors["text"]};
+                border: 0; padding: 6px 8px; font-weight: 600;
+            }}
+            QComboBox#toolbarCombo::drop-down {{ border: 0; width: 16px; }}
             QWidget#workspaceSidebar {{
                 background: {colors["panel_bg"]};
                 border: 1px solid {colors["border"]};
@@ -1226,12 +1289,35 @@ class ClassicWindow(QMainWindow):
             "latest_session": sessions[0].title if sessions else "",
             "latest_result": str(payload_events[-1].get("text") or payload_events[-1].get("source") or "")[:120] if payload_events else "",
             "top_agents": triggerable[:5],
+            "catalog": catalog,
         }
 
     def _agents_html(self, snapshot=None):
         snapshot = snapshot or self._dashboard_snapshot()
         top_agents = snapshot.get("top_agents", [])
+        catalog = snapshot.get("catalog", [])
         agent_names = ", ".join(record.name for record in top_agents[:3]) if top_agents else "Noch keine startbaren Hauptagenten erkannt."
+        agent_cards = []
+        for record in catalog:
+            agent_type = (
+                "Externer Agent"
+                if record.tier in {"brainvault", "shared", "personal", "staging"}
+                else "Trinity-Agent"
+            )
+            description = (record.description or record.path or "Keine Kurzbeschreibung hinterlegt.").strip()
+            rights = ", ".join(record.allowed_tools[:4]) or "keine speziellen Rechte"
+            agent_cards.append(
+                {
+                    "icon": "✦" if agent_type == "Trinity-Agent" else "◇",
+                    "title": f"{record.name} · {agent_type}",
+                    "body": (
+                        f"{description[:150]} · Rechte: {rights} · "
+                        f"Status: {record.runtime_status}/{record.quality_status} · "
+                        f"Jobs offen: {record.job_open}"
+                    ),
+                    "badge": record.preferred_harness or "auto",
+                }
+            )
         return self._panel_html(
             "Agents",
             "Zentrale Sicht auf laufende Aufträge, direkt startbare Hauptagenten und geplante Automatismen.",
@@ -1254,7 +1340,7 @@ class ClassicWindow(QMainWindow):
                     "body": "Automationen werden hier als nächste Ausbaustufe sichtbar: Zeitplan, letzter Lauf und Ergebnis.",
                     "badge": "Planung",
                 },
-            ],
+            ] + agent_cards,
         )
 
     def _control_html(self, snapshot=None):

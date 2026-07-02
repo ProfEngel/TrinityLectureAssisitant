@@ -8,6 +8,7 @@ from web_ui import render_web_ui
 from chat_protocol import append_chat_event, load_chat_events, parse_command
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
+from workspace_manager import TrinityWorkspaceManager
 
 
 def test_bridge_writes_ios_message_to_command_file(tmp_path):
@@ -128,6 +129,48 @@ def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
         "allowed_tools"
     ] == ["filesystem", "tests"]
     assert result["files"] == {"soul": "Meine Soul", "user": "Mein Profil"}
+
+
+def test_bridge_updates_agent_display_name(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+
+    result = bridge.update_agent_display(
+        {"agent_id": "agent-builder", "display_name": "Agentenwerkstatt"}
+    )
+    config = json.loads((home / "core" / "config.json").read_text(encoding="utf-8"))
+
+    assert result["ok"] is True
+    assert config["agent_catalog"]["agents"]["agent-builder"]["display_name"] == "Agentenwerkstatt"
+
+
+def test_bridge_dashboard_exposes_agent_metadata(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+
+    result = bridge.dashboard()
+    trinity = next(item for item in result["agents"]["items"] if item["id"] == "trinity-core")
+
+    assert trinity["kind_label"] == "Trinity-Kernagent"
+    assert "description" in trinity
+    assert "allowed_tools" in trinity
+    assert "rights" in trinity
+
+
+def test_bridge_deletes_workspace_session(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+    manager = TrinityWorkspaceManager(home)
+    created = manager.create_session("20260702_0900_Test")
+
+    result = bridge.delete_session({"session_id": created.id})
+
+    assert result["ok"] is True
+    assert result["deleted"] is True
+    assert not created.path.exists()
 
 
 def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path):

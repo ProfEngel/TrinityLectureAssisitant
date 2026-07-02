@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.24:** Agenten zeigen nun kompakt Herkunft, Beschreibung, Rechte und Jobzahlen; Agent-Anzeigenamen koennen ohne Ordner-Rename angepasst werden; Sessions lassen sich direkt loeschen; ClassicUI und Companion ruecken mit iPad-aehnlicher Symbolleiste und moderner Chat-Eingabe weiter zusammen.
 - **v0.16.23:** Companion/Bridge-Feinschliff: Agents zeigt nun den vollen Dashboard-Agentenpool gruppiert als Trinity-Kernagenten und BrainVault-Erweiterungen; Prompts koennen direkt aus `Soul.md`/`User.md` geladen und gespeichert werden; Light/Dark/System greift in der Companion-App wirklich.
 - **v0.16.22:** Companion-Feinschliff: iPhone-Talk-Buttons bleiben frei, Agents und Control werden anklickbar mit Favoriten, Agent-Start, RAG-/Session-/Prompt-Details; macOS-Desktop-App nutzt das Trinity-Icon nun explizit als Bundle-Icon.
 - **v0.16.21:** `Agents` und `Control` nutzen nun echte Dashboard-Daten aus der Bridge; iPhone bleibt im Hochformat schlank ohne funktionslosen `...`-Button, iPad und ClassicUI behalten die erweiterte Symbolleiste.

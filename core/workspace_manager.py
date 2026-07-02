@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -297,6 +298,37 @@ class TrinityWorkspaceManager:
         data["last_opened_at"] = _now_iso()
         _write_json(target_dir / "session.json", data)
         return self._session_record(target_dir)
+
+    def delete_session(self, session_id: str, archive: bool = False) -> dict:
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        record = self._session_record(session_dir)
+        if archive:
+            archive_dir = self.paths.runtime_root / "archive" / "sessions"
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            target = archive_dir / session_dir.name
+            counter = 2
+            while target.exists():
+                target = archive_dir / f"{session_dir.name}-{counter}"
+                counter += 1
+            shutil.move(str(session_dir), str(target))
+            return {
+                "id": record.id,
+                "title": record.title,
+                "deleted": False,
+                "archived": True,
+                "path": str(target),
+            }
+        shutil.rmtree(session_dir)
+        return {
+            "id": record.id,
+            "title": record.title,
+            "deleted": True,
+            "archived": False,
+            "path": str(session_dir),
+        }
 
     def create_note(self, workspace_id: str, title: str | None = None, body: str = "") -> NoteRecord:
         self.ensure_layout()
