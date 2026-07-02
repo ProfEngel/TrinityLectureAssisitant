@@ -36,7 +36,7 @@ from platform_adapters import find_codex_executable, find_opencode_executable, f
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from web_ui import render_web_ui
-from workspace_manager import TrinityWorkspaceManager
+from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
 
 
 DEFAULT_HOST = "127.0.0.1"
@@ -573,6 +573,85 @@ class TrinityBridge:
             save_config(self.config_path, config)
         return {"ok": True, "agent_id": agent_id, "display_name": display_name}
 
+    def workspace_state(self, workspace_id=None, session_limit=80):
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        workspaces = manager.list_workspaces()
+        selected_workspace = str(workspace_id or "").strip()
+        if selected_workspace:
+            manager.get_workspace(selected_workspace)
+        else:
+            selected_workspace = INBOX_WORKSPACE_ID
+        sessions = manager.list_sessions(limit=max(1, min(int(session_limit or 80), 250)))
+        notes = manager.list_notes(limit=80)
+        return {
+            "ok": True,
+            "inbox": INBOX_WORKSPACE_ID,
+            "selected_workspace_id": selected_workspace,
+            "workspaces": [item.as_dict() for item in workspaces],
+            "sessions": [item.as_dict() for item in sessions],
+            "notes": [item.as_dict() for item in notes],
+        }
+
+    def create_workspace(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Arbeitsraum-Erstellung erwartet ein Objekt.")
+        title = str(payload.get("title") or payload.get("name") or "").strip()
+        if not title:
+            raise ValueError("Arbeitsraum braucht einen Namen.")
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        workspace = manager.create_workspace(
+            title,
+            kind=str(payload.get("kind") or "custom"),
+            pinned=bool(payload.get("pinned", False)),
+        )
+        return {"ok": True, "workspace": workspace.as_dict()}
+
+    def update_workspace(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Arbeitsraum-Update erwartet ein Objekt.")
+        workspace_id = str(payload.get("workspace_id") or payload.get("id") or "").strip()
+        if not workspace_id:
+            raise ValueError("workspace_id fehlt.")
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        workspace = manager.update_workspace(
+            workspace_id,
+            title=payload.get("title") if "title" in payload else None,
+            pinned=bool(payload.get("pinned")) if "pinned" in payload else None,
+            status=payload.get("status") if "status" in payload else None,
+        )
+        return {"ok": True, "workspace": workspace.as_dict()}
+
+    def create_session(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Erstellung erwartet ein Objekt.")
+        title = str(payload.get("title") or payload.get("name") or "").strip()
+        workspace_id = str(payload.get("workspace_id") or INBOX_WORKSPACE_ID).strip() or INBOX_WORKSPACE_ID
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        session = manager.create_session(
+            title or None,
+            workspace_id=workspace_id,
+            mode=str(payload.get("mode") or "lecture"),
+        )
+        return {"ok": True, "session": session.as_dict()}
+
+    def update_session(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Update erwartet ein Objekt.")
+        session_id = str(payload.get("session_id") or payload.get("id") or "").strip()
+        if not session_id:
+            raise ValueError("session_id fehlt.")
+        manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        session = manager.update_session(
+            session_id,
+            title=payload.get("title") if "title" in payload else None,
+            status=payload.get("status") if "status" in payload else None,
+            summary_status=payload.get("summary_status") if "summary_status" in payload else None,
+            pinned=bool(payload.get("pinned")) if "pinned" in payload else None,
+            workspace_id=payload.get("workspace_id") if "workspace_id" in payload else None,
+            mode=payload.get("mode") if "mode" in payload else None,
+        )
+        return {"ok": True, "session": session.as_dict()}
+
     def delete_session(self, payload):
         if not isinstance(payload, dict):
             raise ValueError("Session-Loeschen erwartet ein Objekt.")
@@ -917,13 +996,19 @@ class TrinityBridge:
         user=None,
         access_token="",
         include_payload_html=True,
+        session_id="",
     ):
         events = []
+        target_session_id = str(session_id or "").strip()
         for event in load_chat_events(
-            self.history_path_for(user), limit=max(limit * 3, MAX_EVENTS)
+            self.history_path_for(user),
+            limit=5000 if target_session_id else max(limit * 3, MAX_EVENTS),
         ):
             timestamp = float(event.get("timestamp", 0) or 0)
             if timestamp <= after:
+                continue
+            event_session_id = str(event.get("session_id") or "").strip()
+            if target_session_id and event_session_id and event_session_id != target_session_id:
                 continue
             cleaned = dict(event)
             if cleaned.get("payload_html") and include_payload_html:
@@ -1176,8 +1261,22 @@ def make_handler(bridge):
                                 user=user,
                                 access_token=bridge._bearer_token(self, query),
                                 include_payload_html=include_payload_html,
+                                session_id=query.get("session_id", [""])[0],
                             ),
                         },
+                    )
+                elif parsed.path == "/workspaces":
+                    try:
+                        session_limit = int(query.get("session_limit", ["80"])[0] or 80)
+                    except (TypeError, ValueError):
+                        session_limit = 80
+                    _json_response(
+                        self,
+                        200,
+                        bridge.workspace_state(
+                            workspace_id=query.get("workspace_id", [""])[0],
+                            session_limit=session_limit,
+                        ),
                     )
                 elif parsed.path == "/payload":
                     after = float(query.get("after", ["0"])[0] or 0)
@@ -1276,6 +1375,30 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
+                elif parsed.path == "/workspace/create":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Arbeitsraeume erstellen ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.create_workspace(_read_json(self)))
+                elif parsed.path == "/workspace/update":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Arbeitsraeume aendern ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.update_workspace(_read_json(self)))
+                elif parsed.path == "/session/create":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Sessions erstellen ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.create_session(_read_json(self)))
+                elif parsed.path == "/session/update":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Sessions aendern ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.update_session(_read_json(self)))
                 elif parsed.path == "/session/delete":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(

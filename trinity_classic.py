@@ -281,6 +281,8 @@ class ClassicWindow(QMainWindow):
         self.remote_events = []
         self.remote_after = 0.0
         self._remote_next_poll = 0.0
+        self._workspace_sidebar_signature = None
+        self._workspace_sidebar_next_refresh = 0.0
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
         self.workspace_manager = TrinityWorkspaceManager(BASE_DIR, load_config(CONFIG_FILE))
         self.selected_workspace_id = INBOX_WORKSPACE_ID
@@ -1169,7 +1171,31 @@ class ClassicWindow(QMainWindow):
         self._refresh_transcript()
         self._refresh_chat_history()
         self._refresh_memory_if_changed()
+        self._refresh_workspace_sidebar_if_changed()
         self._refresh_workspace_views()
+
+    def _workspace_sidebar_signature_for_sync(self):
+        try:
+            root = self.workspace_manager.root
+            if not root.exists():
+                return ()
+            signature = []
+            for path in root.rglob("*.json"):
+                stat = path.stat()
+                signature.append((str(path), stat.st_mtime, stat.st_size))
+            return tuple(sorted(signature))
+        except OSError:
+            return ()
+
+    def _refresh_workspace_sidebar_if_changed(self):
+        if time.monotonic() < self._workspace_sidebar_next_refresh:
+            return
+        self._workspace_sidebar_next_refresh = time.monotonic() + 1.5
+        signature = self._workspace_sidebar_signature_for_sync()
+        if signature == self._workspace_sidebar_signature:
+            return
+        self._workspace_sidebar_signature = signature
+        self._refresh_workspace_sidebar()
 
     def _payload_for_workspace(self):
         if self.remote_client:

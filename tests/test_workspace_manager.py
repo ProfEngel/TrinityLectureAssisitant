@@ -62,6 +62,36 @@ def test_workspace_session_lifecycle_and_move(tmp_path):
     assert manager.list_sessions(workspace.id) == []
 
 
+def test_workspace_and_session_updates_are_persistent(tmp_path):
+    home = tmp_path / "Trinity"
+    (home / "core").mkdir(parents=True)
+    runtime = tmp_path / "Runtime"
+    manager = TrinityWorkspaceManager(home, _config(runtime))
+
+    workspace = manager.create_workspace("Roman", kind="writing")
+    updated_workspace = manager.update_workspace(workspace.id, title="Erendria", pinned=True)
+    session = manager.create_session("Alt", workspace_id=INBOX_WORKSPACE_ID)
+    updated_session = manager.update_session(
+        session.id,
+        title="Kapitel 3",
+        workspace_id=workspace.id,
+        pinned=True,
+        status="active",
+        summary_status="queued",
+        mode="office",
+    )
+
+    assert updated_workspace.title == "Erendria"
+    assert updated_workspace.pinned is True
+    assert updated_session.title == "Kapitel 3"
+    assert updated_session.workspace_id == workspace.id
+    assert updated_session.pinned is True
+    assert updated_session.status == "active"
+    assert updated_session.summary_status == "queued"
+    assert manager.list_sessions(workspace.id)[0].id == session.id
+    assert manager.list_sessions(INBOX_WORKSPACE_ID) == []
+
+
 def test_workspace_session_delete_can_archive(tmp_path):
     home = tmp_path / "Trinity"
     (home / "core").mkdir(parents=True)

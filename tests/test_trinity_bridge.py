@@ -173,6 +173,32 @@ def test_bridge_deletes_workspace_session(tmp_path):
     assert not created.path.exists()
 
 
+def test_bridge_exposes_and_mutates_workspace_state(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+
+    initial = bridge.workspace_state()
+    workspace = bridge.create_workspace({"title": "Erendria"})["workspace"]
+    session = bridge.create_session(
+        {"title": "20260702_0900_Kapitel3", "workspace_id": workspace["id"]}
+    )["session"]
+    updated = bridge.update_session(
+        {"session_id": session["id"], "title": "Kapitel 4", "pinned": True}
+    )["session"]
+    state = bridge.workspace_state(workspace_id=workspace["id"])
+    archived = bridge.delete_session({"session_id": session["id"], "archive": True})
+
+    assert initial["ok"] is True
+    assert initial["inbox"] == "_inbox"
+    assert workspace["title"] == "Erendria"
+    assert updated["title"] == "Kapitel 4"
+    assert updated["pinned"] is True
+    assert state["selected_workspace_id"] == workspace["id"]
+    assert any(item["id"] == session["id"] for item in state["sessions"])
+    assert archived["archived"] is True
+
+
 def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path):
     bridge = TrinityBridge(tmp_path)
 
@@ -530,6 +556,28 @@ def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
     assert events[0]["text"] == "Fertig"
     assert "/media?path=" in events[0]["payload_html"]
     assert "file://" not in events[0]["payload_html"]
+
+
+def test_bridge_events_can_be_loaded_for_one_session(tmp_path):
+    home = tmp_path
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {"role": "user", "text": "Session A", "session_id": "session-a"},
+    )
+    append_chat_event(
+        history,
+        {"role": "assistant", "text": "Session B", "session_id": "session-b"},
+    )
+    append_chat_event(
+        history,
+        {"role": "assistant", "text": "Unscoped Antwort", "request_id": "req-1"},
+    )
+    bridge = TrinityBridge(home)
+
+    events = bridge.events_since(0, session_id="session-b")
+
+    assert [event["text"] for event in events] == ["Session B", "Unscoped Antwort"]
 
 
 def test_bridge_deletes_single_chat_event(tmp_path):

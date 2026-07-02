@@ -268,6 +268,31 @@ class TrinityWorkspaceManager:
         _write_json(workspace.path / "workspace.json", data)
         return self._workspace_record(workspace.id)
 
+    def update_workspace(
+        self,
+        workspace_id: str,
+        *,
+        title: str | None = None,
+        pinned: bool | None = None,
+        status: str | None = None,
+    ) -> WorkspaceRecord:
+        self.ensure_layout()
+        workspace = self.get_workspace(workspace_id)
+        data = _read_json(workspace.path / "workspace.json", {})
+        if title is not None:
+            cleaned = title.strip()
+            if cleaned:
+                data["title"] = cleaned
+        if pinned is not None:
+            data["pinned"] = bool(pinned)
+        if status is not None:
+            cleaned_status = status.strip()
+            if cleaned_status:
+                data["status"] = cleaned_status
+        data["updated_at"] = _now_iso()
+        _write_json(workspace.path / "workspace.json", data)
+        return self._workspace_record(workspace.id)
+
     def update_session_pinned(self, session_id: str, pinned: bool) -> SessionRecord:
         self.ensure_layout()
         session_dir = self._find_session_dir(session_id)
@@ -276,6 +301,48 @@ class TrinityWorkspaceManager:
         data = _read_json(session_dir / "session.json", {})
         data["pinned"] = bool(pinned)
         data["updated_at"] = _now_iso()
+        _write_json(session_dir / "session.json", data)
+        return self._session_record(session_dir)
+
+    def update_session(
+        self,
+        session_id: str,
+        *,
+        title: str | None = None,
+        status: str | None = None,
+        summary_status: str | None = None,
+        pinned: bool | None = None,
+        workspace_id: str | None = None,
+        mode: str | None = None,
+    ) -> SessionRecord:
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        if workspace_id:
+            current = _read_json(session_dir / "session.json", {})
+            if str(current.get("workspace_id") or INBOX_WORKSPACE_ID) != workspace_id:
+                moved = self.move_session(session_id, workspace_id)
+                session_dir = moved.path
+        data = _read_json(session_dir / "session.json", {})
+        if title is not None:
+            cleaned = title.strip()
+            if cleaned:
+                data["title"] = cleaned
+        if status is not None:
+            cleaned_status = status.strip()
+            if cleaned_status:
+                data["status"] = cleaned_status
+        if summary_status is not None:
+            data["summary_status"] = summary_status.strip() or "none"
+        if pinned is not None:
+            data["pinned"] = bool(pinned)
+        if mode is not None:
+            cleaned_mode = mode.strip()
+            if cleaned_mode:
+                data["mode"] = cleaned_mode
+        data["updated_at"] = _now_iso()
+        data["last_opened_at"] = _now_iso()
         _write_json(session_dir / "session.json", data)
         return self._session_record(session_dir)
 

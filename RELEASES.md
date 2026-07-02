@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.28:** Desktop, iPad und iPhone synchronisieren Arbeitsraeume und Sessions ueber die Bridge; Clients koennen dieselbe Session gezielt laden, umbenennen, archivieren oder loeschen, und mobile Antworten erscheinen auch bei langen/parallel genutzten Session-Verlaeufen wieder zuverlaessig.
 - **v0.16.27:** Companion-Chat-Kompatibilitaet: Mobile Antworten werden auch dann wieder angezeigt, wenn ein Runtime-Pfad eine Antwort nur ueber `request_id` und ohne `session_id` zurueckliefert; die Companion-Eingabe startet wieder kompakt einzeilig.
 - **v0.16.26:** Companion-Chat-Fix: Nachrichten koennen serverseitig geloescht werden, neue Sessions filtern alte Events strikt aus und Return sendet Chatnachrichten direkter.
 - **v0.16.25:** Pi-Antworten werden nicht mehr doppelt angezeigt: Wenn Pi nur den normalen Antworttext liefert, erzeugt Trinity keine zusaetzliche Agenten-/Medienkarte mehr.
