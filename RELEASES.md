@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.32:** Companion Offline-Talk verhaelt sich naeher wie online: finale STT-Chunks werden lokal in den Chat geschrieben, Wakeword-Varianten aus Trinity werden offline erkannt, Apple Foundation Models koennen direkt antworten und die spaeter synchronisierten Offline-Events umfassen nun auch Transkripte.
 - **v0.16.31:** Companion-App erhaelt einen sichtbaren Antwortmodus-Schalter: `Auto` priorisiert den Trinity Server und nutzt Apple Foundation Models als Fallback; `Foundation` bevorzugt lokale Textantworten und synchronisiert Offline-Events spaeter zurueck. README wurde aufgeraeumt und verweist auf Feature- und Offline-Dokumentation.
 - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.
 - **v0.16.29:** Chatprompts aus ClassicUI, iPad und iPhone laufen nun ueber eine Bridge-Queue statt ueber eine einzelne Befehlsdatei; mehrere Clients/Sessions koennen parallel senden, alte Fremd-Session-Events werden strikter gefiltert, und fehlerhafte Skill-Erkennung blockiert den normalen LLM-Antwortpfad nicht mehr.

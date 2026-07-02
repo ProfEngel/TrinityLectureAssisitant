@@ -691,13 +691,17 @@ class TrinityBridge:
             if client_event_id and client_event_id in existing_ids:
                 continue
             role = str(event.get("role") or "").strip().lower()
-            if role not in {"user", "assistant"}:
+            if role not in {"user", "assistant", "transcript"}:
                 continue
             text = str(event.get("text") or "").strip()
             if not text:
                 continue
             source = str(event.get("source") or "companion-offline").strip()[:80]
-            if source not in {"companion-offline", "apple-foundation-offline"}:
+            if source not in {
+                "companion-offline",
+                "companion-offline-stt",
+                "apple-foundation-offline",
+            }:
                 source = "companion-offline"
             session_id = str(event.get("session_id") or event.get("sessionId") or "").strip()
             session_name = str(event.get("session_name") or event.get("sessionName") or "").strip()[:160]
@@ -784,10 +788,16 @@ class TrinityBridge:
         }
 
     def get_prompts(self):
+        config = self._read_config()
+        persona = config.get("persona", {})
+        if not isinstance(persona, dict):
+            persona = {}
         return {
             "ok": True,
             "soul": self._read_text_file(self.core_dir / "Soul.md"),
             "user": self._read_text_file(self.core_dir / "User.md"),
+            "agent_name": str(persona.get("agent_name") or "Trinity"),
+            "trigger_variants": list(persona.get("trigger_variants") or []),
         }
 
     def save_prompts(self, payload):

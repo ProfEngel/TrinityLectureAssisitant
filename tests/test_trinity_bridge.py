@@ -196,6 +196,14 @@ def test_bridge_imports_companion_offline_events_once(tmp_path):
                 "session_id": "session-offline",
                 "session_name": "Offline Test",
             },
+            {
+                "event_id": "local-transcript-1",
+                "role": "transcript",
+                "source": "companion-offline-stt",
+                "text": "Nur mitgeschriebener Offline-Talk",
+                "session_id": "session-offline",
+                "session_name": "Offline Test",
+            },
         ]
     }
 
@@ -204,10 +212,43 @@ def test_bridge_imports_companion_offline_events_once(tmp_path):
     events = load_chat_events(home / "memory" / "classic_chat_history.jsonl", limit=10)
 
     assert first["ok"] is True
-    assert first["imported"] == 2
+    assert first["imported"] == 3
     assert second["imported"] == 0
-    assert [event["text"] for event in events] == ["Hallo offline", "Lokale Antwort"]
+    assert [event["text"] for event in events] == [
+        "Hallo offline",
+        "Lokale Antwort",
+        "Nur mitgeschriebener Offline-Talk",
+    ]
+    assert events[-1]["role"] == "transcript"
     assert all(event["offline_synced"] is True for event in events)
+
+
+def test_bridge_prompts_include_persona_wakeword_variants(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    (home / "core" / "Soul.md").write_text("Systemprompt", encoding="utf-8")
+    (home / "core" / "User.md").write_text("Userprompt", encoding="utf-8")
+    (home / "core" / "config.json").write_text(
+        json.dumps(
+            {
+                "persona": {
+                    "agent_name": "Trinity",
+                    "trigger_variants": ["trinity", "triniti"],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    bridge = TrinityBridge(home)
+
+    prompts = bridge.get_prompts()
+
+    assert prompts["ok"] is True
+    assert prompts["soul"] == "Systemprompt"
+    assert prompts["user"] == "Userprompt"
+    assert prompts["agent_name"] == "Trinity"
+    assert prompts["trigger_variants"] == ["trinity", "triniti"]
 
 
 def test_bridge_exposes_and_mutates_workspace_state(tmp_path):

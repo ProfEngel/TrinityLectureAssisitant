@@ -1,7 +1,10 @@
 # Companion Offline Sync und Foundation-Fallback
 
-Ab v0.16.31 kann die Companion-App nicht nur offline puffern, sondern auch
-zwischen Server-Prioritaet und lokalem Apple-Foundation-Modus wechseln.
+Ab v0.16.32 kann die Companion-App nicht nur offline puffern, sondern im
+Talk-Modus auch lokal auf das Trinity-Wakeword reagieren. Erkannte Sprache wird
+sofort in der aktiven Session sichtbar, lokale Apple-Foundation-Antworten werden
+wie normale Trinity-Antworten angezeigt und koennen ueber iPhone/iPad-TTS
+vorgelesen werden.
 
 ## Betriebsmodi
 
@@ -13,6 +16,26 @@ zwischen Server-Prioritaet und lokalem Apple-Foundation-Modus wechseln.
 In beiden Modi bleiben Sessions, Arbeitsraeume, Notizen und Chat-Events auf dem
 Geraet verfuegbar. Der aktuell aktive Modus wird oben in der Companion-App
 angezeigt.
+
+## Offline-Talk
+
+Wenn die Bridge nicht erreichbar ist, behandelt die Companion-App finale
+STT-Chunks so:
+
+1. Ohne Wakeword wird der Text als `transcript` lokal in der aktiven Session
+   gespeichert.
+2. Mit Wakeword, z.B. `Trinity, erklaere ...`, wird der Text als User-Event
+   gespeichert.
+3. Falls Apple Foundation Models verfuegbar sind, erzeugt die App direkt eine
+   lokale Assistant-Antwort.
+4. Wenn Hören/TTS aktiv ist, wird diese Antwort lokal vorgelesen.
+5. Beim Reconnect werden Transcript-, User- und Assistant-Events zur
+   Trinity-Bridge synchronisiert.
+
+Die App cached dafuer die letzten vom Server geladenen `Soul.md`-/`User.md`-
+Prompts sowie die Persona-Wakeword-Varianten. Dadurch klingt der Offline-Modus
+nicht wie ein beliebiger lokaler Helfer, sondern bleibt moeglichst nah an der
+konfigurierten Trinity.
 
 ## Synchronisationsmodell
 
@@ -44,6 +67,8 @@ sequenceDiagram
 - Sessions und aktive Session,
 - lokale Chat-Events pro Session,
 - nicht synchronisierte User-/Assistant-Events,
+- offline mitgeschriebene Transcript-Events,
+- zuletzt geladene Soul-/Userprompt- und Wakeword-Konfiguration,
 - finale STT- und Chat-Outbox-Eintraege.
 
 ## Was beim Reconnect passiert
@@ -70,4 +95,3 @@ Trinity-Server sind nicht verfuegbar:
 
 Wenn ein Auftrag diese Funktionen benoetigt, sollte der Modus auf **Auto**
 stehen und die Trinity-Bridge erreichbar sein.
-

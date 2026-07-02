@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.32:** Offline-Talk in der Companion-App reagiert nun auf Trinity-Wakewords, schreibt STT lokal in den Chat, erzeugt bei unterstuetzten Geraeten Apple-Foundation-Antworten inklusive lokaler TTS und synchronisiert Transcript/User/Assistant-Events spaeter zurueck. Die Companion-App cached dabei Soul-/Userprompt und Wakeword-Varianten vom Trinity-Server.
 > - **v0.16.31:** Companion-App bekommt einen sichtbaren Antwortmodus: **Auto** nutzt Trinity Server zuerst und Apple Foundation Models als Fallback; **Foundation** bevorzugt einfache lokale Textantworten auf iPhone/iPad und synchronisiert sie spaeter zurueck.
 > - **v0.16.30:** Companion-Clients koennen Arbeitsraeume, Sessions, Notizen und Chat-Events lokal cachen; bei Verbindungsverlust kann die iPhone-/iPad-App einfache Textantworten ueber Apples Foundation Models lokal erzeugen und diese beim Reconnect in die Trinity-Session zuruecksynchronisieren.
-> - **v0.16.29:** Chatprompts aus ClassicUI, iPad und iPhone laufen nun ueber eine Bridge-Queue statt ueber eine einzelne Befehlsdatei; mehrere Clients/Sessions koennen parallel senden, alte Fremd-Session-Events werden strikter gefiltert, und fehlerhafte Skill-Erkennung blockiert den normalen LLM-Antwortpfad nicht mehr.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
