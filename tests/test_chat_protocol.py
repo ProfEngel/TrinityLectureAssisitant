@@ -4,6 +4,7 @@ from chat_protocol import (
     encode_chat_request,
     load_chat_events,
     parse_command,
+    remove_chat_event,
 )
 
 
@@ -38,3 +39,15 @@ def test_chat_history_uses_json_lines(tmp_path):
 
     assert [event["role"] for event in events] == ["user", "assistant"]
     assert events[-1]["text"] == "Hallo zurück"
+
+
+def test_chat_history_can_remove_single_event(tmp_path):
+    path = tmp_path / "history.jsonl"
+    first = append_chat_event(path, {"role": "user", "text": "Bleibt"})
+    second = append_chat_event(path, {"role": "assistant", "text": "Weg"})
+
+    assert remove_chat_event(path, second["event_id"]) is True
+
+    events = load_chat_events(path)
+    assert [event["event_id"] for event in events] == [first["event_id"]]
+    assert remove_chat_event(path, "missing") is False

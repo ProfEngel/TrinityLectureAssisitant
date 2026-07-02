@@ -532,6 +532,20 @@ def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
     assert "file://" not in events[0]["payload_html"]
 
 
+def test_bridge_deletes_single_chat_event(tmp_path):
+    home = tmp_path
+    history = home / "memory" / "classic_chat_history.jsonl"
+    kept = append_chat_event(history, {"role": "user", "text": "Bleibt"})
+    removed = append_chat_event(history, {"role": "assistant", "text": "Weg"})
+    bridge = TrinityBridge(home)
+
+    result = bridge.delete_event({"event_id": removed["event_id"]})
+
+    assert result["ok"] is True
+    events = bridge.events_since(0)
+    assert [event["event_id"] for event in events] == [kept["event_id"]]
+
+
 def test_bridge_rewrites_core_payload_media_urls(tmp_path):
     home = tmp_path
     core_dir = home / "core"

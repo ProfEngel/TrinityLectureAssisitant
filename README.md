@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.26:** Companion-Chat-Fix: Nachrichten koennen serverseitig geloescht werden, neue Sessions filtern alte Events strikt aus und Return sendet Chatnachrichten direkter.
 > - **v0.16.25:** Pi-Antworten werden nicht mehr doppelt angezeigt: Wenn Pi nur den normalen Antworttext liefert, erzeugt Trinity keine zusaetzliche Agenten-/Medienkarte mehr.
 > - **v0.16.24:** Agenten zeigen nun kompakt Herkunft, Beschreibung, Rechte und Jobzahlen; Agent-Anzeigenamen koennen ohne Ordner-Rename angepasst werden; Sessions lassen sich direkt loeschen; ClassicUI und Companion ruecken mit iPad-aehnlicher Symbolleiste und moderner Chat-Eingabe weiter zusammen.
-> - **v0.16.23:** Companion/Bridge-Feinschliff: Agents zeigt nun den vollen Dashboard-Agentenpool gruppiert als Trinity-Kernagenten und BrainVault-Erweiterungen; Prompts koennen direkt aus `Soul.md`/`User.md` geladen und gespeichert werden; Light/Dark/System greift in der Companion-App wirklich.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

@@ -22,7 +22,13 @@ from urllib.request import url2pathname
 
 from agent_catalog import build_agent_catalog, normalize_catalog_overrides
 from chat_attachments import attachment_kind
-from chat_protocol import append_chat_event, build_chat_request, encode_chat_request, load_chat_events
+from chat_protocol import (
+    append_chat_event,
+    build_chat_request,
+    encode_chat_request,
+    load_chat_events,
+    remove_chat_event,
+)
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
 from memory_store import MemoryStore
@@ -576,6 +582,17 @@ class TrinityBridge:
         manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
         result = manager.delete_session(session_id, archive=bool(payload.get("archive", False)))
         return {"ok": True, **result}
+
+    def delete_event(self, payload, user=None):
+        if not isinstance(payload, dict):
+            raise ValueError("Nachrichten-Loeschen erwartet ein Objekt.")
+        event_id = str(payload.get("event_id") or payload.get("id") or "").strip()
+        if not event_id:
+            raise ValueError("event_id fehlt.")
+        removed = remove_chat_event(self.history_path_for(user), event_id)
+        if not removed:
+            raise ValueError("Nachricht wurde nicht gefunden.")
+        return {"ok": True, "event_id": event_id, "deleted": True}
 
     def _recent_jobs(self, limit=8):
         db_path = self.memory_dir / "jobs.sqlite3"
@@ -1265,6 +1282,8 @@ def make_handler(bridge):
                             "Sessions loeschen ist nur lokal oder fuer Administratoren verfuegbar."
                         )
                     _json_response(self, 200, bridge.delete_session(_read_json(self)))
+                elif parsed.path == "/event/delete":
+                    _json_response(self, 200, bridge.delete_event(_read_json(self), user=user))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/runtime":

@@ -87,3 +87,35 @@ def load_chat_events(history_path, limit=200):
         if isinstance(event, dict):
             events.append(event)
     return events
+
+
+def remove_chat_event(history_path, event_id):
+    path = Path(history_path)
+    target = str(event_id or "").strip()
+    if not target:
+        return False
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+
+    kept = []
+    removed = False
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            kept.append(line)
+            continue
+        if isinstance(event, dict) and str(event.get("event_id") or "") == target:
+            removed = True
+            continue
+        kept.append(line)
+
+    if not removed:
+        return False
+
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(("\n".join(kept) + "\n") if kept else "", encoding="utf-8")
+    os.replace(temporary, path)
+    return True
