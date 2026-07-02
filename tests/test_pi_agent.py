@@ -261,8 +261,8 @@ def test_execute_returns_pi_answer_directly(monkeypatch):
     )
 
     assert result["direct_answer"] == "Pi hat geantwortet."
-    assert result["has_payload"] is True
-    assert "Pi hat geantwortet" in result["html_payload"]
+    assert result["has_payload"] is False
+    assert result["html_payload"] == ""
 
 
 def test_capability_request_lists_brainvault_agents_without_explicit_pi(monkeypatch, tmp_path):

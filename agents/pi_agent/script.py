@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import html
 import json
 import os
 import re
@@ -552,20 +551,11 @@ def _run_pi(
 
 
 def _result(message: str, alias: str = "") -> dict:
-    escaped = html.escape(message)
-    subtitle = f"<p>Projekt: {html.escape(alias)}</p>" if alias else ""
     return {
         "direct_answer": message,
         "search_context": "",
-        "has_payload": True,
-        "html_payload": (
-            "<section style='font-family: system-ui; padding: 18px; color: #e5f2ff; "
-            "background: #0f172a; border-radius: 14px;'>"
-            "<h2 style='margin-top:0;'>Pi</h2>"
-            f"{subtitle}"
-            f"<pre style='white-space:pre-wrap'>{escaped}</pre>"
-            "</section>"
-        ),
+        "has_payload": False,
+        "html_payload": "",
     }
 
 
