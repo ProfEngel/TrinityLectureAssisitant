@@ -5,7 +5,7 @@ import time
 
 from trinity_bridge import TrinityBridge, _local_path_value
 from web_ui import render_web_ui
-from chat_protocol import append_chat_event, load_chat_events, parse_command
+from chat_protocol import append_chat_event, load_chat_events, pop_next_chat_request
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
 from workspace_manager import TrinityWorkspaceManager
@@ -22,7 +22,7 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     )
 
     assert result["ok"] is True
-    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    request = pop_next_chat_request(home / "core")
     assert request["text"] == "Hallo Trinity"
     assert request["source"] == "ios"
     assert request["session_id"] == "ios-1"
@@ -37,7 +37,7 @@ def test_bridge_keeps_explicit_web_source(tmp_path):
 
     bridge.send_message({"text": "Hallo", "source": "web"})
 
-    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    request = pop_next_chat_request(home / "core")
     assert request["source"] == "web"
 
 
@@ -239,7 +239,7 @@ def test_bridge_can_allow_tts_for_ios_message(tmp_path):
 
     bridge.send_message({"text": "Sag das laut", "speak": True})
 
-    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    request = pop_next_chat_request(home / "core")
     assert request["silent"] is False
     assert request["allow_tts"] is True
 
@@ -506,7 +506,7 @@ def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
     )
 
     assert result["ok"] is True
-    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    request = pop_next_chat_request(home / "core")
     assert [item["kind"] for item in request["attachments"]] == ["image", "pdf"]
     assert all(item["path"] for item in request["attachments"])
 
@@ -529,7 +529,7 @@ def test_bridge_uses_default_prompt_for_attachment_only_message(tmp_path):
         }
     )
 
-    request = parse_command((home / "core" / "cmd.txt").read_text(encoding="utf-8"))
+    request = pop_next_chat_request(home / "core")
     assert request["text"] == "Bitte analysiere die beigefügten Anlagen."
 
 
@@ -577,7 +577,7 @@ def test_bridge_events_can_be_loaded_for_one_session(tmp_path):
 
     events = bridge.events_since(0, session_id="session-b")
 
-    assert [event["text"] for event in events] == ["Session B", "Unscoped Antwort"]
+    assert [event["text"] for event in events] == ["Session B"]
 
 
 def test_bridge_deletes_single_chat_event(tmp_path):
@@ -705,7 +705,6 @@ def test_authenticated_bridge_separates_user_histories_and_uploads(tmp_path):
     colleague = bridge.auth.create_user(admin, "Kollegin", "zweites-langes-passwort")
 
     bridge.send_message({"text": "Nur fuer Admin"}, user=admin)
-    bridge.command_path.unlink()
     bridge.send_message({"text": "Nur fuer Kollegin"}, user=colleague)
 
     admin_events = bridge.events_since(0, user=admin)

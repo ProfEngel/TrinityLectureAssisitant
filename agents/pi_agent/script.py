@@ -135,9 +135,52 @@ def _configured_projects(config: dict) -> dict:
         clean_alias = str(alias).strip()
         if not clean_alias or not raw_path:
             continue
-        path = Path(os.path.expandvars(os.path.expanduser(str(raw_path)))).resolve()
-        if path.is_dir():
+        path = _safe_resolve(raw_path)
+        if _safe_is_dir(path):
             result[clean_alias] = path
+    return result
+
+
+def _safe_resolve(raw_path):
+    try:
+        return Path(os.path.expandvars(os.path.expanduser(str(raw_path)))).resolve()
+    except OSError:
+        return None
+
+
+def _safe_is_dir(path) -> bool:
+    try:
+        return bool(path and path.is_dir())
+    except OSError:
+        return False
+
+
+def _safe_is_file(path) -> bool:
+    try:
+        return bool(path and path.is_file())
+    except OSError:
+        return False
+
+
+def _safe_rglob(path, pattern: str):
+    try:
+        return sorted(path.rglob(pattern))
+    except OSError:
+        return []
+
+
+def _safe_child_dirs(path):
+    try:
+        children = sorted(path.iterdir(), key=lambda item: item.name.casefold())
+    except OSError:
+        return []
+    result = []
+    for child in children:
+        try:
+            if child.is_dir():
+                result.append(child)
+        except OSError:
+            continue
     return result
 
 
@@ -279,7 +322,7 @@ def _brainvault_query_context(project_path: Path = None, query: str = "") -> str
 
 
 def _matches_brainvault_index(root: Path, query: str = "") -> bool:
-    if not root or not (root / ".agents").is_dir():
+    if not root or not _safe_is_dir(root / ".agents"):
         return False
     terms = _query_terms(query)
     if not terms:
@@ -296,7 +339,7 @@ def _matches_brainvault_index(root: Path, query: str = "") -> bool:
 def _brainvault_index_terms(root: Path) -> set[str]:
     terms = set()
     agents_dir = root / ".agents"
-    for agent_yaml in sorted(agents_dir.rglob("agent.yaml")):
+    for agent_yaml in _safe_rglob(agents_dir, "agent.yaml"):
         try:
             raw = agent_yaml.read_text(encoding="utf-8", errors="ignore")[:12000]
         except OSError:
@@ -318,12 +361,11 @@ def _brainvault_index_terms(root: Path) -> set[str]:
         Path("MainHub"),
     ):
         base = root / relative_base
-        if not base.is_dir():
+        if not _safe_is_dir(base):
             continue
-        for child in sorted(base.iterdir()):
-            if child.is_dir():
-                terms.update(_index_tokens(child.name))
-                terms.update(_index_tokens(child.relative_to(root).as_posix()))
+        for child in _safe_child_dirs(base):
+            terms.update(_index_tokens(child.name))
+            terms.update(_index_tokens(child.relative_to(root).as_posix()))
     return terms
 
 
@@ -383,7 +425,7 @@ def _query_terms(query: str) -> list[str]:
 def _matching_brainvault_agents(root: Path, terms: list[str]) -> list[str]:
     hits = []
     agents_dir = root / ".agents"
-    for agent_yaml in sorted(agents_dir.rglob("agent.yaml")):
+    for agent_yaml in _safe_rglob(agents_dir, "agent.yaml"):
         try:
             raw = agent_yaml.read_text(encoding="utf-8", errors="ignore")[:12000]
         except OSError:
@@ -415,11 +457,9 @@ def _matching_brainvault_projects(root: Path, terms: list[str]) -> list[str]:
         Path("MainHub"),
     ):
         base = root / relative_base
-        if not base.is_dir():
+        if not _safe_is_dir(base):
             continue
-        for child in sorted(base.iterdir()):
-            if not child.is_dir():
-                continue
+        for child in _safe_child_dirs(base):
             haystack = _normalize_for_search(child.name)
             if any(term in haystack for term in terms):
                 hits.append(child.relative_to(root).as_posix())
@@ -672,7 +712,7 @@ def _project_from_control_plane(context: dict):
         try:
             repo_root = Path(__file__).resolve().parents[2]
             path = brainvault_root_from_config(repo_root, config)
-            if path.is_dir() and (path / ".agents").is_dir():
+            if _safe_is_dir(path) and _safe_is_dir(path / ".agents"):
                 return "BrainVault", path
         except Exception:
             pass
@@ -681,8 +721,8 @@ def _project_from_control_plane(context: dict):
         raw_path = str(control.get(key) or "").strip()
         if not raw_path:
             continue
-        path = Path(os.path.expandvars(os.path.expanduser(raw_path))).resolve()
-        if path.is_dir() and (path / ".agents").is_dir():
+        path = _safe_resolve(raw_path)
+        if _safe_is_dir(path) and _safe_is_dir(path / ".agents"):
             return "BrainVault", path
     return "", None
 
@@ -691,7 +731,7 @@ def _load_brainvault_agent_summary(root: Path) -> list[dict]:
     if not root:
         return []
     catalog = root / ".agents" / "_meta" / "agent_catalog.json"
-    if not catalog.is_file():
+    if not _safe_is_file(catalog):
         catalog = root / ".catalog" / "agent_catalog.json"
     try:
         data = json.loads(catalog.read_text(encoding="utf-8"))

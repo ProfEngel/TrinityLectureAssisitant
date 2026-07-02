@@ -25,7 +25,7 @@ from chat_attachments import attachment_kind
 from chat_protocol import (
     append_chat_event,
     build_chat_request,
-    encode_chat_request,
+    enqueue_chat_request,
     load_chat_events,
     remove_chat_event,
 )
@@ -181,8 +181,6 @@ class TrinityBridge:
         history_path = self.history_path_for(user)
 
         with self._lock:
-            if self.command_path.exists():
-                raise RuntimeError("Trinity verarbeitet noch eine vorherige Anfrage.")
             append_chat_event(
                 history_path,
                 {
@@ -196,7 +194,7 @@ class TrinityBridge:
                     "privacy_mode": request["privacy_mode"],
                 },
             )
-            self.command_path.write_text(encode_chat_request(request), encoding="utf-8")
+            enqueue_chat_request(self.core_dir, request)
 
         return {"ok": True, "request_id": request["request_id"], "accepted_at": time.time()}
 
@@ -1008,7 +1006,7 @@ class TrinityBridge:
             if timestamp <= after:
                 continue
             event_session_id = str(event.get("session_id") or "").strip()
-            if target_session_id and event_session_id and event_session_id != target_session_id:
+            if target_session_id and event_session_id != target_session_id:
                 continue
             cleaned = dict(event)
             if cleaned.get("payload_html") and include_payload_html:

@@ -47,7 +47,7 @@ from chat_attachments import stage_attachment
 from chat_protocol import (
     append_chat_event,
     build_chat_request,
-    encode_chat_request,
+    enqueue_chat_request,
     load_chat_events,
 )
 from memory_store import MemoryStore, render_graph_html
@@ -1869,10 +1869,8 @@ class ClassicWindow(QMainWindow):
             )
         except Exception:
             pass
-        command_path = os.path.join(CORE_DIR, "cmd.txt")
         try:
-            with open(command_path, "w", encoding="utf-8") as handle:
-                handle.write(encode_chat_request(request))
+            enqueue_chat_request(CORE_DIR, request)
             self.command.clear()
             self.pending_attachments = []
             self._update_attachment_summary()

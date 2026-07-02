@@ -23,6 +23,48 @@ def encode_chat_request(request):
     return json.dumps(request, ensure_ascii=False)
 
 
+def command_queue_dir(core_dir):
+    return Path(core_dir) / "cmd_queue"
+
+
+def enqueue_chat_request(core_dir, request):
+    queue_dir = command_queue_dir(core_dir)
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    request.setdefault("request_id", uuid.uuid4().hex)
+    filename = f"{time.time_ns()}-{request['request_id']}.json"
+    destination = queue_dir / filename
+    temporary = queue_dir / f"{filename}.tmp"
+    temporary.write_text(encode_chat_request(request), encoding="utf-8")
+    os.replace(temporary, destination)
+    return destination
+
+
+def pop_next_chat_request(core_dir):
+    queue_dir = command_queue_dir(core_dir)
+    if queue_dir.exists():
+        for path in sorted(queue_dir.glob("*.json")):
+            try:
+                raw = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            try:
+                path.unlink()
+            except OSError:
+                pass
+            return parse_command(raw)
+
+    legacy_path = Path(core_dir) / "cmd.txt"
+    try:
+        raw = legacy_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        legacy_path.unlink()
+    except OSError:
+        pass
+    return parse_command(raw)
+
+
 def parse_command(raw_command):
     raw = raw_command.strip()
     if raw.startswith("{"):

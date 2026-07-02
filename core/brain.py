@@ -310,6 +310,49 @@ class TrinityBrain:
             return False
         return True
 
+    @staticmethod
+    def _skill_label(skill):
+        return getattr(skill, "__name__", getattr(skill, "__file__", "Skill"))
+
+    def _skill_can_handle(self, skill, router_text, skill_context=None):
+        try:
+            handles_query = bool(skill.can_handle(router_text))
+        except Exception as exc:
+            print(
+                "⚠️ Skill-Erkennung übersprungen "
+                f"({self._skill_label(skill)}): {exc}"
+            )
+            return False
+
+        if (
+            not handles_query
+            and skill_context is not None
+            and hasattr(skill, "can_handle_with_context")
+        ):
+            try:
+                handles_query = bool(
+                    skill.can_handle_with_context(router_text, skill_context)
+                )
+            except Exception as exc:
+                print(
+                    "⚠️ Kontext-Skill-Erkennung übersprungen "
+                    f"({self._skill_label(skill)}): {exc}"
+                )
+                return False
+        return handles_query
+
+    def _skill_can_handle_song(self, skill, router_text):
+        if not hasattr(skill, "can_handle_song"):
+            return False
+        try:
+            return bool(skill.can_handle_song(router_text))
+        except Exception as exc:
+            print(
+                "⚠️ Song-Skill-Erkennung übersprungen "
+                f"({self._skill_label(skill)}): {exc}"
+            )
+            return False
+
 
     def get_soul(self):
         return self._soul_cache
@@ -394,7 +437,7 @@ class TrinityBrain:
                 print(f"⚠️ Job-Planung nicht verfuegbar: {exc}")
 
         for skill, missing in getattr(self, "unavailable_skills", []):
-            if skill.can_handle(router_text):
+            if self._skill_can_handle(skill, router_text):
                 search_context = (
                     "--- FUNKTION NICHT VERFÜGBAR ---\n"
                     f"{capability_message(missing)}\n\n"
@@ -407,7 +450,7 @@ class TrinityBrain:
         for skill in getattr(self, 'live_skills', []):
             if search_context:
                 break
-            if hasattr(skill, 'can_handle_song') and skill.can_handle_song(router_text):
+            if self._skill_can_handle_song(skill, router_text):
                 try:
                     result = skill.execute_t2a(user_query, context={
                         "brain": self,
@@ -451,9 +494,11 @@ class TrinityBrain:
                         "für normale Bildanalyse."
                     )
                     continue
-                handles_query = skill.can_handle(router_text)
-                if not handles_query and hasattr(skill, "can_handle_with_context"):
-                    handles_query = skill.can_handle_with_context(router_text, skill_context)
+                handles_query = self._skill_can_handle(
+                    skill,
+                    router_text,
+                    skill_context,
+                )
                 if handles_query:
                     try:
                         result = skill.execute(user_query, context=skill_context)

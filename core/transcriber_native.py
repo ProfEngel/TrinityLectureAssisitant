@@ -22,7 +22,7 @@ from AVFoundation import AVAudioEngine
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
 from platform_adapters import create_tts_backend
-from chat_protocol import append_chat_event, parse_command
+from chat_protocol import append_chat_event, pop_next_chat_request
 from transcriber import CHAT_HISTORY_FILE, MEMORY_DIR, TrinityEar, set_state
 
 
@@ -157,8 +157,6 @@ class NativeTrinityEar(TrinityEar):
         self.is_running = True
         set_state("idle")
 
-        cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
-        
         # Start Heartbeat Thread only if enabled AND not in chat mode
         mode = getattr(self, 'mode', 'office')
         if getattr(self, 'proactive_cfg', {}).get("heartbeat_enabled", False) and mode != "chat":
@@ -184,11 +182,9 @@ class NativeTrinityEar(TrinityEar):
             while self.is_running:
                 self._process_external_stt_feed()
 
-                if os.path.exists(cmd_file):
+                request = pop_next_chat_request(os.path.dirname(__file__))
+                if request is not None:
                     try:
-                        with open(cmd_file, "r", encoding="utf-8") as f:
-                            request = parse_command(f.read())
-                        os.remove(cmd_file)
                         cmd_text = request["text"]
                         if cmd_text:
                             is_silent = request.get("silent", False)

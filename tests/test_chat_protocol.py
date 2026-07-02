@@ -2,8 +2,10 @@ from chat_protocol import (
     append_chat_event,
     build_chat_request,
     encode_chat_request,
+    enqueue_chat_request,
     load_chat_events,
     parse_command,
+    pop_next_chat_request,
     remove_chat_event,
 )
 
@@ -28,6 +30,18 @@ def test_legacy_silent_command_stays_supported():
     assert parsed["text"] == "Hallo Trinity"
     assert parsed["silent"] is True
     assert parsed["source"] == "legacy"
+
+
+def test_chat_request_queue_preserves_multiple_requests(tmp_path):
+    first = build_chat_request("Erste Nachricht")
+    second = build_chat_request("Zweite Nachricht")
+
+    enqueue_chat_request(tmp_path, first)
+    enqueue_chat_request(tmp_path, second)
+
+    assert pop_next_chat_request(tmp_path)["text"] == "Erste Nachricht"
+    assert pop_next_chat_request(tmp_path)["text"] == "Zweite Nachricht"
+    assert pop_next_chat_request(tmp_path) is None
 
 
 def test_chat_history_uses_json_lines(tmp_path):

@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 # Damit der Import aus dem gleichen Verzeichnis funktioniert
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
-from chat_protocol import append_chat_event, parse_command
+from chat_protocol import append_chat_event, pop_next_chat_request
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
 from tenant_context import tenant_history_path, tenant_memory_db_path
@@ -728,8 +728,6 @@ class TrinityEar:
         if self.telegram_cfg.get("enabled", False) and self.telegram_cfg.get("bot_token"):
             threading.Thread(target=self._telegram_listener_loop, daemon=True).start()
         
-        cmd_file = os.path.join(os.path.dirname(__file__), "cmd.txt")
-        
         blocks_per_chunk = int(self.chunk_duration / 0.5)
 
         if self.mode != "chat" and self.speech_input_enabled:
@@ -757,11 +755,9 @@ class TrinityEar:
                 self._process_external_stt_feed()
 
                 # 1. Prüfe auf stille Text-Eingaben
-                if os.path.exists(cmd_file):
+                request = pop_next_chat_request(os.path.dirname(__file__))
+                if request is not None:
                     try:
-                        with open(cmd_file, "r", encoding="utf-8") as f:
-                            request = parse_command(f.read())
-                        os.remove(cmd_file)
                         cmd_text = request["text"]
                         if cmd_text:
                             is_silent = request.get("silent", False)

@@ -199,6 +199,38 @@ def test_pi_context_does_not_route_general_knowledge_question(tmp_path):
     )
 
 
+def test_pi_context_skips_unreadable_brainvault_project_base(monkeypatch, tmp_path):
+    agent = _load_agent()
+    brainvault = tmp_path / "BrainVault"
+    agents_dir = brainvault / ".agents" / "skills" / "mail-agent"
+    agents_dir.mkdir(parents=True)
+    (agents_dir / "agent.yaml").write_text(
+        "id: skills.mail\nname: Mail Agent\nstatus: active\n",
+        encoding="utf-8",
+    )
+    blocked_projects = brainvault / "Ideaverse" / "projects"
+    blocked_projects.mkdir(parents=True)
+    original_iterdir = agent.Path.iterdir
+
+    def guarded_iterdir(path):
+        if path == blocked_projects:
+            raise PermissionError("blocked")
+        return original_iterdir(path)
+
+    monkeypatch.setattr(agent.Path, "iterdir", guarded_iterdir)
+
+    assert agent.can_handle_with_context(
+        "Trinity, erklaere mir kurz die Spieltheorie.",
+        {
+            "pi_cfg": {
+                "enabled": True,
+                "projects": {"BrainVault": str(brainvault)},
+                "default_project": "BrainVault",
+            }
+        },
+    ) is False
+
+
 def test_run_pi_sets_project_environment(monkeypatch, tmp_path):
     agent = _load_agent()
     project = tmp_path / "BrainVault"
