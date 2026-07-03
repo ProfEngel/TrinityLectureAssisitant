@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.36:** LLM- und Agentenantworten werden vor der Anzeige zentral bereinigt, damit interne Thinking-/Reasoning-Entwuerfe nicht mehr in Talk, Chat oder TTS landen. Die ClassicUI laedt beim Klick auf eine Session jetzt gezielt deren Verlauf aus der Bridge.
 > - **v0.16.35:** Companion-STT uebertraegt Session-Name und Datenschutzkontext jetzt auch im Chat-/Wakeword-Pfad; iPad/iPhone koennen den Runtime-Modus Vorlesung/Buero/Chat setzen, zeigen `Wakeword erkannt` sichtbar an und reagieren mit kuerzeren STT-/Polling-Latenzen.
 > - **v0.16.34:** Telegram bekommt eine eigene persistente Session; Telegram-Text, Voice, Bilder und erzeugte Medien werden sauber in diesem Kanal protokolliert, waehrend iPhone/iPad-Clients kompaktere Statusanzeigen, schnellere TTS/STT-Wiederaufnahme und sofort sichtbare neue Arbeitsraeume/Sessions erhalten.
-> - **v0.16.32:** Offline-Talk in der Companion-App reagiert nun auf Trinity-Wakewords, schreibt STT lokal in den Chat, erzeugt bei unterstuetzten Geraeten Apple-Foundation-Antworten inklusive lokaler TTS und synchronisiert Transcript/User/Assistant-Events spaeter zurueck. Die Companion-App cached dabei Soul-/Userprompt und Wakeword-Varianten vom Trinity-Server.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

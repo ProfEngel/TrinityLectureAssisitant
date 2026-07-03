@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.36:** Antwort-Sicherheitsnetz fuer Talk/Chat: Trinity bereinigt LLM- und Agentenantworten vor der Anzeige von internen Thinking-/Reasoning-Bloecken, bevorzugt klare Final-Antworten und gibt kurze Sprachfragen nicht mehr als ausufernde Scratchpads aus. ClassicUI laedt beim Session-Wechsel ausserdem gezielt die gewaehlte Bridge-Session.
 - **v0.16.35:** Companion-STT bleibt jetzt sauber in der aktiven Session: `session_name`, `session_id` und Datenschutzkontext werden auch im Chat-/Wakeword-Pfad uebertragen. iPad/iPhone koennen den Runtime-Modus `Vorlesung`, `Buero` oder `Chat` setzen, zeigen `Wakeword erkannt` kurz sichtbar an und arbeiten mit kuerzeren STT-/Polling-Latenzen.
 - **v0.16.34:** Telegram bekommt eine eigene persistente Session; Telegram-Text, Voice, Bilder und erzeugte Medien bleiben im Telegram-Kanal. Passend dazu werden iPhone-Statusflaechen kompakter, Talk-Kamera/Anhang liegen frei, STT nimmt nach TTS schneller wieder auf und neue Companion-Arbeitsraeume/Sessions erscheinen sofort lokal.
 - **v0.16.32:** Companion Offline-Talk verhaelt sich naeher wie online: finale STT-Chunks werden lokal in den Chat geschrieben, Wakeword-Varianten aus Trinity werden offline erkannt, Apple Foundation Models koennen direkt antworten und die spaeter synchronisierten Offline-Events umfassen nun auch Transkripte.

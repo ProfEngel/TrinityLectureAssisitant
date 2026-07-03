@@ -6,6 +6,7 @@ import base64
 import json
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
@@ -42,8 +43,11 @@ class RemoteTrinityClient:
         }
         return self._request("/message", payload)
 
-    def events_since(self, after=0.0):
-        return self._request(f"/events?after={float(after)}", method="GET").get("events", [])
+    def events_since(self, after=0.0, session_id=""):
+        query = {"after": float(after)}
+        if str(session_id or "").strip():
+            query["session_id"] = str(session_id).strip()
+        return self._request(f"/events?{urlencode(query)}", method="GET").get("events", [])
 
     def latest_payload(self):
         return self._request("/payload", method="GET")

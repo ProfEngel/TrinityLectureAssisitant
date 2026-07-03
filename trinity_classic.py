@@ -680,7 +680,13 @@ class ClassicWindow(QMainWindow):
         self.session_id = record.id
         self.session_name = record.title
         self._chat_signature = None
-        self._refresh_chat_history()
+        if self.remote_client:
+            self.remote_after = 0
+            self.remote_events = []
+            self._remote_next_poll = 0
+            self._refresh_remote_chat()
+        else:
+            self._refresh_chat_history()
         self.status.setText(f"Session geöffnet: {record.title}")
 
     def _workspace_label(self, record):
@@ -1462,7 +1468,10 @@ class ClassicWindow(QMainWindow):
             return
         self._remote_next_poll = time.monotonic() + 1.2
         try:
-            incoming = self.remote_client.events_since(self.remote_after)
+            incoming = self.remote_client.events_since(
+                self.remote_after,
+                session_id=self.session_id,
+            )
         except RuntimeError as exc:
             self.status.setText(f"Server nicht erreichbar: {exc}")
             return

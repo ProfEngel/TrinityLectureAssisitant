@@ -6,6 +6,7 @@ import shutil
 import re
 import time
 
+from answer_sanitizer import clean_visible_answer
 from platform_adapters import capability_message, detect_capabilities
 from chat_attachments import prepare_attachment_content
 from brainvault_agents import brainvault_root_from_config
@@ -254,7 +255,9 @@ class TrinityBrain:
             if resp.status_code == 200:
                 msg = resp.json()['choices'][0]['message']
                 # Qwen3-Fix: Fallback auf reasoning_content wenn content leer
-                return (msg.get('content') or msg.get('reasoning_content') or '').strip()
+                return clean_visible_answer(
+                    msg.get('content') or msg.get('reasoning_content') or ''
+                )
         except Exception as e:
             print(f"⚠️ ask_llm Fehler: {e}")
         return ""
@@ -515,6 +518,7 @@ class TrinityBrain:
                     break
 
         if direct_answer:
+            direct_answer = clean_visible_answer(direct_answer)
             if orchestrator is not None:
                 orchestrator.finish(task_decision, direct_answer)
             return direct_answer, has_payload
@@ -535,7 +539,12 @@ class TrinityBrain:
             f"Hier ist das aktuelle Transkript der Vorlesung inklusive Zeitstempel:\n"
             f"{transcript}\n\n"
             f"Regel: Wenn du nach dem Transkript oder vergangenen Aussagen gefragt wirst, "
-            f"beziehe dich exakt auf die Informationen und Zeitstempel in diesem Transkript."
+            f"beziehe dich exakt auf die Informationen und Zeitstempel in diesem Transkript.\n"
+            f"Absolute Ausgabe-Regel: Gib niemals interne Reasoning-, Thinking-, "
+            f"Analyse-, Draft-, Check- oder Self-Correction-Prozesse aus. "
+            f"Antworte nur mit der finalen Nutzerantwort. Bei kurzen Sprachfragen "
+            f"antworte knapp in hoechstens vier Saetzen, ausser der Nutzer fordert "
+            f"ausdruecklich eine ausfuehrliche Herleitung an."
         )
 
         data = {
@@ -568,7 +577,9 @@ class TrinityBrain:
             result = response.json()
             msg = result['choices'][0]['message']
             # Qwen3-Fix: Im Thinking-Modus ist 'content' leer, Antwort steht in 'reasoning_content'
-            answer = (msg.get('content') or msg.get('reasoning_content') or '').strip()
+            answer = clean_visible_answer(
+                msg.get('content') or msg.get('reasoning_content') or ''
+            )
             print(f"💡 Antwort ({len(answer)} Zeichen): {answer[:80]}...")
             
             # Falls Textmodus aktiv ist und noch kein Payload gesetzt wurde (z.B. keine Map), erzeuge Untertitel-Payload
