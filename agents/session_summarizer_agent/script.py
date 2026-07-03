@@ -128,21 +128,23 @@ def execute(query: str, context: dict = None) -> dict:
     html_payload = f"""
     <!-- KEEP_OPEN -->
     <!-- SESSION_SUMMARY_PAYLOAD -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
-        <h2 style="margin: 0; font-weight: 300; font-size: 18px;">📋 Abschluss-Zusammenfassung</h2>
-        <span style="font-size: 12px; opacity: 0.5;">Datei: {summary_filename}</span>
-    </div>
-    
-    <div style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 20px;">
-        {formatted_summary}
-    </div>
-    
-    <div style="border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 15px;">
-        <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #00e5ff;">✍️ Eigene Ergänzungen:</h3>
-        <textarea id="user_notes" style="width: 100%; height: 120px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-family: inherit; font-size: 14px; outline: none;" placeholder="Schreibe hier weitere Notizen hinein..."></textarea>
-        <p style="font-size: 11px; opacity: 0.5; margin-top: 5px;">
-            Hinweis: Ergänzungen in diesem Fenster sind temporär. Für dauerhafte Änderungen editiere bitte die Datei direkt in <code>memory/summaries/</code>.
-        </p>
+    <div style="box-sizing: border-box; min-height: 100%; width: 100%; padding: 22px; border-radius: 18px; background: linear-gradient(145deg, #07111f, #111827); color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; box-shadow: 0 18px 60px rgba(0,0,0,0.45);">
+        <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.16); padding-bottom: 12px; margin-bottom: 18px;">
+            <h2 style="margin: 0; font-weight: 650; font-size: 20px; letter-spacing: -0.01em;">📋 Abschluss-Zusammenfassung</h2>
+            <span style="font-size: 12px; color: #94a3b8; text-align: right;">Datei: {summary_filename}</span>
+        </div>
+
+        <div style="font-size: 15px; line-height: 1.65; color: #e5e7eb; margin-bottom: 22px;">
+            {formatted_summary}
+        </div>
+
+        <div style="border-top: 1px dashed rgba(148,163,184,0.45); padding-top: 16px;">
+            <h3 style="font-size: 14px; font-weight: 700; margin: 0 0 10px 0; color: #38bdf8;">✍️ Eigene Ergänzungen:</h3>
+            <textarea id="user_notes" style="box-sizing: border-box; width: 100%; height: 120px; background: rgba(15,23,42,0.92); border: 1px solid rgba(148,163,184,0.32); border-radius: 12px; color: #f8fafc; padding: 12px; font-family: inherit; font-size: 14px; outline: none;" placeholder="Schreibe hier weitere Notizen hinein..."></textarea>
+            <p style="font-size: 11px; color: #94a3b8; margin-top: 7px;">
+                Hinweis: Ergänzungen in diesem Fenster sind temporär. Für dauerhafte Änderungen editiere bitte die Datei direkt in <code style="color:#bae6fd;">memory/summaries/</code>.
+            </p>
+        </div>
     </div>
     """
     

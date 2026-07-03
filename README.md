@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.37:** Arbeitsraeume und Sessions sind jetzt normale Nutzeraktionen fuer angemeldete Companion-Clients: iPad/iPhone koennen erstellen, umbenennen, archivieren und loeschen, ohne Admin-Settings zu brauchen. Summary-Overlays sind wieder lesbar, und lokale Runtime-/Build-Artefakte werden ignoriert.
 > - **v0.16.36:** LLM- und Agentenantworten werden vor der Anzeige zentral bereinigt, damit interne Thinking-/Reasoning-Entwuerfe nicht mehr in Talk, Chat oder TTS landen. Die ClassicUI laedt beim Klick auf eine Session jetzt gezielt deren Verlauf aus der Bridge.
 > - **v0.16.35:** Companion-STT uebertraegt Session-Name und Datenschutzkontext jetzt auch im Chat-/Wakeword-Pfad; iPad/iPhone koennen den Runtime-Modus Vorlesung/Buero/Chat setzen, zeigen `Wakeword erkannt` sichtbar an und reagieren mit kuerzeren STT-/Polling-Latenzen.
-> - **v0.16.34:** Telegram bekommt eine eigene persistente Session; Telegram-Text, Voice, Bilder und erzeugte Medien werden sauber in diesem Kanal protokolliert, waehrend iPhone/iPad-Clients kompaktere Statusanzeigen, schnellere TTS/STT-Wiederaufnahme und sofort sichtbare neue Arbeitsraeume/Sessions erhalten.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

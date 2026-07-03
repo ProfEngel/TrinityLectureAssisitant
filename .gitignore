@@ -17,9 +17,13 @@ RAG/index/
 gen_images/
 memory/
 logs/
+TrinityRuntime/
+build/
+venv/
 __pycache__/
 *.pyc
 *.egg-info/
+RAG/*.xlsx
 
 # OS specific
 .DS_Store

@@ -309,6 +309,26 @@ def test_web_settings_are_local_or_administrator_only(tmp_path):
     assert account_bridge.can_manage_settings(RemoteHandler(), {"role": "admin"}) is True
 
 
+def test_workspace_sessions_are_available_to_authenticated_users(tmp_path):
+    class LocalHandler:
+        client_address = ("127.0.0.1", 12345)
+
+    class RemoteHandler:
+        client_address = ("100.90.5.25", 12345)
+
+    local_bridge = TrinityBridge(tmp_path)
+    assert local_bridge.can_manage_workspaces(LocalHandler(), {}) is True
+    assert local_bridge.can_manage_workspaces(RemoteHandler(), {}) is False
+
+    token_bridge = TrinityBridge(tmp_path / "token", token="secret")
+    assert token_bridge.can_manage_workspaces(RemoteHandler(), {}) is True
+
+    account_bridge = TrinityBridge(tmp_path / "accounts", auth_enabled=True)
+    assert account_bridge.can_manage_workspaces(RemoteHandler(), {"role": "user"}) is True
+    assert account_bridge.can_manage_workspaces(RemoteHandler(), {"role": "admin"}) is True
+    assert account_bridge.can_manage_workspaces(RemoteHandler(), None) is False
+
+
 def test_bridge_can_allow_tts_for_ios_message(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

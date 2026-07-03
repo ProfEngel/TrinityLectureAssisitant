@@ -779,6 +779,15 @@ class TrinityBridge:
         address = str(getattr(handler, "client_address", ("",))[0])
         return address in {"127.0.0.1", "::1", "localhost"}
 
+    def can_manage_workspaces(self, handler, user):
+        """Workspace/session changes are user actions, not privileged settings."""
+        if self.auth_enabled:
+            return user is not None
+        if self.token:
+            return True
+        address = str(getattr(handler, "client_address", ("",))[0])
+        return address in {"127.0.0.1", "::1", "localhost"}
+
     def get_web_settings(self):
         return {
             "ok": True,
@@ -1433,33 +1442,33 @@ def make_handler(bridge):
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
                 elif parsed.path == "/workspace/create":
-                    if not bridge.can_manage_settings(self, user):
+                    if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
-                            "Arbeitsraeume erstellen ist nur lokal oder fuer Administratoren verfuegbar."
+                            "Arbeitsraeume erstellen ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.create_workspace(_read_json(self)))
                 elif parsed.path == "/workspace/update":
-                    if not bridge.can_manage_settings(self, user):
+                    if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
-                            "Arbeitsraeume aendern ist nur lokal oder fuer Administratoren verfuegbar."
+                            "Arbeitsraeume aendern ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.update_workspace(_read_json(self)))
                 elif parsed.path == "/session/create":
-                    if not bridge.can_manage_settings(self, user):
+                    if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
-                            "Sessions erstellen ist nur lokal oder fuer Administratoren verfuegbar."
+                            "Sessions erstellen ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.create_session(_read_json(self)))
                 elif parsed.path == "/session/update":
-                    if not bridge.can_manage_settings(self, user):
+                    if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
-                            "Sessions aendern ist nur lokal oder fuer Administratoren verfuegbar."
+                            "Sessions aendern ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.update_session(_read_json(self)))
                 elif parsed.path == "/session/delete":
-                    if not bridge.can_manage_settings(self, user):
+                    if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
-                            "Sessions loeschen ist nur lokal oder fuer Administratoren verfuegbar."
+                            "Sessions loeschen ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.delete_session(_read_json(self)))
                 elif parsed.path == "/event/delete":
