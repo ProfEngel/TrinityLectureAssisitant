@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.39:** Die Companion Bridge schreibt erfolgreiche Dauerpolls wie `/events`, `/payload`, `/bubble`, `/workspaces` und `/dashboard` nicht mehr in den Live-Mitschnitt. STT, POST-Aktionen und Fehler bleiben sichtbar; bei Bedarf aktiviert `TRINITY_BRIDGE_VERBOSE_GETS=1` wieder das volle HTTP-Log.
 > - **v0.16.38:** Companion-Clients duerfen nach erfolgreicher Bridge-Auth wieder Arbeitsraeume und Sessions erstellen, auch wenn Trinity ohne Bearer-Token im Tailnet laeuft. Die iPad/iPhone-Statuszeile bleibt kompakt, und offene Trinity-Auftraege werden sofort sichtbar.
 > - **v0.16.37:** Arbeitsraeume und Sessions sind jetzt normale Nutzeraktionen fuer Companion-Clients: iPad/iPhone koennen erstellen, umbenennen, archivieren und loeschen, waehrend harte Settings-Rechte geschuetzt bleiben. Summary-Overlays sind wieder lesbar, und lokale Runtime-/Build-Artefakte werden ignoriert.
-> - **v0.16.36:** LLM- und Agentenantworten werden vor der Anzeige zentral bereinigt, damit interne Thinking-/Reasoning-Entwuerfe nicht mehr in Talk, Chat oder TTS landen. Die ClassicUI laedt beim Klick auf eine Session jetzt gezielt deren Verlauf aus der Bridge.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

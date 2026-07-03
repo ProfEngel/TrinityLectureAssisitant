@@ -51,6 +51,31 @@ SETTINGS_SECTIONS = {
     "companion", "server", "client", "control_plane", "harness_routing",
     "agent_catalog",
 }
+QUIET_GET_LOG_PATHS = {
+    "/health",
+    "/events",
+    "/payload",
+    "/bubble",
+    "/workspaces",
+    "/dashboard",
+}
+
+
+def _verbose_bridge_get_logs():
+    return str(os.environ.get("TRINITY_BRIDGE_VERBOSE_GETS", "")).strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
+
+def _should_log_bridge_request(command, path, message):
+    if _verbose_bridge_get_logs():
+        return True
+    if command != "GET":
+        return True
+    if urlparse(path).path not in QUIET_GET_LOG_PATHS:
+        return True
+    # Keep errors visible, but hide successful polling noise from the terminal.
+    return '" 200 ' not in message
 
 
 def _json_response(handler, status, payload):
@@ -1262,7 +1287,9 @@ def make_handler(bridge):
 
         def log_message(self, fmt, *args):
             try:
-                print(f"[bridge] {self.address_string()} - {fmt % args}")
+                message = fmt % args
+                if _should_log_bridge_request(self.command, self.path, message):
+                    print(f"[bridge] {self.address_string()} - {message}")
             except (BrokenPipeError, OSError):
                 # A detached desktop launcher can outlive its original stdout.
                 # Logging must never prevent an otherwise valid HTTP response.
