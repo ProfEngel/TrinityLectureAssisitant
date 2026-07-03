@@ -211,6 +211,7 @@ class TrinityBridge:
                 "is_final": is_final,
                 "speak": bool(payload.get("speak", False)),
                 "session_id": str(payload.get("session_id", "")).strip(),
+                "session_name": str(payload.get("session_name", "")).strip()[:160],
                 "privacy_mode": str(payload.get("privacy_mode", "local")).strip() or "local",
                 "tenant_id": self._tenant_id(user),
             },
@@ -224,6 +225,7 @@ class TrinityBridge:
                     "source": "ios-stt",
                     "text": text,
                     "session_id": event["session_id"],
+                    "session_name": event.get("session_name", ""),
                     "privacy_mode": event["privacy_mode"],
                 },
             )

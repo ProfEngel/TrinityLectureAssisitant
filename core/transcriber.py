@@ -1077,6 +1077,9 @@ class TrinityEar:
                     "attachments": [],
                     "silent": not speak,
                     "history_recorded": True,
+                    "session_id": event.get("session_id", ""),
+                    "session_name": event.get("session_name", ""),
+                    "privacy_mode": event.get("privacy_mode", "local"),
                     "tenant_id": event.get("tenant_id", ""),
                 }
                 self.trigger_action(text, silent_response=not speak, chat_request=request)
@@ -1092,6 +1095,7 @@ class TrinityEar:
                     "silent": not speak,
                     "history_recorded": True,
                     "session_id": event.get("session_id", ""),
+                    "session_name": event.get("session_name", ""),
                     "privacy_mode": event.get("privacy_mode", "local"),
                     "tenant_id": event.get("tenant_id", ""),
                 }
