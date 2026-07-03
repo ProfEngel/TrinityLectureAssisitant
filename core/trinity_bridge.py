@@ -781,12 +781,7 @@ class TrinityBridge:
 
     def can_manage_workspaces(self, handler, user):
         """Workspace/session changes are user actions, not privileged settings."""
-        if self.auth_enabled:
-            return user is not None
-        if self.token:
-            return True
-        address = str(getattr(handler, "client_address", ("",))[0])
-        return address in {"127.0.0.1", "::1", "localhost"}
+        return user is not None
 
     def get_web_settings(self):
         return {

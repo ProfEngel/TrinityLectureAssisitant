@@ -318,7 +318,8 @@ def test_workspace_sessions_are_available_to_authenticated_users(tmp_path):
 
     local_bridge = TrinityBridge(tmp_path)
     assert local_bridge.can_manage_workspaces(LocalHandler(), {}) is True
-    assert local_bridge.can_manage_workspaces(RemoteHandler(), {}) is False
+    assert local_bridge.can_manage_workspaces(RemoteHandler(), {}) is True
+    assert local_bridge.can_manage_workspaces(RemoteHandler(), None) is False
 
     token_bridge = TrinityBridge(tmp_path / "token", token="secret")
     assert token_bridge.can_manage_workspaces(RemoteHandler(), {}) is True
