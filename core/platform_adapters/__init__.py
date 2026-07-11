@@ -4,6 +4,7 @@ from .capabilities import (
     capability_message,
     detect_capabilities,
     find_codex_executable,
+    find_goose_executable,
     find_opencode_executable,
     find_pi_executable,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "create_tts_backend",
     "detect_capabilities",
     "find_codex_executable",
+    "find_goose_executable",
     "find_opencode_executable",
     "find_pi_executable",
 ]

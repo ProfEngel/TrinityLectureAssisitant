@@ -11,6 +11,7 @@ CAPABILITY_LABELS = {
     "codex_cli": "lokale Codex CLI",
     "opencode_cli": "lokale OpenCode CLI",
     "pi_cli": "lokale Pi CLI",
+    "goose_cli": "lokale Goose CLI",
     "native_macos_speech": "native macOS-Spracherkennung",
     "powerpoint_automation": "PowerPoint-Automation",
     "speech_input": "Whisper-Spracherkennung",
@@ -29,6 +30,8 @@ def detect_capabilities(system: Optional[str] = None) -> Set[str]:
         capabilities.add("opencode_cli")
     if find_pi_executable():
         capabilities.add("pi_cli")
+    if find_goose_executable():
+        capabilities.add("goose_cli")
 
     if _module_available("faster_whisper") and _module_available("sounddevice"):
         capabilities.add("speech_input")
@@ -176,6 +179,45 @@ def find_pi_executable() -> Optional[str]:
             [
                 Path(local_appdata) / "npm" / "pi.cmd",
                 Path(local_appdata) / "Programs" / "Pi" / "pi.exe",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def find_goose_executable() -> Optional[str]:
+    """Locate Goose on desktop-style macOS, Linux and Windows installations."""
+
+    for name in ("goose", "goose.exe", "goose.cmd"):
+        found = shutil.which(name)
+        if found:
+            return found
+
+    candidates = [
+        Path("/opt/homebrew/bin/goose"),
+        Path("/usr/local/bin/goose"),
+        Path.home() / ".local" / "bin" / "goose",
+        Path.home() / ".goose" / "bin" / "goose",
+    ]
+
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.extend(
+            [
+                Path(appdata) / "Goose" / "goose.exe",
+                Path(appdata) / "npm" / "goose.cmd",
+            ]
+        )
+
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        candidates.extend(
+            [
+                Path(local_appdata) / "Programs" / "Goose" / "goose.exe",
+                Path(local_appdata) / "Goose" / "goose.exe",
             ]
         )
 

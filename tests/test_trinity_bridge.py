@@ -282,6 +282,7 @@ def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path)
 
     result = bridge.test_harness({"harness": "codex", "executable": sys.executable})
     pi_result = bridge.test_harness({"harness": "pi", "executable": sys.executable})
+    goose_result = bridge.test_harness({"harness": "goose", "executable": sys.executable})
     trinity_result = bridge.test_harness({"harness": "trinity"})
 
     assert result["ok"] is True
@@ -289,6 +290,7 @@ def test_bridge_can_test_harness_executable_without_running_agent_task(tmp_path)
     assert result["path"] == sys.executable
     assert pi_result["ok"] is True
     assert pi_result["message"].startswith("Pi-Wrapper gefunden")
+    assert goose_result["ok"] is True
     assert trinity_result["ok"] is True
     assert trinity_result["message"].startswith("Trinity ist")
 

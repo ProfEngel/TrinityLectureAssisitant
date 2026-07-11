@@ -113,6 +113,15 @@ def default_config(platform_name=None):
             "timeout_seconds": 600,
             "max_output_chars": 3200,
         },
+        "goose": {
+            "enabled": False,
+            "executable": "goose",
+            "default_project": "",
+            "projects": {},
+            "arguments": ["run", "--no-session", "--quiet", "--text", "{prompt}"],
+            "timeout_seconds": 900,
+            "max_output_chars": 3200,
+        },
         "comfyui": {
             "enabled": False,
             "server_url": "http://YOUR_TAILSCALE_NODE:8188",
@@ -179,6 +188,7 @@ def default_config(platform_name=None):
             "frameworks": {
                 "trinity": {
                     "label": "Trinity",
+                    "active": True,
                     "roles": {
                         "agent_builder": False,
                         "complex_cases": True,
@@ -187,6 +197,7 @@ def default_config(platform_name=None):
                 },
                 "codex": {
                     "label": "Codex",
+                    "active": False,
                     "roles": {
                         "agent_builder": True,
                         "complex_cases": True,
@@ -195,6 +206,7 @@ def default_config(platform_name=None):
                 },
                 "pi": {
                     "label": "Pi",
+                    "active": False,
                     "roles": {
                         "agent_builder": False,
                         "complex_cases": True,
@@ -203,6 +215,16 @@ def default_config(platform_name=None):
                 },
                 "opencode": {
                     "label": "OpenCode",
+                    "active": False,
+                    "roles": {
+                        "agent_builder": False,
+                        "complex_cases": True,
+                        "agent_execution": True,
+                    },
+                },
+                "goose": {
+                    "label": "Goose",
+                    "active": False,
                     "roles": {
                         "agent_builder": False,
                         "complex_cases": True,
@@ -216,6 +238,7 @@ def default_config(platform_name=None):
                 "legacy-codex-agent": ["trinity", "codex"],
                 "legacy-pi-agent": ["trinity", "pi"],
                 "legacy-opencode-agent": ["trinity", "opencode"],
+                "legacy-goose-agent": ["trinity", "goose"],
             },
         },
     }
@@ -243,6 +266,16 @@ def load_config(config_path, platform_name=None):
     except (OSError, json.JSONDecodeError):
         data = {}
     had_harness_routing = isinstance(data.get("harness_routing"), dict)
+    raw_frameworks = (
+        data.get("harness_routing", {}).get("frameworks", {})
+        if had_harness_routing
+        else {}
+    )
+    explicit_active_harnesses = {
+        harness_id
+        for harness_id, framework in raw_frameworks.items()
+        if isinstance(framework, dict) and "active" in framework
+    }
     original_assignments = None
     if had_harness_routing and isinstance(
         data.get("harness_routing", {}).get("agent_assignments"), dict
@@ -258,18 +291,28 @@ def load_config(config_path, platform_name=None):
     return _migrate_config(
         merged,
         had_harness_routing=had_harness_routing,
+        explicit_active_harnesses=explicit_active_harnesses,
     )
 
 
-def _migrate_config(config, had_harness_routing=True):
+def _migrate_config(config, had_harness_routing=True, explicit_active_harnesses=None):
     """Keep older configs usable after schema additions."""
 
     routing = config.setdefault("harness_routing", {})
     frameworks = routing.setdefault("frameworks", {})
     defaults = DEFAULT_CONFIG["harness_routing"]
+    explicit_active_harnesses = set(explicit_active_harnesses or ())
     for harness_id, default_framework in defaults["frameworks"].items():
         framework = frameworks.setdefault(harness_id, {})
         framework.setdefault("label", default_framework["label"])
+        if harness_id not in explicit_active_harnesses:
+            framework["active"] = (
+                True
+                if harness_id == "trinity"
+                else bool(config.get(harness_id, {}).get("enabled", False))
+            )
+        else:
+            framework["active"] = bool(framework.get("active", False))
         roles = framework.setdefault("roles", {})
         for role, default_value in default_framework["roles"].items():
             roles.setdefault(role, default_value)
@@ -287,7 +330,7 @@ def _migrate_config(config, had_harness_routing=True):
     if had_harness_routing:
         return config
 
-    for harness_id in ("codex", "opencode", "pi"):
+    for harness_id in ("codex", "opencode", "pi", "goose"):
         enabled = bool(config.get(harness_id, {}).get("enabled", False))
         framework = frameworks.setdefault(harness_id, {})
         roles = framework.setdefault("roles", {})
@@ -297,6 +340,20 @@ def _migrate_config(config, had_harness_routing=True):
             if harness_id == "codex":
                 roles["agent_builder"] = True
     return config
+
+
+def is_harness_active(config, harness_id: str) -> bool:
+    """Return the master availability flag for a configured harness."""
+
+    harness_id = str(harness_id or "").strip().casefold()
+    if harness_id == "trinity":
+        return True
+    frameworks = (config or {}).get("harness_routing", {}).get("frameworks", {})
+    framework = frameworks.get(harness_id, {}) if isinstance(frameworks, dict) else {}
+    if isinstance(framework, dict) and "active" in framework:
+        return bool(framework.get("active"))
+    section = (config or {}).get(harness_id, {})
+    return bool(section.get("enabled", False)) if isinstance(section, dict) else False
 
 
 def save_config(config_path, config):

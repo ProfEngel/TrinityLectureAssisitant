@@ -1,6 +1,7 @@
 import json
 
 from configuration import (
+    is_harness_active,
     load_config,
     parse_setting_value,
     save_config,
@@ -22,6 +23,8 @@ def test_missing_config_uses_independent_defaults(tmp_path):
     assert first["harness_routing"]["frameworks"]["trinity"]["roles"][
         "agent_execution"
     ] is True
+    assert first["goose"]["enabled"] is False
+    assert first["harness_routing"]["frameworks"]["goose"]["active"] is False
     assert first["harness_routing"]["agent_assignments"]["trinity-core"] == [
         "trinity"
     ]
@@ -105,3 +108,30 @@ def test_existing_harness_roles_are_not_overwritten_by_enabled_flags(tmp_path):
     assert roles["complex_cases"] is False
     assert roles["agent_execution"] is False
     assert config["harness_routing"]["agent_assignments"] == {}
+
+
+def test_harness_master_switch_migrates_from_legacy_enabled_flag(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"goose": {"enabled": True}}), encoding="utf-8")
+
+    config = load_config(path, platform_name="Linux")
+
+    assert is_harness_active(config, "goose") is True
+    assert config["harness_routing"]["frameworks"]["goose"]["active"] is True
+
+
+def test_explicit_harness_master_switch_overrides_enabled_flag(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "goose": {"enabled": True},
+                "harness_routing": {"frameworks": {"goose": {"active": False}}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(path, platform_name="Linux")
+
+    assert is_harness_active(config, "goose") is False

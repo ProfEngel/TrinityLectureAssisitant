@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from platform_adapters import (
     create_tts_backend,
     find_codex_executable,
+    find_goose_executable,
     find_opencode_executable,
     find_pi_executable,
 )
@@ -279,19 +280,45 @@ class SettingsWindow(QMainWindow):
             self.config["pi"]["timeout_seconds"] = self.pi_timeout_spin.value()
             self.config["pi"]["max_output_chars"] = self.pi_output_spin.value()
 
+        # Goose
+        if "goose" not in self.config:
+            self.config["goose"] = {}
+        if hasattr(self, "goose_cb"):
+            self.config["goose"]["enabled"] = self.goose_cb.isChecked()
+            self.config["goose"]["executable"] = (
+                self.goose_executable_edit.text().strip() or "goose"
+            )
+            self.config["goose"]["projects"] = self._projects_from_text(
+                self.goose_projects_edit.toPlainText()
+            )
+            self.config["goose"]["default_project"] = (
+                self.goose_default_project_edit.text().strip()
+            )
+            arguments = self.goose_arguments_edit.text().strip()
+            try:
+                self.config["goose"]["arguments"] = shlex.split(arguments) if arguments else []
+            except ValueError:
+                self.config["goose"]["arguments"] = arguments.split() if arguments else []
+            self.config["goose"]["timeout_seconds"] = self.goose_timeout_spin.value()
+            self.config["goose"]["max_output_chars"] = self.goose_output_spin.value()
+
         # Harness routing: roles and per-agent execution matrix
         if hasattr(self, "harness_role_checks"):
             routing = self.config.setdefault("harness_routing", {})
             frameworks = routing.setdefault("frameworks", {})
-            for harness_id, label in self._harness_labels().items():
+            for harness_id, label in self._all_harness_labels().items():
                 framework = frameworks.setdefault(harness_id, {})
                 framework["label"] = label
-                framework["roles"] = {
+                if hasattr(self, "harness_active_checks"):
+                    framework["active"] = self.harness_active_checks[harness_id].isChecked()
+                roles = {
                     role: checkbox.isChecked()
                     for (current_harness, role), checkbox in self.harness_role_checks.items()
                     if current_harness == harness_id
                 }
-            assignments = {}
+                if roles:
+                    framework["roles"] = roles
+            assignments = dict(routing.get("agent_assignments", {}))
             if hasattr(self, "harness_agent_table"):
                 harness_ids = self._harness_ids()
                 for row, agent_id in enumerate(getattr(self, "harness_agent_ids", [])):
@@ -300,7 +327,12 @@ class SettingsWindow(QMainWindow):
                         item = self.harness_agent_table.item(row, col)
                         if item and item.checkState() == Qt.Checked:
                             selected.append(harness_id)
-                    assignments[agent_id] = selected
+                    preserved = [
+                        harness_id
+                        for harness_id in assignments.get(agent_id, [])
+                        if harness_id not in harness_ids
+                    ]
+                    assignments[agent_id] = [*preserved, *selected]
             routing["agent_assignments"] = assignments
 
         # Agent catalog metadata: maturity. Rights stay in agent.yaml/config and
@@ -972,36 +1004,90 @@ class SettingsWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         description = QLabel(
-            "Hier werden lokale Agenten-Frameworks zentral konfiguriert. Codex, "
-            "Pi und OpenCode bleiben intern kompatibel zu ihren bisherigen "
-            "Einstellungen, werden aber gemeinsam nach Rollen und Agenten-"
-            "Ausfuehrung gesteuert. Spaeter kann hier z.B. Claude Code ergaenzt werden."
+            "Aktiviere nur die Harnesses, die Trinity verwenden darf. Deaktivierte "
+            "Harnesses erscheinen nicht in der Detailansicht, Agentenmatrix oder "
+            "Standardauswahl und werden auch nicht ausgefuehrt."
         )
         description.setWordWrap(True)
         layout.addWidget(description)
 
+        self.harness_active_checks = {}
         self.harness_role_checks = {}
         self.harness_agent_ids = []
 
-        layout.addWidget(self._create_trinity_harness_group())
-        layout.addWidget(self._create_codex_harness_group())
-        layout.addWidget(self._create_pi_harness_group())
-        layout.addWidget(self._create_opencode_harness_group())
+        layout.addWidget(self._create_harness_activation_group())
+        if self._is_harness_active("trinity"):
+            layout.addWidget(self._create_trinity_harness_group())
+        if self._is_harness_active("codex"):
+            layout.addWidget(self._create_codex_harness_group())
+        if self._is_harness_active("pi"):
+            layout.addWidget(self._create_pi_harness_group())
+        if self._is_harness_active("goose"):
+            layout.addWidget(self._create_goose_harness_group())
+        if self._is_harness_active("opencode"):
+            layout.addWidget(self._create_opencode_harness_group())
         layout.addWidget(self._create_harness_agent_matrix_group(), 1)
         return widget
 
-    @staticmethod
-    def _harness_ids():
-        return ["trinity", "codex", "pi", "opencode"]
+    def _harness_ids(self):
+        return [
+            harness_id
+            for harness_id in self._all_harness_labels()
+            if self._is_harness_active(harness_id)
+        ]
 
     @staticmethod
-    def _harness_labels():
+    def _all_harness_labels():
         return {
             "trinity": "Trinity",
             "codex": "Codex",
             "pi": "Pi",
+            "goose": "Goose",
             "opencode": "OpenCode",
         }
+
+    def _harness_labels(self):
+        return {
+            harness_id: label
+            for harness_id, label in self._all_harness_labels().items()
+            if self._is_harness_active(harness_id)
+        }
+
+    def _is_harness_active(self, harness_id):
+        if harness_id == "trinity":
+            return True
+        framework = (
+            self.config.get("harness_routing", {})
+            .get("frameworks", {})
+            .get(harness_id, {})
+        )
+        if "active" in framework:
+            return bool(framework["active"])
+        return bool(self.config.get(harness_id, {}).get("enabled", False))
+
+    def _create_harness_activation_group(self):
+        group = QGroupBox("Aktive Harnesses")
+        layout = QVBoxLayout(group)
+        hint = QLabel(
+            "Nach dem Speichern wird die Ansicht mit den aktivierten Harnesses "
+            "neu aufgebaut. Trinity bleibt immer aktiv."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        layout.addWidget(hint)
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        for harness_id, label in self._all_harness_labels().items():
+            checkbox = QCheckBox(label)
+            checkbox.setChecked(self._is_harness_active(harness_id))
+            if harness_id == "trinity":
+                checkbox.setEnabled(False)
+            self.harness_active_checks[harness_id] = checkbox
+            row_layout.addWidget(checkbox)
+        row_layout.addStretch()
+        layout.addWidget(row)
+        return group
 
     @staticmethod
     def _role_labels():
@@ -1222,6 +1308,76 @@ class SettingsWindow(QMainWindow):
         group.setLayout(form)
         return group
 
+    def _create_goose_harness_group(self):
+        group = QGroupBox("Goose")
+        form = QFormLayout()
+        self._tidy_form(form)
+        goose_conf = self.config.get("goose", {})
+
+        top_row = QWidget()
+        top_layout = QHBoxLayout(top_row)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        self.goose_cb = QCheckBox("Goose-Auftraege erlauben")
+        self.goose_cb.setChecked(goose_conf.get("enabled", False))
+        top_layout.addWidget(self.goose_cb)
+        test_btn = QPushButton("Anbindung testen")
+        test_btn.clicked.connect(lambda: self._test_harness_connection("goose"))
+        top_layout.addWidget(test_btn)
+        top_layout.addStretch()
+        form.addRow(top_row)
+
+        detected = find_goose_executable()
+        status = QLabel("Gefunden" if detected else "Nicht gefunden")
+        if detected:
+            status.setToolTip(str(detected))
+        self._set_status_label_style(status, bool(detected))
+        form.addRow("Status:", status)
+        self._add_harness_roles(form, "goose")
+
+        self.goose_executable_edit = QLineEdit(goose_conf.get("executable", "goose"))
+        form.addRow("Programm:", self.goose_executable_edit)
+
+        self.goose_projects_edit = QTextEdit()
+        self.goose_projects_edit.setPlainText(self._projects_to_text(goose_conf.get("projects", {})))
+        self.goose_projects_edit.setPlaceholderText(
+            "BrainVault = /vollstaendiger/Pfad/zum/BrainVault\n"
+            "Sandbox = /vollstaendiger/Pfad/zur/Sandbox"
+        )
+        self.goose_projects_edit.setMinimumHeight(150)
+        form.addRow("Freigegebene Projekte:", self.goose_projects_edit)
+
+        self.goose_default_project_edit = QLineEdit(goose_conf.get("default_project", ""))
+        form.addRow("Standardprojekt:", self.goose_default_project_edit)
+
+        raw_arguments = goose_conf.get("arguments", [])
+        arguments_text = " ".join(str(item) for item in raw_arguments) if isinstance(raw_arguments, list) else str(raw_arguments or "")
+        self.goose_arguments_edit = QLineEdit(arguments_text)
+        self.goose_arguments_edit.setPlaceholderText("run --no-session --quiet --text {prompt}")
+        form.addRow("Argumente:", self.goose_arguments_edit)
+
+        self.goose_timeout_spin = QSpinBox()
+        self.goose_timeout_spin.setRange(30, 7200)
+        self.goose_timeout_spin.setSuffix(" Sekunden")
+        self.goose_timeout_spin.setValue(int(goose_conf.get("timeout_seconds", 900)))
+        form.addRow("Zeitlimit:", self.goose_timeout_spin)
+
+        self.goose_output_spin = QSpinBox()
+        self.goose_output_spin.setRange(500, 12000)
+        self.goose_output_spin.setSingleStep(500)
+        self.goose_output_spin.setSuffix(" Zeichen")
+        self.goose_output_spin.setValue(int(goose_conf.get("max_output_chars", 3200)))
+        form.addRow("Antwortlaenge:", self.goose_output_spin)
+
+        hint = QLabel(
+            "Goose wird ausschliesslich im ausgewaehlten, freigegebenen Projektordner "
+            "gestartet. Der Standardlauf ist nicht interaktiv und liefert Trinity einen Abschlussbericht."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        form.addRow("", hint)
+        group.setLayout(form)
+        return group
+
     def _create_opencode_harness_group(self):
         group = QGroupBox("OpenCode")
         form = QFormLayout()
@@ -1292,7 +1448,7 @@ class SettingsWindow(QMainWindow):
         hint = QLabel(
             "Links stehen alle bekannten Trinity-Agenten inklusive Trinity selbst, "
             "Agentenbuilder, Shared/Personal/Staging Skills und Legacy-Agenten. "
-            "Pro Zeile wird festgelegt, ob Trinity, Codex, Pi oder OpenCode diesen "
+            "Pro Zeile wird festgelegt, ob ein aktives Harness diesen "
             "Agenten beziehungsweise diese Agentenfamilie ausfuehren darf."
         )
         hint.setWordWrap(True)
@@ -1358,7 +1514,12 @@ class SettingsWindow(QMainWindow):
             self.config.get("control_plane", {})
             .get("default_brainvault_harness", "pi")
         )
-        return value if value in self._harness_ids() else "pi"
+        if value in self._harness_ids():
+            return value
+        for harness_id in ("pi", "codex", "goose", "opencode", "trinity"):
+            if harness_id in self._harness_ids():
+                return harness_id
+        return "trinity"
 
     def _apply_default_brainvault_assignments(self, records=None):
         records = records or self._harness_agent_records()
@@ -1428,18 +1589,33 @@ class SettingsWindow(QMainWindow):
             return
 
         root = os.path.abspath(os.path.expanduser(root))
-        for harness_id in ("codex", "pi", "opencode"):
+        for harness_id in ("codex", "pi", "goose", "opencode"):
+            if not self._is_harness_active(harness_id):
+                continue
             harness_conf = self.config.setdefault(harness_id, {})
             projects = harness_conf.setdefault("projects", {})
             if isinstance(projects, dict):
                 projects.setdefault("BrainVault", root)
             harness_conf["default_project"] = "BrainVault"
 
-    @staticmethod
     def _projects_to_text(projects):
         if not isinstance(projects, dict):
             return ""
         return "\n".join(f"{alias} = {path}" for alias, path in projects.items())
+
+    @staticmethod
+    def _projects_from_text(text):
+        projects = {}
+        for line in str(text or "").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            alias, path = stripped.split("=", 1)
+            alias = alias.strip()
+            path = path.strip()
+            if alias and path:
+                projects[alias] = path
+        return projects
 
     def _test_harness_connection(self, harness_id):
         if harness_id == "trinity":
@@ -1506,6 +1682,7 @@ class SettingsWindow(QMainWindow):
             "trinity": None,
             "codex": getattr(self, "codex_executable_edit", None),
             "pi": getattr(self, "pi_executable_edit", None),
+            "goose": getattr(self, "goose_executable_edit", None),
             "opencode": getattr(self, "opencode_executable_edit", None),
         }
         field = fields.get(harness_id)
@@ -1522,6 +1699,7 @@ class SettingsWindow(QMainWindow):
         finders = {
             "codex": find_codex_executable,
             "pi": find_pi_executable,
+            "goose": find_goose_executable,
             "opencode": find_opencode_executable,
         }
         if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:

@@ -32,7 +32,12 @@ from chat_protocol import (
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
 from memory_store import MemoryStore
-from platform_adapters import find_codex_executable, find_opencode_executable, find_pi_executable
+from platform_adapters import (
+    find_codex_executable,
+    find_goose_executable,
+    find_opencode_executable,
+    find_pi_executable,
+)
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from web_ui import render_web_ui
@@ -47,7 +52,7 @@ MAX_EVENTS = 200
 MAX_SETTINGS_TEXT_BYTES = 100 * 1024
 SETTINGS_SECTIONS = {
     "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
-    "audio_routing", "telegram", "codex", "opencode", "pi", "comfyui",
+    "audio_routing", "telegram", "codex", "opencode", "pi", "goose", "comfyui",
     "companion", "server", "client", "control_plane", "harness_routing",
     "agent_catalog",
 }
@@ -873,7 +878,7 @@ class TrinityBridge:
         if not isinstance(payload, dict):
             raise ValueError("Harness-Test erwartet ein Objekt.")
         harness_id = str(payload.get("harness") or "").strip().lower()
-        if harness_id not in {"trinity", "codex", "pi", "opencode"}:
+        if harness_id not in {"trinity", "codex", "pi", "opencode", "goose"}:
             raise ValueError("Unbekanntes Harness.")
 
         if harness_id == "trinity":
@@ -896,6 +901,7 @@ class TrinityBridge:
             "codex": "Codex",
             "pi": "Pi",
             "opencode": "OpenCode",
+            "goose": "Goose",
         }[harness_id]
         if not resolved:
             return {
@@ -1267,6 +1273,7 @@ class TrinityBridge:
             "codex": find_codex_executable,
             "pi": find_pi_executable,
             "opencode": find_opencode_executable,
+            "goose": find_goose_executable,
         }
         if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:
             finder = finders.get(harness_id)

@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.40:** Goose ist als optionaler lokaler Harness integriert. In **Einstellungen -> Harnesses** schaltet ein zentraler Aktiv-Schalter je Harness die Detailkonfiguration, Agentenmatrix und Ausfuehrung gemeinsam an oder aus.
 > - **v0.16.39:** Die Companion Bridge schreibt erfolgreiche Dauerpolls wie `/events`, `/payload`, `/bubble`, `/workspaces` und `/dashboard` nicht mehr in den Live-Mitschnitt. STT, POST-Aktionen und Fehler bleiben sichtbar; bei Bedarf aktiviert `TRINITY_BRIDGE_VERBOSE_GETS=1` wieder das volle HTTP-Log.
 > - **v0.16.38:** Companion-Clients duerfen nach erfolgreicher Bridge-Auth wieder Arbeitsraeume und Sessions erstellen, auch wenn Trinity ohne Bearer-Token im Tailnet laeuft. Die iPad/iPhone-Statuszeile bleibt kompakt, und offene Trinity-Auftraege werden sofort sichtbar.
 > - **v0.16.37:** Arbeitsraeume und Sessions sind jetzt normale Nutzeraktionen fuer Companion-Clients: iPad/iPhone koennen erstellen, umbenennen, archivieren und loeschen, waehrend harte Settings-Rechte geschuetzt bleiben. Summary-Overlays sind wieder lesbar, und lokale Runtime-/Build-Artefakte werden ignoriert.
@@ -495,6 +496,18 @@ Beispiel:
 
 > „Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.“
 
+### Goose als optionaler CLI-Harness
+
+Goose kann als weiterer lokaler Harness für ausdrücklich adressierte Aufgaben
+aktiviert werden. Öffne **Einstellungen -> Harnesses**, schalte **Goose** im
+Bereich *Aktive Harnesses* ein, speichere und öffne die Seite erneut. Danach
+Programm, freigegebene Projekte, optionales Standardprojekt und Zeitlimit
+eintragen sowie **Goose-Aufträge erlauben** aktivieren. Deaktivierte Harnesses
+werden weder in der Agentenmatrix noch als Standard-Harness angeboten.
+
+Beispiel: `Trinity, nutze Goose im Projekt BrainVault und prüfe die
+Projektregeln. Ändere keine Dateien.`
+
 ### Agenten erstellen, importieren oder erweitern
 
 Der Agentenbuilder reagiert auf klare Formulierungen und arbeitet immer
@@ -536,7 +549,7 @@ In den Desktop-Einstellungen liegt das unter **MainHub / Control Plane**.
 Sichtbar bleiben nur die lokale **Runtime**, der **Cloud-Agentenpool** und der
 **Standard-Extern-Harness**. Der Cloud-Agentenpool ist der uebergeordnete
 BrainVault-Root, also der Ordner, in dem `.agents` und `AGENTS.md` liegen.
-Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
+Trinity stellt diesen Ordner Codex, Pi, Goose und OpenCode automatisch als Projekt
 `BrainVault` bereit. Pi ist der Standard fuer laufende BrainVault-Agentenarbeit;
 Codex bleibt fuer neue Agenten, Imports, Refactorings, Tests und Quality-Gates
 vorgesehen. Aeltere Einstellungen, die noch auf

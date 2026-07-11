@@ -16,6 +16,7 @@ except Exception:  # pragma: no cover - optional during isolated script use
     brainvault_root_from_config = None
 
 from platform_adapters import find_pi_executable
+from configuration import is_harness_active
 
 
 PRIORITY = 97
@@ -75,6 +76,9 @@ def execute(query: str, context: dict = None) -> dict:
     context = context or {}
     config = dict(context.get("pi_cfg") or {})
     projects = _configured_projects(config)
+
+    if not is_harness_active(context.get("full_config") or {"pi": config}, "pi"):
+        return _result("Pi ist in Einstellungen > Harnesses deaktiviert.")
 
     if _is_capability_request(query) and not _is_explicit_pi_request(query):
         return _capability_result(query, context, projects, config)

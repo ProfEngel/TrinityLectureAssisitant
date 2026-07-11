@@ -590,6 +590,7 @@ def _config_from_context(context: dict) -> dict:
         "codex": context.get("codex_cfg") or {},
         "opencode": context.get("opencode_cfg") or {},
         "pi": context.get("pi_cfg") or {},
+        "goose": context.get("goose_cfg") or {},
     }
 
 
@@ -600,6 +601,7 @@ def _requested_harnesses(query: str, context: dict) -> list[str]:
         "codex": ("codex", "kodeks"),
         "pi": (" mit pi", "nutze pi", " pi "),
         "opencode": ("opencode", "open code", "open-code"),
+        "goose": ("goose",),
     }.items():
         if any(marker in f" {text} " for marker in markers):
             requested.append(harness_id)
@@ -622,9 +624,9 @@ def _builder_harness_candidates(config: dict) -> list[str]:
     # safer default for building, tests and reviewable diffs.
     if _harness_role_enabled(config, "codex", "agent_builder"):
         candidates.append("codex")
-    if default_builder in {"codex", "pi", "opencode"} and default_builder not in candidates:
+    if default_builder in {"codex", "pi", "opencode", "goose"} and default_builder not in candidates:
         candidates.append(default_builder)
-    for harness_id in ("codex", "opencode", "pi"):
+    for harness_id in ("codex", "goose", "opencode", "pi"):
         if harness_id not in candidates:
             candidates.append(harness_id)
     return candidates
@@ -637,6 +639,9 @@ def _harness_role_enabled(config: dict, harness_id: str, role: str) -> bool:
 
 
 def _harness_enabled(context: dict, config: dict, harness_id: str) -> bool:
+    framework = config.get("harness_routing", {}).get("frameworks", {}).get(harness_id, {})
+    if isinstance(framework, dict) and "active" in framework and not framework.get("active", False):
+        return False
     section = config.get(harness_id, {})
     if not isinstance(section, dict) or not section.get("enabled", False):
         return False
@@ -682,6 +687,8 @@ def _run_harness(
         "codex_cfg": context.get("codex_cfg") or _config_from_context(context).get("codex", {}),
         "opencode_cfg": context.get("opencode_cfg") or _config_from_context(context).get("opencode", {}),
         "pi_cfg": context.get("pi_cfg") or _config_from_context(context).get("pi", {}),
+        "goose_cfg": context.get("goose_cfg") or _config_from_context(context).get("goose", {}),
+        "full_config": _config_from_context(context),
     }
     try:
         result = module.execute(harness_query, harness_context)
@@ -727,6 +734,8 @@ def _harness_query(harness_id: str, query: str, action: str, staging_path: Path,
         )
     if harness_id == "opencode":
         return "Trinity, nutze OpenCode. " + base
+    if harness_id == "goose":
+        return "Trinity, nutze Goose. " + base
     return "Trinity, nutze Pi. " + base
 
 
@@ -1056,7 +1065,7 @@ def _brainvault_agent_yaml(
             "examples": [],
         },
         "tags": [agent_id.split(".", 1)[0]],
-        "compatible_harnesses": ["trinity", "codex", "pi", "opencode", "claude-code", "antigravity"],
+        "compatible_harnesses": ["trinity", "codex", "pi", "opencode", "goose", "claude-code", "antigravity"],
         "preferred_harness": "auto",
         "entrypoints": {"script": "script.py"},
         "permissions": {

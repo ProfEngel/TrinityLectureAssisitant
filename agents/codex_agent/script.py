@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 import requests
+from configuration import is_harness_active
 from platform_adapters import find_codex_executable
 
 
@@ -30,6 +31,9 @@ def can_handle(query: str) -> bool:
 def execute(query: str, context: dict = None) -> dict:
     context = context or {}
     config = dict(context.get("codex_cfg") or {})
+
+    if not is_harness_active(context.get("full_config") or {"codex": config}, "codex"):
+        return _result("Codex ist in Einstellungen > Harnesses deaktiviert.")
 
     if not config.get("enabled", False):
         return _result(

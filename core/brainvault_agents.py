@@ -22,7 +22,7 @@ BRAINVAULT_LAYOUT = (
     ".agents/_template",
     ".agents/_meta",
 )
-DEFAULT_HARNESSES = ["trinity", "codex", "pi", "opencode", "claude-code", "antigravity"]
+DEFAULT_HARNESSES = ["trinity", "codex", "pi", "opencode", "goose", "claude-code", "antigravity"]
 AGENT_SCAN_MARKERS = {
     "agent.yaml",
     "agent.yml",
@@ -897,6 +897,8 @@ def _default_harnesses_yaml() -> str:
     role: agent-builder
     default_for: [new-agent-creation, agent-refactoring, tests, quality-gates]
   - id: opencode
+    role: optional-runtime
+  - id: goose
     role: optional-runtime
   - id: claude-code
     role: optional-builder

@@ -180,6 +180,18 @@ else
     echo "   ⚠️  icon.png nicht gefunden – App-Icon bleibt Standard."
 fi
 
+# Finder-, iCloud- oder anderer Dateianbieter-Metadaten können eine zuvor
+# vorhandene Ad-hoc-Signatur ungültig machen. Erst das fertige Bundle bereinigen
+# und dann lokal neu signieren, damit der Desktop-Launcher direkt öffnet.
+echo "🔐 Prüfe lokale Signatur der Trinity.app..."
+xattr -cr "$APP_PATH" 2>/dev/null || true
+if /usr/bin/codesign --force --deep --sign - "$APP_PATH" 2>/dev/null && \
+   /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>/dev/null; then
+    echo "   ✅ Trinity.app lokal signiert und geprüft."
+else
+    echo "   ⚠️  Trinity.app konnte nicht vollständig signiert werden. Der Launcher kann dennoch funktionieren."
+fi
+
 echo ""
 echo "🎉 ${IS_UPDATE:+Update}${IS_UPDATE:-Installation} erfolgreich abgeschlossen!"
 echo "============================================"

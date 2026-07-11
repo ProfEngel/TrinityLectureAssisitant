@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 import requests
+from configuration import is_harness_active
 from platform_adapters import find_opencode_executable
 
 
@@ -29,6 +30,9 @@ def can_handle(query: str) -> bool:
 def execute(query: str, context: dict = None) -> dict:
     context = context or {}
     config = dict(context.get("opencode_cfg") or {})
+
+    if not is_harness_active(context.get("full_config") or {"opencode": config}, "opencode"):
+        return _result("OpenCode ist in Einstellungen > Harnesses deaktiviert.")
 
     if not config.get("enabled", False):
         return _result(
