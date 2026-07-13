@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.41:** Windows-Bugfix fuer die Einstellungen: Der Harness-Tab oeffnet Projektlisten wieder korrekt und stuerzt nicht mehr beim Aufruf von `_projects_to_text` ab.
 > - **v0.16.40:** Goose ist als optionaler lokaler Harness integriert. In **Einstellungen -> Harnesses** schaltet ein zentraler Aktiv-Schalter je Harness die Detailkonfiguration, Agentenmatrix und Ausfuehrung gemeinsam an oder aus.
 > - **v0.16.39:** Die Companion Bridge schreibt erfolgreiche Dauerpolls wie `/events`, `/payload`, `/bubble`, `/workspaces` und `/dashboard` nicht mehr in den Live-Mitschnitt. STT, POST-Aktionen und Fehler bleiben sichtbar; bei Bedarf aktiviert `TRINITY_BRIDGE_VERBOSE_GETS=1` wieder das volle HTTP-Log.
 > - **v0.16.38:** Companion-Clients duerfen nach erfolgreicher Bridge-Auth wieder Arbeitsraeume und Sessions erstellen, auch wenn Trinity ohne Bearer-Token im Tailnet laeuft. Die iPad/iPhone-Statuszeile bleibt kompakt, und offene Trinity-Auftraege werden sofort sichtbar.

@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.41:** Windows-Bugfix fuer den Einstellungen-Dialog: Harness-Projektlisten werden wieder korrekt formatiert. Das Oeffnen der Einstellungen scheitert nicht mehr mit `SettingsWindow._projects_to_text() takes 1 positional argument but 2 were given`.
 - **v0.16.40:** Optionaler Goose-Harness mit CLI-Erkennung, Projekt-Whitelist, Testknopf, Agentenmatrix und zentralen Aktiv-Schaltern. Deaktivierte Harnesses werden nicht mehr angezeigt oder ausgeführt. Der macOS-Installer bereinigt außerdem Finder-/Dateianbieter-Metadaten und signiert `Trinity.app` nach dem Bundlebau lokal neu.
 - **v0.16.39:** Companion-Bridge-Logs sind im Live-Mitschnitt wieder lesbar: erfolgreiche zyklische GET-Polls fuer `/events`, `/payload`, `/bubble`, `/workspaces`, `/dashboard` und `/health` werden standardmaessig ausgeblendet. STT, POST-Aktionen, andere Pfade und Fehler bleiben sichtbar; `TRINITY_BRIDGE_VERBOSE_GETS=1` schaltet das volle HTTP-Log wieder ein.
 - **v0.16.38:** Companion-Remote-Fix fuer Arbeitsraeume und Sessions: erfolgreich authentifizierte oder bewusst offene Bridge-Clients duerfen Workspace-/Session-Aktionen ausfuehren, ohne Admin-Settings-Rechte zu brauchen. Dazu passt die Companion-App v0.16.40 mit kompakter Statuszeile, sofort sichtbarem Auftrag-laeuft-Symbol und robusterem STT/Wakeword-Kontext.

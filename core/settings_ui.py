@@ -1598,6 +1598,7 @@ class SettingsWindow(QMainWindow):
                 projects.setdefault("BrainVault", root)
             harness_conf["default_project"] = "BrainVault"
 
+    @staticmethod
     def _projects_to_text(projects):
         if not isinstance(projects, dict):
             return ""
