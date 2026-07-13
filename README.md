@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.42:** Der Windows-Updater beendet nun laufende Trinity-Prozesse der bestehenden Installation und meldet verbleibende Dateisperren mit einer klaren Handlungsanweisung.
 > - **v0.16.41:** Windows-Bugfix fuer die Einstellungen: Der Harness-Tab oeffnet Projektlisten wieder korrekt und stuerzt nicht mehr beim Aufruf von `_projects_to_text` ab.
 > - **v0.16.40:** Goose ist als optionaler lokaler Harness integriert. In **Einstellungen -> Harnesses** schaltet ein zentraler Aktiv-Schalter je Harness die Detailkonfiguration, Agentenmatrix und Ausfuehrung gemeinsam an oder aus.
 > - **v0.16.39:** Die Companion Bridge schreibt erfolgreiche Dauerpolls wie `/events`, `/payload`, `/bubble`, `/workspaces` und `/dashboard` nicht mehr in den Live-Mitschnitt. STT, POST-Aktionen und Fehler bleiben sichtbar; bei Bedarf aktiviert `TRINITY_BRIDGE_VERBOSE_GETS=1` wieder das volle HTTP-Log.

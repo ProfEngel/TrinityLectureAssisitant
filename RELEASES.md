@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.42:** Windows-Installer-Update: Vor dem Austausch einer bestehenden Installation werden laufende Trinity-Prozesse gezielt beendet. Verbleibende Dateisperren werden mit einer klaren Meldung nach mehreren Wiederholungsversuchen abgebrochen statt mit einem unklaren `Remove-Item`-Fehler.
 - **v0.16.41:** Windows-Bugfix fuer den Einstellungen-Dialog: Harness-Projektlisten werden wieder korrekt formatiert. Das Oeffnen der Einstellungen scheitert nicht mehr mit `SettingsWindow._projects_to_text() takes 1 positional argument but 2 were given`.
 - **v0.16.40:** Optionaler Goose-Harness mit CLI-Erkennung, Projekt-Whitelist, Testknopf, Agentenmatrix und zentralen Aktiv-Schaltern. Deaktivierte Harnesses werden nicht mehr angezeigt oder ausgeführt. Der macOS-Installer bereinigt außerdem Finder-/Dateianbieter-Metadaten und signiert `Trinity.app` nach dem Bundlebau lokal neu.
 - **v0.16.39:** Companion-Bridge-Logs sind im Live-Mitschnitt wieder lesbar: erfolgreiche zyklische GET-Polls fuer `/events`, `/payload`, `/bubble`, `/workspaces`, `/dashboard` und `/health` werden standardmaessig ausgeblendet. STT, POST-Aktionen, andere Pfade und Fehler bleiben sichtbar; `TRINITY_BRIDGE_VERBOSE_GETS=1` schaltet das volle HTTP-Log wieder ein.

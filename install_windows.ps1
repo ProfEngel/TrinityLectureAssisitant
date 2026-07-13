@@ -214,6 +214,56 @@ function Copy-DirectoryContents {
         Copy-Item -Destination $Destination -Recurse -Force
 }
 
+function Stop-TrinityProcesses {
+    param([string]$Root)
+
+    # The launcher, settings UI, and console are Python processes. Stop only
+    # processes whose command line belongs to this exact installation.
+    $normalizedRoot = [System.IO.Path]::GetFullPath($Root).TrimEnd("\\")
+    $escapedRoot = [regex]::Escape($normalizedRoot)
+    $processes = @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.ProcessId -ne $PID -and
+                $_.CommandLine -and
+                $_.CommandLine -match $escapedRoot
+            }
+    )
+
+    if ($processes.Count -eq 0) {
+        return
+    }
+
+    Write-Host "Beende laufende Trinity-Prozesse fuer das Update ..."
+    foreach ($process in $processes) {
+        try {
+            Stop-Process -Id $process.ProcessId -Force -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Trinity-Prozess $($process.ProcessId) konnte nicht beendet werden: $($_.Exception.Message)"
+        }
+    }
+
+    Start-Sleep -Seconds 2
+}
+
+function Remove-InstallationDirectory {
+    param([string]$Path)
+
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            Remove-Item $Path -Recurse -Force -ErrorAction Stop
+            return
+        }
+        catch {
+            if ($attempt -eq 5) {
+                throw "Die bestehende Trinity-Installation konnte nicht entfernt werden. Bitte Trinity und alle offenen Einstellungen schliessen und das Update erneut starten. Details: $($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 1
+        }
+    }
+}
+
 $pythonCommand = Get-PythonCommand
 if ($ValidateEnvironmentOnly) {
     Write-Host ""
@@ -226,6 +276,7 @@ $backupDir = "$InstallDir`_backup_$timestamp"
 $isUpdate = Test-Path $InstallDir
 
 if ($isUpdate) {
+    Stop-TrinityProcesses $InstallDir
     Write-Host "Bestehende Installation erkannt. Sichere Nutzerdaten ..."
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
@@ -238,7 +289,7 @@ if ($isUpdate) {
     Copy-DirectoryContents "$InstallDir\logs" "$backupDir\logs"
     Copy-DirectoryContents "$InstallDir\TrinityRuntime" "$backupDir\TrinityRuntime"
 
-    Remove-Item $InstallDir -Recurse -Force
+    Remove-InstallationDirectory $InstallDir
 }
 
 Write-Host "Lade Trinity herunter ..."
