@@ -2590,7 +2590,8 @@ class SettingsWindow(QMainWindow):
         comfy_hint = QLabel(
             "Trinity wählt Workflows automatisch basierend auf deiner Anfrage aus.\n"
             "Server erreichbar? → Test-Button nutzen.\n"
-            "Trigger: 'lokales Bild', 'flux render', 'mach ein video', 'song schreiben' …"
+            "Bilder werden standardmäßig lokal erzeugt: 'Erstelle ein Bild …'.\n"
+            "Nur 'externes Bild' oder 'über fal.ai' nutzt die externe API."
         )
         comfy_hint.setStyleSheet("color: #8aadf4; font-size: 12px; margin-top: 15px; font-weight: 500;")
         comfy_hint.setWordWrap(True)

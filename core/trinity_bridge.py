@@ -15,6 +15,7 @@ import subprocess
 import threading
 import time
 import uuid
+from html import unescape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -1149,6 +1150,12 @@ class TrinityBridge:
             if target_session_id and event_session_id != target_session_id:
                 continue
             cleaned = dict(event)
+            payload_html = str(cleaned.get("payload_html") or "")
+            if payload_html and not cleaned.get("attachments"):
+                cleaned["attachments"] = self.attachments_from_payload(
+                    payload_html,
+                    user=user,
+                )
             if cleaned.get("payload_html") and include_payload_html:
                 cleaned["payload_html"] = self.rewrite_html(
                     cleaned["payload_html"], user=user, access_token=access_token
@@ -1164,6 +1171,41 @@ class TrinityBridge:
                 )
             events.append(cleaned)
         return events[-limit:]
+
+    def attachments_from_payload(self, html, user=None):
+        """Expose local image/audio/video payload files as regular media attachments."""
+        attachments = []
+        seen = set()
+        pattern = re.compile(
+            r"<(img|audio|video)\b[^>]*?\bsrc\s*=\s*(['\"])([^'\"]+)\2",
+            re.IGNORECASE,
+        )
+        for match in pattern.finditer(str(html or "")):
+            tag = match.group(1).lower()
+            raw_path = unescape(match.group(3))
+            try:
+                media_path = self.media_path_from_query(raw_path, user=user)
+            except (OSError, PermissionError, ValueError):
+                continue
+            key = str(media_path)
+            if key in seen:
+                continue
+            seen.add(key)
+            mime = mimetypes.guess_type(media_path.name)[0] or {
+                "img": "image/png",
+                "audio": "audio/mpeg",
+                "video": "video/mp4",
+            }[tag]
+            attachments.append(
+                {
+                    "name": media_path.name,
+                    "path": key,
+                    "kind": attachment_kind(media_path) or tag,
+                    "mime": mime,
+                    "size": media_path.stat().st_size,
+                }
+            )
+        return attachments
 
     def latest_payload(self, user=None, access_token="", after=0.0):
         if user:
@@ -1202,8 +1244,17 @@ class TrinityBridge:
             "blue": "Übungsaufgabe",
             "green": "Info",
         }.get(color, "Heartbeat")
+        headings = re.findall(r"<h[12][^>]*>(.*?)</h[12]>", html, re.IGNORECASE | re.DOTALL)
+        if headings:
+            parsed_title = re.sub(r"<[^>]+>", " ", unescape(headings[-1]))
+            parsed_title = re.sub(r"\s+", " ", parsed_title).strip()
+            if parsed_title:
+                title = parsed_title[:120]
+        markers = list(re.finditer(r"<!--\s*KEEP_OPEN\s*-->", html, re.IGNORECASE))
+        detail_html = html[markers[-1].start():] if markers else html
         return {
             "html": self.rewrite_html(html),
+            "detail_html": self.rewrite_html(detail_html),
             "timestamp": self._mtime(self.bubble_payload_path),
             "color": color,
             "title": title,

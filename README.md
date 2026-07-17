@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.45:** Bildauftraege laufen standardmaessig lokal ueber ComfyUI; nur ein ausdruecklicher externer Wunsch nutzt fal.ai. Erzeugte Bild-, Audio- und Video-Payloads werden als echte Companion-/G2-Medienanhaenge ausgeliefert, und der Lecture-Heartbeat kann relevante Fachbegriffe als kurze Definitions-Bubble melden.
 > - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - **v0.16.43:** Even Realities G2 kann Trinity ueber die Companion Bridge als diskretes HUD und Mikrofon nutzen. Zuruf- und Konversationsmodus, getrennte Serverprofile sowie lokale PCM-Transkription funktionieren auf macOS und Windows 11.
-> - **v0.16.42:** Der Windows-Updater beendet nun laufende Trinity-Prozesse der bestehenden Installation und meldet verbleibende Dateisperren mit einer klaren Handlungsanweisung.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
@@ -84,10 +84,10 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Lecture Mode** | *Lecture* | Fokus auf Plenum-Interaktion, Souffleur-Routing & Visuals. |
  | **RAG-Agent** | *Beide* | Suche in Vorlesungs-PDFs, Mails & Session-Summaries. |
  | **WebSearch-Agent** | *Beide* | Echtzeit-Websuche via Tavily. |
- | **Image-Agent** | *Lecture* | Bildgenerierung (Infografiken/Skizzen) via fal.ai. |
+ | **Image-Agent** | *Lecture* | Explizit externe Bildgenerierung via fal.ai (`externes Bild`). |
  | **Simulation-Agent** | *Lecture* | Interaktive Simulationen (Bienen, Sortierung, NNs). |
  | **PowerPoint-Agent** | *Lecture* | Native Steuerung via AppleScript (macOS) oder COM (Windows). |
- | **ComfyUI-Agent** | *Beide* | Lokale Generierung von Bildern, Musik & Videos. |
+ | **ComfyUI-Agent** | *Beide* | Standardroute für lokale Bilder sowie Musik und Videos. |
  | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
@@ -118,7 +118,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 | **TTS (Text → Stimme)** | macOS `say` oder Windows SAPI |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
-| **Bildgenerierung** | fal.ai `nano-banana-2` (Cloud) oder ComfyUI `Flux.1/2` (Lokal) |
+| **Bildgenerierung** | ComfyUI `Flux.1/2` lokal als Standard; fal.ai `nano-banana-2` nur auf ausdrücklichen externen Wunsch |
 | **Musikgenerierung** | ComfyUI `AceStep 1.5` (Lokal) |
 | **Videogenerierung** | ComfyUI `LTX 2.3` (Lokal) |
 | **Python Sandbox** | Pyodide WebAssembly (lokal in QWebEngineView) |

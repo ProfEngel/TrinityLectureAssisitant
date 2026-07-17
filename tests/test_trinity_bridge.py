@@ -731,6 +731,33 @@ def test_bridge_returns_events_and_rewrites_file_urls(tmp_path):
     assert "file://" not in events[0]["payload_html"]
 
 
+def test_bridge_exposes_payload_image_to_clients_without_inline_html(tmp_path):
+    home = tmp_path
+    media_dir = home / "gen_images"
+    media_dir.mkdir(parents=True)
+    image = media_dir / "lecture-result.png"
+    image.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "assistant",
+            "source": "runtime",
+            "text": "Das Bild ist fertig.",
+            "payload_html": f'<img src="{image.resolve().as_uri()}">',
+        },
+    )
+    bridge = TrinityBridge(home)
+
+    events = bridge.events_since(0, include_payload_html=False)
+
+    assert events[0]["has_payload"] is True
+    assert events[0]["attachments"][0]["name"] == "lecture-result.png"
+    assert events[0]["attachments"][0]["mime"] == "image/png"
+    assert events[0]["attachments"][0]["kind"] == "image"
+    assert events[0]["attachments"][0]["media_url"].startswith("/media?path=")
+
+
 def test_bridge_events_can_be_loaded_for_one_session(tmp_path):
     home = tmp_path
     history = home / "memory" / "classic_chat_history.jsonl"

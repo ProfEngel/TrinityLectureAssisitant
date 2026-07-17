@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.45:** Lokale Medien zuerst: Normale Bildauftraege gehen ohne Zusatzwort an ComfyUI, waehrend nur `externes Bild` oder `fal.ai` die Cloud-API nutzt. Die Bridge stellt Bilder, Audio und Video aus HTML-Payloads als echte Medienanhaenge fuer Companion/G2 bereit; der Lecture-Heartbeat kann zudem relevante Fachbegriffe mit Kurzdefinition melden.
 - **v0.16.44:** G2-Whisper-Feinschliff: Das Telefon-Plugin kann `Schnell`, `Ausgewogen` oder `Genau` an die Desktop-Bridge uebergeben. Trinity nutzt passende Beam-Suchen sowie einen deutschen Fachwort-/Befehlsbias, ohne das normale Desktop- oder iPhone/iPad-STT zu veraendern.
 - **v0.16.43:** Optionale Even-Realities-G2-Anbindung: Die Companion Bridge akzeptiert authentifiziertes 16-kHz-PCM, transkribiert es lokal mit `faster-whisper` und routet fertige Texte wahlweise in Trinitys Wakeword- oder Chatpfad. Das getrennte G2-Plugin bietet Zuruf-/Konversationsmodus, zwei lokale Serverprofile, Sessions, Bubble-/Medienhinweise und ein bewusst freies HUD.
 - **v0.16.42:** Windows-Installer-Update: Vor dem Austausch einer bestehenden Installation werden laufende Trinity-Prozesse gezielt beendet. Verbleibende Dateisperren werden mit einer klaren Meldung nach mehreren Wiederholungsversuchen abgebrochen statt mit einem unklaren `Remove-Item`-Fehler.

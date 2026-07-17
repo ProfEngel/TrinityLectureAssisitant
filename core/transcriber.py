@@ -1,6 +1,7 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "8"
 os.environ["KMP_BLOCKTIME"] = "1"
+import html as html_lib
 import time
 import queue
 import sys
@@ -19,7 +20,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*")
 # Damit der Import aus dem gleichen Verzeichnis funktioniert
 sys.path.append(os.path.dirname(__file__))
 from brain import TrinityBrain
-from chat_protocol import append_chat_event, pop_next_chat_request
+from chat_protocol import append_chat_event, load_chat_events, pop_next_chat_request
 from external_stt_feed import pop_external_stt_events
 from memory_store import MemoryStore
 from tenant_context import tenant_history_path, tenant_memory_db_path
@@ -382,6 +383,21 @@ class TrinityEar:
                 with open(self.transcript_file, "r") as f:
                     content = f.read()
                 recent_text = content[-3000:] if len(content) > 3000 else content
+                # Conversation clients such as G2 write directly to chat history
+                # instead of the microphone transcript. Include only recent user
+                # turns so proactive findings work in both G2 modes.
+                cutoff = time.time() - max(600, interval_min * 120)
+                chat_context = []
+                for event in load_chat_events(CHAT_HISTORY_FILE, limit=80):
+                    if (
+                        event.get("role") == "user"
+                        and float(event.get("timestamp", 0) or 0) >= cutoff
+                        and str(event.get("text") or "").strip()
+                    ):
+                        chat_context.append(str(event.get("text")).strip())
+                if chat_context:
+                    recent_text = f"{recent_text}\n" + "\n".join(chat_context[-20:])
+                    recent_text = recent_text[-5000:]
                 
                 # Check ob wir überhaupt Content haben
                 if len(recent_text.strip()) < 100:
@@ -396,6 +412,7 @@ class TrinityEar:
                 result = hb_module.analyze_transcript(self.brain, recent_text)
                 if result and result.get("has_finding"):
                     color = result.get("bubble_color", "red")
+                    finding_type = result.get("type", "")
                     msg = result.get("message", "Heartbeat Hinweis.")
                     print(f"💓 Heartbeat Finding ({color}): {msg}")
                     
@@ -408,8 +425,12 @@ class TrinityEar:
                         html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{task_text}</p><div style='height: 500px; display: flex; align-items:flex-end; justify-content:center; opacity:0.5;'>Scroll runter für die Lösung 👇</div><div style='padding-top: 50px; border-top: 1px solid rgba(255,255,255,0.2);'><strong style='color:#00e5ff;'>Lösung:</strong><p style='font-size:16px; line-height: 1.5;'>{solution_text}</p></div>"
                         msg_log = f"{task_text} (Lösung: {solution_text})"
                     else:
-                        title = "⚠️ Fehler erkannt" if color == "red" else ("💡 Alternative Perspektive" if color == "yellow" else "ℹ️ Info")
-                        html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{title}</h2><p style='font-size:16px; line-height: 1.5;'>{msg}</p>"
+                        if finding_type == "term":
+                            term = str(result.get("term") or "Fachbegriff").strip()[:100]
+                            title = f"💡 Begriff: {term}"
+                        else:
+                            title = "⚠️ Fehler erkannt" if color == "red" else ("💡 Alternative Perspektive" if color == "yellow" else "ℹ️ Info")
+                        html = f"<!-- KEEP_OPEN --><h2 style='margin-top:0;font-weight:300;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:10px;font-size:18px;'>{html_lib.escape(title)}</h2><p style='font-size:16px; line-height: 1.5;'>{html_lib.escape(str(msg))}</p>"
                         msg_log = msg
 
                     # Füge Separator hinzu, falls es schon andere Bubbles gibt (Akkumulation)

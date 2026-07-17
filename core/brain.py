@@ -271,8 +271,21 @@ class TrinityBrain:
             return fallback
 
     def _is_explicit_local_media_request(self, router_text):
-        """Route image uploads to ComfyUI only when the user explicitly asks for it."""
+        """Route image edits locally unless the user explicitly requests fal.ai."""
         text = (router_text or "").lower()
+        external_markers = [
+            "externes bild", "externe grafik", "externes schaubild",
+            "bild extern", "grafik extern", "extern erstell", "extern generier",
+            "fal.ai", "fal ai",
+        ]
+        external_media_markers = [
+            "bild", "grafik", "schaubild", "infografik", "zeichnung", "illustration",
+        ]
+        if (
+            any(marker in text for marker in external_markers)
+            or ("extern" in text and any(marker in text for marker in external_media_markers))
+        ):
+            return False
         local_markers = [
             "comfyui",
             "flux",
@@ -303,7 +316,13 @@ class TrinityBrain:
         video_markers = ["video", "kurzvideo", "animier", "animation", "i2v", "bewegung"]
         has_local_marker = any(marker in text for marker in local_markers)
         has_edit_marker = any(marker in text for marker in edit_markers + video_markers)
-        return has_local_marker and has_edit_marker
+        generation_markers = ["erstell", "erzeug", "generier", "render", "zeichne", "visualisier"]
+        image_markers = ["bild", "grafik", "schaubild", "infografik", "zeichnung", "illustration"]
+        has_generation_request = (
+            any(marker in text for marker in generation_markers)
+            and any(marker in text for marker in image_markers)
+        )
+        return has_edit_marker or (has_local_marker and has_generation_request)
 
     def _skill_allowed_for_image_upload(self, skill, router_text):
         """Avoid hijacking normal image understanding with generation agents."""

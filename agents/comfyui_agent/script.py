@@ -33,6 +33,30 @@ VIDEO_TRIGGER_WORDS = [
     "film", "clip", "bewegtbild"
 ]
 
+EXTERNAL_IMAGE_MARKERS = [
+    "externes bild", "externe grafik", "externes schaubild",
+    "bild extern", "grafik extern", "extern erstell", "extern generier",
+    "fal.ai", "fal ai",
+]
+
+IMAGE_MEDIA_WORDS = [
+    "bild", "schaubild", "grafik", "infografik", "diagramm",
+    "zeichnung", "illustration",
+]
+
+IMAGE_ACTION_WORDS = [
+    "erstell", "erzeug", "generier", "produzier", "render", "zeichne",
+    "mach ein", "mache ein", "visualisier",
+]
+
+
+def is_explicit_external_request(query: str) -> bool:
+    lower = str(query or "").lower()
+    return (
+        any(marker in lower for marker in EXTERNAL_IMAGE_MARKERS)
+        or ("extern" in lower and any(word in lower for word in IMAGE_MEDIA_WORDS))
+    )
+
 # Workflow-Mapping
 WORKFLOW_T2I = "Flux2_Klein_T2I_API.json"
 WORKFLOW_I2I = "Flux2_klein_I2I_API.json"
@@ -96,6 +120,18 @@ def _extract_dimensions(query: str) -> Optional[tuple]:
 
 def can_handle(query: str) -> bool:
     lower = query.lower()
+    if is_explicit_external_request(lower):
+        return False
+
+    # Local generation is the default. The user only needs to name the medium
+    # and an action; "lokal" or "ComfyUI" remain accepted but are no longer
+    # required.
+    if (
+        any(word in lower for word in IMAGE_MEDIA_WORDS)
+        and any(word in lower for word in IMAGE_ACTION_WORDS)
+    ):
+        return True
+
     # Direkte Keywords (Bild & Video)
     combined_triggers = TRIGGER_WORDS + VIDEO_TRIGGER_WORDS
     if any(word in lower for word in combined_triggers):
@@ -232,8 +268,8 @@ def execute(query: str, context: dict = None) -> dict:
     # UI-Payload bauen (immer, auch wenn von Telegram — Brain zeigt es an wenn has_payload=True)
     html_payload = _build_image_payload(local_path, image_prompt)
     sc = (f"--- COMFYUI BILD ---\nDu hast soeben via lokalem ComfyUI-Server (Flux2 Klein) "
-          f"ein Bild zu '{image_prompt}' generiert und es wird nun im Nebenfenster angezeigt. "
-          f"Bestätige dem Nutzer kurz, dass das Bild fertig ist.\n\n")
+          f"ein Bild zu '{image_prompt}' generiert und als Medium bereitgestellt. "
+          f"Bestätige dem Nutzer nur kurz, dass das Bild fertig ist.\n\n")
 
     return {
         "has_payload": not from_telegram,  # Kein UI-Payload wenn rein Telegram-Anfrage

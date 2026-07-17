@@ -3,8 +3,36 @@ import time
 import requests
 from pathlib import Path
 
+
+EXTERNAL_IMAGE_MARKERS = [
+    "externes bild",
+    "externe grafik",
+    "externes schaubild",
+    "bild extern",
+    "grafik extern",
+    "extern erstell",
+    "extern generier",
+    "fal.ai",
+    "fal ai",
+]
+
+
+def is_explicit_external_request(query: str) -> bool:
+    router_text = str(query or "").lower()
+    media_words = ["bild", "grafik", "schaubild", "infografik", "zeichnung", "illustration"]
+    return (
+        any(marker in router_text for marker in EXTERNAL_IMAGE_MARKERS)
+        or ("extern" in router_text and any(word in router_text for word in media_words))
+    )
+
+
 def can_handle(query: str) -> bool:
     router_text = query.lower()
+    # fal.ai is an explicit cloud route. Normal image requests belong to the
+    # local ComfyUI agent and must not silently consume an external API.
+    if not is_explicit_external_request(router_text):
+        return False
+
     # Wenn 'lokal' oder 'server' oder 'comfyui' oder 'flux render' oder 'sierra' vorkommt, soll ComfyUI-Agent übernehmen
     if any(word in router_text for word in ["lokal", "server", "comfyui", "flux render", "sierra"]):
         return False
@@ -95,7 +123,7 @@ def execute(query: str, context: dict = None) -> dict:
             json.dump(existing_images, f, indent=2, ensure_ascii=False)
             
         html_payload = _build_image_payload(img_path, prompt)
-        search_context = f"--- IMAGE GENERATION ---\nDu hast soeben ein NEUES Schaubild zu '{prompt}' generiert. Bestätige dem Nutzer, dass er das Bild nun im Nebenfenster sehen kann und biete an, Details dazu zu erklären.\n\n"
+        search_context = f"--- IMAGE GENERATION ---\nDu hast soeben extern ein NEUES Schaubild zu '{prompt}' generiert und als Medium bereitgestellt. Bestätige nur kurz, dass das Bild fertig ist.\n\n"
         return {
             "has_payload": True,
             "html_payload": html_payload,
