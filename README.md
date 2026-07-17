@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - **v0.16.43:** Even Realities G2 kann Trinity ueber die Companion Bridge als diskretes HUD und Mikrofon nutzen. Zuruf- und Konversationsmodus, getrennte Serverprofile sowie lokale PCM-Transkription funktionieren auf macOS und Windows 11.
 > - **v0.16.42:** Der Windows-Updater beendet nun laufende Trinity-Prozesse der bestehenden Installation und meldet verbleibende Dateisperren mit einer klaren Handlungsanweisung.
-> - **v0.16.41:** Windows-Bugfix fuer die Einstellungen: Der Harness-Tab oeffnet Projektlisten wieder korrekt und stuerzt nicht mehr beim Aufruf von `_projects_to_text` ab.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

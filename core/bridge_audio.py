@@ -9,6 +9,17 @@ import threading
 
 G2_SAMPLE_RATE = 16_000
 MAX_AUDIO_SECONDS = 20
+TRINITY_VOCABULARY = (
+    "Trinity. Deutsche Vorlesung und natuerliche Konversation. "
+    "Wichtige Begriffe: Trinity, Hilfe, Modus Zuruf, Zurufmodus, "
+    "Konversationsmodus, Wakeword, Checkliste, Stichwoerter, Arbeitsraum, "
+    "Schnellsession, Nash-Gleichgewicht, Gefangenendilemma und Kooperation."
+)
+TRINITY_HOTWORDS = (
+    "Trinity Hilfe Zuruf Zurufmodus Konversationsmodus Wakeword Checkliste "
+    "Stichwoerter Arbeitsraum Schnellsession Nash-Gleichgewicht "
+    "Gefangenendilemma Kooperation"
+)
 
 
 class BridgeAudioTranscriber:
@@ -48,7 +59,7 @@ class BridgeAudioTranscriber:
             )
         return self._model
 
-    def transcribe(self, audio_base64, *, sample_rate=G2_SAMPLE_RATE, language="de"):
+    def transcribe(self, audio_base64, *, sample_rate=G2_SAMPLE_RATE, language="de", quality="balanced"):
         audio = self.decode_pcm(audio_base64, sample_rate=sample_rate)
         selected_language = str(language or "de").strip().lower()
         if selected_language in {"", "auto"}:
@@ -56,15 +67,22 @@ class BridgeAudioTranscriber:
         elif selected_language not in {"de", "en"}:
             raise ValueError("Unterstuetzte Sprachen sind de, en oder auto.")
 
+        quality = str(quality or "balanced").strip().lower()
+        if quality not in {"fast", "balanced", "precise"}:
+            raise ValueError("Erkennungsqualitaet muss fast, balanced oder precise sein.")
+        beam_size = {"fast": 1, "balanced": 3, "precise": 5}[quality]
+
         with self._lock:
             segments, info = self._ensure_model().transcribe(
                 audio,
                 language=selected_language,
-                initial_prompt="Trinity. Deutsche Vorlesung und natuerliche Konversation.",
+                initial_prompt=TRINITY_VOCABULARY,
+                hotwords=TRINITY_HOTWORDS,
                 condition_on_previous_text=False,
                 vad_filter=True,
-                beam_size=1,
-                best_of=1,
+                beam_size=beam_size,
+                best_of=beam_size,
+                temperature=0.0,
             )
             text = " ".join(str(segment.text or "").strip() for segment in segments).strip()
         return {

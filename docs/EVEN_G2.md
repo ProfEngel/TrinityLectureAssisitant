@@ -25,6 +25,12 @@ Die Brille verbindet sich nicht direkt mit Mac oder Windows. Das Telefon mit der
 
 Das G2-Display ist monochrom. Die Trinity-Ampel wird daher mit `!`, `!!` und `!!!` dargestellt. Die Brille hat keinen Lautsprecher; Antworten erscheinen als Text.
 
+Fertige Bilder und Schaubilder koennen ueber einen Ring-Tipp oder den Befehl
+`Trinity, zeige das letzte Medium` als kontrastoptimierte monochrome Vorschau
+geoeffnet werden. Ein weiterer Tipp wechselt zum naechsten Ergebnis,
+Doppeltippen schliesst die Vorschau. Fuer Audio, Video und HTML zeigt das HUD
+eine kompakte Ergebniskarte.
+
 ## Modi
 
 - **Zuruf:** Gesprochenes wird transkribiert und durch Trinitys normalen Wakeword-Pfad verarbeitet.
@@ -74,6 +80,18 @@ Sprachbefehle:
    ```
 
 8. In der Even-App den QR-Code im Entwicklerbereich scannen. Im Telefonfenster des Plugins Profilname, Trinity-URL und Bearer-Token eintragen und **Verbindung testen** waehlen.
+
+### Spracherkennung einstellen
+
+Die vier G2-Mikrofone kommen im Plugin-SDK als ein gemeinsamer
+16-kHz-Audiostrom an. Sie koennen nicht einzeln geregelt werden. Das
+Telefonfenster des G2-Plugins bietet deshalb die wirksamen Einstellungen:
+
+- Empfindlichkeit: `70-75` ist ein guter Ausgangspunkt fuer Vorlesungen.
+- Satzende-Pause: `800-900 ms` verhindert in unruhigen Raeumen zu fruehes Abschneiden.
+- Sprachfilter: hebt leise Sprache begrenzt an und reduziert Gleichanteile.
+- Whisper-Qualitaet: `Schnell`, `Ausgewogen` oder `Genau`; hoehere Qualitaet
+  verbessert schwierige Fachbegriffe, braucht aber etwas mehr Rechenzeit.
 
 Fuer einen dauerhafteren Test `npm run pack` ausfuehren und `TrinityEvenG2.ehpk` im Even-Hub-Portal als privaten Test hochladen. Lokales QR-Sideloading ist fuer schnelle Entwicklung gedacht und uebersteht laut Even nicht jeden Sperr- oder Hintergrundwechsel.
 

@@ -283,6 +283,7 @@ class TrinityBridge:
             payload.get("audio_base64"),
             sample_rate=payload.get("sample_rate", 16_000),
             language=payload.get("language", "de"),
+            quality=payload.get("quality", "balanced"),
         )
         text = str(result.get("text") or "").strip()
         response = {"ok": True, **result, "route": route, "routed": False}

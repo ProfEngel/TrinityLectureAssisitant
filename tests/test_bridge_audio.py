@@ -32,13 +32,48 @@ def test_bridge_audio_rejects_wrong_sample_rate_and_oversized_audio():
         BridgeAudioTranscriber.decode_pcm(oversized)
 
 
+def test_bridge_audio_biases_short_g2_commands_without_reusing_previous_text():
+    calls = []
+
+    class Segment:
+        text = " Trinity, Modus Zuruf "
+
+    class Info:
+        language = "de"
+        language_probability = 0.99
+
+    class FakeModel:
+        def transcribe(self, _audio, **kwargs):
+            calls.append(kwargs)
+            return [Segment()], Info()
+
+    transcriber = BridgeAudioTranscriber()
+    transcriber._model = FakeModel()
+    encoded = base64.b64encode(b"\x00\x00" * 1600).decode("ascii")
+
+    result = transcriber.transcribe(encoded)
+
+    assert result["text"] == "Trinity, Modus Zuruf"
+    assert calls[0]["condition_on_previous_text"] is False
+    assert calls[0]["beam_size"] == 3
+    assert "Zuruf" in calls[0]["hotwords"]
+    assert "Nash-Gleichgewicht" in calls[0]["initial_prompt"]
+
+    transcriber.transcribe(encoded, quality="precise")
+    assert calls[1]["beam_size"] == 5
+
+    with pytest.raises(ValueError, match="Erkennungsqualitaet"):
+        transcriber.transcribe(encoded, quality="maximum")
+
+
 def test_audio_transcription_http_endpoint_accepts_authenticated_g2_request(tmp_path):
     (tmp_path / "core").mkdir()
     (tmp_path / "memory").mkdir()
     bridge = TrinityBridge(tmp_path, token="secret")
 
     class FakeTranscriber:
-        def transcribe(self, _audio_base64, **_kwargs):
+        def transcribe(self, _audio_base64, **kwargs):
+            assert kwargs["quality"] == "precise"
             return {"text": "Trinity Test", "language": "de"}
 
     bridge._audio_transcriber = FakeTranscriber()
@@ -48,7 +83,7 @@ def test_audio_transcription_http_endpoint_accepts_authenticated_g2_request(tmp_
     try:
         request = Request(
             f"http://127.0.0.1:{server.server_port}/audio/transcribe",
-            data=json.dumps({"audio_base64": "cGNt", "route": "none"}).encode("utf-8"),
+            data=json.dumps({"audio_base64": "cGNt", "quality": "precise", "route": "none"}).encode("utf-8"),
             headers={"Authorization": "Bearer secret", "Content-Type": "application/json"},
             method="POST",
         )
