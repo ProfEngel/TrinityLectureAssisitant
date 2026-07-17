@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import url2pathname
 
 from agent_catalog import build_agent_catalog, normalize_catalog_overrides
+from bridge_audio import BridgeAudioTranscriber
 from chat_attachments import attachment_kind
 from chat_protocol import (
     append_chat_event,
@@ -150,6 +151,7 @@ class TrinityBridge:
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
         self._lock = threading.Lock()
         self._summary_jobs = set()
+        self._audio_transcriber = None
 
     @property
     def media_roots(self):
@@ -233,10 +235,13 @@ class TrinityBridge:
         if not text:
             raise ValueError("STT-Text darf nicht leer sein.")
         is_final = bool(payload.get("is_final", False))
+        source = str(payload.get("source") or "ios-stt").strip().lower()
+        if source not in {"ios-stt", "g2-stt"}:
+            source = "ios-stt"
         event = append_external_stt_event(
             self.stt_feed_path,
             {
-                "source": "ios-stt",
+                "source": source,
                 "text": text,
                 "is_final": is_final,
                 "speak": bool(payload.get("speak", False)),
@@ -252,7 +257,7 @@ class TrinityBridge:
                 {
                     "request_id": event["event_id"],
                     "role": "user",
-                    "source": "ios-stt",
+                    "source": source,
                     "text": text,
                     "session_id": event["session_id"],
                     "session_name": event.get("session_name", ""),
@@ -260,6 +265,46 @@ class TrinityBridge:
                 },
             )
         return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
+
+    def transcribe_audio(self, payload, user=None):
+        if not isinstance(payload, dict):
+            raise ValueError("Audio-Transkription erwartet ein Objekt.")
+        route = str(payload.get("route") or "stt").strip().lower()
+        if route not in {"none", "stt", "message"}:
+            raise ValueError("Audio-Route muss none, stt oder message sein.")
+
+        with self._lock:
+            if self._audio_transcriber is None:
+                config = load_config(self.config_path)
+                model_name = str(config.get("stt", {}).get("model") or "small")
+                self._audio_transcriber = BridgeAudioTranscriber(model_name=model_name)
+
+        result = self._audio_transcriber.transcribe(
+            payload.get("audio_base64"),
+            sample_rate=payload.get("sample_rate", 16_000),
+            language=payload.get("language", "de"),
+        )
+        text = str(result.get("text") or "").strip()
+        response = {"ok": True, **result, "route": route, "routed": False}
+        if not text or route == "none":
+            return response
+
+        common = {
+            "text": text,
+            "session_id": str(payload.get("session_id") or "").strip(),
+            "session_name": str(payload.get("session_name") or "").strip()[:160],
+            "privacy_mode": str(payload.get("privacy_mode") or "local").strip() or "local",
+            "speak": bool(payload.get("speak", False)),
+        }
+        if route == "message":
+            routed = self.send_message({**common, "source": "g2-conversation"}, user=user)
+        else:
+            routed = self.send_stt(
+                {**common, "source": "g2-stt", "is_final": True},
+                user=user,
+            )
+        response.update({"routed": True, "request": routed})
+        return response
 
     def end_session(self, payload, user=None):
         session_id = str(payload.get("session_id", "")).strip()
@@ -1110,6 +1155,7 @@ class TrinityBridge:
             elif not include_payload_html:
                 # Mobile clients load the current payload independently. Avoid
                 # repeatedly sending old, potentially very large sandbox HTML.
+                cleaned["has_payload"] = bool(cleaned.get("payload_html"))
                 cleaned.pop("payload_html", None)
             if cleaned.get("attachments"):
                 cleaned["attachments"] = self.rewrite_attachments(
@@ -1468,6 +1514,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
+                elif parsed.path == "/audio/transcribe":
+                    _json_response(self, 200, bridge.transcribe_audio(_read_json(self), user=user))
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
                 elif parsed.path == "/workspace/create":

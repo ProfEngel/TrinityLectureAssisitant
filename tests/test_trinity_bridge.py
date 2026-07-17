@@ -373,6 +373,78 @@ def test_bridge_writes_live_stt_feed(tmp_path):
     assert history[0]["text"] == "Trinity kannst du das erklaeren"
 
 
+def test_bridge_transcribes_g2_audio_and_routes_to_wakeword_feed(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    class FakeTranscriber:
+        def transcribe(self, audio_base64, **kwargs):
+            assert audio_base64 == "cGNt"
+            assert kwargs["sample_rate"] == 16000
+            return {"text": "Trinity erklaere Spieltheorie", "language": "de"}
+
+    bridge._audio_transcriber = FakeTranscriber()
+    result = bridge.transcribe_audio(
+        {
+            "audio_base64": "cGNt",
+            "sample_rate": 16000,
+            "route": "stt",
+            "session_id": "g2-session",
+        }
+    )
+
+    assert result["ok"] is True
+    assert result["routed"] is True
+    events = pop_external_stt_events(home / "core" / "ios_stt_feed.jsonl")
+    assert events[0]["source"] == "g2-stt"
+    assert events[0]["text"] == "Trinity erklaere Spieltheorie"
+
+
+def test_bridge_transcribes_g2_audio_and_routes_continuous_conversation(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    class FakeTranscriber:
+        def transcribe(self, _audio_base64, **_kwargs):
+            return {"text": "Was war letzte Woche offen?", "language": "de"}
+
+    bridge._audio_transcriber = FakeTranscriber()
+    result = bridge.transcribe_audio(
+        {
+            "audio_base64": "cGNt",
+            "route": "message",
+            "session_id": "g2-session",
+        }
+    )
+
+    assert result["routed"] is True
+    request = pop_next_chat_request(home / "core")
+    assert request["source"] == "g2-conversation"
+    assert request["session_id"] == "g2-session"
+
+
+def test_bridge_can_transcribe_g2_audio_without_routing_a_command(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    class FakeTranscriber:
+        def transcribe(self, _audio_base64, **_kwargs):
+            return {"text": "Trinity Modus Konversation", "language": "de"}
+
+    bridge._audio_transcriber = FakeTranscriber()
+    result = bridge.transcribe_audio({"audio_base64": "cGNt", "route": "none"})
+
+    assert result["text"] == "Trinity Modus Konversation"
+    assert result["routed"] is False
+    assert not (home / "core" / "ios_stt_feed.jsonl").exists()
+
+
 def test_bridge_end_session_creates_summary_asset_and_memory(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

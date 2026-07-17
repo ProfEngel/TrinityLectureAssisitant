@@ -1056,8 +1056,10 @@ class TrinityEar:
                 continue
             self._last_external_stt_text = text
             speak = bool(event.get("speak", False))
+            source = str(event.get("source") or "ios-stt").strip().lower()
             marker = "final" if is_final else "live"
-            print(f"📱 iPhone-STT ({marker}): {text}")
+            source_label = "G2-STT" if source == "g2-stt" else "iPhone-STT"
+            print(f"📱 {source_label} ({marker}): {text}")
             if not is_final:
                 continue
             if self._looks_like_recent_assistant_echo(text):
@@ -1072,7 +1074,7 @@ class TrinityEar:
             ):
                 request = {
                     "request_id": event.get("event_id"),
-                    "source": "ios-stt",
+                    "source": source,
                     "text": text,
                     "attachments": [],
                     "silent": not speak,
@@ -1086,10 +1088,10 @@ class TrinityEar:
                 continue
 
             request = None
-            if str(event.get("source") or "") == "ios-stt":
+            if source in {"ios-stt", "g2-stt"}:
                 request = {
                     "request_id": event.get("event_id"),
-                    "source": "ios-stt",
+                    "source": source,
                     "text": text,
                     "attachments": [],
                     "silent": not speak,
