@@ -52,6 +52,10 @@ trinity doctor
 trinity start
 ~~~
 
+Der Installer fragt bereits nach dem Profil und dem Speicherort des
+Inhalts-Vaults. Das anschließende Onboarding erkennt diesen Vault und fragt ihn
+nicht erneut ab.
+
 ### Windows 11
 
 In PowerShell:
@@ -63,6 +67,9 @@ trinity onboarding
 trinity doctor
 trinity start
 ~~~
+
+Auch unter Windows wird der Vault bei der Erstinstallation gewählt. Ein Update
+verwendet den in der vorhandenen Konfiguration gespeicherten Pfad.
 
 Die Ausfuehrungsrichtlinie gilt damit nur fuer das geoeffnete PowerShell-Fenster.
 Weitere Hinweise stehen in [Deployment Windows 11](Deployment_Windows11.md).
@@ -96,7 +103,8 @@ Proaktivitaet aktiviert werden.
 
 ## 3. Lokale Runtime, Cloud-Vault und Agenten-Werkzeugkasten
 
-Beim ersten `trinity onboarding` fragt Trinity nach drei Speicherorten:
+Bei der Erstinstallation beziehungsweise beim ersten `trinity onboarding`
+werden drei klar getrennte Speicherorte festgelegt:
 
 | Ort | Aufgabe | Darf in die Cloud? |
 |---|---|---|
@@ -112,6 +120,34 @@ einzige Datenwahrheit fuer dauerhafte Inhalte. Ausfuehrbarer Agentencode liegt
 lokal unter `.agents`; automatisch generierte Katalogdaten liegen unter
 `.agents/_meta`. Der Werkzeugkasten wird separat ueber ein privates GitHub-Repo
 gesichert. Alte `MainHub/TrinityVault`-Strukturen sind nur noch Migrationsquelle.
+
+### Neuer oder bereits vorhandener Vault
+
+Trinity verlangt eine bewusste Wahl des Vault-Speicherorts. Danach gilt:
+
+- Existiert der Ordner noch nicht, legt Trinity ihn mit der Phase-1-Struktur an.
+- Existiert ein leerer Ordner, ergänzt Trinity die Struktur dort.
+- Enthält der Ordner bereits Daten, zeigt Trinity den gefundenen Bestand an und
+  bittet um Bestätigung.
+- Bei einer bestätigten Übernahme bleiben alle vorhandenen Dateien und Ordner
+  unverändert. Trinity verschiebt nichts automatisch.
+- Fremde bestehende Haupteinträge werden in
+  `90 Inhaltsverzeichnis und Schlagwörter/BESTAND_BEI_EINRICHTUNG.md`
+  protokolliert und können später kontrolliert zugeordnet werden.
+- Eine wiederholte Einrichtung ergänzt nur Fehlendes und überschreibt weder
+  Inhalte noch eine vorhandene `README.md`.
+
+Nützliche Prüfkommandos:
+
+~~~bash
+trinity vault status
+trinity vault init
+trinity vault setup
+~~~
+
+`vault init` ist für bekannte Installationen und Updates gedacht. Es verwendet
+den gespeicherten Pfad ohne erneute Rückfrage. `vault setup` dient der bewussten
+Auswahl oder Änderung des Speicherorts.
 
 Generisches Beispiel:
 

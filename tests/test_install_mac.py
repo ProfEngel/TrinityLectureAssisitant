@@ -13,6 +13,10 @@ def test_macos_installer_adds_trinity_cli_to_user_path():
     assert 'export PATH="$HOME/.local/bin:$PATH"' in script
     assert '"$INSTALL_DIR/TrinityRuntime"' in script
     assert 'control-plane init' in script
+    assert 'vault setup' in script
+    assert 'vault init' in script
+    assert 'if [ "$IS_UPDATE" = true ]' in script
+    assert "</dev/tty" in script
 
 
 def test_macos_installer_uses_supported_python_and_preserves_recovery_copy():

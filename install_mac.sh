@@ -156,8 +156,30 @@ if [ ! -f "$ZPROFILE" ] || ! grep -Fq "$PATH_LINE" "$ZPROFILE"; then
 fi
 export PATH="$CLI_BIN:$PATH"
 
-# 6.6 MainHub / Control Plane idempotent vorbereiten
-echo "🧭 Prüfe MainHub-/Control-Plane-Ordner..."
+# 6.6 Inhalts-Vault und Control Plane idempotent vorbereiten
+run_vault_setup() {
+    if [ ! -r /dev/tty ]; then
+        echo "❌ Die Vault-Ersteinrichtung benötigt ein interaktives Terminal."
+        echo "   Starte danach manuell: trinity vault setup"
+        return 1
+    fi
+    ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" vault setup </dev/tty
+}
+
+if [ "$IS_UPDATE" = true ]; then
+    echo "🗂️  Prüfe den bereits konfigurierten Inhalts-Vault..."
+    if ! ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" vault init; then
+        echo "   Der bestehende Vault war noch nicht eindeutig konfiguriert."
+        echo "   Bitte wähle jetzt den vorhandenen oder einen neuen Vault-Ordner."
+        run_vault_setup
+    fi
+else
+    echo "🗂️  Richte den Inhalts-Vault für diese Neuinstallation ein..."
+    echo "   Du bestimmst selbst, wo der Vault liegen soll."
+    run_vault_setup
+fi
+
+echo "🧭 Prüfe lokale MainHub-/Control-Plane-Ordner..."
 ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" control-plane init >/dev/null 2>&1 || \
     echo "   ⚠️  Control Plane konnte jetzt nicht initialisiert werden. Später möglich mit: trinity control-plane init"
 

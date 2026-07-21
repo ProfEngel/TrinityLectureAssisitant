@@ -15,9 +15,10 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.46:** Trinity startet auf aktuellen Python-Versionen wieder stabil, hält die signierte macOS-App außerhalb des iCloud-Schreibtischs und trennt Inhalts-Vault, lokale Runtime und lokalen Agenten-Werkzeugkasten. Neuinstallationen lassen den Speicherort des Vaults ausdrücklich wählen; Updates erkennen den bekannten Vault, ergänzen nur fehlende Phase-1-Ordner und lassen vorhandene Inhalte unverändert.
 > - **v0.16.45:** Bildauftraege laufen standardmaessig lokal ueber ComfyUI; nur ein ausdruecklicher externer Wunsch nutzt fal.ai. Erzeugte Bild-, Audio- und Video-Payloads werden als echte Companion-/G2-Medienanhaenge ausgeliefert, und der Lecture-Heartbeat kann relevante Fachbegriffe als kurze Definitions-Bubble melden.
-> - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - **v0.16.43:** Even Realities G2 kann Trinity ueber die Companion Bridge als diskretes HUD und Mikrofon nutzen. Zuruf- und Konversationsmodus, getrennte Serverprofile sowie lokale PCM-Transkription funktionieren auf macOS und Windows 11.
+> - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
@@ -175,6 +176,9 @@ Empfohlen wird Python 3.13. Der Installer akzeptiert 64-Bit-Python 3.10 bis
 3.14, verwendet auf dem Mac bevorzugt Homebrews `python@3.13` und legt die
 signierte App unter `~/Applications/Trinity.app` ab. Auf dem Schreibtisch liegt
 nur ein Verweis, damit iCloud-Desktop-Metadaten die Signatur nicht beschädigen.
+Bei einer Neuinstallation fragt Trinity nach Profil und Speicherort des
+Inhalts-Vaults. Bei einem Update wird der bereits konfigurierte Vault
+weiterverwendet; bestehende Inhalte werden weder verschoben noch überschrieben.
 
 Öffne das Terminal und führe diesen Befehl aus:
 
@@ -201,6 +205,10 @@ Classic-UI und Terminal-CLI. Zusätzlich installiert Trinity eine Verknüpfung
 **„Trinity ohne Terminal“** für einen stillen Start mit grafischer Oberfläche.
 Nach der Installation steht in einem neuen Terminal außerdem der Befehl `trinity`
 zur Verfügung.
+
+Der Installer fragt bei einer Neuinstallation nach Profil und Speicherort des
+Inhalts-Vaults. Bei Updates prüft Trinity den gespeicherten Vault und ergänzt
+nur fehlende Phase-1-Ordner.
 
 Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im
@@ -301,6 +309,8 @@ folgende Befehle bereit:
 trinity start
 trinity settings
 trinity onboarding
+trinity vault status
+trinity vault setup
 trinity doctor
 trinity doctor --fix
 trinity tui
@@ -309,7 +319,9 @@ trinity server
 ```
 
 `trinity settings` ist eine interaktive Einstellungsoberfläche für Headless-Systeme.
-`trinity onboarding` führt durch die Ersteinrichtung. `trinity doctor` prüft Python,
+`trinity onboarding` führt durch die Ersteinrichtung. `trinity vault status`
+prüft den gespeicherten Inhalts-Vault; `trinity vault setup` wählt oder ändert
+ihn bewusst. `trinity doctor` prüft Python,
 SSL, Konfiguration, Oberflächen, LLM, Codex und beschreibbare Laufzeitordner. Mit
 `trinity start --surface classic|eyes|terminal|all` kann die Oberfläche für einen
 einzelnen Start überschrieben werden.

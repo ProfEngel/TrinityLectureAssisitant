@@ -46,7 +46,14 @@ def test_platform_defaults_keep_runtime_local_and_vault_syncable(monkeypatch, tm
 def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
     runtime = tmp_path / "TrinityRuntime"
     vault = tmp_path / "BrainVault"
-    config = {"control_plane": {"runtime_root": str(runtime), "vault_root": str(vault)}}
+    agents_root = tmp_path / "LocalAgentPool"
+    config = {
+        "control_plane": {
+            "runtime_root": str(runtime),
+            "vault_root": str(vault),
+            "external_agents_root": str(agents_root),
+        }
+    }
 
     result = TrinityControlPlane(tmp_path, config).ensure_foundation()
     catalog_path = runtime / "catalog" / "agent_catalog.json"
@@ -56,8 +63,9 @@ def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
     assert (runtime / "model_profiles" / "local-default.json").is_file()
     assert (runtime / "artifacts" / "artifact_index.jsonl").is_file()
     assert (runtime / "memory" / "jobs.sqlite3").is_file()
-    assert (vault / ".agents").is_dir()
-    assert (vault / ".agents" / "_meta" / "agent_catalog.json").is_file()
+    assert not (vault / ".agents").exists()
+    assert (agents_root / ".agents").is_dir()
+    assert (agents_root / ".agents" / "_meta" / "agent_catalog.json").is_file()
     assert not (vault / "00_registry").exists()
     assert not (vault / "03_results").exists()
     assert not (vault / ".catalog").exists()

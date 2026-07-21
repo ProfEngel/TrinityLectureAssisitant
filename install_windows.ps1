@@ -385,7 +385,28 @@ if ($cliBin -notin ($env:Path -split ";")) {
     $env:Path = "$env:Path;$cliBin"
 }
 
-Write-Host "Initialisiere MainHub / Control Plane ..."
+if ($isUpdate) {
+    Write-Host "Pruefe den bereits konfigurierten Inhalts-Vault ..."
+    & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault init
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Der bestehende Vault war noch nicht eindeutig konfiguriert."
+        Write-Host "Bitte waehle jetzt den vorhandenen oder einen neuen Vault-Ordner."
+        & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault setup
+        if ($LASTEXITCODE -ne 0) {
+            throw "Der Inhalts-Vault konnte nicht eingerichtet werden."
+        }
+    }
+}
+else {
+    Write-Host "Richte den Inhalts-Vault fuer diese Neuinstallation ein ..."
+    Write-Host "Du bestimmst selbst, wo der Vault liegen soll."
+    & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault setup
+    if ($LASTEXITCODE -ne 0) {
+        throw "Der Inhalts-Vault konnte nicht eingerichtet werden."
+    }
+}
+
+Write-Host "Initialisiere lokale MainHub-/Control-Plane-Daten ..."
 Push-Location $InstallDir
 try {
     & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir control-plane init | Out-Null

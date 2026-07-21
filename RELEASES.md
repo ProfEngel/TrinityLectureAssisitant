@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.46:** Sichere Mac-Reparatur und verbindliche Vault-Architektur: Trinity unterstützt Python 3.10 bis 3.14, empfiehlt Python 3.13 und hält das signierte App-Bundle unter `~/Applications`. Inhalts-Vault, lokale Runtime und lokaler Agenten-Werkzeugkasten sind getrennt. Neuinstallationen verlangen eine bewusste Profil- und Vault-Wahl; Updates erkennen vorhandene Konfigurationen, übernehmen bestehende Inhalte unverändert und ergänzen nur fehlende Phase-1-Ordner.
 - **v0.16.45:** Lokale Medien zuerst: Normale Bildauftraege gehen ohne Zusatzwort an ComfyUI, waehrend nur `externes Bild` oder `fal.ai` die Cloud-API nutzt. Die Bridge stellt Bilder, Audio und Video aus HTML-Payloads als echte Medienanhaenge fuer Companion/G2 bereit; der Lecture-Heartbeat kann zudem relevante Fachbegriffe mit Kurzdefinition melden.
 - **v0.16.44:** G2-Whisper-Feinschliff: Das Telefon-Plugin kann `Schnell`, `Ausgewogen` oder `Genau` an die Desktop-Bridge uebergeben. Trinity nutzt passende Beam-Suchen sowie einen deutschen Fachwort-/Befehlsbias, ohne das normale Desktop- oder iPhone/iPad-STT zu veraendern.
 - **v0.16.43:** Optionale Even-Realities-G2-Anbindung: Die Companion Bridge akzeptiert authentifiziertes 16-kHz-PCM, transkribiert es lokal mit `faster-whisper` und routet fertige Texte wahlweise in Trinitys Wakeword- oder Chatpfad. Das getrennte G2-Plugin bietet Zuruf-/Konversationsmodus, zwei lokale Serverprofile, Sessions, Bubble-/Medienhinweise und ein bewusst freies HUD.

@@ -28,6 +28,7 @@
     "voice": "Samantha"
   },
   "system": {
+    "profile": "PRIVAT",
     "show_terminal": true,
     "eyes_ui_enabled": false,
     "classic_ui_enabled": true,

@@ -18,6 +18,9 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert "SetEnvironmentVariable(\"Path\"" in script
     assert "TrinityRuntime" in script
     assert "control-plane init" in script
+    assert "vault setup" in script
+    assert "vault init" in script
+    assert "if ($isUpdate)" in script
 
 
 def test_windows_installer_stops_running_trinity_before_replacing_update():

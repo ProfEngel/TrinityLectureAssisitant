@@ -40,6 +40,7 @@ class TrinityPaths:
     home: Path
     runtime_root: Path
     vault_root: Path
+    profile: str
 
     @classmethod
     def from_config(
@@ -50,6 +51,7 @@ class TrinityPaths:
     ) -> "TrinityPaths":
         home_path = Path(home).expanduser().resolve()
         control = (config or {}).get("control_plane", {})
+        profile = str((config or {}).get("system", {}).get("profile", "PRIVAT")).upper()
         runtime_value = control.get("runtime_root") or os.environ.get("TRINITY_RUNTIME")
         vault_value = control.get("vault_root") or os.environ.get("TRINITY_VAULT")
         return cls(
@@ -62,6 +64,7 @@ class TrinityPaths:
                 vault_value,
                 default_vault_root(platform_name=platform_name),
             ),
+            profile=profile if profile in {"BIZ", "PRIVAT", "TEST"} else "PRIVAT",
         )
 
     def ensure_layout(self) -> dict:
@@ -79,13 +82,16 @@ class TrinityPaths:
     def separation_warnings(self) -> list[str]:
         warnings: list[str] = []
         if _is_relative_to(self.runtime_root, self.vault_root):
-            warnings.append("Runtime liegt innerhalb des synchronisierten BrainVault.")
+            warnings.append("Runtime liegt innerhalb des synchronisierten Inhalts-Vaults.")
         if _is_relative_to(self.vault_root, self.runtime_root):
-            warnings.append("BrainVault liegt innerhalb der lokalen Runtime.")
-        if _looks_like_icloud(self.runtime_root):
-            warnings.append("Runtime liegt in iCloud; aktive Jobs sollten lokal bleiben.")
-        if not _looks_like_icloud(self.vault_root):
-            warnings.append("BrainVault liegt nicht in iCloud; Synchronisation ist nicht garantiert.")
+            warnings.append("Inhalts-Vault liegt innerhalb der lokalen Runtime.")
+        if _looks_like_cloud_sync(self.runtime_root):
+            warnings.append("Runtime liegt in einem Cloud-Ordner; aktive Jobs müssen lokal bleiben.")
+        if self.profile != "TEST" and not _looks_like_cloud_sync(self.vault_root):
+            warnings.append(
+                "Inhalts-Vault liegt nicht in einem erkennbaren Cloud-Ordner; "
+                "Synchronisation und Sicherung bitte prüfen."
+            )
         return warnings
 
     def summary(self) -> dict:
@@ -93,6 +99,7 @@ class TrinityPaths:
             "home": str(self.home),
             "runtime_root": str(self.runtime_root),
             "vault_root": str(self.vault_root),
+            "profile": self.profile,
             "warnings": self.separation_warnings(),
         }
 
@@ -144,5 +151,15 @@ def _is_relative_to(child: Path, parent: Path) -> bool:
         return False
 
 
-def _looks_like_icloud(path: Path) -> bool:
-    return "Mobile Documents" in path.parts or "CloudDocs" in path.parts
+def _looks_like_cloud_sync(path: Path) -> bool:
+    rendered = "/".join(path.parts).casefold()
+    markers = (
+        "mobile documents",
+        "clouddocs",
+        "onedrive",
+        "dropbox",
+        "google drive",
+        "googledrive",
+        "sharepoint",
+    )
+    return any(marker in rendered for marker in markers)
