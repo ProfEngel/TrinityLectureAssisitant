@@ -148,12 +148,48 @@ Nicht in den Vault gehören:
 - Python-Umgebungen und installierte Programme
 - ausführbarer Agentencode als maßgebliche Quelle
 
-## 6. Verbindliche, verständliche Vault-Struktur
+## 6. Verbindliche, verständliche Vault-Strukturen
 
-BizVault und BrainVault verwenden dieselben wenigen Hauptbereiche:
+BizVault und BrainVault sind absichtlich **nicht gleich aufgebaut**. Der
+berufliche Bestand wird nach den tatsächlich wiederkehrenden Hochschulaufgaben
+geordnet; der private Bestand bleibt projektbezogen.
+
+### BizVault – Beruf
 
 ```text
-<BizVault oder BrainVault>/
+BizVault/
+├── 00 Eingang und noch zuordnen/
+├── 10 Lehre und Lehrmaterial/
+├── 20 Prüfungen und Bewertungen/
+├── 30 Hochschulorganisation/
+├── 40 Forschung und Transfer/
+├── 50 Vorträge und Veranstaltungen/
+├── 60 Abschlussarbeiten und Betreuung/
+├── 70 Vorlagen und wiederverwendbare Bausteine/
+├── 80 Frühere und abgeschlossene Vorgänge/
+└── 90 Überblick und Ablagehilfe/
+```
+
+Diese Struktur bildet die fachliche Logik des bisherigen CampusHub ab:
+
+- `TeachLab` wird später kontrolliert **Lehre und Lehrmaterial** zugeordnet.
+- `Prüfungen` wird nach Prüfungszeitraum und Modul unter **Prüfungen und
+  Bewertungen** übernommen.
+- `Ops` wird **Hochschulorganisation** zugeordnet.
+- `ThesisForge` wird **Abschlussarbeiten und Betreuung** zugeordnet.
+- Forschung und Vorträge erhalten eigene, sofort sichtbare Bereiche, auch wenn
+  sie im Altbestand bislang an unterschiedlichen Orten lagen.
+- `projects/Automatismen` ist ausdrücklich **keine** Migrationsquelle für diese
+  fachliche BizVault-Struktur.
+
+Lehrmodule liegen direkt unter `10 Lehre und Lehrmaterial`; Prüfungszeiträume
+direkt unter `20 Prüfungen und Bewertungen`. Zusätzliche Zwischenebenen werden
+nur angelegt, wenn sie wirklich Orientierung schaffen.
+
+### BrainVault – Privat
+
+```text
+BrainVault/
 ├── 00 Noch zuordnen/
 ├── 10 Aktive Projekte/
 ├── 20 Wissen und Quellen/
@@ -163,25 +199,16 @@ BizVault und BrainVault verwenden dieselben wenigen Hauptbereiche:
 └── 90 Inhaltsverzeichnis und Schlagwörter/
 ```
 
-Die Namen sind verbindlicher als technische Begriffe wie `Input`, `Output`,
-`Artifacts` oder `Registry`.
+Die deutschen Namen sind verbindlicher als technische Begriffe wie `Input`,
+`Output`, `Artifacts` oder `Registry`. Die jeweiligen 90er-Ordner enthalten
+kleine, neu aufbaubare Kataloge und Manifeste – niemals die einzigen Exemplare
+der Originale.
 
-- **00 Noch zuordnen** ist nur ein vorübergehender Eingang, kein dauerhaftes
-  Datengrab.
-- **10 Aktive Projekte** enthält alles, woran aktuell gearbeitet wird.
-- **20 Wissen und Quellen** enthält projektübergreifendes Nachschlagewissen.
-- **30 Vorlagen und Bausteine** enthält wiederverwendbare Arbeitsgrundlagen.
-- **40 Abgeschlossene Projekte** bewahrt vollständige Projektzusammenhänge.
-- **50 Fertige Werke und Veröffentlichungen** macht finale Ergebnisse direkt
-  auffindbar, auch wenn das zugehörige Projekt archiviert ist.
-- **90 Inhaltsverzeichnis und Schlagwörter** enthält kleine, neu aufbaubare
-  Kataloge und Manifeste – niemals die einzigen Exemplare der Originale.
-
-Ein Projekt erhält höchstens so viel Unterstruktur wie wirklich nötig. Ein
-verständliches Beispiel ist:
+Ein Vorhaben erhält höchstens so viel Unterstruktur wie wirklich nötig. Ein
+Lehrbuch liegt beruflich beispielsweise direkt hier:
 
 ```text
-10 Aktive Projekte/
+10 Lehre und Lehrmaterial/
 └── Lehrbuch Investition und Finanzierung/
     ├── Projektübersicht.md
     ├── Arbeitsmaterial/

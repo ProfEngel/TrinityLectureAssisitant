@@ -125,15 +125,16 @@ gesichert. Alte `MainHub/TrinityVault`-Strukturen sind nur noch Migrationsquelle
 
 Trinity verlangt eine bewusste Wahl des Vault-Speicherorts. Danach gilt:
 
-- Existiert der Ordner noch nicht, legt Trinity ihn mit der Phase-1-Struktur an.
+- Existiert der Ordner noch nicht, legt Trinity die zum Profil passende
+  Phase-1-Struktur an: beruflich nach Hochschulaufgaben, privat nach Projekten.
 - Existiert ein leerer Ordner, ergänzt Trinity die Struktur dort.
 - Enthält der Ordner bereits Daten, zeigt Trinity den gefundenen Bestand an und
   bittet um Bestätigung.
 - Bei einer bestätigten Übernahme bleiben alle vorhandenen Dateien und Ordner
   unverändert. Trinity verschiebt nichts automatisch.
-- Fremde bestehende Haupteinträge werden in
-  `90 Inhaltsverzeichnis und Schlagwörter/BESTAND_BEI_EINRICHTUNG.md`
-  protokolliert und können später kontrolliert zugeordnet werden.
+- Fremde bestehende Haupteinträge werden im jeweiligen 90er-Ordner unter
+  `BESTAND_BEI_EINRICHTUNG.md` protokolliert und können später kontrolliert
+  zugeordnet werden.
 - Eine wiederholte Einrichtung ergänzt nur Fehlendes und überschreibt weder
   Inhalte noch eine vorhandene `README.md`.
 

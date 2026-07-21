@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 
-PHASE1_VAULT_DIRECTORIES = (
+PRIVATE_VAULT_DIRECTORIES = (
     "00 Noch zuordnen",
     "10 Aktive Projekte",
     "20 Wissen und Quellen",
@@ -22,6 +22,30 @@ PHASE1_VAULT_DIRECTORIES = (
     "50 Fertige Werke und Veröffentlichungen",
     "90 Inhaltsverzeichnis und Schlagwörter",
 )
+
+BUSINESS_VAULT_DIRECTORIES = (
+    "00 Eingang und noch zuordnen",
+    "10 Lehre und Lehrmaterial",
+    "20 Prüfungen und Bewertungen",
+    "30 Hochschulorganisation",
+    "40 Forschung und Transfer",
+    "50 Vorträge und Veranstaltungen",
+    "60 Abschlussarbeiten und Betreuung",
+    "70 Vorlagen und wiederverwendbare Bausteine",
+    "80 Frühere und abgeschlossene Vorgänge",
+    "90 Überblick und Ablagehilfe",
+)
+
+TEST_VAULT_DIRECTORIES = (
+    "00 Testmaterial",
+    "10 Laufende Tests",
+    "80 Abgeschlossene Tests",
+    "90 Testprotokolle",
+)
+
+# Kompatibilitätsname für Erweiterungen, die bisher die private Standardstruktur
+# importiert haben. Neue Aufrufer sollen ``vault_directories(profile)`` nutzen.
+PHASE1_VAULT_DIRECTORIES = PRIVATE_VAULT_DIRECTORIES
 
 PROFILE_ALIASES = {
     "beruf": "BIZ",
@@ -56,6 +80,16 @@ def vault_name(profile: object) -> str:
     ]
 
 
+def vault_directories(profile: object) -> tuple[str, ...]:
+    """Return the understandable top-level structure for one profile."""
+
+    return {
+        "BIZ": BUSINESS_VAULT_DIRECTORIES,
+        "PRIVAT": PRIVATE_VAULT_DIRECTORIES,
+        "TEST": TEST_VAULT_DIRECTORIES,
+    }[normalize_profile(profile)]
+
+
 def suggested_vault_root(
     profile: object,
     platform_name: Optional[str] = None,
@@ -83,7 +117,7 @@ def suggested_vault_root(
     return Path.home() / "BrainVault"
 
 
-def inspect_content_vault(root: str | Path) -> dict:
+def inspect_content_vault(root: str | Path, *, profile: object = "PRIVAT") -> dict:
     """Inspect only the top level so large Cloud Vaults are not downloaded."""
 
     root_path = Path(root).expanduser().resolve()
@@ -97,7 +131,8 @@ def inspect_content_vault(root: str | Path) -> dict:
             for entry in root_path.iterdir()
             if entry.name not in IGNORED_TOP_LEVEL_ENTRIES
         )
-    expected = set(PHASE1_VAULT_DIRECTORIES)
+    expected_directories = vault_directories(profile)
+    expected = set(expected_directories)
     unclassified = [
         name
         for name in entries
@@ -110,10 +145,10 @@ def inspect_content_vault(root: str | Path) -> dict:
         "entries": entries,
         "unclassified_entries": unclassified,
         "existing_directories": [
-            name for name in PHASE1_VAULT_DIRECTORIES if (root_path / name).is_dir()
+            name for name in expected_directories if (root_path / name).is_dir()
         ],
         "missing_directories": [
-            name for name in PHASE1_VAULT_DIRECTORIES if not (root_path / name).is_dir()
+            name for name in expected_directories if not (root_path / name).is_dir()
         ],
     }
 
@@ -149,12 +184,14 @@ def ensure_content_vault_layout(
     """Adopt an existing folder safely or create a new Phase-1 content vault."""
 
     root_path = validate_content_vault_location(root, forbidden_roots=forbidden_roots)
-    before = inspect_content_vault(root_path)
+    normalized_profile = normalize_profile(profile)
+    expected_directories = vault_directories(normalized_profile)
+    before = inspect_content_vault(root_path, profile=normalized_profile)
     created_root = not before["exists"]
     root_path.mkdir(parents=True, exist_ok=True)
 
     created_directories = []
-    for name in PHASE1_VAULT_DIRECTORIES:
+    for name in expected_directories:
         target = root_path / name
         if not target.is_dir():
             target.mkdir(parents=True, exist_ok=True)
@@ -167,9 +204,7 @@ def ensure_content_vault_layout(
     inventory_created = False
     if before["unclassified_entries"]:
         inventory_path = (
-            root_path
-            / "90 Inhaltsverzeichnis und Schlagwörter"
-            / "BESTAND_BEI_EINRICHTUNG.md"
+            root_path / expected_directories[-1] / "BESTAND_BEI_EINRICHTUNG.md"
         )
         inventory_created = _write_if_missing(
             inventory_path,
@@ -178,7 +213,7 @@ def ensure_content_vault_layout(
 
     return {
         "root": str(root_path),
-        "profile": normalize_profile(profile),
+        "profile": normalized_profile,
         "vault_name": vault_name(profile),
         "created_root": created_root,
         "created_directories": created_directories,
@@ -201,6 +236,35 @@ def _vault_readme(profile: object) -> str:
         "PRIVAT": "private ",
         "TEST": "ausdrücklich freigegebene Test-",
     }[normalized]
+    descriptions = {
+        "BIZ": (
+            ("00 Eingang und noch zuordnen", "vorübergehender beruflicher Eingang"),
+            ("10 Lehre und Lehrmaterial", "Module, Vorlesungen, Übungen und Lehrbücher"),
+            ("20 Prüfungen und Bewertungen", "Prüfungszeiträume, Aufgaben, Abgaben und Bewertungen"),
+            ("30 Hochschulorganisation", "Deputat, Semesterplanung und administrative Vorgänge"),
+            ("40 Forschung und Transfer", "Forschung, Manuskripte, Daten und Kooperationen"),
+            ("50 Vorträge und Veranstaltungen", "Vorträge, Folien und Veranstaltungsunterlagen"),
+            ("60 Abschlussarbeiten und Betreuung", "laufende Betreuungen, Gutachten und abgeschlossene Arbeiten"),
+            ("70 Vorlagen und wiederverwendbare Bausteine", "dauerhaft nutzbare berufliche Grundlagen"),
+            ("80 Frühere und abgeschlossene Vorgänge", "abgeschlossene Inhalte ohne passenden Fachbereich"),
+            ("90 Überblick und Ablagehilfe", "Ordnerplan, Bestandslisten und kleine Kataloge"),
+        ),
+        "PRIVAT": (
+            ("00 Noch zuordnen", "vorübergehender Eingang"),
+            ("10 Aktive Projekte", "aktuell bearbeitete Vorhaben"),
+            ("20 Wissen und Quellen", "Nachschlagewissen und Quellen"),
+            ("30 Vorlagen und Bausteine", "wiederverwendbare Grundlagen"),
+            ("40 Abgeschlossene Projekte", "vollständig archivierte Vorhaben"),
+            ("50 Fertige Werke und Veröffentlichungen", "finale Fassungen"),
+            ("90 Inhaltsverzeichnis und Schlagwörter", "Kataloge und Manifeste"),
+        ),
+        "TEST": (
+            ("00 Testmaterial", "ausdrücklich freigegebene Testdaten"),
+            ("10 Laufende Tests", "aktuelle, isolierte Erprobungen"),
+            ("80 Abgeschlossene Tests", "beendete Testläufe"),
+            ("90 Testprotokolle", "Ergebnisse und nachvollziehbare Testnotizen"),
+        ),
+    }[normalized]
     lines = [
         f"# {name} – {label}",
         "",
@@ -208,22 +272,21 @@ def _vault_readme(profile: object) -> str:
         "",
         "## Hauptbereiche",
         "",
-        "- `00 Noch zuordnen`: vorübergehender Eingang",
-        "- `10 Aktive Projekte`: aktuell bearbeitete Vorhaben",
-        "- `20 Wissen und Quellen`: Nachschlagewissen und Quellen",
-        "- `30 Vorlagen und Bausteine`: wiederverwendbare Grundlagen",
-        "- `40 Abgeschlossene Projekte`: vollständig archivierte Vorhaben",
-        "- `50 Fertige Werke und Veröffentlichungen`: finale Fassungen",
-        "- `90 Inhaltsverzeichnis und Schlagwörter`: Kataloge und Manifeste",
-        "",
-        "Nicht hierher gehören Trinity-Runtime, ausführbare Agenten, lokale",
-        "RAG-/Graphify-Indizes, Caches, rohe technische Logs oder Secrets.",
-        "",
     ]
+    lines.extend(f"- `{directory}`: {description}" for directory, description in descriptions)
+    lines.extend(
+        [
+            "",
+            "Nicht hierher gehören Trinity-Runtime, ausführbare Agenten, lokale",
+            "RAG-/Graphify-Indizes, Caches, rohe technische Logs oder Secrets.",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
 def _existing_inventory(profile: object, entries: list[str]) -> str:
+    inbox = vault_directories(profile)[0]
     lines = [
         "# Bestand bei der Trinity-Einrichtung",
         "",
@@ -239,7 +302,7 @@ def _existing_inventory(profile: object, entries: list[str]) -> str:
         [
             "",
             "Diese Einträge können später kontrolliert katalogisiert oder nach",
-            "`00 Noch zuordnen` übernommen werden. RAG-, Graphify- und andere",
+            f"`{inbox}` übernommen werden. RAG-, Graphify- und andere",
             "Suchindizes sind neu aufbaubar und nicht die Originaldaten.",
             "",
         ]

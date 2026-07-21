@@ -126,12 +126,25 @@ In einen Vault gehören:
 Nicht in einen Vault gehören aktive Runtime-Datenbanken, Secrets, Locks,
 Caches, rohe Logs oder temporäre Dateien.
 
-### Gewünschte, leicht erkennbare Zielstruktur
+### Leicht erkennbare Zielstrukturen
 
-Diese Struktur wird erst nach Sicherung und Inventur umgesetzt:
+Berufliche Hochschulaufgaben und private Projekte brauchen unterschiedliche
+Ordnungslogiken.
 
 ```text
-<BizVault oder BrainVault>/
+BizVault/
+├── 00 Eingang und noch zuordnen/
+├── 10 Lehre und Lehrmaterial/
+├── 20 Prüfungen und Bewertungen/
+├── 30 Hochschulorganisation/
+├── 40 Forschung und Transfer/
+├── 50 Vorträge und Veranstaltungen/
+├── 60 Abschlussarbeiten und Betreuung/
+├── 70 Vorlagen und wiederverwendbare Bausteine/
+├── 80 Frühere und abgeschlossene Vorgänge/
+└── 90 Überblick und Ablagehilfe/
+
+BrainVault/
 ├── 00 Noch zuordnen/
 ├── 10 Aktive Projekte/
 ├── 20 Wissen und Quellen/
@@ -142,8 +155,9 @@ Diese Struktur wird erst nach Sicherung und Inventur umgesetzt:
 ```
 
 Die Zahlen halten die wenigen Hauptbereiche in einer stabilen, sofort
-verständlichen Reihenfolge. Innerhalb eines Projekts dürfen zusätzliche
-Ordner nur entstehen, wenn sie wirklich Orientierung schaffen.
+verständlichen Reihenfolge. Lehrmodule, Prüfungszeiträume und private Projekte
+liegen möglichst direkt unter ihrem Hauptbereich. Zusätzliche Ordner entstehen
+nur, wenn sie wirklich Orientierung schaffen.
 
 ### Was „in Arbeit“, „fertig“ oder „Vorlage“ bedeutet
 

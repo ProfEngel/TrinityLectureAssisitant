@@ -15,9 +15,8 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
-> - **v0.16.46:** Trinity startet auf aktuellen Python-Versionen wieder stabil, hält die signierte macOS-App außerhalb des iCloud-Schreibtischs und trennt Inhalts-Vault, lokale Runtime und lokalen Agenten-Werkzeugkasten. Neuinstallationen lassen den Speicherort des Vaults ausdrücklich wählen; Updates erkennen den bekannten Vault, ergänzen nur fehlende Phase-1-Ordner und lassen vorhandene Inhalte unverändert.
+> - **v0.16.46:** Trinity startet auf aktuellen Python-Versionen wieder stabil, hält die signierte macOS-App außerhalb des iCloud-Schreibtischs und trennt Inhalts-Vault, lokale Runtime und lokalen Agenten-Werkzeugkasten. Neuinstallationen lassen Profil und Vault-Speicherort ausdrücklich wählen; der BizVault wird nach Hochschulaufgaben, der BrainVault nach privaten Projekten gegliedert. Updates erkennen den bekannten Vault, ergänzen nur fehlende Profilordner und lassen vorhandene Inhalte unverändert.
 > - **v0.16.45:** Bildauftraege laufen standardmaessig lokal ueber ComfyUI; nur ein ausdruecklicher externer Wunsch nutzt fal.ai. Erzeugte Bild-, Audio- und Video-Payloads werden als echte Companion-/G2-Medienanhaenge ausgeliefert, und der Lecture-Heartbeat kann relevante Fachbegriffe als kurze Definitions-Bubble melden.
-> - **v0.16.43:** Even Realities G2 kann Trinity ueber die Companion Bridge als diskretes HUD und Mikrofon nutzen. Zuruf- und Konversationsmodus, getrennte Serverprofile sowie lokale PCM-Transkription funktionieren auf macOS und Windows 11.
 > - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
@@ -208,7 +207,7 @@ zur Verfügung.
 
 Der Installer fragt bei einer Neuinstallation nach Profil und Speicherort des
 Inhalts-Vaults. Bei Updates prüft Trinity den gespeicherten Vault und ergänzt
-nur fehlende Phase-1-Ordner.
+nur fehlende Ordner der gewählten Profilstruktur.
 
 Die vollständige Anleitung und Funktionsmatrix stehen in
 [Deployment Windows 11](docs/Deployment_Windows11.md) und im

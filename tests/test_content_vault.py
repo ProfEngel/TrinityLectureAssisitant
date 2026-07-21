@@ -1,4 +1,5 @@
 from content_vault import (
+    BUSINESS_VAULT_DIRECTORIES,
     PHASE1_VAULT_DIRECTORIES,
     ensure_content_vault_layout,
     inspect_content_vault,
@@ -21,6 +22,22 @@ def test_new_private_vault_gets_understandable_phase1_structure(tmp_path):
     assert not (root / "Outputs").exists()
 
 
+def test_new_business_vault_uses_academic_work_structure(tmp_path):
+    root = tmp_path / "BizVault"
+
+    result = ensure_content_vault_layout(root, profile="BIZ")
+
+    assert result["profile"] == "BIZ"
+    assert all((root / name).is_dir() for name in BUSINESS_VAULT_DIRECTORIES)
+    assert (root / "10 Lehre und Lehrmaterial").is_dir()
+    assert (root / "20 Prüfungen und Bewertungen").is_dir()
+    assert (root / "30 Hochschulorganisation").is_dir()
+    assert (root / "40 Forschung und Transfer").is_dir()
+    assert (root / "50 Vorträge und Veranstaltungen").is_dir()
+    assert (root / "60 Abschlussarbeiten und Betreuung").is_dir()
+    assert not (root / "10 Aktive Projekte").exists()
+
+
 def test_existing_content_is_adopted_without_being_moved_or_overwritten(tmp_path):
     root = tmp_path / "Existing"
     existing = root / "Mein altes Projekt"
@@ -33,7 +50,7 @@ def test_existing_content_is_adopted_without_being_moved_or_overwritten(tmp_path
     assert result["created_root"] is False
     assert result["preserved_entries"] == ["Mein altes Projekt"]
     assert source.read_text(encoding="utf-8") == "Original"
-    inventory = root / "90 Inhaltsverzeichnis und Schlagwörter" / "BESTAND_BEI_EINRICHTUNG.md"
+    inventory = root / "90 Überblick und Ablagehilfe" / "BESTAND_BEI_EINRICHTUNG.md"
     assert inventory.is_file()
     assert "Mein altes Projekt" in inventory.read_text(encoding="utf-8")
 

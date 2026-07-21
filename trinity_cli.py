@@ -182,11 +182,11 @@ def _configure_control_plane(config, home, input_fn=input):
             print(f"Gespeicherter Inhalts-Vault erkannt: {vault_result['root']}")
             if vault_result["created_directories"]:
                 print(
-                    "Fehlende Phase-1-Ordner wurden ergänzt: "
+                    "Fehlende Profilordner wurden ergänzt: "
                     + ", ".join(vault_result["created_directories"])
                 )
             else:
-                print("Die Phase-1-Ordnerstruktur ist bereits vollständig.")
+                print("Die Ordnerstruktur für dieses Profil ist bereits vollständig.")
         except (OSError, ValueError) as exc:
             print(f"Der gespeicherte Vault kann nicht verwendet werden: {exc}")
             vault_result = _configure_content_vault(config, home, input_fn)
@@ -249,7 +249,7 @@ def _configure_content_vault(config, home, input_fn=input):
             print("Ein Speicherort ist erforderlich.")
             continue
         try:
-            inspection = inspect_content_vault(selected)
+            inspection = inspect_content_vault(selected, profile=profile)
             if inspection["exists"] and inspection["entry_count"]:
                 shown = ", ".join(inspection["entries"][:8])
                 suffix = " ..." if inspection["entry_count"] > 8 else ""
@@ -291,11 +291,11 @@ def _configure_content_vault(config, home, input_fn=input):
             )
         if result["created_directories"]:
             print(
-                "Fehlende Phase-1-Ordner angelegt: "
+                "Fehlende Profilordner angelegt: "
                 + ", ".join(result["created_directories"])
             )
         else:
-            print("Die Phase-1-Ordnerstruktur war bereits vollständig.")
+            print("Die Ordnerstruktur für dieses Profil war bereits vollständig.")
         return result
 
 
@@ -869,12 +869,12 @@ def run_vault_command(home, args, input_fn=input):
         )
 
     if args.vault_action == "status":
-        result = inspect_content_vault(root)
+        result = inspect_content_vault(root, profile=profile)
         result["profile"] = profile
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
-    inspection = inspect_content_vault(root)
+    inspection = inspect_content_vault(root, profile=profile)
     if (
         args.vault_action == "setup"
         and inspection["entry_count"]
