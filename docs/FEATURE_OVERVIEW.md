@@ -39,16 +39,15 @@ flowchart LR
 ### Companion und Offline-Betrieb
 
 - iPhone/iPad synchronisieren Arbeitsraeume, Sessions, Notizen und Chat-Events.
-- Clients koennen dieselbe Session oder bewusst verschiedene Sessions parallel
-  nutzen.
+- Pro Trinity-Profil gibt es genau eine serverseitig aktive Sitzung. Desktop,
+  Telegram, G2, iPhone, iPad und Web zeigen denselben Verlauf und dieselbe
+  fertige Antwort; ältere Sitzungen bleiben erhalten und können gemeinsam
+  wieder geöffnet werden.
 - Ohne Verbindung bleiben gecachte Sessions sichtbar; neue Nachrichten werden
   gepuffert.
-- Im **Auto-Modus** geht Trinity zuerst zum Server und nutzt Apple Foundation
-  Models nur als lokalen Text-Fallback.
-- Im **Foundation-Modus** werden einfache Textantworten bewusst lokal auf dem
-  iPhone/iPad bevorzugt.
-- Offline erzeugte Antworten werden beim Reconnect in die Trinity-Session
-  zuruecksynchronisiert.
+- Offline-Eingaben werden lokal gepuffert. Erst die Server-Trinity erzeugt nach
+  dem Reconnect die verbindliche Antwort, damit keine widersprüchliche zweite
+  Companion-Antwort entsteht.
 
 Details: [Companion Offline Sync](COMPANION_OFFLINE_SYNC.md)
 

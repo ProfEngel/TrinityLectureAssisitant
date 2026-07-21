@@ -229,7 +229,7 @@ def launch_trinity():
             ]
             token = str(bridge_config.get("token") or "")
             if token:
-                bridge_command.extend(["--token", token])
+                child_env["TRINITY_BRIDGE_TOKEN"] = token
             if web_enabled and not companion_enabled and bridge_config.get("auth_enabled", False):
                 bridge_command.append("--auth")
             bridge_process = subprocess.Popen(

@@ -11,10 +11,11 @@ from urllib.request import Request, urlopen
 
 
 class RemoteTrinityClient:
-    def __init__(self, server_url, token="", timeout=12):
+    def __init__(self, server_url, token="", timeout=12, profile=""):
         self.server_url = str(server_url or "").rstrip("/")
         self.token = str(token or "")
         self.timeout = timeout
+        self.profile = str(profile or "").strip().upper()
         if not self.server_url.startswith(("http://", "https://")):
             raise ValueError("Server-URL muss mit http:// oder https:// beginnen.")
 
@@ -55,6 +56,26 @@ class RemoteTrinityClient:
     def get_runtime(self):
         return self._request("/runtime", method="GET")
 
+    def current_session(self):
+        return self._request("/session/current", method="GET")
+
+    def create_session(self, title, workspace_id="_inbox", mode="chat", source="desktop"):
+        return self._request(
+            "/session/create",
+            {
+                "title": title,
+                "workspace_id": workspace_id,
+                "mode": mode,
+                "source": source,
+            },
+        )
+
+    def activate_session(self, session_id, source="desktop"):
+        return self._request(
+            "/session/activate",
+            {"session_id": session_id, "source": source},
+        )
+
     def set_runtime(self, updates):
         return self._request("/runtime", dict(updates or {}))
 
@@ -92,6 +113,8 @@ class RemoteTrinityClient:
             if not self.token:
                 raise RuntimeError("Bitte zuerst mit `trinity client login` anmelden.")
             headers["Authorization"] = f"Bearer {self.token}"
+        if self.profile:
+            headers["X-Trinity-Profile"] = self.profile
         if payload is not None:
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             headers["Content-Type"] = "application/json"

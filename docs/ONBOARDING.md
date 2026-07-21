@@ -261,7 +261,11 @@ Desktop-/Server-Trinity per lokaler HTTP-Bridge.
 4. Host 0.0.0.0, einen freien Port (typisch 8765) und einen langen Bearer Token
    setzen.
 5. Trinity neu starten.
-6. In der Companion-App http://TAILSCALE-IP:8765 und denselben Token eintragen.
+6. In der Companion-App das Profil **Privat**, **Beruf** oder **Test** wählen und
+   dort http://TAILSCALE-IP:8765 sowie den zugehörigen Token eintragen.
+7. **Verbindung testen** wählen. Die App vergleicht ihr erwartetes Profil mit
+   dem Server und verweigert beispielsweise eine BIZ-Verbindung zur
+   PRIVAT-Trinity.
 
 Bei Tailscale muss normalerweise kein Router-Port ins Internet geoeffnet werden.
 Die lokale Firewall darf Trinity/Python nur in privaten Netzen beziehungsweise im
@@ -280,6 +284,11 @@ Die Companion-App kann Chat, Live-Mitschrift, Bilder, Audio, Video, Timer,
 Simulationen und Python-/Sandbox-Ergebnisse darstellen. iOS/iPadOS kann
 Hintergrund-Spracherkennung systembedingt begrenzen; ein sichtbarer Vordergrund-
 oder Split-View-Betrieb ist fuer laengere Vortraege robuster.
+
+Alle Oberflächen eines Profils verwenden dieselbe serverseitig aktive Sitzung.
+Ein Sitzungswechsel auf iPad, G2 oder Desktop wird von den anderen Clients beim
+nächsten Sync übernommen. Offline darf die Companion-App Eingaben puffern, aber
+keine zweite verbindliche Antwort neben der Server-Trinity erzeugen.
 
 Android Tablet/Phone ist als zukuenftige Companion-Variante vorgesehen. Es gibt
 in diesem Repository noch keinen Android-Installer oder Android-Client.

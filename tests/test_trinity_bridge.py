@@ -25,7 +25,8 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     request = pop_next_chat_request(home / "core")
     assert request["text"] == "Hallo Trinity"
     assert request["source"] == "ios"
-    assert request["session_id"] == "ios-1"
+    assert request["session_id"] == result["session"]["id"]
+    assert request["client_session_id"] == "ios-1"
     assert request["privacy_mode"] == "local"
 
 
@@ -424,7 +425,46 @@ def test_bridge_transcribes_g2_audio_and_routes_continuous_conversation(tmp_path
     assert result["routed"] is True
     request = pop_next_chat_request(home / "core")
     assert request["source"] == "g2-conversation"
-    assert request["session_id"] == "g2-session"
+    assert request["session_id"] == result["request"]["session"]["id"]
+    assert request["client_session_id"] == "g2-session"
+
+
+def test_all_channels_share_one_server_authoritative_session(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    (home / "core" / "config.json").write_text(
+        json.dumps(
+            {
+                "system": {"profile": "PRIVAT"},
+                "control_plane": {
+                    "runtime_root": str(home / "runtime"),
+                    "vault_root": str(home / "BrainVault"),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    bridge = TrinityBridge(home)
+
+    ios = bridge.send_message({"text": "vom iPhone", "session_id": "ios-local"})
+    telegram = bridge.send_message(
+        {"text": "aus Telegram", "source": "telegram", "session_id": "telegram"}
+    )
+    g2 = bridge.send_message({"text": "von G2", "source": "g2-conversation"})
+    requests = [pop_next_chat_request(home / "core") for _ in range(3)]
+
+    assert {item["session_id"] for item in requests} == {ios["session"]["id"]}
+    assert telegram["session"]["id"] == ios["session"]["id"] == g2["session"]["id"]
+    assert all(item["profile"] == "PRIVAT" for item in requests)
+    assert bridge.instance_state()["knowledge"] == {
+        "vault_root": str((home / "BrainVault").resolve()),
+        "vault_available": False,
+        "runtime_root": str((home / "runtime").resolve()),
+        "rag_index_scope": "NOT_BUILT",
+        "rag_sources": [],
+        "graphify_index_scope": "NOT_BUILT",
+    }
 
 
 def test_bridge_can_transcribe_g2_audio_without_routing_a_command(tmp_path):

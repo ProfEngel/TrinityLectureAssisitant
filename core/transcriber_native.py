@@ -209,21 +209,6 @@ class NativeTrinityEar(TrinityEar):
                             with open(self.transcript_file, "a", encoding="utf-8") as f:
                                 f.write(f"[{t_stamp}] [User (UI-Chat)]: {cmd_text}\n")
 
-                            if (
-                                request.get("source") == "classic"
-                                and not request.get("history_recorded")
-                            ):
-                                append_chat_event(
-                                    CHAT_HISTORY_FILE,
-                                    {
-                                        "request_id": request["request_id"],
-                                        "role": "user",
-                                        "source": "classic",
-                                        "text": cmd_text,
-                                        "attachments": request.get("attachments", []),
-                                    },
-                                )
-
                             self.trigger_action(
                                 cmd_text,
                                 silent_response=is_silent,

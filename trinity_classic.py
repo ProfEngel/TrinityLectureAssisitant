@@ -55,6 +55,7 @@ from remote_client import RemoteTrinityClient
 from configuration import load_config, save_config
 from trinity_bridge import TrinityBridge
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
+from unified_session import UnifiedSessionStore
 
 
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
@@ -285,6 +286,10 @@ class ClassicWindow(QMainWindow):
         self._workspace_sidebar_next_refresh = 0.0
         self.memory_store = MemoryStore(os.path.join(MEMORY_DIR, "trinity_memory.sqlite3"))
         self.workspace_manager = TrinityWorkspaceManager(BASE_DIR, load_config(CONFIG_FILE))
+        self.session_store = UnifiedSessionStore(BASE_DIR, load_config(CONFIG_FILE))
+        active_session = self.session_store.current()
+        self.session_id = active_session.id
+        self.session_name = active_session.title
         self.selected_workspace_id = INBOX_WORKSPACE_ID
         self.selected_workspace_title = "Schnellsessions"
         self.theme = self._load_theme()
@@ -677,6 +682,14 @@ class ClassicWindow(QMainWindow):
         self._refresh_workspace_sidebar()
 
     def _select_session_sidebar_item(self, record):
+        if self.remote_client:
+            try:
+                self.remote_client.activate_session(record.id)
+            except RuntimeError as exc:
+                self.status.setText(f"Session konnte nicht gemeinsam geöffnet werden: {exc}")
+                return
+        else:
+            self.session_store.activate(record, source="classic-desktop")
         self.session_id = record.id
         self.session_name = record.title
         self._chat_signature = None
@@ -966,7 +979,12 @@ class ClassicWindow(QMainWindow):
             config = json.loads(Path(CONFIG_FILE).read_text(encoding="utf-8"))
             client = config.get("client", {})
             if client.get("enabled") and client.get("server_url") and client.get("token"):
-                return RemoteTrinityClient(client["server_url"], client["token"], timeout=1.5)
+                return RemoteTrinityClient(
+                    client["server_url"],
+                    client["token"],
+                    timeout=1.5,
+                    profile=config.get("system", {}).get("profile", ""),
+                )
         except (OSError, ValueError, json.JSONDecodeError):
             pass
         return None
@@ -1468,6 +1486,13 @@ class ClassicWindow(QMainWindow):
             return
         self._remote_next_poll = time.monotonic() + 1.2
         try:
+            current = self.remote_client.current_session().get("session") or {}
+            current_id = str(current.get("id") or "")
+            if current_id and current_id != self.session_id:
+                self.session_id = current_id
+                self.session_name = str(current.get("title") or "Gemeinsame Trinity-Sitzung")
+                self.remote_after = 0
+                self.remote_events = []
             incoming = self.remote_client.events_since(
                 self.remote_after,
                 session_id=self.session_id,
@@ -1539,6 +1564,12 @@ class ClassicWindow(QMainWindow):
 
     def _refresh_chat_history(self):
         path = CHAT_HISTORY_FILE
+        current = self.session_store.current()
+        if current and current.id != self.session_id:
+            self.session_id = current.id
+            self.session_name = current.title
+            self._chat_signature = None
+            self.status.setText(f"Gemeinsame Session übernommen: {current.title}")
         try:
             signature = (os.path.getmtime(path), os.path.getsize(path))
         except OSError:
@@ -1653,13 +1684,27 @@ class ClassicWindow(QMainWindow):
         old_session_name = self.session_name or "Classic Desktop"
         old_started_at = self.session_started_at
         old_ended_at = time.time()
-        session = self.workspace_manager.create_session(
-            name.strip() or suggested_name,
-            workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
-            mode=self.mode_combo.currentText(),
-        )
-        self.session_id = session.id
-        self.session_name = session.title
+        if self.remote_client:
+            try:
+                created = self.remote_client.create_session(
+                    name.strip() or suggested_name,
+                    workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
+                    mode=self.mode_combo.currentText(),
+                )["session"]
+            except RuntimeError as exc:
+                self.status.setText(f"Gemeinsame Session konnte nicht erstellt werden: {exc}")
+                return
+            self.session_id = created["id"]
+            self.session_name = created["title"]
+        else:
+            session = self.workspace_manager.create_session(
+                name.strip() or suggested_name,
+                workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
+                mode=self.mode_combo.currentText(),
+            )
+            self.session_store.activate(session, source="classic-desktop")
+            self.session_id = session.id
+            self.session_name = session.title
         self.session_started_at = time.time()
         self._summarize_previous_session_in_background(
             old_session_id,
@@ -1854,8 +1899,9 @@ class ClassicWindow(QMainWindow):
             self.pending_attachments,
             history_recorded=True,
         )
-        request["session_id"] = self.session_id
-        request["session_name"] = self.session_name
+        request = self.session_store.canonicalize(request, source="classic")
+        self.session_id = request["session_id"]
+        self.session_name = request["session_name"]
         append_chat_event(
             CHAT_HISTORY_FILE,
             {
@@ -1869,7 +1915,7 @@ class ClassicWindow(QMainWindow):
             },
         )
         try:
-            session_id = self.memory_store.ensure_session("classic", "Classic UI")
+            session_id = self.memory_store.ensure_session(self.session_id, self.session_name)
             self.memory_store.add_message(
                 session_id,
                 "user",
