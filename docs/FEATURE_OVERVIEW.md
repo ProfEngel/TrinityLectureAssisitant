@@ -13,8 +13,8 @@ Plane fuer persoenliche KI-Arbeit:
   lokale Modelle, RAG, Agenten, Medienworkflows und WebUI.
 - **Companion:** iPhone und iPad dienen als Mikrofon, mobile Chatoberflaeche,
   Presenter-Display und Offline-Client.
-- **BrainVault-Agentenpool:** externe Fachagenten liegen in einem gemeinsamen
-  Cloud-Ordner und koennen durch Pi, Codex, OpenCode oder andere Harnesses
+- **Lokaler Agenten-Werkzeugkasten:** externe Fachagenten liegen in einer
+  lokalen, ueber Git gesicherten Ablage und koennen durch Pi, Codex, OpenCode oder andere Harnesses
   genutzt werden.
 - **Arbeitsraeume und Sessions:** Arbeit wird in Arbeitsraeume, Sessions,
   Notizen, Summaries und Assets gegliedert, statt in einen endlosen Chatstrom.
@@ -29,7 +29,8 @@ flowchart LR
     Core --> RAG["RAG & Memory"]
     Core --> Agents["Trinity-Agenten"]
     Core --> Harness["Pi / Codex / OpenCode"]
-    Harness --> BrainVault["BrainVault .agents"]
+    Harness --> AgentsPool["Lokaler Werkzeugkasten .agents"]
+    Core --> BrainVault["Cloud-Vault fuer Inhalte"]
     Core --> Media["ComfyUI / Sandbox / Medien"]
 ```
 
@@ -77,8 +78,8 @@ Details: [Workspace-/Session-Roadmap](WORKSPACES_SESSIONS_NOTES_ROADMAP.md)
 ### Agenten und Harnesses
 
 - Trinity-eigene Agenten bleiben in der lokalen Runtime.
-- Externe Fachagenten liegen im BrainVault-Agentenpool unter `.agents`.
-- Pi ist der Standard-Harness fuer laufende BrainVault-Agentenarbeit.
+- Externe Fachagenten liegen im lokalen Agenten-Werkzeugkasten unter `.agents`.
+- Pi ist der Standard-Harness fuer laufende externe Agentenarbeit.
 - Codex ist der Builder-Harness fuer neue Agenten, Imports, Refactorings, Tests
   und Quality-Gates.
 - Agents-Ansichten zeigen Favoriten, Status, Rechte, Jobzahlen und startbare
@@ -87,7 +88,7 @@ Details: [Workspace-/Session-Roadmap](WORKSPACES_SESSIONS_NOTES_ROADMAP.md)
 Details:
 
 - [Agenten-Oekosystem](AGENT_ECOSYSTEM.md)
-- [BrainVault-Agenten](BRAINVAULT_AGENTS.md)
+- [Agenten-Werkzeugkasten](BRAINVAULT_AGENTS.md)
 - [Control Plane und BrainVault](CONTROL_PLANE_MAINHUB.md)
 
 ### Oberflaechen
@@ -112,4 +113,3 @@ stehen nicht zur Verfuegung:
 - serverseitige Automatismen und geplante Jobs.
 
 Das ist Absicht: Der Offline-Modus soll stabil, schnell und privat bleiben.
-

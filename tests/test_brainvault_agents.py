@@ -100,6 +100,19 @@ def test_external_agents_root_overrides_brainvault_root(tmp_path):
     assert resolved == external.resolve()
 
 
+def test_explicit_dot_agents_path_resolves_to_parent(tmp_path):
+    home = tmp_path / "Trinity"
+    agents = tmp_path / ".agents"
+    agents.mkdir()
+
+    resolved = brainvault_root_from_config(
+        home,
+        {"control_plane": {"external_agents_root": str(agents)}},
+    )
+
+    assert resolved == tmp_path.resolve()
+
+
 def test_import_agent_directory_copies_skill_and_catalogs_as_active(tmp_path):
     root = tmp_path / "BrainVault"
     source = tmp_path / "CampusHub" / ".agents" / "skills" / "demo-agent"

@@ -40,14 +40,14 @@ def run_doctor(trinity_home, fix=False, online=False):
     config_path = core / "config.json"
     results = []
 
-    version_ok = (3, 9) <= sys.version_info[:2] < (3, 13)
+    version_ok = (3, 10) <= sys.version_info[:2] < (3, 15)
     results.append(
         _result(
             "OK" if version_ok else "ERROR",
             "Python",
             sys.version.split()[0]
             if version_ok
-            else "Trinity benötigt Python 3.9 bis 3.12.",
+            else "Trinity benötigt Python 3.10 bis 3.14.",
         )
     )
     ssl_ok, ssl_message = _ssl_status()

@@ -39,13 +39,13 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Dort ist auch beschrieben,
 > wie der neue Agentenkatalog Reifegrad, Rechte, Freigaben und Harness-Zuordnung
 > je Agent verwaltet. Die aktuelle
-> Control Plane und der BrainVault-Agentenpool fuer Trinity als
+> Control Plane und der lokale Agenten-Werkzeugkasten fuer Trinity als
 > harness-agnostisches Agenten-Betriebssystem sind in
 > **[Control Plane und BrainVault](docs/CONTROL_PLANE_MAINHUB.md)** dokumentiert;
-> das Erstsetup fuer lokalen Runtime-Ordner und Cloud-Agentenpool steht im
-> **[Onboarding: Runtime und BrainVault](docs/ONBOARDING.md#3-lokale-runtime-und-brainvault-agentenpool)**.
+> das Erstsetup fuer lokale Runtime, Cloud-Inhalte und lokale Agenten steht im
+> **[Onboarding](docs/ONBOARDING.md#3-lokale-runtime-cloud-vault-und-agenten-werkzeugkasten)**.
 > Die neue gemeinsame externe Agentenbasis ist in
-> **[BrainVault-Agenten](docs/BRAINVAULT_AGENTS.md)** dokumentiert. Der naechste
+> **[Agenten-Werkzeugkasten](docs/BRAINVAULT_AGENTS.md)** dokumentiert. Der naechste
 > grosse Entwicklungsschritt zu Arbeitsraeumen, Schnellsessions, Notizen und
 > manuellen Session-Summaries ist in der
 > **[Workspace-/Session-Roadmap](docs/WORKSPACES_SESSIONS_NOTES_ROADMAP.md)**
@@ -170,6 +170,11 @@ Du brauchst ein KI-Sprachmodell via OpenRouter oder lokal via LM Studio/Ollama s
 ### macOS
 
 Der stabile macOS-Funktionsumfang bleibt vollständig erhalten.
+
+Empfohlen wird Python 3.13. Der Installer akzeptiert 64-Bit-Python 3.10 bis
+3.14, verwendet auf dem Mac bevorzugt Homebrews `python@3.13` und legt die
+signierte App unter `~/Applications/Trinity.app` ab. Auf dem Schreibtisch liegt
+nur ein Verweis, damit iCloud-Desktop-Metadaten die Signatur nicht beschädigen.
 
 Öffne das Terminal und führe diesen Befehl aus:
 
@@ -520,20 +525,20 @@ freigabeorientiert:
 
 > „Trinity, erweitere den Feedback-Agenten um einen Plausibilitaetscheck.“
 
-Bei Imports legt Trinity einen BrainVault-Agenten direkt unter
-`BrainVault/.agents/<bereich>/<agent-id>/` als `draft` an, schreibt
+Bei Imports legt Trinity einen externen Agenten direkt unter der lokalen Ablage
+`.agents/<bereich>/<agent-id>/` als `draft` an, schreibt
 `agent.yaml`, `SKILL.md`, `README.md`, einen Ursprungssnapshot und einen
-Importbericht. Sichtbar ist der Agent sofort im BrainVault-Katalog; aktiv wird
+Importbericht. Sichtbar ist der Agent sofort im Agentenkatalog; aktiv wird
 er erst nach Tests und Freigabe (`status: active`, `enabled: true`).
 
 Seit dem Builder-Loop erzeugt Trinity dazu einen sichtbaren Job mit Quality
-Gates. Im BrainVault-Draft liegen dann `BUILDER_PLAN.md`,
+Gates. Im lokalen Agentenentwurf liegen dann `BUILDER_PLAN.md`,
 `VALIDATION_REPORT.md` und, falls Codex, Pi oder OpenCode aktiviert und passend
 angefordert sind, ein `HARNESS_REPORT.md`. Der Fortschritt ist ueber
 `trinity jobs list` und `trinity jobs show JOB_ID` nachvollziehbar. Eine
 Aktivierung bleibt eine explizite Freigabe.
 
-BrainVault-Agenten koennen auch ohne Trinity-UI gepflegt werden:
+Externe Agenten koennen auch ohne Trinity-UI gepflegt werden:
 
 ```bash
 agentctl init
@@ -546,22 +551,22 @@ agentctl validate research.document_reviewer
 agentctl catalog build
 ```
 
-In den Desktop-Einstellungen liegt das unter **MainHub / Control Plane**.
-Sichtbar bleiben nur die lokale **Runtime**, der **Cloud-Agentenpool** und der
-**Standard-Extern-Harness**. Der Cloud-Agentenpool ist der uebergeordnete
-BrainVault-Root, also der Ordner, in dem `.agents` und `AGENTS.md` liegen.
-Trinity stellt diesen Ordner Codex, Pi, Goose und OpenCode automatisch als Projekt
-`BrainVault` bereit. Pi ist der Standard fuer laufende BrainVault-Agentenarbeit;
+In den Desktop-Einstellungen liegt das unter **Trinity-Ablagen**.
+Getrennt sichtbar sind die lokale **Runtime**, der **Cloud-Vault fuer Inhalte**,
+der lokale **Agenten-Werkzeugkasten** und der **Standard-Extern-Harness**. Der
+Werkzeugkasten ist der lokale Ordner, in dem `.agents` und `AGENTS.md` liegen.
+Trinity kann dessen `.agents`-Ordner Codex, Pi, Goose und OpenCode als Projekt
+`Agenten` bereitstellen. Pi ist der Standard fuer laufende externe Agentenarbeit;
 Codex bleibt fuer neue Agenten, Imports, Refactorings, Tests und Quality-Gates
 vorgesehen. Aeltere Einstellungen, die noch auf
-`MainHub/TrinityVault` zeigen, werden beim Lesen auf den BrainVault-Root
+`MainHub/TrinityVault` zeigen, werden beim Lesen auf den lokalen Agenten-Root
 gemappt, sofern dort `.agents` existiert.
 
-Unter **Agenten** gibt es zwei kurze Tabellen: lokale Trinity-Agenten und
-externe Cloud-Agenten. Rechte, Skripte und Detailregeln bleiben in der
+Unter **Agenten** gibt es zwei kurze Tabellen: Trinity-interne Agenten und
+externe Agenten aus dem lokalen Werkzeugkasten. Rechte, Skripte und Detailregeln bleiben in der
 jeweiligen `agent.yaml`, damit die UI lesbar bleibt. Ueber
-**Cloud-Agentenpool aktualisieren** liest Trinity `.agents` neu ein und weist
-neue Cloud-Agenten dem gewaehlten Standard-Harness zu.
+**Agenten-Werkzeugkasten aktualisieren** liest Trinity `.agents` neu ein und weist
+neue externe Agenten dem gewaehlten Standard-Harness zu.
 
 ---
 

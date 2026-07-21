@@ -7,8 +7,8 @@ REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
 command -v python3 >/dev/null || { echo "Python 3 fehlt."; exit 1; }
 python3 - <<'PY'
 import sys
-if not ((3, 9) <= sys.version_info[:2] < (3, 13)):
-    raise SystemExit("Trinity benoetigt Python 3.9 bis 3.12.")
+if not ((3, 10) <= sys.version_info[:2] < (3, 15)):
+    raise SystemExit("Trinity benoetigt Python 3.10 bis 3.14.")
 PY
 
 BACKUP="${INSTALL_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
