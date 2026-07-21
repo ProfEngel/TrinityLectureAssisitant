@@ -65,6 +65,16 @@ def _normalize_trigger_text(value):
     return re.sub(r"[^a-z0-9]+", " ", asciiish).strip()
 
 
+def requests_session_close(text):
+    normalized = _normalize_trigger_text(text)
+    has_session = re.search(r"\b(?:session|sitzung)\b", normalized)
+    has_close = re.search(
+        r"\b(?:schliess(?:e|en)?|beend(?:e|en)?|abschliess(?:e|en)?)\b",
+        normalized,
+    )
+    return bool(has_session and has_close)
+
+
 def _bounded_levenshtein(left, right, max_distance=1):
     """Small edit-distance helper for short wake words."""
     if left == right:
@@ -1274,6 +1284,52 @@ class TrinityEar:
         lower_text = text.lower()
         # recent_text = die letzten 2-3 Chunks (für präzise Keyword-Erkennung)
         action_text = (recent_text or text).lower()
+
+        if requests_session_close(text):
+            try:
+                from trinity_bridge import TrinityBridge
+
+                result = TrinityBridge(PROJECT_DIR).close_session(
+                    {
+                        "session_id": chat_request["session_id"],
+                        "mode": getattr(self, "mode", "chat"),
+                        "source": chat_request["source"],
+                    }
+                )
+                replacement = result["session"]
+                message = (
+                    "Die Session ist geschlossen. Die Summary wird erstellt; "
+                    f"auf allen Geräten ist jetzt „{replacement['title']}“ aktiv."
+                )
+                append_chat_event(
+                    chat_history_path_for_request(chat_request),
+                    {
+                        "request_id": f"session-close-{chat_request['request_id']}",
+                        "role": "assistant",
+                        "source": "session-control",
+                        "text": message,
+                        "session_id": replacement["id"],
+                        "session_name": replacement["title"],
+                        "profile": result["active_session"].get("profile", ""),
+                    },
+                )
+                if self.telegram_cfg.get("enabled", False):
+                    try:
+                        import requests
+                        requests.post(
+                            f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage",
+                            json={"chat_id": self.telegram_cfg["chat_id"], "text": message},
+                            timeout=5,
+                        )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        print(f"⚠️ Sessionwechsel konnte nicht an Telegram gemeldet werden: {exc}")
+                if not silent_response:
+                    self._speak_quick(message)
+            except Exception as exc:  # pylint: disable=broad-except
+                message = f"Die Session konnte nicht abgeschlossen werden: {exc}"
+                if not silent_response:
+                    self._speak_quick(message)
+            return
         
         # UI-Befehle direkt abfangen (ohne LLM)
         # Modus-Wechsel

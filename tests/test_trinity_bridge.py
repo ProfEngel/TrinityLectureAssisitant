@@ -694,6 +694,60 @@ def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
     assert "Spieltheorie" in event["text"]
 
 
+def test_bridge_close_session_summarizes_and_activates_replacement(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    manager = TrinityWorkspaceManager(home)
+    lecture = manager.create_workspace("Spieltheorie", kind="lecture")
+    session = manager.create_session("Vorlesung 1", workspace_id=lecture.id)
+    medium = session.path / "media" / "nash-diagramm.png"
+    medium.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "ios",
+            "text": "Erkläre das Nash-Gleichgewicht.",
+            "session_id": session.id,
+            "session_name": session.title,
+        },
+    )
+    source_summary = home / "memory" / "summaries" / "Summary.md"
+    source_summary.parent.mkdir(parents=True)
+    source_summary.write_text("# Summary", encoding="utf-8")
+    bridge = TrinityBridge(home)
+    bridge._run_session_summary_agent = lambda **_kwargs: {
+        "summary": "## Hauptthemen\n- Nash-Gleichgewicht",
+        "summary_path": str(source_summary),
+    }
+
+    result = bridge.close_session(
+        {
+            "session_id": session.id,
+            "replacement_title": "Vorlesung 2",
+            "mode": "lecture",
+            "wait": True,
+        }
+    )
+
+    closed = manager.get_session(session.id)
+    replacement = manager.get_session(result["session"]["id"])
+    assert closed.status == "closed"
+    assert closed.summary_status == "complete"
+    assert (closed.path / "summary.md").is_file()
+    assert medium.is_file()
+    assert replacement.workspace_id == lecture.id
+    assert replacement.title == "Vorlesung 2"
+    assert result["active_session"]["id"] == replacement.id
+
+    target = manager.create_workspace("Modularchiv", kind="lecture")
+    moved = manager.move_session(closed.id, target.id)
+    assert (moved.path / "summary.md").is_file()
+    assert (moved.path / "media" / "nash-diagramm.png").is_file()
+
+
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

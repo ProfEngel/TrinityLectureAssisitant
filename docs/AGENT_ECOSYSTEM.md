@@ -186,7 +186,7 @@ unvollstaendiges System aktiviert:
 4. Artefakt-, Knowledge- und Projekt-Memory-Manager: getrennte Projektkontexte
    mit Hashes, Herkunft und Zugriffskontrolle.
 5. Notification Bus und Gateway API: Jobs, Freigaben und Skill-Status an
-   ClassicUI, WebUI, iPhone, iPad und spaetere Android/Watch-Clients liefern.
+   ClassicUI, WebUI, iPhone, iPad und Android-Clients liefern.
 6. Tool Broker in allen neuen Skills erzwingen und alte Skills schrittweise
    migrieren.
 

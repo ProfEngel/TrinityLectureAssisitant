@@ -261,8 +261,10 @@ Desktop-/Server-Trinity per lokaler HTTP-Bridge.
 4. Host 0.0.0.0, einen freien Port (typisch 8765) und einen langen Bearer Token
    setzen.
 5. Trinity neu starten.
-6. In der Companion-App das Profil **Privat**, **Beruf** oder **Test** wählen und
-   dort http://TAILSCALE-IP:8765 sowie den zugehörigen Token eintragen.
+6. Die Companion-App startet mit **Arbeit**, **Privat** und **Development**.
+   Mindestens zwei Profile bleiben erhalten; weitere lassen sich mit dem
+   Plus-Icon ergänzen. Im gewünschten Profil http://TAILSCALE-IP:8765 und den
+   zugehörigen Token eintragen.
 7. **Verbindung testen** wählen. Die App vergleicht ihr erwartetes Profil mit
    dem Server und verweigert beispielsweise eine BIZ-Verbindung zur
    PRIVAT-Trinity.
@@ -290,8 +292,14 @@ Ein Sitzungswechsel auf iPad, G2 oder Desktop wird von den anderen Clients beim
 nächsten Sync übernommen. Offline darf die Companion-App Eingaben puffern, aber
 keine zweite verbindliche Antwort neben der Server-Trinity erzeugen.
 
-Android Tablet/Phone ist als zukuenftige Companion-Variante vorgesehen. Es gibt
-in diesem Repository noch keinen Android-Installer oder Android-Client.
+"Session schließen" ist ein einziger serverseitiger Vorgang: Die alte Sitzung
+wird geschlossen, ihre Summary automatisch angestoßen und genau eine neue
+Sitzung für alle Geräte aktiviert. Summary, Transkript und Sitzungsmedien bleiben
+erhalten. Wird die geschlossene Sitzung am Desktop einem Projekt oder
+Vorlesungsmodul zugeordnet, wandern diese Unterlagen gemeinsam mit.
+
+Android Tablet/Phone ist als schlanker Bridge-Companion im separaten
+`android/`-Teil des Companion-Repositories vorbereitet.
 
 ## 7. Lokale Codex-, OpenCode- und Pi-Agenten
 

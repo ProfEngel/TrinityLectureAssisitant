@@ -106,6 +106,22 @@ def test_workspace_session_delete_can_archive(tmp_path):
     assert (runtime / "archive" / "sessions" / session.id / "session.json").is_file()
 
 
+def test_workspace_manager_closes_session_without_removing_contents(tmp_path):
+    home = tmp_path / "Trinity"
+    (home / "core").mkdir(parents=True)
+    runtime = tmp_path / "Runtime"
+    manager = TrinityWorkspaceManager(home, _config(runtime))
+    session = manager.create_session("Vorlesung")
+    medium = session.path / "media" / "diagramm.png"
+    medium.write_bytes(b"png")
+
+    closed = manager.close_session(session.id)
+
+    assert closed.status == "closed"
+    assert closed.summary_status == "queued"
+    assert medium.read_bytes() == b"png"
+
+
 def test_workspace_ids_are_unique(tmp_path):
     home = tmp_path / "Trinity"
     (home / "core").mkdir(parents=True)

@@ -156,6 +156,7 @@ class TrinityBridge:
         self.auth_enabled = bool(auth_enabled)
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
         self._lock = threading.Lock()
+        self._session_close_lock = threading.Lock()
         self._summary_jobs = set()
         self._audio_transcriber = None
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
@@ -395,12 +396,14 @@ class TrinityBridge:
             and (not ended_at or float(event.get("timestamp", 0) or 0) <= ended_at)
         ]
         if not events:
+            self._set_session_summary_status(session_id, "empty")
             return {
                 "ok": True,
                 "created": False,
                 "message": "Keine Inhalte fuer diese Session gefunden.",
             }
 
+        self._set_session_summary_status(session_id, "queued")
         transcript_path = self._write_session_transcript(session_id, session_name, events)
         if wait:
             record = self._create_session_summary_record(
@@ -458,6 +461,70 @@ class TrinityBridge:
             "message": "Session-Summary wird im Hintergrund erstellt.",
         }
 
+    def close_session(self, payload, user=None):
+        """Close the canonical session, queue its summary, and activate one replacement."""
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Abschluss erwartet ein Objekt.")
+        with self._session_close_lock:
+            current = self.sessions.current()
+            requested_id = str(payload.get("session_id") or current.id).strip()
+            if requested_id != current.id:
+                raise ValueError(
+                    "Nur die aktuell aktive gemeinsame Session kann geschlossen werden."
+                )
+
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            closing = manager.get_session(current.id)
+            summary = self.end_session(
+                {
+                    **payload,
+                    "session_id": closing.id,
+                    "session_name": closing.title,
+                    "display_session_id": "",
+                    "display_session_name": "",
+                    "wait": bool(payload.get("wait", False)),
+                },
+                user=user,
+            )
+            summary_status = (
+                "complete"
+                if summary.get("created")
+                else "queued"
+                if summary.get("accepted")
+                else "empty"
+            )
+            closed = manager.close_session(closing.id, summary_status=summary_status)
+            replacement_title = str(
+                payload.get("replacement_title") or payload.get("next_title") or ""
+            ).strip()
+            replacement = manager.create_session(
+                replacement_title or None,
+                workspace_id=str(
+                    payload.get("workspace_id") or closing.workspace_id or INBOX_WORKSPACE_ID
+                ),
+                mode=str(payload.get("mode") or "chat"),
+            )
+            self.sessions.activate(
+                replacement,
+                source=str(payload.get("source") or "session-close"),
+            )
+            return {
+                "ok": True,
+                "profile": self.profile,
+                "summary": summary,
+                "closed_session": closed.as_dict(),
+                "session": replacement.as_dict(),
+                "active_session": self.current_session(),
+            }
+
+    def _set_session_summary_status(self, session_id, status):
+        try:
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            manager.update_session_summary_status(str(session_id), str(status))
+        except (OSError, ValueError):
+            # Legacy/unscoped sessions do not necessarily have workspace metadata.
+            pass
+
     def _create_session_summary_record(
         self,
         *,
@@ -491,13 +558,20 @@ class TrinityBridge:
                 user=user,
             )
 
-        summary_path = Path(str(summary_result.get("summary_path") or "")).resolve()
+        raw_summary_path = str(summary_result.get("summary_path") or "").strip()
+        source_summary_path = Path(raw_summary_path).resolve() if raw_summary_path else None
+        summary_path = self._write_session_summary_copy(
+            session_id=session_id,
+            session_name=session_name,
+            summary=summary,
+            fallback_path=source_summary_path,
+        )
         html_payload = str(summary_result.get("html_payload") or "")
         if html_payload:
             self.payload_path.write_text(html_payload, encoding="utf-8")
 
         attachments = []
-        if summary_path.is_file():
+        if summary_path and summary_path.is_file():
             attachments.append(
                 {
                     "name": summary_path.name,
@@ -524,6 +598,7 @@ class TrinityBridge:
                 "metadata": {
                     "memory_id": summary_result.get("memory_id", ""),
                     "summary_path": str(summary_path) if summary_path else "",
+                    "source_summary_path": str(source_summary_path) if source_summary_path else "",
                     "transcript_path": str(transcript_path),
                     "original_session_id": session_id,
                     "original_session_name": session_name,
@@ -531,7 +606,28 @@ class TrinityBridge:
                 },
             },
         )
+        self._set_session_summary_status(session_id, "complete")
         return record
+
+    def _write_session_summary_copy(
+        self,
+        *,
+        session_id,
+        session_name,
+        summary,
+        fallback_path,
+    ):
+        try:
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            session = manager.get_session(str(session_id))
+            target = session.path / "summary.md"
+            target.write_text(
+                f"# Session-Summary – {session_name or session.title}\n\n{summary.strip()}\n",
+                encoding="utf-8",
+            )
+            return target.resolve()
+        except (OSError, ValueError):
+            return fallback_path
 
     def _run_session_summary_job(
         self,
@@ -555,6 +651,7 @@ class TrinityBridge:
                 user=user,
             )
         except Exception as exc:  # pylint: disable=broad-except
+            self._set_session_summary_status(session_id, "failed")
             append_chat_event(
                 history_path,
                 {
@@ -1663,6 +1760,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.transcribe_audio(_read_json(self), user=user))
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
+                elif parsed.path == "/session/close":
+                    if not bridge.can_manage_workspaces(self, user):
+                        raise PermissionError(
+                            "Sessions schliessen ist nur fuer angemeldete oder lokale Clients verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.close_session(_read_json(self), user=user))
                 elif parsed.path == "/workspace/create":
                     if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(

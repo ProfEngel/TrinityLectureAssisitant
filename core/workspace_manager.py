@@ -259,6 +259,20 @@ class TrinityWorkspaceManager:
         _write_json(session_dir / "session.json", data)
         return self._session_record(session_dir)
 
+    def close_session(self, session_id: str, summary_status: str = "queued") -> SessionRecord:
+        """Close a session without removing its transcript, summary, or media."""
+        self.ensure_layout()
+        session_dir = self._find_session_dir(session_id)
+        if session_dir is None:
+            raise ValueError(f"Session nicht gefunden: {session_id}")
+        data = _read_json(session_dir / "session.json", {})
+        data["status"] = "closed"
+        data["summary_status"] = summary_status or "queued"
+        data["ended_at"] = _now_iso()
+        data["updated_at"] = _now_iso()
+        _write_json(session_dir / "session.json", data)
+        return self._session_record(session_dir)
+
     def update_workspace_pinned(self, workspace_id: str, pinned: bool) -> WorkspaceRecord:
         self.ensure_layout()
         workspace = self.get_workspace(workspace_id)

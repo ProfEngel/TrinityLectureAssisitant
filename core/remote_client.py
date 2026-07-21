@@ -76,11 +76,20 @@ class RemoteTrinityClient:
             {"session_id": session_id, "source": source},
         )
 
+    def update_session(self, session_id, **updates):
+        return self._request(
+            "/session/update",
+            {"session_id": session_id, **updates},
+        )
+
     def set_runtime(self, updates):
         return self._request("/runtime", dict(updates or {}))
 
     def end_session(self, payload):
         return self._request("/session/end", dict(payload or {}))
+
+    def close_session(self, payload):
+        return self._request("/session/close", dict(payload or {}))
 
     def create_user(self, username, password, role="user"):
         return self._request(

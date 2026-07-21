@@ -36,6 +36,13 @@ def test_wake_word_does_not_trigger_on_nearby_regular_words():
     assert not transcriber.has_trigger("Die Strategie ist nicht trivial", variants)
 
 
+def test_session_close_command_is_explicit():
+    assert transcriber.requests_session_close("Trinity, schließe die Session")
+    assert transcriber.requests_session_close("Bitte die aktuelle Sitzung abschließen")
+    assert not transcriber.requests_session_close("Fasse die Session nur zusammen")
+    assert not transcriber.requests_session_close("Schließe das Fenster")
+
+
 def test_windows_config_disables_speech_input_by_default(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
     config_path.write_text(

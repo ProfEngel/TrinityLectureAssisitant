@@ -807,6 +807,46 @@ class ClassicWindow(QMainWindow):
             else f"Session gelöst: {updated.title}"
         )
 
+    def assign_session_to_workspace(self, record):
+        try:
+            workspaces = self.workspace_manager.list_workspaces()
+        except OSError as exc:
+            self.status.setText(f"Arbeitsräume konnten nicht geladen werden: {exc}")
+            return
+        labels = [item.title for item in workspaces]
+        if not labels:
+            self.status.setText("Noch kein Arbeitsraum vorhanden.")
+            return
+        current_index = next(
+            (index for index, item in enumerate(workspaces) if item.id == record.workspace_id),
+            0,
+        )
+        selected, accepted = QInputDialog.getItem(
+            self,
+            "Session zuordnen",
+            "Projekt oder Vorlesungsmodul:",
+            labels,
+            current_index,
+            False,
+        )
+        if not accepted:
+            return
+        target = workspaces[labels.index(selected)]
+        try:
+            if self.remote_client:
+                self.remote_client.update_session(record.id, workspace_id=target.id)
+            else:
+                self.workspace_manager.move_session(record.id, target.id)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.status.setText(f"Session konnte nicht zugeordnet werden: {exc}")
+            return
+        self.selected_workspace_id = target.id
+        self.selected_workspace_title = target.title
+        self._refresh_workspace_sidebar()
+        self.status.setText(
+            f"Session samt Summary und Medien zugeordnet: {target.title}"
+        )
+
     def delete_session_from_sidebar(self, record):
         answer = QMessageBox.question(
             self,
@@ -950,6 +990,13 @@ class ClassicWindow(QMainWindow):
                     "Σ",
                     "Diese Session im Hintergrund zusammenfassen",
                     lambda checked=False, item=record: self.summarize_session_from_sidebar(item),
+                )
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "↪",
+                    "Session samt Summary und Medien einem Projekt oder Vorlesungsmodul zuordnen",
+                    lambda checked=False, item=record: self.assign_session_to_workspace(item),
                 )
             )
             row.addWidget(
@@ -1680,40 +1727,26 @@ class ClassicWindow(QMainWindow):
         )
         if not accepted:
             return
-        old_session_id = self.session_id
-        old_session_name = self.session_name or "Classic Desktop"
-        old_started_at = self.session_started_at
-        old_ended_at = time.time()
-        if self.remote_client:
-            try:
-                created = self.remote_client.create_session(
-                    name.strip() or suggested_name,
-                    workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
-                    mode=self.mode_combo.currentText(),
-                )["session"]
-            except RuntimeError as exc:
-                self.status.setText(f"Gemeinsame Session konnte nicht erstellt werden: {exc}")
-                return
-            self.session_id = created["id"]
-            self.session_name = created["title"]
-        else:
-            session = self.workspace_manager.create_session(
-                name.strip() or suggested_name,
-                workspace_id=self.selected_workspace_id or INBOX_WORKSPACE_ID,
-                mode=self.mode_combo.currentText(),
+        payload = {
+            "session_id": self.session_id,
+            "replacement_title": name.strip() or suggested_name,
+            "workspace_id": self.selected_workspace_id or INBOX_WORKSPACE_ID,
+            "mode": self.mode_combo.currentText(),
+            "source": "classic-desktop",
+        }
+        try:
+            result = (
+                self.remote_client.close_session(payload)
+                if self.remote_client
+                else TrinityBridge(BASE_DIR).close_session(payload)
             )
-            self.session_store.activate(session, source="classic-desktop")
-            self.session_id = session.id
-            self.session_name = session.title
+            created = result["session"]
+        except (RuntimeError, ValueError) as exc:
+            self.status.setText(f"Session konnte nicht abgeschlossen werden: {exc}")
+            return
+        self.session_id = created["id"]
+        self.session_name = created["title"]
         self.session_started_at = time.time()
-        self._summarize_previous_session_in_background(
-            old_session_id,
-            old_session_name,
-            old_started_at,
-            old_ended_at,
-            self.session_id,
-            self.session_name,
-        )
         self.remote_events = []
         self.remote_after = time.time()
         self.pending_attachments = []
