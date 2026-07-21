@@ -40,7 +40,8 @@ Rechner. Dazu gehören der installierte Programmcode, Python-Umgebung,
 Abhängigkeiten und Startprogramme.
 
 - Mac: derzeit `/Users/matmax/Trinity_Assistant`
-- sichtbare Mac-App: derzeit `/Users/matmax/Desktop/Trinity.app`
+- eigentliche Mac-App: `/Users/matmax/Applications/Trinity.app`
+- auf dem Schreibtisch: nur der Verweis `Trinity.app`
 - Windows-Ziel: `%LOCALAPPDATA%\Trinity`
 - Quelle für Installation und Updates: Trinity-Repository und versionierte
   Releases auf GitHub
@@ -76,6 +77,8 @@ BIZ und PRIVAT installiert. `In-Erprobung` wird nur im Testbereich ausgefuehrt.
 Von dort werden Agenten bewusst und profilbezogen lokal installiert. Die
 Cloud-Vaults sind weder Softwareverteilung noch Quelle der Wahrheit für
 ausführbaren Agentencode.
+
+Aktive lokale Agentenablage auf dem Mac: `/Users/matmax/.agents`
 
 ## 3. Trinity-Runtime – lokal, nicht im Cloud-Ordner
 
@@ -134,8 +137,8 @@ Diese Struktur wird erst nach Sicherung und Inventur umgesetzt:
 ├── 20 Wissen und Quellen/
 ├── 30 Vorlagen und Bausteine/
 ├── 40 Abgeschlossene Projekte/
-├── 50 Fertige Werke/
-└── 90 Trinity-Katalog/
+├── 50 Fertige Werke und Veröffentlichungen/
+└── 90 Inhaltsverzeichnis und Schlagwörter/
 ```
 
 Die Zahlen halten die wenigen Hauptbereiche in einer stabilen, sofort
@@ -179,9 +182,11 @@ Am 21. Juli 2026 wurden die iCloud-Ordner umbenannt:
 - Der bisherige gemischte Datenbestand heißt nun **BrainVault_LEGACY**.
 
 Das ist eine nachvollziehbare Ausgangslage für Phase 2, aber noch keine
-Migration. Insbesondere liegen Trinity-Projekt, bestehende Agenten und viele
-alte Inhalte derzeit noch im Legacy-Ordner. Bis zu Sicherung und Inventur wird
-daraus nichts automatisch verschoben oder gelöscht.
+Inhaltsmigration. Die aktive Trinity-Installation liegt inzwischen lokal unter
+`/Users/matmax/Trinity_Assistant`, die aktive App unter `~/Applications` und
+der lokale Agentenbestand unter `~/.agents`. Im Legacy-Ordner liegen weiterhin
+eine alte Projektkopie, historische Agentenbestände, Graphify-Daten und viele
+noch nicht zugeordnete Inhalte. Daraus wird nichts automatisch gelöscht.
 
 Gespeicherte absolute Pfade in Trinity, Harness-Konfigurationen und
 Graphify-Manifesten müssen kontrolliert auf die Übergangsnamen angepasst oder
@@ -197,6 +202,20 @@ Installationskonfigurationen benötigen getrennte, versionierte und möglichst
 verschlüsselte Wiederherstellungskopien. GitHub sichert die Code-Historie,
 ersetzt aber kein Backup der Vault-Inhalte oder Runtime-Zustände.
 
+## 8. Wer welches Profil benutzen darf
+
+| Gerät oder Zugang | Erlaubte Nutzung |
+|---|---|
+| Windows | Beruf lokal |
+| Mac | Privat lokal, Testbereich getrennt, Beruf nur remote oder als Dateiclient |
+| iPhone und iPad | Beruf oder Privat nach sichtbarer, bewusster Profilwahl |
+| Even G2 | übernimmt das am Telefon ausgewählte Profil |
+| Telegram | zwei getrennte Bots: einer für Beruf, einer für Privat |
+| Ubuntu | nur beruflicher LLM-Dienst, kein eigenes Profil und kein Vault |
+
+**Autorität** bedeutet Trinity-Ausführung, Memory, Sessions und Freigaben.
+**Datenwahrheit** bleibt immer der passende BizVault oder BrainVault.
+
 ## Die Fünf-Sekunden-Entscheidung
 
 | Frage | Richtiger Ort |
@@ -206,6 +225,8 @@ ersetzt aber kein Backup der Vault-Inhalte oder Runtime-Zustände.
 | Ist es ein dauerhaftes BIZ-Dokument oder -Projekt? | OneDrive/BizVault |
 | Ist es ein dauerhaftes privates Dokument oder -Projekt? | iCloud/BrainVault |
 | Ist es ein Such- oder Beziehungsindex? | lokal bei Graphify/RAG |
+| Ist es eine berufliche Trinity-Sitzung? | Windows-Runtime, auch wenn der Mac der Client ist |
+| Ist es eine private Trinity-Sitzung? | Mac-Runtime |
 | Soll es einen Ausfall überleben? | zusätzlich unabhängiges Backup |
 
 ## Kurzantwort: Habe ich es richtig verstanden?

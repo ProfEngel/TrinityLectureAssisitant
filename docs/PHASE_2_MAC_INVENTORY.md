@@ -85,3 +85,5 @@ Profilzuordnung wird Graphify fuer Privat und Beruf jeweils lokal neu aufgebaut.
 - verschluesselte zweite Wiederherstellungskopie auf einem unabhaengigen Medium
 - Neuaufbau der lokalen RAG- und Graphify-Indizes nach der Vault-Migration
 - fachliche Pruefung und Bereinigung der 24 integrierten Legacy-Agenten
+- `TrinityCreativeCanvas` und seinen LaunchAgent aus dem privaten Cloud-Vault
+  in eine lokale Installation ueberfuehren; technische Logs lokal ablegen
