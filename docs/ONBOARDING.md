@@ -261,7 +261,13 @@ Desktop-/Server-Trinity per lokaler HTTP-Bridge.
 4. Host 0.0.0.0, einen freien Port (typisch 8765) und einen langen Bearer Token
    setzen.
 5. Trinity neu starten.
-6. In der Companion-App http://TAILSCALE-IP:8765 und denselben Token eintragen.
+6. Die Companion-App startet mit **Arbeit**, **Privat** und **Development**.
+   Mindestens zwei Profile bleiben erhalten; weitere lassen sich mit dem
+   Plus-Icon ergänzen. Im gewünschten Profil http://TAILSCALE-IP:8765 und den
+   zugehörigen Token eintragen.
+7. **Verbindung testen** wählen. Die App vergleicht ihr erwartetes Profil mit
+   dem Server und verweigert beispielsweise eine BIZ-Verbindung zur
+   PRIVAT-Trinity.
 
 Bei Tailscale muss normalerweise kein Router-Port ins Internet geoeffnet werden.
 Die lokale Firewall darf Trinity/Python nur in privaten Netzen beziehungsweise im
@@ -281,8 +287,19 @@ Simulationen und Python-/Sandbox-Ergebnisse darstellen. iOS/iPadOS kann
 Hintergrund-Spracherkennung systembedingt begrenzen; ein sichtbarer Vordergrund-
 oder Split-View-Betrieb ist fuer laengere Vortraege robuster.
 
-Android Tablet/Phone ist als zukuenftige Companion-Variante vorgesehen. Es gibt
-in diesem Repository noch keinen Android-Installer oder Android-Client.
+Alle Oberflächen eines Profils verwenden dieselbe serverseitig aktive Sitzung.
+Ein Sitzungswechsel auf iPad, G2 oder Desktop wird von den anderen Clients beim
+nächsten Sync übernommen. Offline darf die Companion-App Eingaben puffern, aber
+keine zweite verbindliche Antwort neben der Server-Trinity erzeugen.
+
+"Session schließen" ist ein einziger serverseitiger Vorgang: Die alte Sitzung
+wird geschlossen, ihre Summary automatisch angestoßen und genau eine neue
+Sitzung für alle Geräte aktiviert. Summary, Transkript und Sitzungsmedien bleiben
+erhalten. Wird die geschlossene Sitzung am Desktop einem Projekt oder
+Vorlesungsmodul zugeordnet, wandern diese Unterlagen gemeinsam mit.
+
+Android Tablet/Phone ist als schlanker Bridge-Companion im separaten
+`android/`-Teil des Companion-Repositories vorbereitet.
 
 ## 7. Lokale Codex-, OpenCode- und Pi-Agenten
 

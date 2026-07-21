@@ -42,6 +42,8 @@ from platform_adapters import (
 )
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
+from trinity_paths import TrinityPaths
+from unified_session import UnifiedSessionStore
 from web_ui import render_web_ui
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
 
@@ -91,7 +93,10 @@ def _json_response(handler, status, payload):
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Content-Length", str(len(data)))
     handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    handler.send_header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Trinity-Profile",
+    )
     handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     handler.end_headers()
     handler.wfile.write(data)
@@ -151,8 +156,51 @@ class TrinityBridge:
         self.auth_enabled = bool(auth_enabled)
         self.auth = ServerAuth(self.home) if self.auth_enabled else None
         self._lock = threading.Lock()
+        self._session_close_lock = threading.Lock()
         self._summary_jobs = set()
         self._audio_transcriber = None
+        self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
+
+    @property
+    def profile(self):
+        return self.sessions.profile
+
+    def current_session(self):
+        return self.sessions.as_dict()
+
+    def instance_state(self):
+        paths = TrinityPaths.from_config(self.home, load_config(self.config_path))
+        rag_meta_path = self.home / "RAG" / "index" / "meta.json"
+        try:
+            rag_meta = json.loads(rag_meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            rag_meta = {}
+        rag_profile = str(rag_meta.get("profile") or "").strip().upper()
+        if not rag_meta:
+            rag_scope = "NOT_BUILT"
+        elif rag_profile == paths.profile:
+            rag_scope = paths.profile
+        else:
+            rag_scope = "LEGACY_UNSCOPED"
+        return {
+            "profile": paths.profile,
+            "session": self.current_session(),
+            "knowledge": {
+                "vault_root": str(paths.vault_root),
+                "vault_available": paths.vault_root.is_dir(),
+                "runtime_root": str(paths.runtime_root),
+                "rag_index_scope": rag_scope,
+                "rag_sources": list(rag_meta.get("sources") or []),
+                "graphify_index_scope": "NOT_BUILT",
+            },
+        }
+
+    def validate_client_profile(self, value):
+        expected = str(value or "").strip().upper()
+        if expected and expected != self.profile:
+            raise PermissionError(
+                f"Profil verwechselt: Client erwartet {expected}, diese Trinity ist {self.profile}."
+            )
 
     @property
     def media_roots(self):
@@ -211,6 +259,7 @@ class TrinityBridge:
         request["silent"] = not bool(payload.get("speak", False))
         request["allow_tts"] = bool(payload.get("speak", False))
         request["tenant_id"] = self._tenant_id(user)
+        request = self.sessions.canonicalize(request, source=request["source"])
         history_path = self.history_path_for(user)
 
         with self._lock:
@@ -229,7 +278,13 @@ class TrinityBridge:
             )
             enqueue_chat_request(self.core_dir, request)
 
-        return {"ok": True, "request_id": request["request_id"], "accepted_at": time.time()}
+        return {
+            "ok": True,
+            "request_id": request["request_id"],
+            "accepted_at": time.time(),
+            "profile": self.profile,
+            "session": self.current_session(),
+        }
 
     def send_stt(self, payload, user=None):
         text = str(payload.get("text", "")).strip()
@@ -239,6 +294,7 @@ class TrinityBridge:
         source = str(payload.get("source") or "ios-stt").strip().lower()
         if source not in {"ios-stt", "g2-stt"}:
             source = "ios-stt"
+        canonical = self.sessions.canonicalize(payload, source=source)
         event = append_external_stt_event(
             self.stt_feed_path,
             {
@@ -246,8 +302,8 @@ class TrinityBridge:
                 "text": text,
                 "is_final": is_final,
                 "speak": bool(payload.get("speak", False)),
-                "session_id": str(payload.get("session_id", "")).strip(),
-                "session_name": str(payload.get("session_name", "")).strip()[:160],
+                "session_id": canonical["session_id"],
+                "session_name": canonical["session_name"],
                 "privacy_mode": str(payload.get("privacy_mode", "local")).strip() or "local",
                 "tenant_id": self._tenant_id(user),
             },
@@ -265,7 +321,13 @@ class TrinityBridge:
                     "privacy_mode": event["privacy_mode"],
                 },
             )
-        return {"ok": True, "event_id": event["event_id"], "accepted_at": event["timestamp"]}
+        return {
+            "ok": True,
+            "event_id": event["event_id"],
+            "accepted_at": event["timestamp"],
+            "profile": self.profile,
+            "session": self.current_session(),
+        }
 
     def transcribe_audio(self, payload, user=None):
         if not isinstance(payload, dict):
@@ -334,12 +396,14 @@ class TrinityBridge:
             and (not ended_at or float(event.get("timestamp", 0) or 0) <= ended_at)
         ]
         if not events:
+            self._set_session_summary_status(session_id, "empty")
             return {
                 "ok": True,
                 "created": False,
                 "message": "Keine Inhalte fuer diese Session gefunden.",
             }
 
+        self._set_session_summary_status(session_id, "queued")
         transcript_path = self._write_session_transcript(session_id, session_name, events)
         if wait:
             record = self._create_session_summary_record(
@@ -397,6 +461,70 @@ class TrinityBridge:
             "message": "Session-Summary wird im Hintergrund erstellt.",
         }
 
+    def close_session(self, payload, user=None):
+        """Close the canonical session, queue its summary, and activate one replacement."""
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Abschluss erwartet ein Objekt.")
+        with self._session_close_lock:
+            current = self.sessions.current()
+            requested_id = str(payload.get("session_id") or current.id).strip()
+            if requested_id != current.id:
+                raise ValueError(
+                    "Nur die aktuell aktive gemeinsame Session kann geschlossen werden."
+                )
+
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            closing = manager.get_session(current.id)
+            summary = self.end_session(
+                {
+                    **payload,
+                    "session_id": closing.id,
+                    "session_name": closing.title,
+                    "display_session_id": "",
+                    "display_session_name": "",
+                    "wait": bool(payload.get("wait", False)),
+                },
+                user=user,
+            )
+            summary_status = (
+                "complete"
+                if summary.get("created")
+                else "queued"
+                if summary.get("accepted")
+                else "empty"
+            )
+            closed = manager.close_session(closing.id, summary_status=summary_status)
+            replacement_title = str(
+                payload.get("replacement_title") or payload.get("next_title") or ""
+            ).strip()
+            replacement = manager.create_session(
+                replacement_title or None,
+                workspace_id=str(
+                    payload.get("workspace_id") or closing.workspace_id or INBOX_WORKSPACE_ID
+                ),
+                mode=str(payload.get("mode") or "chat"),
+            )
+            self.sessions.activate(
+                replacement,
+                source=str(payload.get("source") or "session-close"),
+            )
+            return {
+                "ok": True,
+                "profile": self.profile,
+                "summary": summary,
+                "closed_session": closed.as_dict(),
+                "session": replacement.as_dict(),
+                "active_session": self.current_session(),
+            }
+
+    def _set_session_summary_status(self, session_id, status):
+        try:
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            manager.update_session_summary_status(str(session_id), str(status))
+        except (OSError, ValueError):
+            # Legacy/unscoped sessions do not necessarily have workspace metadata.
+            pass
+
     def _create_session_summary_record(
         self,
         *,
@@ -430,13 +558,20 @@ class TrinityBridge:
                 user=user,
             )
 
-        summary_path = Path(str(summary_result.get("summary_path") or "")).resolve()
+        raw_summary_path = str(summary_result.get("summary_path") or "").strip()
+        source_summary_path = Path(raw_summary_path).resolve() if raw_summary_path else None
+        summary_path = self._write_session_summary_copy(
+            session_id=session_id,
+            session_name=session_name,
+            summary=summary,
+            fallback_path=source_summary_path,
+        )
         html_payload = str(summary_result.get("html_payload") or "")
         if html_payload:
             self.payload_path.write_text(html_payload, encoding="utf-8")
 
         attachments = []
-        if summary_path.is_file():
+        if summary_path and summary_path.is_file():
             attachments.append(
                 {
                     "name": summary_path.name,
@@ -463,6 +598,7 @@ class TrinityBridge:
                 "metadata": {
                     "memory_id": summary_result.get("memory_id", ""),
                     "summary_path": str(summary_path) if summary_path else "",
+                    "source_summary_path": str(source_summary_path) if source_summary_path else "",
                     "transcript_path": str(transcript_path),
                     "original_session_id": session_id,
                     "original_session_name": session_name,
@@ -470,7 +606,28 @@ class TrinityBridge:
                 },
             },
         )
+        self._set_session_summary_status(session_id, "complete")
         return record
+
+    def _write_session_summary_copy(
+        self,
+        *,
+        session_id,
+        session_name,
+        summary,
+        fallback_path,
+    ):
+        try:
+            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+            session = manager.get_session(str(session_id))
+            target = session.path / "summary.md"
+            target.write_text(
+                f"# Session-Summary – {session_name or session.title}\n\n{summary.strip()}\n",
+                encoding="utf-8",
+            )
+            return target.resolve()
+        except (OSError, ValueError):
+            return fallback_path
 
     def _run_session_summary_job(
         self,
@@ -494,6 +651,7 @@ class TrinityBridge:
                 user=user,
             )
         except Exception as exc:  # pylint: disable=broad-except
+            self._set_session_summary_status(session_id, "failed")
             append_chat_event(
                 history_path,
                 {
@@ -664,6 +822,8 @@ class TrinityBridge:
             "ok": True,
             "inbox": INBOX_WORKSPACE_ID,
             "selected_workspace_id": selected_workspace,
+            "active_session": self.current_session(),
+            "profile": self.profile,
             "workspaces": [item.as_dict() for item in workspaces],
             "sessions": [item.as_dict() for item in sessions],
             "notes": [item.as_dict() for item in notes],
@@ -709,7 +869,18 @@ class TrinityBridge:
             workspace_id=workspace_id,
             mode=str(payload.get("mode") or "lecture"),
         )
-        return {"ok": True, "session": session.as_dict()}
+        self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
+        self.sessions.activate(session, source=str(payload.get("source") or "client"))
+        return {"ok": True, "session": session.as_dict(), "active_session": self.current_session()}
+
+    def activate_session(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Session-Aktivierung erwartet ein Objekt.")
+        session_id = str(payload.get("session_id") or payload.get("id") or "").strip()
+        if not session_id:
+            raise ValueError("session_id fehlt.")
+        session = self.sessions.activate(session_id, source=str(payload.get("source") or "client"))
+        return {"ok": True, "session": session.as_dict(), "active_session": self.current_session()}
 
     def update_session(self, payload):
         if not isinstance(payload, dict):
@@ -736,7 +907,16 @@ class TrinityBridge:
         if not session_id:
             raise ValueError("session_id fehlt.")
         manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
+        was_active = session_id == self.current_session()["id"]
         result = manager.delete_session(session_id, archive=bool(payload.get("archive", False)))
+        if was_active:
+            try:
+                self.sessions.pointer_path.unlink()
+            except OSError:
+                pass
+            replacement = self.sessions.current()
+            result["active_session"] = self.current_session()
+            result["replacement_session_id"] = replacement.id
         return {"ok": True, **result}
 
     def delete_event(self, payload, user=None):
@@ -782,8 +962,10 @@ class TrinityBridge:
                 "apple-foundation-offline",
             }:
                 source = "companion-offline"
-            session_id = str(event.get("session_id") or event.get("sessionId") or "").strip()
-            session_name = str(event.get("session_name") or event.get("sessionName") or "").strip()[:160]
+            supplied_session_id = str(event.get("session_id") or event.get("sessionId") or "").strip()
+            canonical = self.sessions.canonicalize(event, source=source)
+            session_id = canonical["session_id"]
+            session_name = canonical["session_name"]
             record = append_chat_event(
                 history_path,
                 {
@@ -794,6 +976,8 @@ class TrinityBridge:
                     "session_name": session_name,
                     "client_event_id": client_event_id or None,
                     "offline_synced": True,
+                    "original_session_id": supplied_session_id or None,
+                    "profile": self.profile,
                 },
             )
             imported.append(record)
@@ -1421,6 +1605,7 @@ def make_handler(bridge):
                 _json_response(self, 401, {"ok": False, "error": "unauthorized"})
                 return
             try:
+                bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/health":
                     _json_response(
                         self,
@@ -1431,6 +1616,7 @@ def make_handler(bridge):
                             "time": time.time(),
                             "history": bridge.history_path_for(user).exists(),
                             "user": user or None,
+                            **bridge.instance_state(),
                         },
                     )
                 elif parsed.path == "/events":
@@ -1454,10 +1640,13 @@ def make_handler(bridge):
                                 user=user,
                                 access_token=bridge._bearer_token(self, query),
                                 include_payload_html=include_payload_html,
-                                session_id=query.get("session_id", [""])[0],
+                                session_id=bridge.current_session()["id"],
                             ),
+                            **bridge.instance_state(),
                         },
                     )
+                elif parsed.path == "/session/current":
+                    _json_response(self, 200, {"ok": True, **bridge.instance_state()})
                 elif parsed.path == "/workspaces":
                     try:
                         session_limit = int(query.get("session_limit", ["80"])[0] or 80)
@@ -1562,6 +1751,7 @@ def make_handler(bridge):
                 _json_response(self, 401, {"ok": False, "error": "unauthorized"})
                 return
             try:
+                bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/stt":
@@ -1570,6 +1760,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.transcribe_audio(_read_json(self), user=user))
                 elif parsed.path == "/session/end":
                     _json_response(self, 200, bridge.end_session(_read_json(self), user=user))
+                elif parsed.path == "/session/close":
+                    if not bridge.can_manage_workspaces(self, user):
+                        raise PermissionError(
+                            "Sessions schliessen ist nur fuer angemeldete oder lokale Clients verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.close_session(_read_json(self), user=user))
                 elif parsed.path == "/workspace/create":
                     if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(
@@ -1594,6 +1790,12 @@ def make_handler(bridge):
                             "Sessions aendern ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.update_session(_read_json(self)))
+                elif parsed.path == "/session/activate":
+                    if not bridge.can_manage_workspaces(self, user):
+                        raise PermissionError(
+                            "Sessions aktivieren ist nur fuer angemeldete oder lokale Clients verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.activate_session(_read_json(self)))
                 elif parsed.path == "/session/delete":
                     if not bridge.can_manage_workspaces(self, user):
                         raise PermissionError(

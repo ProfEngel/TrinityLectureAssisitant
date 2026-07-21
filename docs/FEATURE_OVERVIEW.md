@@ -39,16 +39,18 @@ flowchart LR
 ### Companion und Offline-Betrieb
 
 - iPhone/iPad synchronisieren Arbeitsraeume, Sessions, Notizen und Chat-Events.
-- Clients koennen dieselbe Session oder bewusst verschiedene Sessions parallel
-  nutzen.
+- Standardprofile sind Arbeit, Privat und Development. Mindestens zwei Profile
+  bleiben bestehen; weitere Verbindungen können per Plus-Icon ergänzt werden.
+  Chat, aktive Sitzung, Offline-Puffer und Medienbibliothek sind profilgebunden.
+- Pro Trinity-Profil gibt es genau eine serverseitig aktive Sitzung. Desktop,
+  Telegram, G2, iPhone, iPad und Web zeigen denselben Verlauf und dieselbe
+  fertige Antwort; ältere Sitzungen bleiben erhalten und können gemeinsam
+  wieder geöffnet werden.
 - Ohne Verbindung bleiben gecachte Sessions sichtbar; neue Nachrichten werden
   gepuffert.
-- Im **Auto-Modus** geht Trinity zuerst zum Server und nutzt Apple Foundation
-  Models nur als lokalen Text-Fallback.
-- Im **Foundation-Modus** werden einfache Textantworten bewusst lokal auf dem
-  iPhone/iPad bevorzugt.
-- Offline erzeugte Antworten werden beim Reconnect in die Trinity-Session
-  zuruecksynchronisiert.
+- Offline-Eingaben werden lokal gepuffert. Erst die Server-Trinity erzeugt nach
+  dem Reconnect die verbindliche Antwort, damit keine widersprüchliche zweite
+  Companion-Antwort entsteht.
 
 Details: [Companion Offline Sync](COMPANION_OFFLINE_SYNC.md)
 
@@ -60,18 +62,23 @@ Details: [Companion Offline Sync](COMPANION_OFFLINE_SYNC.md)
 - Webansicht fuer Unterrichtsseiten, Dashboards, Mentimeter, SAP, Intranet oder
   lokale Webdienste.
 - Generierte Bilder, Audio, Video, Simulationen, Timer und Pyodide-/Sandbox-
-  Ergebnisse erscheinen als wiederaufrufbare Assets.
+  Ergebnisse erscheinen als wiederaufrufbare, profilgebundene Assets und
+  bleiben erhalten, bis sie ausdrücklich aus der Ergebnisliste gelöscht werden.
 
 ### Arbeitsraeume, Sessions und Notizen
 
 - Sessions koennen benannt, umbenannt, angeheftet, archiviert, geloescht und
   zusammengefasst werden.
+- Das Schließen einer aktiven Session startet automatisch die Summary und
+  aktiviert atomar eine neue gemeinsame Session auf allen Geräten.
 - Arbeitsraeume buendeln Sessions, Notizen und Summaries nach Kontext, etwa
   Vorlesung, Buchprojekt, Forschung oder Office.
 - Neue Sessions starten mit Zeitstempel und koennen spaeter einem Arbeitsraum
   zugeordnet werden.
-- Summaries werden als Assets gespeichert und koennen in Memory/RAG uebernommen
-  werden.
+- Summaries werden zusätzlich in der jeweiligen Sitzungsmappe gespeichert. Die
+  Desktop-Zuordnung zu einem Projekt oder Vorlesungsmodul nimmt Summary,
+  Transkript und Sitzungsmedien gemeinsam mit; danach können sie für
+  Vorabbriefings und RAG genutzt werden.
 
 Details: [Workspace-/Session-Roadmap](WORKSPACES_SESSIONS_NOTES_ROADMAP.md)
 

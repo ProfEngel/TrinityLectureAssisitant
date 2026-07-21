@@ -25,7 +25,8 @@ def test_bridge_writes_ios_message_to_command_file(tmp_path):
     request = pop_next_chat_request(home / "core")
     assert request["text"] == "Hallo Trinity"
     assert request["source"] == "ios"
-    assert request["session_id"] == "ios-1"
+    assert request["session_id"] == result["session"]["id"]
+    assert request["client_session_id"] == "ios-1"
     assert request["privacy_mode"] == "local"
 
 
@@ -424,7 +425,46 @@ def test_bridge_transcribes_g2_audio_and_routes_continuous_conversation(tmp_path
     assert result["routed"] is True
     request = pop_next_chat_request(home / "core")
     assert request["source"] == "g2-conversation"
-    assert request["session_id"] == "g2-session"
+    assert request["session_id"] == result["request"]["session"]["id"]
+    assert request["client_session_id"] == "g2-session"
+
+
+def test_all_channels_share_one_server_authoritative_session(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    (home / "core" / "config.json").write_text(
+        json.dumps(
+            {
+                "system": {"profile": "PRIVAT"},
+                "control_plane": {
+                    "runtime_root": str(home / "runtime"),
+                    "vault_root": str(home / "BrainVault"),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    bridge = TrinityBridge(home)
+
+    ios = bridge.send_message({"text": "vom iPhone", "session_id": "ios-local"})
+    telegram = bridge.send_message(
+        {"text": "aus Telegram", "source": "telegram", "session_id": "telegram"}
+    )
+    g2 = bridge.send_message({"text": "von G2", "source": "g2-conversation"})
+    requests = [pop_next_chat_request(home / "core") for _ in range(3)]
+
+    assert {item["session_id"] for item in requests} == {ios["session"]["id"]}
+    assert telegram["session"]["id"] == ios["session"]["id"] == g2["session"]["id"]
+    assert all(item["profile"] == "PRIVAT" for item in requests)
+    assert bridge.instance_state()["knowledge"] == {
+        "vault_root": str((home / "BrainVault").resolve()),
+        "vault_available": False,
+        "runtime_root": str((home / "runtime").resolve()),
+        "rag_index_scope": "NOT_BUILT",
+        "rag_sources": [],
+        "graphify_index_scope": "NOT_BUILT",
+    }
 
 
 def test_bridge_can_transcribe_g2_audio_without_routing_a_command(tmp_path):
@@ -652,6 +692,60 @@ def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
     assert event["metadata"]["original_session_id"] == "old-session"
     assert event["metadata"]["original_session_name"] == "Alte Session"
     assert "Spieltheorie" in event["text"]
+
+
+def test_bridge_close_session_summarizes_and_activates_replacement(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    manager = TrinityWorkspaceManager(home)
+    lecture = manager.create_workspace("Spieltheorie", kind="lecture")
+    session = manager.create_session("Vorlesung 1", workspace_id=lecture.id)
+    medium = session.path / "media" / "nash-diagramm.png"
+    medium.write_bytes(b"png")
+    history = home / "memory" / "classic_chat_history.jsonl"
+    append_chat_event(
+        history,
+        {
+            "role": "user",
+            "source": "ios",
+            "text": "Erkläre das Nash-Gleichgewicht.",
+            "session_id": session.id,
+            "session_name": session.title,
+        },
+    )
+    source_summary = home / "memory" / "summaries" / "Summary.md"
+    source_summary.parent.mkdir(parents=True)
+    source_summary.write_text("# Summary", encoding="utf-8")
+    bridge = TrinityBridge(home)
+    bridge._run_session_summary_agent = lambda **_kwargs: {
+        "summary": "## Hauptthemen\n- Nash-Gleichgewicht",
+        "summary_path": str(source_summary),
+    }
+
+    result = bridge.close_session(
+        {
+            "session_id": session.id,
+            "replacement_title": "Vorlesung 2",
+            "mode": "lecture",
+            "wait": True,
+        }
+    )
+
+    closed = manager.get_session(session.id)
+    replacement = manager.get_session(result["session"]["id"])
+    assert closed.status == "closed"
+    assert closed.summary_status == "complete"
+    assert (closed.path / "summary.md").is_file()
+    assert medium.is_file()
+    assert replacement.workspace_id == lecture.id
+    assert replacement.title == "Vorlesung 2"
+    assert result["active_session"]["id"] == replacement.id
+
+    target = manager.create_workspace("Modularchiv", kind="lecture")
+    moved = manager.move_session(closed.id, target.id)
+    assert (moved.path / "summary.md").is_file()
+    assert (moved.path / "media" / "nash-diagramm.png").is_file()
 
 
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):

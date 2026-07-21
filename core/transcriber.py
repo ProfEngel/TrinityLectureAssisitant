@@ -26,6 +26,7 @@ from memory_store import MemoryStore
 from tenant_context import tenant_history_path, tenant_memory_db_path
 from platform_adapters import create_tts_backend
 from workspace_context import load_workspace_attachment
+from unified_session import UnifiedSessionStore
 
 # Konfiguration
 MODEL = "small"  # Schnell auf CPU: <1s Latenz. Für beste Qualität: 'large-v3-turbo'
@@ -36,8 +37,6 @@ CORE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(CORE_DIR)
 MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR, "classic_chat_history.jsonl")
-TELEGRAM_SESSION_ID = "telegram"
-TELEGRAM_SESSION_NAME = "Telegram"
 os.makedirs(MEMORY_DIR, exist_ok=True)
 SILENCE_THRESHOLD = 0.05
 INITIAL_PROMPT = "Trinity, Spieltheorie, Vorlesung, Informatik, ERP, Nash-Gleichgewicht, Hebbsche Regel, Infografik."
@@ -64,6 +63,16 @@ def _normalize_trigger_text(value):
     asciiish = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     asciiish = asciiish.replace("ß", "ss")
     return re.sub(r"[^a-z0-9]+", " ", asciiish).strip()
+
+
+def requests_session_close(text):
+    normalized = _normalize_trigger_text(text)
+    has_session = re.search(r"\b(?:session|sitzung)\b", normalized)
+    has_close = re.search(
+        r"\b(?:schliess(?:e|en)?|beend(?:e|en)?|abschliess(?:e|en)?)\b",
+        normalized,
+    )
+    return bool(has_session and has_close)
 
 
 def _bounded_levenshtein(left, right, max_distance=1):
@@ -184,7 +193,7 @@ def chat_history_path_for_request(chat_request=None):
 
 
 def build_telegram_chat_request(text, attachments=None):
-    return {
+    request = {
         "type": "chat_request",
         "request_id": uuid.uuid4().hex,
         "source": "telegram",
@@ -193,10 +202,21 @@ def build_telegram_chat_request(text, attachments=None):
         "text": str(text or "").strip(),
         "attachments": list(attachments or []),
         "history_recorded": True,
-        "session_id": TELEGRAM_SESSION_ID,
-        "session_name": TELEGRAM_SESSION_NAME,
         "privacy_mode": "telegram",
     }
+    return UnifiedSessionStore(PROJECT_DIR).canonicalize(request, source="telegram")
+
+
+def canonical_chat_request(request=None, source="runtime"):
+    value = dict(request or {})
+    value.setdefault("type", "chat_request")
+    value.setdefault("request_id", uuid.uuid4().hex)
+    value.setdefault("source", source)
+    value.setdefault("text", "")
+    value.setdefault("attachments", [])
+    value.setdefault("silent", True)
+    value.setdefault("history_recorded", False)
+    return UnifiedSessionStore(PROJECT_DIR).canonicalize(value, source=source)
 
 class TrinityEar:
     def __init__(self):
@@ -509,8 +529,8 @@ class TrinityEar:
                                             "source": "telegram",
                                             "text": text,
                                             "attachments": [],
-                                            "session_id": TELEGRAM_SESSION_ID,
-                                            "session_name": TELEGRAM_SESSION_NAME,
+                                            "session_id": telegram_request["session_id"],
+                                            "session_name": telegram_request["session_name"],
                                             "privacy_mode": "telegram",
                                         },
                                     )
@@ -582,8 +602,8 @@ class TrinityEar:
                                                         "source": "telegram",
                                                         "text": voice_text,
                                                         "attachments": [],
-                                                        "session_id": TELEGRAM_SESSION_ID,
-                                                        "session_name": TELEGRAM_SESSION_NAME,
+                                                        "session_id": telegram_request["session_id"],
+                                                        "session_name": telegram_request["session_name"],
                                                         "privacy_mode": "telegram",
                                                     },
                                                 )
@@ -694,8 +714,8 @@ class TrinityEar:
                         "source": "telegram",
                         "text": prompt,
                         "attachments": [attachment],
-                        "session_id": TELEGRAM_SESSION_ID,
-                        "session_name": TELEGRAM_SESSION_NAME,
+                        "session_id": telegram_request["session_id"],
+                        "session_name": telegram_request["session_name"],
                         "privacy_mode": "telegram",
                     },
                 )
@@ -714,8 +734,8 @@ class TrinityEar:
                         "source": "telegram",
                         "text": antwort or "Ich konnte das Bild nicht auswerten.",
                         "payload_html": "",
-                        "session_id": TELEGRAM_SESSION_ID,
-                        "session_name": TELEGRAM_SESSION_NAME,
+                        "session_id": telegram_request["session_id"],
+                        "session_name": telegram_request["session_name"],
                     },
                 )
                 req.post(
@@ -812,8 +832,8 @@ class TrinityEar:
                     "source": "telegram",
                     "text": caption or "Telegram-Bild verarbeitet.",
                     "attachments": [attachment],
-                    "session_id": TELEGRAM_SESSION_ID,
-                    "session_name": TELEGRAM_SESSION_NAME,
+                    "session_id": telegram_request["session_id"],
+                    "session_name": telegram_request["session_name"],
                     "privacy_mode": "telegram",
                 },
             )
@@ -825,8 +845,8 @@ class TrinityEar:
                     "source": "telegram",
                     "text": log_response,
                     "payload_html": "",
-                    "session_id": TELEGRAM_SESSION_ID,
-                    "session_name": TELEGRAM_SESSION_NAME,
+                    "session_id": telegram_request["session_id"],
+                    "session_name": telegram_request["session_name"],
                 },
             )
 
@@ -912,21 +932,6 @@ class TrinityEar:
                             t_stamp = time.strftime("%H:%M:%S")
                             with open(self.transcript_file, "a", encoding="utf-8") as f:
                                 f.write(f"[{t_stamp}] [User (UI-Chat)]: {cmd_text}\n")
-
-                            if (
-                                request.get("source") == "classic"
-                                and not request.get("history_recorded")
-                            ):
-                                append_chat_event(
-                                    chat_history_path_for_request(request),
-                                    {
-                                        "request_id": request["request_id"],
-                                        "role": "user",
-                                        "source": "classic",
-                                        "text": cmd_text,
-                                        "attachments": request.get("attachments", []),
-                                    },
-                                )
 
                             self.trigger_action(
                                 cmd_text,
@@ -1251,6 +1256,27 @@ class TrinityEar:
         chat_request=None,
     ):
         self.reload_config_if_changed()
+        request_source = (chat_request or {}).get("source") or (
+            "telegram" if from_telegram else "desktop-speech"
+        )
+        chat_request = canonical_chat_request(chat_request, source=request_source)
+        chat_request["text"] = str(chat_request.get("text") or text)
+        if not chat_request.get("history_recorded"):
+            append_chat_event(
+                chat_history_path_for_request(chat_request),
+                {
+                    "request_id": chat_request["request_id"],
+                    "role": "user",
+                    "source": chat_request["source"],
+                    "text": chat_request["text"],
+                    "attachments": chat_request.get("attachments", []),
+                    "session_id": chat_request["session_id"],
+                    "session_name": chat_request["session_name"],
+                    "privacy_mode": chat_request.get("privacy_mode", "local"),
+                    "profile": chat_request.get("profile", ""),
+                },
+            )
+            chat_request["history_recorded"] = True
         if getattr(self, 'mode', 'office') == 'chat':
             silent_response = True
             
@@ -1258,6 +1284,52 @@ class TrinityEar:
         lower_text = text.lower()
         # recent_text = die letzten 2-3 Chunks (für präzise Keyword-Erkennung)
         action_text = (recent_text or text).lower()
+
+        if requests_session_close(text):
+            try:
+                from trinity_bridge import TrinityBridge
+
+                result = TrinityBridge(PROJECT_DIR).close_session(
+                    {
+                        "session_id": chat_request["session_id"],
+                        "mode": getattr(self, "mode", "chat"),
+                        "source": chat_request["source"],
+                    }
+                )
+                replacement = result["session"]
+                message = (
+                    "Die Session ist geschlossen. Die Summary wird erstellt; "
+                    f"auf allen Geräten ist jetzt „{replacement['title']}“ aktiv."
+                )
+                append_chat_event(
+                    chat_history_path_for_request(chat_request),
+                    {
+                        "request_id": f"session-close-{chat_request['request_id']}",
+                        "role": "assistant",
+                        "source": "session-control",
+                        "text": message,
+                        "session_id": replacement["id"],
+                        "session_name": replacement["title"],
+                        "profile": result["active_session"].get("profile", ""),
+                    },
+                )
+                if self.telegram_cfg.get("enabled", False):
+                    try:
+                        import requests
+                        requests.post(
+                            f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage",
+                            json={"chat_id": self.telegram_cfg["chat_id"], "text": message},
+                            timeout=5,
+                        )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        print(f"⚠️ Sessionwechsel konnte nicht an Telegram gemeldet werden: {exc}")
+                if not silent_response:
+                    self._speak_quick(message)
+            except Exception as exc:  # pylint: disable=broad-except
+                message = f"Die Session konnte nicht abgeschlossen werden: {exc}"
+                if not silent_response:
+                    self._speak_quick(message)
+            return
         
         # UI-Befehle direkt abfangen (ohne LLM)
         # Modus-Wechsel
@@ -1393,8 +1465,8 @@ class TrinityEar:
                 t_stamp = time.strftime("%H:%M:%S")
                 f.write(f"[{t_stamp}] [{self.agent_name}]: {antwort}\n")
                 
-            # 📱 Telegram Feedback: Antwort zurückschicken, falls von dort angetriggert
-            if from_telegram and self.telegram_cfg.get("enabled", False):
+            # Telegram is another window onto the same canonical answer stream.
+            if self.telegram_cfg.get("enabled", False):
                 try:
                     import requests
                     tg_url = f"https://api.telegram.org/bot{self.telegram_cfg['bot_token']}/sendMessage"
@@ -1431,6 +1503,7 @@ class TrinityEar:
                     "payload_html": history_payload,
                     "session_id": (chat_request or {}).get("session_id", ""),
                     "session_name": (chat_request or {}).get("session_name", ""),
+                    "profile": (chat_request or {}).get("profile", ""),
                 },
             )
             try:
@@ -1443,14 +1516,9 @@ class TrinityEar:
                 source = "telegram" if from_telegram else (
                     (chat_request or {}).get("source") or "eyes"
                 )
-                session_titles = {
-                    "classic": "Classic UI",
-                    "telegram": "Telegram",
-                    "eyes": "Eyes UI",
-                }
                 session_id = memory_store.ensure_session(
-                    source,
-                    session_titles.get(source, "Trinity Runtime"),
+                    (chat_request or {}).get("session_id") or "trinity-current",
+                    (chat_request or {}).get("session_name") or "Gemeinsame Trinity-Sitzung",
                 )
                 user_text = (chat_request or {}).get("text") or text
                 request_id = (chat_request or {}).get("request_id")

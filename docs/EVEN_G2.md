@@ -35,7 +35,9 @@ eine kompakte Ergebniskarte.
 
 - **Zuruf:** Gesprochenes wird transkribiert und durch Trinitys normalen Wakeword-Pfad verarbeitet.
 - **Konversation:** Jede abgeschlossene Aeusserung wird wie eine Chatnachricht an Trinity geschickt.
-- Einfacher Druck am Brillenbuegel wechselt den Modus. Wischen wechselt zwischen den beiden Serverprofilen.
+- Einfacher Druck am Brillenbuegel wechselt den Modus. Wischen wechselt zwischen
+  den drei getrennten Serverprofilen Privat, Beruf und Test. Die Bridge prüft
+  das erwartete Profil gegen die Trinity-Instanz.
 
 Sprachbefehle:
 
@@ -97,7 +99,12 @@ Fuer einen dauerhafteren Test `npm run pack` ausfuehren und `TrinityEvenG2.ehpk`
 
 ## Privat und geschaeftlich
 
-Ein Plugin mit zwei lokalen Profilen ist der einfachste Weg. URLs und Tokens bleiben getrennt, ebenso die zuletzt verwendeten Sessions. Fuer eine harte organisatorische Trennung koennen spaeter zwei Pakete mit unterschiedlichen `package_id`-Werten und jeweils nur einer freigegebenen Origin gebaut werden.
+Ein Plugin mit drei lokalen Profilen ist der einfachste Weg. URLs, Tokens und
+lokale Caches bleiben getrennt. Innerhalb eines Profils übernimmt G2 immer die
+serverseitig aktive gemeinsame Sitzung; es führt keine eigene G2-Sitzung neben
+Desktop, Telegram oder Companion. Fuer eine harte organisatorische Trennung
+koennen spaeter getrennte Pakete mit unterschiedlichen `package_id`-Werten und
+jeweils nur einer freigegebenen Origin gebaut werden.
 
 ## Datenschutz und Grenzen
 

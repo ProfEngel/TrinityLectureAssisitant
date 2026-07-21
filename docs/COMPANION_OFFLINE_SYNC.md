@@ -1,97 +1,84 @@
-# Companion Offline Sync und Foundation-Fallback
+# Companion Offline-Puffer und gemeinsame Sitzung
 
-Ab v0.16.32 kann die Companion-App nicht nur offline puffern, sondern im
-Talk-Modus auch lokal auf das Trinity-Wakeword reagieren. Erkannte Sprache wird
-sofort in der aktiven Session sichtbar, lokale Apple-Foundation-Antworten werden
-wie normale Trinity-Antworten angezeigt und koennen ueber iPhone/iPad-TTS
-vorgelesen werden.
+Die Companion-App ist ein weiteres Fenster auf die eine aktive Sitzung der
+gewählten Trinity-Instanz. Erkannte Sprache und getippte Nachrichten können
+offline gepuffert werden. Eine verbindliche Antwort erzeugt ausschließlich die
+Server-Trinity und verteilt sie danach identisch an alle Kanäle.
 
 ## Betriebsmodi
 
 | Modus | Verhalten |
 |---|---|
-| **Auto** | Trinity Server hat Prioritaet. Wenn die Bridge nicht erreichbar ist, cached die App lokal und kann einfache Textantworten ueber Apple Foundation Models erzeugen. |
-| **Foundation** | Textantworten werden bevorzugt lokal auf iPhone/iPad erzeugt. Die Events werden lokal gespeichert und spaeter mit Trinity synchronisiert. |
+| **Server-Sync** | Trinity beantwortet die Anfrage genau einmal; alle verbundenen Oberflächen sehen dasselbe Ereignis. |
+| **Offline-Puffer** | Text und finale STT-Eingaben werden lokal gespeichert und nach dem Reconnect an die gemeinsame Server-Sitzung übergeben. |
 
-In beiden Modi bleiben Sessions, Arbeitsraeume, Notizen und Chat-Events auf dem
-Geraet verfuegbar. Der aktuell aktive Modus wird oben in der Companion-App
-angezeigt.
+Arbeitsräume, ältere Sitzungen, Notizen und bereits geladene Chat-Ereignisse
+bleiben auf dem Gerät lesbar. Pro Verbindungsprofil gibt es einen getrennten
+lokalen Cache; BIZ, PRIVAT und TEST werden nicht vermischt.
 
 ## Offline-Talk
 
 Wenn die Bridge nicht erreichbar ist, behandelt die Companion-App finale
-STT-Chunks so:
+STT-Eingaben so:
 
-1. Ohne Wakeword wird der Text als `transcript` lokal in der aktiven Session
-   gespeichert.
-2. Mit Wakeword, z.B. `Trinity, erklaere ...`, wird der Text als User-Event
-   gespeichert.
-3. Falls Apple Foundation Models verfuegbar sind, erzeugt die App direkt eine
-   lokale Assistant-Antwort.
-4. Wenn Hören/TTS aktiv ist, wird diese Antwort lokal vorgelesen.
-5. Beim Reconnect werden Transcript-, User- und Assistant-Events zur
-   Trinity-Bridge synchronisiert.
-
-Die App cached dafuer die letzten vom Server geladenen `Soul.md`-/`User.md`-
-Prompts sowie die Persona-Wakeword-Varianten. Dadurch klingt der Offline-Modus
-nicht wie ein beliebiger lokaler Helfer, sondern bleibt moeglichst nah an der
-konfigurierten Trinity.
+1. Ohne Wakeword wird der Text als `transcript` lokal gespeichert.
+2. Mit Wakeword, zum Beispiel `Trinity, erkläre ...`, wird der Text als
+   User-Ereignis gepuffert.
+3. Es wird keine lokale Parallelantwort erzeugt.
+4. Beim Reconnect werden Transcript- und User-Ereignisse dedupliziert an die
+   Trinity-Bridge übertragen.
+5. Die Server-Trinity beantwortet den Auftrag einmal; diese Antwort erscheint
+   danach auf Desktop, Telegram, G2, iPhone, iPad und Web.
 
 ## Synchronisationsmodell
 
 ```mermaid
 sequenceDiagram
     participant C as Companion iPhone/iPad
-    participant L as Lokaler Cache
-    participant F as Apple Foundation
+    participant L as Profilgebundener lokaler Puffer
     participant B as Trinity Bridge
-    participant T as Trinity Session Store
+    participant T as Gemeinsame aktive Sitzung
+    participant O as Alle verbundenen Oberflächen
 
-    C->>B: Anfrage im Auto-Modus
+    C->>B: Anfrage im Server-Sync
     alt Bridge erreichbar
-        B->>T: Event in aktiver Session
-        T-->>C: Antwort/Event-Poll
+        B->>T: User-Ereignis genau einmal einreihen
+        T-->>O: Eine kanonische Antwort verteilen
     else Bridge nicht erreichbar
-        C->>L: User-Event puffern
-        C->>F: einfache Textantwort lokal
-        F-->>C: lokale Antwort
-        C->>L: Assistant-Event puffern
+        C->>L: Eingabe bis zum Reconnect puffern
     end
     C->>B: Reconnect /offline/events
-    B->>T: Offline-Events dedupliziert importieren
+    B->>T: Offline-Ereignisse dedupliziert importieren
+    T-->>O: Eine kanonische Antwort verteilen
 ```
 
 ## Was gecacht wird
 
-- letzte bekannte Arbeitsraeume,
-- Sessions und aktive Session,
-- lokale Chat-Events pro Session,
-- nicht synchronisierte User-/Assistant-Events,
-- offline mitgeschriebene Transcript-Events,
-- zuletzt geladene Soul-/Userprompt- und Wakeword-Konfiguration,
-- finale STT- und Chat-Outbox-Eintraege.
+- letzte bekannte Arbeitsräume und Sitzungen,
+- die zuletzt bekannte gemeinsame aktive Sitzung,
+- lokale Chat-Ereignisse pro Sitzung,
+- nicht synchronisierte User- und Transcript-Ereignisse,
+- finale STT- und Chat-Outbox-Einträge.
 
 ## Was beim Reconnect passiert
 
-Die Companion-App sendet lokale Offline-Events an:
+Die Companion-App sendet lokale Offline-Ereignisse an:
 
 ```text
 POST /offline/events
 ```
 
-Trinity importiert diese Events idempotent. Bereits bekannte lokale Event-IDs
-werden uebersprungen, damit beim Wiederverbinden nichts doppelt erscheint.
+Trinity importiert diese Ereignisse idempotent. Bereits bekannte lokale
+Ereignis-IDs werden übersprungen. Anschließend ordnet die Bridge neue Eingaben
+der aktuell aktiven serverseitigen Sitzung zu.
 
-## Grenzen des lokalen Foundation-Modus
+## Grenzen des Offline-Puffers
 
-Apple Foundation Models sind als schlanker, privater Textfallback gedacht. Ohne
-Trinity-Server sind nicht verfuegbar:
+Ohne Trinity-Server sind weder die verbindliche Antwort noch folgende
+Funktionen verfügbar:
 
 - BrainVault-Agenten, Pi, Codex, OpenCode und andere Harnesses,
 - Websuche, RAG, Memory-Dreaming und serverseitige Indizes,
 - Datei-, PDF-, Bild- und Excel-Auswertung,
-- Medienerzeugung ueber ComfyUI, fal.ai oder Sandbox,
+- Medienerzeugung über ComfyUI, fal.ai oder Sandbox,
 - geplante Jobs und serverseitige Automatismen.
-
-Wenn ein Auftrag diese Funktionen benoetigt, sollte der Modus auf **Auto**
-stehen und die Trinity-Bridge erreichbar sein.
