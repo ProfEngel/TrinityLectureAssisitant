@@ -1,3 +1,4 @@
+import chat_protocol
 from chat_protocol import (
     append_chat_event,
     build_chat_request,
@@ -42,6 +43,19 @@ def test_chat_request_queue_preserves_multiple_requests(tmp_path):
     assert pop_next_chat_request(tmp_path)["text"] == "Erste Nachricht"
     assert pop_next_chat_request(tmp_path)["text"] == "Zweite Nachricht"
     assert pop_next_chat_request(tmp_path) is None
+
+
+def test_chat_request_queue_keeps_fifo_when_clock_values_are_identical(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(chat_protocol.time, "time_ns", lambda: 42)
+    monkeypatch.setattr(chat_protocol, "_last_queue_timestamp", 0)
+
+    enqueue_chat_request(tmp_path, build_chat_request("Erste Nachricht"))
+    enqueue_chat_request(tmp_path, build_chat_request("Zweite Nachricht"))
+
+    assert pop_next_chat_request(tmp_path)["text"] == "Erste Nachricht"
+    assert pop_next_chat_request(tmp_path)["text"] == "Zweite Nachricht"
 
 
 def test_chat_history_uses_json_lines(tmp_path):
