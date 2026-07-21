@@ -75,7 +75,7 @@ Ein von Trinity, Codex, Pi, OpenCode, Claude Code oder Antigravity entwickelter
 externer Fachagent gehoert ab v0.16.0 direkt nach:
 
 ~~~text
-BrainVault/.agents/<bereich>/<agent-id>/
+Lokaler-Agenten-Werkzeugkasten/.agents/<bereich>/<agent-id>/
 ~~~
 
 Mindestens erforderlich:
@@ -113,7 +113,7 @@ Seit v0.15.2 gibt es zwei bewusst getrennte Einstellungsbereiche:
   und die Control Plane bei Trinity selbst liegen. Codex, Pi und OpenCode werden
   nur dort angehakt, wo sie wirklich passende Worker sind.
 
-BrainVault-Agenten, Trinity-interne Skills und vorhandene Legacy-Agenten tauchen
+Externe Werkzeugkasten-Agenten, Trinity-interne Skills und vorhandene Legacy-Agenten tauchen
 automatisch in den Listen auf. Das verhindert Dupletten: Der Katalog verwaltet
 Status und Rechte, die Matrix verwaltet die technische Ausfuehrung.
 
@@ -133,7 +133,7 @@ Trinity, erweitere den Agenten ... um ...
 ~~~
 
 Ein Import kopiert nicht blind Code in die produktive Laufzeit. Stattdessen wird
-unter `BrainVault/.agents/<bereich>/<agent-id>/` ein Draft-Agent erzeugt:
+unter `.agents/<bereich>/<agent-id>/` im lokalen Werkzeugkasten ein Draft-Agent erzeugt:
 
 - `agent.yaml` als Quelle der Wahrheit,
 - `manifest.json` als Kompatibilitaetsdatei fuer bestehende Trinity-Jobs,
@@ -154,7 +154,7 @@ Der Builder-Loop arbeitet jobbasiert. Er markiert die Draft-Erstellung,
 lokale Quality-Gates, optionales Harness-Feedback und die Freigabevorbereitung
 als einzelne Schritte im Trinity-Jobmanager. Wenn Codex, Pi oder OpenCode in den
 Harness-Einstellungen aktiviert sind und fuer die passende Rolle freigegeben
-wurden, kann Trinity sie fuer Feedback oder Nacharbeit am BrainVault-Agentenordner
+wurden, kann Trinity sie fuer Feedback oder Nacharbeit am lokalen Agentenordner
 aufrufen. Der Loop darf dabei nicht automatisch aktivieren; dafuer bleibt
 `activate_skill` als Freigabe notwendig.
 

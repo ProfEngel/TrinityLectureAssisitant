@@ -1,19 +1,47 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "🧞‍♀️ Willkommen beim Trinity Assistant Installer für macOS"
 echo "======================================================"
 echo ""
 
-# 1. Python prüfen
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python3 ist nicht installiert. Bitte installiere Python 3 (z.B. via Homebrew: brew install python3) und versuche es erneut."
+# 1. Unterstütztes Python auswählen. Apples /usr/bin/python3 ist auf vielen
+# Macs noch Python 3.9 und damit außerhalb des unterstützten Bereichs.
+PYTHON_BIN=""
+PYTHON_CANDIDATES=()
+[ -n "${TRINITY_PYTHON:-}" ] && PYTHON_CANDIDATES+=("$TRINITY_PYTHON")
+if command -v brew >/dev/null 2>&1; then
+    BREW_PYTHON_313="$(brew --prefix python@3.13 2>/dev/null || true)/bin/python3.13"
+    [ -x "$BREW_PYTHON_313" ] && PYTHON_CANDIDATES+=("$BREW_PYTHON_313")
+fi
+for candidate_name in python3.13 python3.14 python3.12 python3.11 python3.10 python3; do
+    candidate_path="$(command -v "$candidate_name" 2>/dev/null || true)"
+    [ -n "$candidate_path" ] && PYTHON_CANDIDATES+=("$candidate_path")
+done
+
+for candidate in "${PYTHON_CANDIDATES[@]}"; do
+    if "$candidate" -c 'import ssl, struct, sys, venv; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] < (3, 15) and struct.calcsize("P") * 8 == 64 else 1)' >/dev/null 2>&1; then
+        PYTHON_BIN="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+    echo "❌ Trinity benötigt ein 64-Bit-Python 3.10 bis 3.14 mit SSL und venv."
+    echo "   Empfohlen auf dem Mac: brew install python@3.13"
+    echo "   Alternativ: TRINITY_PYTHON=/pfad/zu/python3.13 install_mac.sh"
     exit 1
 fi
-echo "✅ Python3 ist installiert."
+echo "✅ Verwende $($PYTHON_BIN --version 2>&1) unter $PYTHON_BIN."
 
 # 2. Zielverzeichnis festlegen
 INSTALL_DIR="$HOME/Trinity_Assistant"
-BACKUP_DIR="${INSTALL_DIR}_config_backup_$(date +%Y%m%d_%H%M%S)"
+STAMP="$(date +%Y%m%d_%H%M%S)"
+RECOVERY_ROOT="$HOME/Trinity-Recovery/installer-$STAMP"
+BACKUP_DIR="$RECOVERY_ROOT/Nutzerdaten"
+ROLLBACK_DIR="$RECOVERY_ROOT/Trinity_Assistant-vorher"
+REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
+mkdir -p "$RECOVERY_ROOT"
 
 # 3. Update-Modus: Bestehende Configs sichern
 IS_UPDATE=false
@@ -23,6 +51,13 @@ if [ -d "$INSTALL_DIR" ]; then
     echo "🔄 Bestehende Installation erkannt – starte Update-Modus."
     echo "   Deine Konfigurationen werden gesichert und danach wiederhergestellt."
     echo ""
+
+    if [ -d "$INSTALL_DIR/.git" ] && [ -n "$(git -C "$INSTALL_DIR" status --porcelain)" ]; then
+        echo "❌ Die bestehende Installation enthält lokale Codeänderungen."
+        echo "   Zum Schutz dieser Arbeit wird das Update nicht automatisch fortgesetzt."
+        echo "   Sichere oder committe die Änderungen und starte den Installer danach erneut."
+        exit 2
+    fi
 
     mkdir -p "$BACKUP_DIR"
 
@@ -36,22 +71,30 @@ if [ -d "$INSTALL_DIR" ]; then
     [ -d "$INSTALL_DIR/TrinityRuntime" ]    && cp -r "$INSTALL_DIR/TrinityRuntime" "$BACKUP_DIR/TrinityRuntime" && echo "   💾 TrinityRuntime/ gesichert"
 
     echo ""
-    echo "   📁 Backup gespeichert unter: $BACKUP_DIR"
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        git -C "$INSTALL_DIR" bundle create "$RECOVERY_ROOT/trinity-history.bundle" --all
+        git -C "$INSTALL_DIR" status -sb > "$RECOVERY_ROOT/git-status.txt"
+    fi
 
-    # Alten Ordner entfernen (aber Backup ist bereits sicher)
-    rm -rf "$INSTALL_DIR"
+    echo "   📁 Wiederherstellungskopie gespeichert unter: $RECOVERY_ROOT"
+
+    # Die vorige Installation bleibt vollständig als Rückfallstand erhalten.
+    mv "$INSTALL_DIR" "$ROLLBACK_DIR"
 fi
 
 # 4. Neue Version herunterladen
 echo ""
 echo "📥 Lade aktuelle Trinity-Version herunter..."
 if command -v git &> /dev/null; then
-    git clone https://github.com/ProfEngel/TrinityLectureAssisitant.git "$INSTALL_DIR"
+    if ! git clone --branch main --single-branch "$REPOSITORY" "$INSTALL_DIR"; then
+        [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
+        echo "❌ Download fehlgeschlagen; die vorherige Installation wurde wiederhergestellt."
+        exit 1
+    fi
 else
-    curl -L -o trinity.zip https://github.com/ProfEngel/TrinityLectureAssisitant/archive/refs/heads/main.zip
-    unzip -q trinity.zip
-    mv TrinityLectureAssisitant-main "$INSTALL_DIR"
-    rm trinity.zip
+    [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
+    echo "❌ Git fehlt. Installiere zuerst die Xcode Command Line Tools mit: xcode-select --install"
+    exit 1
 fi
 
 # 5. Gesicherte Configs wiederherstellen (Update-Modus)
@@ -68,20 +111,31 @@ if [ "$IS_UPDATE" = true ]; then
     [ -d "$BACKUP_DIR/TrinityRuntime" ] && mkdir -p "$INSTALL_DIR/TrinityRuntime" && cp -a "$BACKUP_DIR/TrinityRuntime/." "$INSTALL_DIR/TrinityRuntime/" && echo "   ✅ TrinityRuntime/ wiederhergestellt"
 
     echo ""
-    echo "   🗑️  Temporäres Backup wird entfernt..."
-    rm -rf "$BACKUP_DIR"
+    echo "   🛟 Wiederherstellungskopie bleibt erhalten: $RECOVERY_ROOT"
 fi
 
 # 6. Virtuelle Umgebung erstellen & Pakete installieren
 echo ""
 echo "🐍 Erstelle virtuelle Python-Umgebung (Sandbox)..."
 cd "$INSTALL_DIR" || exit
-python3 -m venv venv
+install_dependencies() {
+    "$PYTHON_BIN" -m venv venv &&
+    ./venv/bin/python3 -m pip install --upgrade pip -q &&
+    ./venv/bin/python3 -m pip install --no-compile ".[macos]" -q
+}
 
 echo "📦 Installiere Abhängigkeiten (das kann 2–5 Minuten dauern)..."
 export PYTHONIOENCODING=utf-8
-./venv/bin/python3 -m pip install --upgrade pip -q
-./venv/bin/python3 -m pip install --no-compile ".[macos]" -q
+if ! install_dependencies; then
+    cd "$HOME"
+    FAILED_DIR="$RECOVERY_ROOT/Trinity_Assistant-fehlgeschlagen"
+    mv "$INSTALL_DIR" "$FAILED_DIR"
+    [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
+    echo "❌ Installation der Abhängigkeiten fehlgeschlagen."
+    echo "   Die vorherige Installation wurde wiederhergestellt."
+    echo "   Der fehlgeschlagene Stand liegt unter: $FAILED_DIR"
+    exit 1
+fi
 
 # 6.5 Benutzerweiten CLI-Befehl installieren
 CLI_BIN="$HOME/.local/bin"
@@ -102,100 +156,49 @@ if [ ! -f "$ZPROFILE" ] || ! grep -Fq "$PATH_LINE" "$ZPROFILE"; then
 fi
 export PATH="$CLI_BIN:$PATH"
 
-# 6.6 MainHub / Control Plane idempotent vorbereiten
-echo "🧭 Prüfe MainHub-/Control-Plane-Ordner..."
+# 6.6 Inhalts-Vault und Control Plane idempotent vorbereiten
+run_vault_setup() {
+    if [ ! -r /dev/tty ]; then
+        echo "❌ Die Vault-Ersteinrichtung benötigt ein interaktives Terminal."
+        echo "   Starte danach manuell: trinity vault setup"
+        return 1
+    fi
+    ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" vault setup </dev/tty
+}
+
+if [ "$IS_UPDATE" = true ]; then
+    echo "🗂️  Prüfe den bereits konfigurierten Inhalts-Vault..."
+    if ! ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" vault init; then
+        echo "   Der bestehende Vault war noch nicht eindeutig konfiguriert."
+        echo "   Bitte wähle jetzt den vorhandenen oder einen neuen Vault-Ordner."
+        run_vault_setup
+    fi
+else
+    echo "🗂️  Richte den Inhalts-Vault für diese Neuinstallation ein..."
+    echo "   Du bestimmst selbst, wo der Vault liegen soll."
+    run_vault_setup
+fi
+
+echo "🧭 Prüfe lokale MainHub-/Control-Plane-Ordner..."
 ./venv/bin/python3 trinity_cli.py --home "$INSTALL_DIR" control-plane init >/dev/null 2>&1 || \
     echo "   ⚠️  Control Plane konnte jetzt nicht initialisiert werden. Später möglich mit: trinity control-plane init"
 
-# 7. Desktop-Verknüpfung (Native macOS App) erstellen
-DESKTOP_DIR="$HOME/Desktop"
-APP_PATH="$DESKTOP_DIR/Trinity.app"
-
-echo "📝 Erstelle native macOS App auf dem Desktop..."
-# Alte .command Verknüpfung entfernen, falls vorhanden
-rm -f "$DESKTOP_DIR/Starte_Trinity.command"
-rm -rf "$APP_PATH"
-
-cat << 'EOF' > /tmp/trinity_app.applescript
-set configFile to "INSTALL_DIR/core/config.json"
-set showTerminal to false
-try
-    set configText to do shell script "cat '" & configFile & "'"
-    if configText contains "\"show_terminal\": true" then
-        set showTerminal to true
-    end if
-end try
-
-if showTerminal then
-    tell application "Terminal"
-        do script "cd 'INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py"
-        activate
-    end tell
-else
-    do shell script "cd 'INSTALL_DIR' && ./venv/bin/python3 trinity_launcher.py > /dev/null 2>&1 &"
-end if
-EOF
-sed -i '' "s|INSTALL_DIR|$INSTALL_DIR|g" /tmp/trinity_app.applescript
-osacompile -o "$APP_PATH" /tmp/trinity_app.applescript
-rm /tmp/trinity_app.applescript
-
-echo "🖼️  Baue Trinity-Icon (.icns) und setze es im App-Bundle..."
-ICON_SRC="$INSTALL_DIR/core/icon.png"
-ICON_ICNS_SRC="$INSTALL_DIR/assets/trinity_icon.icns"
-ICONSET_DIR="/tmp/TrinityIcon.iconset"
-ICNS_TARGET="$APP_PATH/Contents/Resources/Trinity.icns"
-
-if [ -f "$ICON_ICNS_SRC" ]; then
-    cp "$ICON_ICNS_SRC" "$ICNS_TARGET"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
-    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
-    echo "   ✅ Trinity-Icon (.icns) gesetzt."
-elif [ -f "$ICON_SRC" ]; then
-    # Alle benötigten Größen erzeugen
-    rm -rf "$ICONSET_DIR" && mkdir -p "$ICONSET_DIR"
-    sips -z 16   16   "$ICON_SRC" --out "$ICONSET_DIR/icon_16x16.png"       &>/dev/null
-    sips -z 32   32   "$ICON_SRC" --out "$ICONSET_DIR/icon_16x16@2x.png"    &>/dev/null
-    sips -z 32   32   "$ICON_SRC" --out "$ICONSET_DIR/icon_32x32.png"       &>/dev/null
-    sips -z 64   64   "$ICON_SRC" --out "$ICONSET_DIR/icon_32x32@2x.png"    &>/dev/null
-    sips -z 128  128  "$ICON_SRC" --out "$ICONSET_DIR/icon_128x128.png"     &>/dev/null
-    sips -z 256  256  "$ICON_SRC" --out "$ICONSET_DIR/icon_128x128@2x.png"  &>/dev/null
-    sips -z 256  256  "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256.png"     &>/dev/null
-    sips -z 512  512  "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256@2x.png"  &>/dev/null
-    sips -z 512  512  "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512.png"     &>/dev/null
-    sips -z 1024 1024 "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512@2x.png" &>/dev/null
-    # .icns bauen und direkt ins Bundle kopieren
-    iconutil -c icns "$ICONSET_DIR" -o /tmp/trinity_icon.icns
-    cp /tmp/trinity_icon.icns "$ICNS_TARGET"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconName Trinity" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    touch "$APP_PATH/Contents/Info.plist" "$APP_PATH"
-    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
-    # Auch im Projekt-Assets ablegen für spätere Verwendung
-    cp /tmp/trinity_icon.icns "$INSTALL_DIR/assets/trinity_icon.icns"
-    rm -rf "$ICONSET_DIR" /tmp/trinity_icon.icns
-    echo "   ✅ Trinity-Icon (.icns) gesetzt."
-else
-    echo "   ⚠️  icon.png nicht gefunden – App-Icon bleibt Standard."
-fi
-
-# Finder-, iCloud- oder anderer Dateianbieter-Metadaten können eine zuvor
-# vorhandene Ad-hoc-Signatur ungültig machen. Erst das fertige Bundle bereinigen
-# und dann lokal neu signieren, damit der Desktop-Launcher direkt öffnet.
-echo "🔐 Prüfe lokale Signatur der Trinity.app..."
-xattr -cr "$APP_PATH" 2>/dev/null || true
-if /usr/bin/codesign --force --deep --sign - "$APP_PATH" 2>/dev/null && \
-   /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>/dev/null; then
-    echo "   ✅ Trinity.app lokal signiert und geprüft."
-else
-    echo "   ⚠️  Trinity.app konnte nicht vollständig signiert werden. Der Launcher kann dennoch funktionieren."
-fi
+# 7. Signierte lokale macOS-App erstellen. Das Hilfsskript hält das eigentliche
+# Bundle unter ~/Applications und legt auf dem Desktop nur einen Verweis ab.
+echo "📝 Erstelle native macOS-App..."
+rm -f "$HOME/Desktop/Starte_Trinity.command"
+TRINITY_APP_BACKUP_DIR="$RECOVERY_ROOT/App" ./scripts/create_app.sh
 
 echo ""
-echo "🎉 ${IS_UPDATE:+Update}${IS_UPDATE:-Installation} erfolgreich abgeschlossen!"
+if [ "$IS_UPDATE" = true ]; then
+    INSTALL_ACTION="Update"
+else
+    INSTALL_ACTION="Installation"
+fi
+echo "🎉 $INSTALL_ACTION erfolgreich abgeschlossen!"
 echo "============================================"
-echo "👉 Eine native App ('Trinity.app') liegt auf deinem Schreibtisch."
+echo "👉 Die native App liegt unter '$HOME/Applications/Trinity.app'."
+echo "👉 Auf deinem Schreibtisch liegt ein Verweis namens 'Trinity.app'."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."

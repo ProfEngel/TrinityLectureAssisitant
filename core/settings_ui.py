@@ -4,6 +4,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -350,10 +351,11 @@ class SettingsWindow(QMainWindow):
             self.config["control_plane"]["runtime_root"] = (
                 self.runtime_root_edit.text().strip()
             )
-            cloud_root = self.external_agents_root_edit.text().strip()
-            self.config["control_plane"]["vault_root"] = cloud_root
-            self.config["control_plane"]["brainvault_root"] = cloud_root
-            self.config["control_plane"]["external_agents_root"] = cloud_root
+            content_vault = self.vault_root_edit.text().strip()
+            agents_root = self.external_agents_root_edit.text().strip()
+            self.config["control_plane"]["vault_root"] = content_vault
+            self.config["control_plane"]["brainvault_root"] = agents_root
+            self.config["control_plane"]["external_agents_root"] = agents_root
             self.config["control_plane"]["default_brainvault_harness"] = (
                 self.brainvault_harness_combo.currentText()
             )
@@ -739,9 +741,9 @@ class SettingsWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         description = QLabel(
-            "Trinity trennt lokale Trinity-Agenten von externen Agenten im "
-            "Cloud-Agentenpool. Der Cloud-Agentenpool wird laufend aus dem "
-            "konfigurierten BrainVault/.agents gelesen."
+            "Trinity trennt interne Trinity-Agenten von externen Agenten im "
+            "lokalen Werkzeugkasten. Der Werkzeugkasten wird aus der lokal "
+            "konfigurierten Ablage .agents gelesen."
         )
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -760,7 +762,7 @@ class SettingsWindow(QMainWindow):
         local_layout.addWidget(self.local_agent_table)
         layout.addWidget(local_group)
 
-        cloud_group = QGroupBox("Cloud-Agentenpool")
+        cloud_group = QGroupBox("Lokaler Agenten-Werkzeugkasten")
         cloud_layout = QVBoxLayout(cloud_group)
         cloud_layout.addWidget(self.cloud_agent_table)
         layout.addWidget(cloud_group, 1)
@@ -792,7 +794,7 @@ class SettingsWindow(QMainWindow):
             if record.tier == "brainvault"
         ]
         self.agent_ecosystem_summary.setText(
-            "Agenten gesamt: {total} | lokal: {local} | Cloud-Agentenpool: {cloud}".format(
+            "Agenten gesamt: {total} | Trinity-intern: {local} | Werkzeugkasten: {cloud}".format(
                 total=len(records),
                 local=len(local_records),
                 cloud=len(cloud_records),
@@ -1559,24 +1561,24 @@ class SettingsWindow(QMainWindow):
             if hasattr(self, "brainvault_status_label"):
                 summary = catalog.get("summary", {})
                 self.brainvault_status_label.setText(
-                    f"BrainVault gelesen: {root} | Agenten: {summary.get('total', 0)}"
+                    f"Lokaler Werkzeugkasten gelesen: {root} | Agenten: {summary.get('total', 0)}"
                 )
             QMessageBox.information(
                 self,
-                "BrainVault aktualisiert",
+                "Agenten-Werkzeugkasten aktualisiert",
                 f"Agentenkatalog neu erzeugt:\n{catalog.get('path')}\n\n"
-                "Neue BrainVault-Agenten wurden dem Standard-Harness zugewiesen, "
+                "Neue externe Agenten wurden dem Standard-Harness zugewiesen, "
                 "falls noch keine manuelle Zuordnung vorhanden war.",
             )
         except Exception as exc:
             QMessageBox.warning(
                 self,
-                "BrainVault konnte nicht aktualisiert werden",
+                "Agenten-Werkzeugkasten konnte nicht aktualisiert werden",
                 str(exc),
             )
 
     def _sync_cloud_agent_pool_projects(self):
-        """Expose the configured Cloud-Agentenpool as BrainVault project to each harness."""
+        """Expose only the local .agents directory to active harnesses."""
         root = ""
         if hasattr(self, "external_agents_root_edit"):
             root = self.external_agents_root_edit.text().strip()
@@ -1589,14 +1591,16 @@ class SettingsWindow(QMainWindow):
             return
 
         root = os.path.abspath(os.path.expanduser(root))
+        agents_dir = root if os.path.basename(root) == ".agents" else os.path.join(root, ".agents")
+        if not os.path.isdir(agents_dir):
+            return
         for harness_id in ("codex", "pi", "goose", "opencode"):
             if not self._is_harness_active(harness_id):
                 continue
             harness_conf = self.config.setdefault(harness_id, {})
             projects = harness_conf.setdefault("projects", {})
             if isinstance(projects, dict):
-                projects.setdefault("BrainVault", root)
-            harness_conf["default_project"] = "BrainVault"
+                projects.setdefault("Agenten", agents_dir)
 
     @staticmethod
     def _projects_to_text(projects):
@@ -2008,7 +2012,7 @@ class SettingsWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        group = QGroupBox("Trinity: Runtime und Cloud-Agentenpool")
+        group = QGroupBox("Trinity: lokale Laufzeit, Inhalte und Agenten")
         form = QFormLayout()
         self._tidy_form(form)
         control_conf = self.config.get("control_plane", {})
@@ -2025,23 +2029,30 @@ class SettingsWindow(QMainWindow):
         )
         form.addRow("Lokale Runtime:", self.runtime_root_edit)
 
+        content_vault_default = control_conf.get("vault_root") or str(
+            default_vault_root()
+        )
+        self.vault_root_edit = QLineEdit(content_vault_default)
+        self.vault_root_edit.setPlaceholderText(
+            "/Cloud/Pfad/BrainVault"
+        )
+        form.addRow("Cloud-Vault für Inhalte:", self.vault_root_edit)
+
         try:
-            cloud_default = str(
+            agents_default = str(
                 brainvault_root_from_config(os.path.dirname(CORE_DIR), self.config)
             )
         except Exception:
-            cloud_default = (
+            agents_default = (
                 control_conf.get("external_agents_root")
                 or control_conf.get("brainvault_root")
-                or control_conf.get("vault_root")
-                or str(default_vault_root())
+                or str(Path.home())
             )
-        self.external_agents_root_edit = QLineEdit(cloud_default)
+        self.external_agents_root_edit = QLineEdit(agents_default)
         self.external_agents_root_edit.setPlaceholderText(
-            "/Cloud/Pfad/BrainVault"
+            "/lokale/Wurzel/mit/.agents"
         )
-        form.addRow("Cloud-Agentenpool:", self.external_agents_root_edit)
-        self.vault_root_edit = self.external_agents_root_edit
+        form.addRow("Lokal installierte Agenten:", self.external_agents_root_edit)
         self.brainvault_root_edit = self.external_agents_root_edit
 
         self.brainvault_harness_combo = QComboBox()
@@ -2056,7 +2067,7 @@ class SettingsWindow(QMainWindow):
         refresh_row = QWidget()
         refresh_layout = QHBoxLayout(refresh_row)
         refresh_layout.setContentsMargins(0, 0, 0, 0)
-        refresh_btn = QPushButton("Cloud-Agentenpool aktualisieren")
+        refresh_btn = QPushButton("Agenten-Werkzeugkasten aktualisieren")
         refresh_btn.clicked.connect(self._refresh_brainvault_agents)
         refresh_layout.addWidget(refresh_btn)
         self.brainvault_status_label = QLabel("")
@@ -2067,9 +2078,9 @@ class SettingsWindow(QMainWindow):
 
         hint = QLabel(
             "Die Runtime bleibt lokal und enthaelt Jobs, Queue, Cache, Temp und Secrets.\n\n"
-            "Der Cloud-Agentenpool ist der gemeinsame Ordner fuer externe Agenten. "
-            "Dort muessen `.agents` und `AGENTS.md` liegen. Trinity stellt diesen "
-            "Ordner Codex, Pi und OpenCode automatisch als Projekt `BrainVault` bereit."
+            "Der lokale Agenten-Werkzeugkasten enthaelt ausfuehrbare externe Agenten. "
+            "Dort muessen `.agents` und `AGENTS.md` liegen. Der Cloud-Vault ist "
+            "davon getrennt und enthaelt Projekte, Dokumente und Wissen."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #d29922; font-size: 11px;")

@@ -57,6 +57,7 @@ def test_run_opencode_uses_run_model_agent_and_project_cwd(monkeypatch, tmp_path
         return subprocess.CompletedProcess(command, 0, stdout="Aufgabe erledigt.", stderr="")
 
     monkeypatch.setattr(agent.subprocess, "run", fake_run)
+    monkeypatch.setattr(agent, "_needs_posix_shell", lambda _executable: True)
 
     answer = agent._run_opencode(
         executable="/usr/local/bin/opencode",

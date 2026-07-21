@@ -52,6 +52,10 @@ trinity doctor
 trinity start
 ~~~
 
+Der Installer fragt bereits nach dem Profil und dem Speicherort des
+Inhalts-Vaults. Das anschließende Onboarding erkennt diesen Vault und fragt ihn
+nicht erneut ab.
+
 ### Windows 11
 
 In PowerShell:
@@ -63,6 +67,9 @@ trinity onboarding
 trinity doctor
 trinity start
 ~~~
+
+Auch unter Windows wird der Vault bei der Erstinstallation gewählt. Ein Update
+verwendet den in der vorhandenen Konfiguration gespeicherten Pfad.
 
 Die Ausfuehrungsrichtlinie gilt damit nur fuer das geoeffnete PowerShell-Fenster.
 Weitere Hinweise stehen in [Deployment Windows 11](Deployment_Windows11.md).
@@ -94,32 +101,62 @@ Standardanschluss typischerweise http://localhost:1234/v1/chat/completions.
 Erst wenn trinity doctor den LLM-Zugang bestaetigt, sollte STT, Medien oder
 Proaktivitaet aktiviert werden.
 
-## 3. Lokale Runtime und BrainVault-Agentenpool
+## 3. Lokale Runtime, Cloud-Vault und Agenten-Werkzeugkasten
 
-Beim ersten `trinity onboarding` fragt Trinity nach zwei Speicherorten:
+Bei der Erstinstallation beziehungsweise beim ersten `trinity onboarding`
+werden drei klar getrennte Speicherorte festgelegt:
 
 | Ort | Aufgabe | Darf in die Cloud? |
 |---|---|---|
 | **Lokale Runtime** | laufende Jobs, Queues, aktive Workspaces, SQLite-Datenbanken, Cache, temporaere Dateien, Logs, Locks und Secrets | Nein |
-| **BrainVault / Cloud-Agentenpool** | freigegebene externe Agenten, Kataloge, Harness-Regeln, Vorlagen, Wissensbestaende und Ergebnisse | Ja |
+| **Cloud-Vault fuer Inhalte** | Projekte, Dokumente, Wissensbestaende, Vorlagen und dauerhafte Ergebnisse | Ja |
+| **Lokaler Agenten-Werkzeugkasten** | ausfuehrbare externe Agenten, Kataloge und Harness-Regeln | Nein; ueber Git sichern |
 
 Der Grund ist schlicht: Synchronisierte Cloud-Ordner koennen Dateien sperren,
 umbenennen, verzögert schreiben oder auf einem anderen Gerät gleichzeitig
 anfassen. Fuer laufende Jobs und SQLite-Datenbanken ist das eine schlechte Idee.
-Der BrainVault darf dagegen bewusst in iCloud, OneDrive, Google Drive, Dropbox
-oder einem anderen Sync-Ordner liegen. Massgeblich ist heute der BrainVault-Root,
-also der Ordner, der `.agents`, `AGENTS.md` und optional `CLAUDE.md` enthaelt.
-Automatisch generierte Katalogdaten liegen unter `.agents/_meta`, nicht als
-zusaetzliche Top-Level-Ordner. Alte `MainHub/TrinityVault`-Strukturen sind nicht
-mehr der Normalpfad und koennen archiviert werden, sobald die Einstellungen auf
-den BrainVault-Root zeigen.
+Der Cloud-Vault darf dagegen bewusst in iCloud oder OneDrive liegen. Er ist die
+einzige Datenwahrheit fuer dauerhafte Inhalte. Ausfuehrbarer Agentencode liegt
+lokal unter `.agents`; automatisch generierte Katalogdaten liegen unter
+`.agents/_meta`. Der Werkzeugkasten wird separat ueber ein privates GitHub-Repo
+gesichert. Alte `MainHub/TrinityVault`-Strukturen sind nur noch Migrationsquelle.
+
+### Neuer oder bereits vorhandener Vault
+
+Trinity verlangt eine bewusste Wahl des Vault-Speicherorts. Danach gilt:
+
+- Existiert der Ordner noch nicht, legt Trinity die zum Profil passende
+  Phase-1-Struktur an: beruflich nach Hochschulaufgaben, privat nach Projekten.
+- Existiert ein leerer Ordner, ergänzt Trinity die Struktur dort.
+- Enthält der Ordner bereits Daten, zeigt Trinity den gefundenen Bestand an und
+  bittet um Bestätigung.
+- Bei einer bestätigten Übernahme bleiben alle vorhandenen Dateien und Ordner
+  unverändert. Trinity verschiebt nichts automatisch.
+- Fremde bestehende Haupteinträge werden im jeweiligen 90er-Ordner unter
+  `BESTAND_BEI_EINRICHTUNG.md` protokolliert und können später kontrolliert
+  zugeordnet werden.
+- Eine wiederholte Einrichtung ergänzt nur Fehlendes und überschreibt weder
+  Inhalte noch eine vorhandene `README.md`.
+
+Nützliche Prüfkommandos:
+
+~~~bash
+trinity vault status
+trinity vault init
+trinity vault setup
+~~~
+
+`vault init` ist für bekannte Installationen und Updates gedacht. Es verwendet
+den gespeicherten Pfad ohne erneute Rückfrage. `vault setup` dient der bewussten
+Auswahl oder Änderung des Speicherorts.
 
 Generisches Beispiel:
 
 ~~~bash
 trinity control-plane init \
   --runtime-root "/lokaler/pfad/zu/TrinityRuntime" \
-  --vault-root "/cloud/pfad/zu/BrainVault"
+  --vault-root "/cloud/pfad/zu/BrainVault" \
+  --agents-root "/lokaler/pfad/mit/.agents"
 ~~~
 
 Status und Agentenpool pruefen:
@@ -130,15 +167,15 @@ agentctl list
 ~~~
 
 Eine gesunde Ausgabe zeigt `warnings: []`, den lokalen Runtime-Pfad und den
-BrainVault-Pfad. `agentctl list` sollte die externen Agenten aus
-`BrainVault/.agents` anzeigen. Wenn eine Warnung sagt, dass die Runtime in
+Inhalts-Vault. `agentctl list` sollte die externen Agenten aus der lokalen
+`.agents`-Ablage anzeigen. Wenn eine Warnung sagt, dass die Runtime in
 iCloud/OneDrive/Google Drive liegt, sollte der Runtime-Pfad auf einen lokalen
 Ordner umgestellt werden.
 
 Rueckrollen ist einfach: Die bestehende Trinity-Version bleibt als GitHub-Release
 erreichbar. Lokal kann die Control Plane deaktiviert werden, indem
 `control_plane.enabled` in den Einstellungen ausgeschaltet oder die Installation
-auf einen aelteren Release-Tag zurueckgesetzt wird. Der BrainVault enthaelt
+auf einen aelteren Release-Tag zurueckgesetzt wird. Der Cloud-Vault enthaelt
 keine aktiven Runtime-Datenbanken und kann daher liegen bleiben, bis man ihn
 wirklich nicht mehr braucht.
 
@@ -254,22 +291,21 @@ Rechners. Trinity uebergibt nur explizit genannte Auftraege an zuvor freigegeben
 Projektordner. Jede Ausfuehrung bleibt zusaetzlich an die Regeln, Skills und
 Rechte des jeweiligen Projekts gebunden.
 
-Seit v0.16.3 ist das Standardmodell deutlich einfacher: Unter
-Einstellungen -> MainHub / Control Plane stehen nur die lokale Runtime, der
-Cloud-Agentenpool und der Standard-Extern-Harness. Der Cloud-Agentenpool zeigt auf den
-uebergeordneten BrainVault-Ordner, in dem `.agents` und `AGENTS.md` liegen.
-Trinity stellt diesen Ordner Codex, Pi und OpenCode automatisch als Projekt
-`BrainVault` bereit.
+Unter Einstellungen -> Trinity-Ablagen stehen die lokale Runtime, der
+Cloud-Vault fuer Inhalte, der lokale Agenten-Werkzeugkasten und der
+Standard-Extern-Harness. Der Werkzeugkasten zeigt auf einen lokalen Ordner, in
+dem `.agents` und `AGENTS.md` liegen. Trinity kann dessen `.agents`-Ordner
+Codex, Pi und OpenCode als Projekt `Agenten` bereitstellen.
 
 Codex, Pi und OpenCode liegen unter Einstellungen -> Harnesses. Dort wird
 aktiviert, welche Programme erreichbar sind und welche Rollen sie uebernehmen:
 Agentenbuilder, harte komplexe Faelle oder Ausfuehrung der Agenten. Der
-Standard-Extern-Harness aus der Control Plane entscheidet, wer laufende Cloud-Agentenarbeit
+Standard-Extern-Harness aus der Control Plane entscheidet, wer laufende externe Agentenarbeit
 zuerst bekommt; initial ist das `pi`. Codex bleibt der Builder-Harness fuer neue
 Agenten, Imports, Refactorings, Tests und Quality-Gates.
 
 Unter Einstellungen -> Agenten steht der Agentenkatalog in zwei Tabellen:
-lokale Trinity-Agenten und externe Cloud-Agenten aus BrainVault. Sichtbar
+Trinity-interne Agenten und externe Agenten aus dem Werkzeugkasten. Sichtbar
 bleiben Name, Status, Reifegrad, Harness und ein kurzer Hinweis. Rechte,
 Skripte, Ursprungspfade und Detailregeln stehen in der jeweiligen `agent.yaml`,
 damit die UI nicht ueberlaedt.
@@ -304,9 +340,9 @@ Ein sicherer Startauftrag ist:
 > PDF-Folien auf fehlende Quellen prueft und nur einen Bericht schreibt.
 
 Trinity legt dabei keinen produktiven Agenten heimlich frei. Externe
-Fachagenten werden direkt als BrainVault-Draft unter
-`BrainVault/.agents/<bereich>/<agent-id>/` angelegt und sofort im
-BrainVault-Katalog sichtbar. Erst wenn Tests und Freigabe stimmen, wird
+Fachagenten werden direkt als lokaler Entwurf unter
+`.agents/<bereich>/<agent-id>/` angelegt und sofort im
+Agentenkatalog sichtbar. Erst wenn Tests und Freigabe stimmen, wird
 `agent.yaml` auf `status: active` und `enabled: true` gesetzt.
 
 Typische Auftraege sind:

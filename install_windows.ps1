@@ -22,7 +22,7 @@ function Get-PythonCandidates {
 
     $pyLauncher = Get-Command "py.exe" -ErrorAction SilentlyContinue
     if ($pyLauncher) {
-        foreach ($version in @("-3.11", "-3.12", "-3.10", "-3.9")) {
+        foreach ($version in @("-3.13", "-3.14", "-3.12", "-3.11", "-3.10")) {
             $key = "$($pyLauncher.Source)|$version"
             if ($seen.Add($key)) {
                 $candidates.Add(@{
@@ -83,7 +83,7 @@ import struct
 import sys
 import venv
 
-if sys.version_info[:2] < (3, 9) or sys.version_info[:2] >= (3, 13):
+if sys.version_info[:2] < (3, 10) or sys.version_info[:2] >= (3, 15):
     raise RuntimeError(f'Python {sys.version.split()[0]} wird nicht unterstuetzt')
 if struct.calcsize('P') * 8 != 64:
     raise RuntimeError('Trinity benoetigt 64-Bit-Python')
@@ -135,12 +135,12 @@ function Find-CompatiblePython {
 function Install-CompatiblePython {
     $winget = Get-Command "winget.exe" -ErrorAction SilentlyContinue
     if (-not $winget) {
-        throw "Kein kompatibles Python mit SSL gefunden. Bitte Python 3.11 (64 Bit) von https://www.python.org/downloads/windows/ installieren und den Installer erneut starten."
+        throw "Kein kompatibles Python mit SSL gefunden. Bitte Python 3.13 (64 Bit) von https://www.python.org/downloads/windows/ installieren und den Installer erneut starten."
     }
 
-    Write-Host "Installiere beziehungsweise repariere Python 3.11 mit Windows Package Manager ..."
+    Write-Host "Installiere beziehungsweise repariere Python 3.13 mit Windows Package Manager ..."
     & $winget.Source install `
-        --id Python.Python.3.11 `
+        --id Python.Python.3.13 `
         --exact `
         --source winget `
         --scope user `
@@ -151,7 +151,7 @@ function Install-CompatiblePython {
         --accept-source-agreements
 
     if ($LASTEXITCODE -ne 0) {
-        throw "Python 3.11 konnte nicht automatisch installiert werden. Bitte Python 3.11 (64 Bit) von https://www.python.org/downloads/windows/ installieren."
+        throw "Python 3.13 konnte nicht automatisch installiert werden. Bitte Python 3.13 (64 Bit) von https://www.python.org/downloads/windows/ installieren."
     }
 }
 
@@ -168,7 +168,7 @@ function Get-PythonCommand {
     Install-CompatiblePython
     $pythonCommand = Find-CompatiblePython
     if (-not $pythonCommand) {
-        throw "Python 3.11 wurde installiert, konnte aber noch nicht verwendet werden. Bitte PowerShell neu öffnen und den Installer erneut starten."
+        throw "Python 3.13 wurde installiert, konnte aber noch nicht verwendet werden. Bitte PowerShell neu öffnen und den Installer erneut starten."
     }
 
     return $pythonCommand
@@ -385,7 +385,28 @@ if ($cliBin -notin ($env:Path -split ";")) {
     $env:Path = "$env:Path;$cliBin"
 }
 
-Write-Host "Initialisiere MainHub / Control Plane ..."
+if ($isUpdate) {
+    Write-Host "Pruefe den bereits konfigurierten Inhalts-Vault ..."
+    & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault init
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Der bestehende Vault war noch nicht eindeutig konfiguriert."
+        Write-Host "Bitte waehle jetzt den vorhandenen oder einen neuen Vault-Ordner."
+        & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault setup
+        if ($LASTEXITCODE -ne 0) {
+            throw "Der Inhalts-Vault konnte nicht eingerichtet werden."
+        }
+    }
+}
+else {
+    Write-Host "Richte den Inhalts-Vault fuer diese Neuinstallation ein ..."
+    Write-Host "Du bestimmst selbst, wo der Vault liegen soll."
+    & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir vault setup
+    if ($LASTEXITCODE -ne 0) {
+        throw "Der Inhalts-Vault konnte nicht eingerichtet werden."
+    }
+}
+
+Write-Host "Initialisiere lokale MainHub-/Control-Plane-Daten ..."
 Push-Location $InstallDir
 try {
     & $venvPython "$InstallDir\trinity_cli.py" --home $InstallDir control-plane init | Out-Null

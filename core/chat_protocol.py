@@ -2,9 +2,14 @@
 
 import json
 import os
+import threading
 import time
 import uuid
 from pathlib import Path
+
+
+_QUEUE_CLOCK_LOCK = threading.Lock()
+_last_queue_timestamp = 0
 
 
 def build_chat_request(text, attachments=None, history_recorded=False):
@@ -31,12 +36,21 @@ def enqueue_chat_request(core_dir, request):
     queue_dir = command_queue_dir(core_dir)
     queue_dir.mkdir(parents=True, exist_ok=True)
     request.setdefault("request_id", uuid.uuid4().hex)
-    filename = f"{time.time_ns()}-{request['request_id']}.json"
+    filename = f"{_next_queue_timestamp()}-{request['request_id']}.json"
     destination = queue_dir / filename
     temporary = queue_dir / f"{filename}.tmp"
     temporary.write_text(encode_chat_request(request), encoding="utf-8")
     os.replace(temporary, destination)
     return destination
+
+
+def _next_queue_timestamp():
+    """Return a process-local strictly increasing timestamp for FIFO names."""
+
+    global _last_queue_timestamp
+    with _QUEUE_CLOCK_LOCK:
+        _last_queue_timestamp = max(time.time_ns(), _last_queue_timestamp + 1)
+        return _last_queue_timestamp
 
 
 def pop_next_chat_request(core_dir):

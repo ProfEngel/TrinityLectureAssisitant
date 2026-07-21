@@ -1,10 +1,14 @@
 #!/bin/bash
+set -euo pipefail
 
 # Pfade definieren
 PROJECT_DIR="$(pwd)"
 APP_NAME="Trinity"
+APPLICATIONS_DIR="$HOME/Applications"
 DESKTOP_DIR="$HOME/Desktop"
-APP_PATH="$DESKTOP_DIR/$APP_NAME.app"
+APP_PATH="$APPLICATIONS_DIR/$APP_NAME.app"
+DESKTOP_LINK="$DESKTOP_DIR/$APP_NAME.app"
+BACKUP_DIR="${TRINITY_APP_BACKUP_DIR:-$HOME/Trinity-Recovery/app-backups/$(date +%Y%m%d_%H%M%S)}"
 ICON_PNG="$PROJECT_DIR/core/icon.png"
 ICON_ICNS="$PROJECT_DIR/assets/trinity_icon.icns"
 ICONSET_DIR="/tmp/TrinityIcon.iconset"
@@ -13,8 +17,13 @@ ICNS_TARGET="$APP_PATH/Contents/Resources/Trinity.icns"
 
 echo "🚀 Erstelle native macOS App für Trinity..."
 
-# 1. Alte App entfernen falls vorhanden
-rm -rf "$APP_PATH"
+# Die eigentliche App liegt bewusst nicht auf dem möglicherweise durch iCloud
+# verwalteten Desktop. Dateianbieter-Metadaten können eine lokale Signatur
+# nachträglich ungültig machen. Auf dem Desktop liegt nur ein Verweis.
+mkdir -p "$APPLICATIONS_DIR" "$DESKTOP_DIR" "$BACKUP_DIR"
+if [ -e "$APP_PATH" ]; then
+    mv "$APP_PATH" "$BACKUP_DIR/Trinity.app.previous"
+fi
 
 # 2. AppleScript Applet erstellen
 # Wir nutzen 'do shell script' um Trinity zu starten. 
@@ -36,7 +45,7 @@ if showTerminal then
         activate
     end tell
 else
-    do shell script "cd 'PROJECT_DIR' && ./venv/bin/python3 trinity_launcher.py > /dev/null 2>&1 &"
+    do shell script "mkdir -p 'PROJECT_DIR/logs' && cd 'PROJECT_DIR' && ./venv/bin/python3 trinity_launcher.py >> 'PROJECT_DIR/logs/desktop-launch.log' 2>&1 &"
 end if
 EOF
 sed -i '' "s|PROJECT_DIR|$PROJECT_DIR|g" /tmp/trinity_app.applescript
@@ -77,5 +86,18 @@ else
     echo "⚠️  $ICON_PNG nicht gefunden – App-Icon bleibt Standard."
 fi
 
-echo "✅ Fertig! Du findest '$APP_NAME.app' auf deinem Desktop."
+# Erst das vollständige Bundle bereinigen und danach lokal signieren.
+xattr -cr "$APP_PATH" 2>/dev/null || true
+/usr/bin/codesign --force --deep --sign - "$APP_PATH"
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+if [ -L "$DESKTOP_LINK" ]; then
+    rm "$DESKTOP_LINK"
+elif [ -e "$DESKTOP_LINK" ]; then
+    mv "$DESKTOP_LINK" "$BACKUP_DIR/Trinity-Desktop.app.previous"
+fi
+ln -s "$APP_PATH" "$DESKTOP_LINK"
+
+echo "✅ Fertig! Die signierte App liegt unter $APP_PATH."
+echo "👉 Auf dem Schreibtisch liegt ein Verweis auf diese App."
 echo "👉 Du kannst es jetzt einfach in deine Dock-Leiste ziehen."

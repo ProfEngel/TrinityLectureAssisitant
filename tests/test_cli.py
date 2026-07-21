@@ -31,8 +31,9 @@ def test_cli_exposes_requested_commands():
         "bridge",
         "server",
         "control-plane",
+        "vault",
     ):
-        arguments = [command, "status"] if command == "control-plane" else [command]
+        arguments = [command, "status"] if command in {"control-plane", "vault"} else [command]
         parsed = parser.parse_args(arguments)
         assert parsed.command == command
 
@@ -59,23 +60,131 @@ def test_surface_settings_accept_web_ui_without_terminal():
 
 
 def test_control_plane_onboarding_records_runtime_and_brainvault(tmp_path):
-    runtime = tmp_path / "local-runtime"
+    home = tmp_path / "Trinity"
+    runtime = home / "local-runtime"
     brainvault = tmp_path / "brainvault"
+    agents = tmp_path / "agents-root"
     config = {}
-    answers = iter(["ja", str(runtime), str(brainvault), "pi"])
+    answers = iter(
+        ["privat", "ja", str(runtime), str(brainvault), "ja", str(agents), "pi"]
+    )
 
     trinity_cli._configure_control_plane(
         config,
-        tmp_path,
+        home,
         input_fn=lambda _prompt: next(answers),
     )
 
     assert config["control_plane"]["enabled"] is True
+    assert config["system"]["profile"] == "PRIVAT"
     assert config["control_plane"]["runtime_root"] == str(runtime)
     assert config["control_plane"]["vault_root"] == str(brainvault)
-    assert config["control_plane"]["brainvault_root"] == str(brainvault)
-    assert config["control_plane"]["external_agents_root"] == str(brainvault)
+    assert config["control_plane"]["brainvault_root"] == str(agents)
+    assert config["control_plane"]["external_agents_root"] == str(agents)
     assert config["control_plane"]["default_brainvault_harness"] == "pi"
+    assert (brainvault / "10 Aktive Projekte").is_dir()
+
+
+def test_vault_init_reuses_saved_location_without_duplicate_content(tmp_path):
+    home = tmp_path / "Trinity"
+    core = home / "core"
+    core.mkdir(parents=True)
+    vault = tmp_path / "BrainVault"
+    existing = vault / "Bestehendes Projekt"
+    existing.mkdir(parents=True)
+    (existing / "inhalt.md").write_text("bleibt", encoding="utf-8")
+    save_config(
+        core / "config.json",
+        {
+            "system": {"profile": "PRIVAT"},
+            "control_plane": {
+                "runtime_root": str(home / "TrinityRuntime"),
+                "vault_root": str(vault),
+            },
+        },
+    )
+
+    result = trinity_cli.run_vault_command(
+        home,
+        SimpleNamespace(
+            vault_action="init",
+            root="",
+            profile="",
+            accept_existing=False,
+        ),
+    )
+
+    assert result == 0
+    assert (existing / "inhalt.md").read_text(encoding="utf-8") == "bleibt"
+    assert (vault / "10 Aktive Projekte").is_dir()
+
+
+def test_control_plane_reuses_known_vault_without_asking_for_it_again(tmp_path):
+    home = tmp_path / "Trinity"
+    runtime = home / "TrinityRuntime"
+    vault = tmp_path / "BrainVault"
+    agents = tmp_path / "agents"
+    config = {
+        "system": {"profile": "PRIVAT"},
+        "control_plane": {"vault_root": str(vault)},
+    }
+    prompts = []
+    answers = iter(["privat", "ja", str(runtime), str(agents), "pi"])
+
+    def answer(prompt):
+        prompts.append(prompt)
+        return next(answers)
+
+    trinity_cli._configure_control_plane(config, home, input_fn=answer)
+
+    assert config["control_plane"]["vault_root"] == str(vault.resolve())
+    assert not any("Speicherort des Inhalts-Vaults" in prompt for prompt in prompts)
+    assert (vault / "10 Aktive Projekte").is_dir()
+
+
+def test_noninteractive_vault_setup_requires_acceptance_for_existing_data(tmp_path):
+    home = tmp_path / "Trinity"
+    (home / "core").mkdir(parents=True)
+    vault = tmp_path / "Existing"
+    vault.mkdir()
+    (vault / "datei.txt").write_text("wichtig", encoding="utf-8")
+
+    args = SimpleNamespace(
+        vault_action="setup",
+        root=str(vault),
+        profile="privat",
+        accept_existing=False,
+    )
+    try:
+        trinity_cli.run_vault_command(home, args)
+    except ValueError as exc:
+        assert "--accept-existing" in str(exc)
+    else:
+        raise AssertionError("Existing content must require explicit acceptance")
+
+
+def test_interactive_vault_setup_asks_for_profile_and_location(tmp_path):
+    home = tmp_path / "Trinity"
+    (home / "core").mkdir(parents=True)
+    vault = tmp_path / "Mein BrainVault"
+    answers = iter(["privat", str(vault), "ja"])
+
+    result = trinity_cli.run_vault_command(
+        home,
+        SimpleNamespace(
+            vault_action="setup",
+            root="",
+            profile="",
+            accept_existing=False,
+        ),
+        input_fn=lambda _prompt: next(answers),
+    )
+    config = load_config(home / "core" / "config.json")
+
+    assert result == 0
+    assert config["system"]["profile"] == "PRIVAT"
+    assert config["control_plane"]["vault_root"] == str(vault.resolve())
+    assert (vault / "10 Aktive Projekte").is_dir()
 
 
 def test_direct_cli_setting_updates_shared_config(tmp_path, monkeypatch):

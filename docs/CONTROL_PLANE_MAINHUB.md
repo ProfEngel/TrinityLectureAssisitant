@@ -21,8 +21,8 @@ Roh-JSON und interne Harness-Details bleiben soweit moeglich im Maschinenraum.
 
 ## Ordnertrennung
 
-Trinity unterscheidet strikt zwischen lokaler Runtime und synchronisiertem
-BrainVault.
+Trinity unterscheidet strikt zwischen lokaler Runtime, synchronisiertem
+Inhalts-Vault und lokalem Agenten-Werkzeugkasten.
 
 ### Lokale Runtime
 
@@ -39,10 +39,10 @@ Beispiel:
 Wichtige Unterordner sind `jobs/`, `harnesses/`, `sessions/`, `logs/`,
 `cache/`, `databases/`, `memory/`, `temp/`, `secrets/` und `locks/`.
 
-### BrainVault / Cloud-Agentenpool
+### BrainVault / Cloud-Vault fuer Inhalte
 
-Der BrainVault darf synchronisiert werden. Er ist der gemeinsame, externe
-Agentenpool fuer Trinity und andere Harnesses.
+Der BrainVault darf synchronisiert werden. Er enthaelt Projekte, Dokumente,
+Wissen, Vorlagen und dauerhafte Ergebnisse.
 
 Beispiel:
 
@@ -50,22 +50,25 @@ Beispiel:
 /Cloud/BrainVault
 ```
 
-Aktuelle kanonische Struktur:
+### Lokaler Agenten-Werkzeugkasten
+
+Ausfuehrbare externe Agenten liegen lokal und werden separat ueber Git
+versioniert. Kanonische Struktur:
 
 ```text
-BrainVault/
+Lokaler-Agenten-Werkzeugkasten/
 ├── .agents/
 ├── AGENTS.md
 └── CLAUDE.md
 ```
 
-`BrainVault/.agents` ist die Quelle gemeinsamer externer Agenten. Trinity,
+Die lokale `.agents`-Ablage ist die Quelle gemeinsamer externer Agenten. Trinity,
 Codex, Pi, OpenCode, Antigravity und spaetere Harnesses duerfen denselben Pool
 lesen, testen und erweitern, solange die dortigen Regeln gelten.
 
 Alte `MainHub/TrinityVault`- oder `00_registry`/`01_agents`-Layouts sind
 historische Zwischenstaende. Sie koennen archiviert werden, wenn die
-Trinity-Einstellungen auf den BrainVault-Root zeigen und dort `.agents` sowie
+Trinity-Einstellungen auf den lokalen Agenten-Root zeigen und dort `.agents` sowie
 `AGENTS.md` vorhanden sind.
 
 Nicht in den BrainVault gehoeren aktive SQLite-Datenbanken, laufende Sessions,
@@ -78,7 +81,8 @@ Initialisierung mit generischen Pfaden:
 ```bash
 trinity control-plane init \
   --runtime-root "/lokaler/pfad/zu/TrinityRuntime" \
-  --vault-root "/cloud/pfad/zu/BrainVault"
+  --vault-root "/cloud/pfad/zu/BrainVault" \
+  --agents-root "/lokaler/pfad/mit/.agents"
 ```
 
 Status pruefen:
@@ -89,17 +93,18 @@ agentctl list
 ```
 
 Die Pfade werden in `core/config.json` gespeichert. In den Einstellungen steht
-unter **MainHub / Control Plane** sichtbar nur noch:
+unter **Trinity-Ablagen** sichtbar:
 
 - lokale Runtime
-- Cloud-Agentenpool / BrainVault-Root
+- Cloud-Vault fuer dauerhafte Inhalte
+- lokaler Agenten-Werkzeugkasten
 - Standard-Extern-Harness
 
 ## Harness-Rollen
 
 Aktuelle Rollenlogik:
 
-- **Pi:** Standard-Harness fuer laufende BrainVault-Agentenarbeit.
+- **Pi:** Standard-Harness fuer laufende externe Agentenarbeit.
 - **Codex:** Builder-Harness fuer neue Agenten, Imports, Refactorings, Tests und
   Quality-Gates.
 - **OpenCode:** optionaler Ausfuehrungs- oder Automations-Harness fuer
@@ -110,12 +115,12 @@ Jeder Harness bleibt an freigegebene Projekt-Aliasse und die Regeln des
 jeweiligen Projekts gebunden. Externe Aktionen wie Mailversand, Loeschen,
 Publishing, Deployments oder Uploads brauchen explizite Freigabe.
 
-## BrainVault-Agenten
+## Externe Agenten
 
 Neue externe Agenten liegen direkt unter:
 
 ```text
-BrainVault/.agents/<bereich>/<agent-id>/
+.agents/<bereich>/<agent-id>/
 ```
 
 Empfohlener Agentenordner:
@@ -135,7 +140,7 @@ fixtures/
 
 Die Quelle der Wahrheit ist `agent.yaml`; daraus werden Eintraege unter
 `.agents/_meta` und UI-Listen aufgebaut. Details stehen in
-[BrainVault-Agenten](BRAINVAULT_AGENTS.md).
+[Agenten-Werkzeugkasten](BRAINVAULT_AGENTS.md).
 
 ## Artefakte und Summaries
 
@@ -148,7 +153,7 @@ indexiert. Companion/WebUI/Desktop koennen sie als Ergebnis-Asset anzeigen.
 
 Rueckrollen bleibt bewusst einfach:
 
-1. In den Einstellungen **MainHub / Control Plane** deaktivieren oder
+1. In den Einstellungen **Trinity-Ablagen** deaktivieren oder
    `control_plane.enabled=false` setzen.
 2. Trinity neu starten.
 3. Bei Bedarf auf einen stabilen GitHub-Release-Tag zurueckgehen.

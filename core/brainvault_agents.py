@@ -1,8 +1,10 @@
-"""BrainVault agent library helpers.
+"""Local external-agent library helpers.
 
-BrainVault agents are shared, harness-agnostic agents stored outside the
-Trinity repository. Trinity-internal agents stay in the repo; external agents
-live under BrainVault/.agents and are indexed from agent.yaml files.
+External agents are shared, harness-agnostic agents installed locally outside
+the Trinity repository. Trinity-internal agents stay in the repo; external
+agents live under a local ``.agents`` directory and are indexed from
+``agent.yaml`` files. The historic BrainVault names remain as compatibility
+aliases while installations migrate away from Cloud-hosted executable code.
 """
 
 from __future__ import annotations
@@ -38,16 +40,24 @@ AGENT_SCAN_MARKERS = {
 
 
 def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None) -> Path:
-    """Resolve the shared BrainVault root without forcing a TrinityVault nesting."""
+    """Resolve the local external-agent root.
+
+    The returned path is the parent of ``.agents``. Older configurations that
+    still point to a Cloud Vault remain readable, but a local ``~/.agents``
+    installation takes precedence when no explicit agent root is configured.
+    """
 
     control = (config or {}).get("control_plane", {})
     explicit = (
         control.get("external_agents_root")
+        or os.environ.get("TRINITY_AGENTS_ROOT")
         or control.get("brainvault_root")
         or os.environ.get("TRINITY_BRAINVAULT")
     )
     if explicit:
         explicit_path = Path(str(explicit)).expanduser().resolve()
+        if explicit_path.name == ".agents":
+            return explicit_path.parent
         migrated = _migrate_legacy_agent_pool_root(explicit_path)
         return migrated or explicit_path
 
@@ -59,7 +69,10 @@ def brainvault_root_from_config(home: str | Path, config: Optional[dict] = None)
         return vault.parent.resolve()
     if vault.name.casefold() == "mainhub":
         return vault.parent.resolve()
-    return vault.resolve()
+    if (vault / ".agents").is_dir():
+        return vault.resolve()
+    local_root = Path.home().resolve()
+    return local_root
 
 
 def _migrate_legacy_agent_pool_root(path: Path) -> Optional[Path]:
@@ -858,11 +871,12 @@ def _audit_markdown(candidates: list[dict]) -> str:
 
 
 def _brainvault_agents_md() -> str:
-    return """# BrainVault Agent Rules
+    return """# Regeln fuer den lokalen Agenten-Werkzeugkasten
 
-- BrainVault/.agents ist die einzige Quelle gemeinsamer externer Agenten.
+- Die lokale Ablage .agents ist die einzige ausfuehrbare Quelle gemeinsamer externer Agenten.
 - Trinity-interne Agenten bleiben ausschliesslich im Trinity-Repository.
-- Jeder neue externe Agent wird direkt unter BrainVault/.agents angelegt.
+- Jeder neue externe Agent wird direkt unter der lokalen Ablage .agents angelegt.
+- Der BrainVault enthaelt Inhalte, aber keinen ausfuehrbaren Agentencode.
 - Neue Agenten erscheinen sofort als draft im Katalog.
 - Vor Änderungen zuerst agent.yaml, SKILL.md und vorhandene Tests lesen.
 - Keine Agenten duplizieren.
@@ -879,8 +893,9 @@ def _brainvault_agents_md() -> str:
 def _brainvault_claude_md() -> str:
     return """# Claude Code Notes
 
-Dieses BrainVault folgt AGENTS.md. Claude Code soll vor jeder Arbeit an
-BrainVault-Agenten zuerst AGENTS.md und die jeweilige agent.yaml lesen.
+Dieser lokale Agenten-Werkzeugkasten folgt AGENTS.md. Claude Code soll vor
+jeder Arbeit an externen Agenten zuerst AGENTS.md und die jeweilige agent.yaml
+lesen.
 """
 
 

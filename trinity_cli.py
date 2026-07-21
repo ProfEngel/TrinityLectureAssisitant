@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.21"
+VERSION = "0.16.46"
 
 
 def find_trinity_home(explicit=None):
@@ -107,6 +107,27 @@ def _configure_surfaces(config, input_fn=input):
     system["show_terminal"] = "terminal" in selected
 
 
+def _configure_installation_profile(config, input_fn=input):
+    core_dir = str(Path(__file__).resolve().parent / "core")
+    if core_dir not in sys.path:
+        sys.path.insert(0, core_dir)
+    from content_vault import normalize_profile  # pylint: disable=import-outside-toplevel
+
+    system = config.setdefault("system", {})
+    current_profile = normalize_profile(system.get("profile"))
+    visible_profile = {"BIZ": "beruf", "PRIVAT": "privat", "TEST": "testbereich"}[
+        current_profile
+    ]
+    selected_profile = _prompt_choice(
+        "Profil dieser Trinity-Installation",
+        ("beruf", "privat", "testbereich"),
+        visible_profile,
+        input_fn,
+    )
+    system["profile"] = normalize_profile(selected_profile)
+    return current_profile, system["profile"]
+
+
 def _configure_control_plane(config, home, input_fn=input):
     core_dir = str(Path(home) / "core")
     if core_dir not in sys.path:
@@ -114,28 +135,28 @@ def _configure_control_plane(config, home, input_fn=input):
     from trinity_paths import (  # pylint: disable=import-outside-toplevel
         TrinityPaths,
         default_runtime_root,
-        default_vault_root,
     )
     from brainvault_agents import brainvault_root_from_config  # pylint: disable=import-outside-toplevel
+    from content_vault import ensure_content_vault_layout  # pylint: disable=import-outside-toplevel
 
     print("\nMainHub / Control Plane")
     print("=======================")
     print(
-        "Trinity trennt lokale Runtime und synchronisierten BrainVault. Die "
-        "Runtime enthaelt laufende Jobs, Datenbanken, Cache, temporaere Dateien "
-        "und Secrets und sollte nicht in iCloud, OneDrive oder Google Drive "
-        "liegen. Der BrainVault ist der gemeinsame Cloud-Agentenpool mit "
-        ".agents und AGENTS.md."
+        "Trinity trennt lokale Runtime, dauerhafte Cloud-Inhalte und lokal "
+        "installierte Agenten. Runtime und Agentencode liegen nicht in iCloud "
+        "oder OneDrive. Der Vault enthaelt Projekte, Dokumente, Wissen und "
+        "dauerhafte Ergebnisse."
     )
     control = config.setdefault("control_plane", {})
+    system = config.setdefault("system", {})
+    current_profile, selected_profile = _configure_installation_profile(config, input_fn)
+    profile_changed = selected_profile != current_profile
     runtime_default = control.get("runtime_root") or str(
         default_runtime_root(home=home)
     )
-    brainvault_default = control.get("external_agents_root") or control.get(
+    agents_default = control.get("external_agents_root") or control.get(
         "brainvault_root"
     ) or str(brainvault_root_from_config(home, config))
-    if not brainvault_default:
-        brainvault_default = str(default_vault_root())
     control["enabled"] = (
         _prompt_choice(
             "Control Plane/MainHub aktivieren",
@@ -150,16 +171,37 @@ def _configure_control_plane(config, home, input_fn=input):
         runtime_default,
         input_fn,
     )
-    cloud_root = _prompt(
-        "BrainVault / Cloud-Agentenpool",
-        brainvault_default,
+    saved_vault = control.get("vault_root")
+    if saved_vault and not profile_changed:
+        try:
+            vault_result = ensure_content_vault_layout(
+                saved_vault,
+                profile=system["profile"],
+                forbidden_roots=(home, control["runtime_root"]),
+            )
+            print(f"Gespeicherter Inhalts-Vault erkannt: {vault_result['root']}")
+            if vault_result["created_directories"]:
+                print(
+                    "Fehlende Profilordner wurden ergänzt: "
+                    + ", ".join(vault_result["created_directories"])
+                )
+            else:
+                print("Die Ordnerstruktur für dieses Profil ist bereits vollständig.")
+        except (OSError, ValueError) as exc:
+            print(f"Der gespeicherte Vault kann nicht verwendet werden: {exc}")
+            vault_result = _configure_content_vault(config, home, input_fn)
+    else:
+        vault_result = _configure_content_vault(config, home, input_fn)
+    agents_root = _prompt(
+        "Lokaler Agentenordner (Wurzel mit .agents)",
+        agents_default,
         input_fn,
     )
-    control["vault_root"] = cloud_root
-    control["brainvault_root"] = cloud_root
-    control["external_agents_root"] = cloud_root
+    control["vault_root"] = vault_result["root"]
+    control["brainvault_root"] = agents_root
+    control["external_agents_root"] = agents_root
     control["default_brainvault_harness"] = _prompt_choice(
-        "Standard-Harness fuer BrainVault-Agenten",
+        "Standard-Harness fuer externe Agenten",
         ("codex", "pi", "opencode", "trinity"),
         control.get("default_brainvault_harness", "pi"),
         input_fn,
@@ -171,6 +213,90 @@ def _configure_control_plane(config, home, input_fn=input):
         for warning in warnings:
             print(f"- {warning}")
         print("Passe die Pfade an, falls die Runtime versehentlich im Cloud-Ordner liegt.")
+
+
+def _configure_content_vault(config, home, input_fn=input):
+    core_dir = str(Path(home) / "core")
+    if core_dir not in sys.path:
+        sys.path.insert(0, core_dir)
+    from content_vault import (  # pylint: disable=import-outside-toplevel
+        ensure_content_vault_layout,
+        inspect_content_vault,
+        normalize_profile,
+        profile_label,
+        suggested_vault_root,
+    )
+    from trinity_paths import default_runtime_root  # pylint: disable=import-outside-toplevel
+
+    control = config.setdefault("control_plane", {})
+    system = config.setdefault("system", {})
+    profile = normalize_profile(system.get("profile"))
+    system["profile"] = profile
+    default_root = control.get("vault_root") or str(suggested_vault_root(profile))
+    runtime_root = control.get("runtime_root") or str(default_runtime_root(home=home))
+
+    print(f"\nInhalts-Vault fuer das Profil {profile_label(profile)}")
+    print("Der Vault enthält dauerhafte Projekte, Dokumente, Wissen und Ergebnisse.")
+    print("Trinity verschiebt oder überschreibt vorhandene Inhalte nicht automatisch.")
+
+    while True:
+        selected = _prompt(
+            "Speicherort des Inhalts-Vaults (bitte wählen oder bestätigen)",
+            default_root,
+            input_fn,
+        )
+        if not selected:
+            print("Ein Speicherort ist erforderlich.")
+            continue
+        try:
+            inspection = inspect_content_vault(selected, profile=profile)
+            if inspection["exists"] and inspection["entry_count"]:
+                shown = ", ".join(inspection["entries"][:8])
+                suffix = " ..." if inspection["entry_count"] > 8 else ""
+                print(
+                    f"Vorhandener Ordner erkannt: {inspection['entry_count']} "
+                    f"Eintrag/Einträge ({shown}{suffix})."
+                )
+                question = "Diesen Bestand unverändert als Vault übernehmen"
+            elif inspection["exists"]:
+                print("Der gewählte Ordner besteht bereits und ist leer.")
+                question = "Diesen leeren Ordner als Vault verwenden"
+            else:
+                print("Der gewählte Ordner besteht noch nicht.")
+                question = "Den Vault an diesem Ort erstellen"
+            accepted = _prompt_choice(
+                question,
+                ("ja", "nein"),
+                "ja",
+                input_fn,
+            )
+            if accepted != "ja":
+                default_root = ""
+                continue
+            result = ensure_content_vault_layout(
+                selected,
+                profile=profile,
+                forbidden_roots=(home, runtime_root),
+            )
+        except (OSError, ValueError) as exc:
+            print(f"Vault kann dort nicht eingerichtet werden: {exc}")
+            default_root = ""
+            continue
+
+        control["vault_root"] = result["root"]
+        if result["preserved_entries"]:
+            print(
+                f"Vorhandener Bestand übernommen: "
+                f"{len(result['preserved_entries'])} Eintrag/Einträge blieben unverändert."
+            )
+        if result["created_directories"]:
+            print(
+                "Fehlende Profilordner angelegt: "
+                + ", ".join(result["created_directories"])
+            )
+        else:
+            print("Die Ordnerstruktur für dieses Profil war bereits vollständig.")
+        return result
 
 
 def _configure_pi(config, input_fn=input):
@@ -682,8 +808,10 @@ def run_control_plane_command(home, args):
         changed = True
     if args.vault_root:
         control["vault_root"] = args.vault_root
-        control["brainvault_root"] = args.vault_root
-        control["external_agents_root"] = args.vault_root
+        changed = True
+    if args.agents_root:
+        control["brainvault_root"] = args.agents_root
+        control["external_agents_root"] = args.agents_root
         changed = True
     if changed:
         save_config(config_path, config)
@@ -698,6 +826,74 @@ def run_control_plane_command(home, args):
         result = plane.export_agent_catalog()
     else:
         raise ValueError("Unbekannte Control-Plane-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_vault_command(home, args, input_fn=input):
+    """Set up or inspect the durable content vault without moving user files."""
+
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from configuration import load_config, save_config  # pylint: disable=import-outside-toplevel
+    from content_vault import (  # pylint: disable=import-outside-toplevel
+        ensure_content_vault_layout,
+        inspect_content_vault,
+        normalize_profile,
+    )
+    from trinity_paths import default_runtime_root  # pylint: disable=import-outside-toplevel
+
+    config_path = Path(home) / "core" / "config.json"
+    config = load_config(config_path)
+    control = config.setdefault("control_plane", {})
+    system = config.setdefault("system", {})
+
+    if args.vault_action == "setup" and not args.root:
+        if args.profile:
+            system["profile"] = normalize_profile(args.profile)
+        else:
+            _configure_installation_profile(config, input_fn)
+        result = _configure_content_vault(config, home, input_fn)
+        save_config(config_path, config)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    profile = normalize_profile(args.profile or system.get("profile"))
+    system["profile"] = profile
+    root = args.root or control.get("vault_root")
+    if not root:
+        raise ValueError(
+            "Kein Inhalts-Vault gespeichert. Nutze `trinity vault setup` und "
+            "wähle den Speicherort."
+        )
+
+    if args.vault_action == "status":
+        result = inspect_content_vault(root, profile=profile)
+        result["profile"] = profile
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    inspection = inspect_content_vault(root, profile=profile)
+    if (
+        args.vault_action == "setup"
+        and inspection["entry_count"]
+        and not args.accept_existing
+    ):
+        raise ValueError(
+            "Der gewählte Ordner enthält bereits Daten. Prüfe ihn und wiederhole "
+            "den Befehl mit `--accept-existing`; Trinity lässt die Inhalte dann "
+            "unverändert."
+        )
+
+    runtime_root = control.get("runtime_root") or str(default_runtime_root(home=home))
+    result = ensure_content_vault_layout(
+        root,
+        profile=profile,
+        forbidden_roots=(home, runtime_root),
+    )
+    control["vault_root"] = result["root"]
+    save_config(config_path, config)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
@@ -867,7 +1063,26 @@ def build_parser():
     )
     control.add_argument("control_action", choices=("init", "status", "catalog"))
     control.add_argument("--runtime-root", default="", help="Lokaler TrinityRuntime-Pfad")
-    control.add_argument("--vault-root", default="", help="BrainVault-/Cloud-Agentenpool-Pfad")
+    control.add_argument("--vault-root", default="", help="Cloud-Vault fuer dauerhafte Inhalte")
+    control.add_argument("--agents-root", default="", help="Lokale Wurzel mit .agents")
+
+    vault = subparsers.add_parser(
+        "vault",
+        help="Dauerhaften Inhalts-Vault sicher einrichten oder prüfen",
+    )
+    vault.add_argument("vault_action", choices=("setup", "init", "status"))
+    vault.add_argument("--root", default="", help="Gewählter Inhalts-Vault")
+    vault.add_argument(
+        "--profile",
+        default="",
+        choices=("beruf", "privat", "testbereich", "BIZ", "PRIVAT", "TEST"),
+        help="Profil des Vaults",
+    )
+    vault.add_argument(
+        "--accept-existing",
+        action="store_true",
+        help="Vorhandene Inhalte unverändert übernehmen",
+    )
 
     workspace = subparsers.add_parser(
         "workspace",
@@ -931,6 +1146,8 @@ def main(argv=None):
             return run_approvals_command(home, args)
         if args.command == "control-plane":
             return run_control_plane_command(home, args)
+        if args.command == "vault":
+            return run_vault_command(home, args)
         if args.command == "workspace":
             return run_workspace_command(home, args)
         if args.command == "session":
