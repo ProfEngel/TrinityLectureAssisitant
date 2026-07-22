@@ -31,6 +31,7 @@ def test_macos_installer_uses_supported_python_and_preserves_recovery_copy():
     assert 'rm -rf "$INSTALL_DIR"' not in script
     assert "stop_trinity_processes" in script
     assert "trinity_launcher.py" in script
+    assert '"$INSTALL_DIR/core/transcriber.py"' in script
     assert 'kill -TERM $targets' in script
 
 

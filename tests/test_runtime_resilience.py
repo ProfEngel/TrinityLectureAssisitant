@@ -4,6 +4,7 @@ import time
 import types
 from pathlib import Path
 
+import pytest
 import trinity_launcher
 
 if "requests" not in sys.modules:
@@ -267,6 +268,11 @@ def test_launcher_lock_prevents_duplicate_local_instance(tmp_path):
     third = trinity_launcher._acquire_launcher_lock(str(tmp_path))
     assert third is not None
     trinity_launcher._release_launcher_lock(third)
+
+
+def test_launcher_routes_termination_through_cleanup():
+    with pytest.raises(KeyboardInterrupt):
+        trinity_launcher._request_graceful_shutdown(None, None)
 
 
 def test_surface_argument_is_read_for_cli_start():
