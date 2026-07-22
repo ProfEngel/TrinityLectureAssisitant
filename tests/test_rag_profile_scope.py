@@ -27,8 +27,8 @@ def test_rag_agent_rejects_legacy_and_foreign_profiles(tmp_path):
     assert module._index_profile_is_allowed({"profile": "PRIVAT"}, "PRIVAT") is True
 
 
-def test_rag_builder_writes_the_configured_profile(tmp_path):
-    module = _load_module("trinity_rag_builder_scope", ROOT / "RAG/build_index.py")
+def test_rag_profile_helper_reads_config_and_has_safe_platform_defaults(tmp_path):
+    module = _load_module("trinity_rag_profile_scope", ROOT / "core/rag_profile.py")
     core = tmp_path / "core"
     core.mkdir()
     (core / "config.json").write_text(

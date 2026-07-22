@@ -3,37 +3,26 @@ import subprocess
 import sys
 import json
 
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+CORE_DIR = os.path.join(PROJECT_DIR, "core")
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
+from rag_profile import configured_profile as _configured_profile
+from rag_profile import index_profile_is_allowed as _index_profile_is_allowed
+
 rag_chunks = []
 rag_embeddings = None
 rag_model = None
 index_loaded = False
 
 
-def _configured_profile(project_dir=None):
-    project_dir = project_dir or os.path.dirname(
-        os.path.dirname(os.path.dirname(__file__))
-    )
-    config_path = os.path.join(project_dir, "core", "config.json")
-    try:
-        with open(config_path, "r", encoding="utf-8") as handle:
-            config = json.load(handle)
-        profile = str(config.get("system", {}).get("profile") or "").upper()
-    except (OSError, ValueError, TypeError):
-        profile = ""
-    if profile in {"BIZ", "PRIVAT", "TEST"}:
-        return profile
-    return "BIZ" if sys.platform == "win32" else "PRIVAT"
-
-
-def _index_profile_is_allowed(meta, active_profile):
-    return str((meta or {}).get("profile") or "").strip().upper() == active_profile
-
 def _load_rag_index():
     global rag_chunks, rag_embeddings, index_loaded
     if index_loaded:
         return
 
-    rag_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "RAG")
+    rag_dir = os.path.join(PROJECT_DIR, "RAG")
     index_dir = os.path.join(rag_dir, "index")
 
     if not os.path.isdir(rag_dir):
