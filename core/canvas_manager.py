@@ -57,7 +57,7 @@ class CanvasManager:
             else default_canvas_install_dir(self.home)
         )
         self.port = int(self.settings.get("port") or DEFAULT_CANVAS_PORT)
-        self.host = "127.0.0.1"
+        self.host = str(self.settings.get("host") or "127.0.0.1").strip() or "127.0.0.1"
         self.data_dir = self.paths.runtime_root / "canvas"
         self.logs_dir = self.home / "logs" / "canvas"
         self.pid_path = self.data_dir / "canvas.pid"

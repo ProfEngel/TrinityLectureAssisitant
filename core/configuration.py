@@ -131,6 +131,7 @@ def default_config(platform_name=None):
             "enabled": True,
             "install_dir": "",
             "port": 8787,
+            "host": "127.0.0.1",
         },
         "companion": {
             "enabled": False,
