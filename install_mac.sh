@@ -52,7 +52,16 @@ if [ -d "$INSTALL_DIR" ]; then
     echo "   Deine Konfigurationen werden gesichert und danach wiederhergestellt."
     echo ""
 
-    if [ -d "$INSTALL_DIR/.git" ] && [ -n "$(git -C "$INSTALL_DIR" status --porcelain)" ]; then
+    # payload.html und state.txt sind bewusst versionierte Startwerte, werden
+    # von der laufenden Classic-Oberfläche aber fortlaufend überschrieben.
+    # Sie sind kein Quellcode und dürfen ein sicheres Update nicht blockieren.
+    LOCAL_CODE_CHANGES=""
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        LOCAL_CODE_CHANGES="$(git -C "$INSTALL_DIR" status --porcelain -- . \
+            ':(exclude)core/payload.html' \
+            ':(exclude)core/state.txt')"
+    fi
+    if [ -n "$LOCAL_CODE_CHANGES" ]; then
         echo "❌ Die bestehende Installation enthält lokale Codeänderungen."
         echo "   Zum Schutz dieser Arbeit wird das Update nicht automatisch fortgesetzt."
         echo "   Sichere oder committe die Änderungen und starte den Installer danach erneut."
