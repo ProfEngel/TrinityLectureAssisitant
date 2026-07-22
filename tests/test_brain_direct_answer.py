@@ -103,6 +103,8 @@ def test_brain_sends_image_attachment_as_multimodal_content(tmp_path, monkeypatc
     brain.api_key = "key"
     brain.url = "http://llm"
     brain.model = "vision-model"
+    brain.enable_thinking = False
+    brain.request_timeout_seconds = 120
     brain.live_skills = []
     brain.unavailable_skills = []
     brain._telegram_cfg = {}
@@ -125,6 +127,7 @@ def test_brain_sends_image_attachment_as_multimodal_content(tmp_path, monkeypatc
 
     def fake_request(_url, headers, json, timeout):
         captured["data"] = json
+        captured["timeout"] = timeout
         return Response()
 
     monkeypatch.setattr("core.brain.requests.post", fake_request)
@@ -148,6 +151,9 @@ def test_brain_sends_image_attachment_as_multimodal_content(tmp_path, monkeypatc
 
     user_content = captured["data"]["messages"][-1]["content"]
     assert answer == "Bild erkannt"
+    assert captured["data"]["enable_thinking"] is False
+    assert captured["timeout"] == 120
+    assert "tools" not in captured["data"]
     assert user_content[1]["type"] == "image_url"
     assert brain.last_media_path == str(image)
 

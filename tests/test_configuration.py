@@ -20,6 +20,8 @@ def test_missing_config_uses_independent_defaults(tmp_path):
     assert first["system"]["classic_ui_enabled"] is True
     assert first["companion"]["enabled"] is False
     assert first["companion"]["port"] == 8765
+    assert first["llm"]["local"]["enable_thinking"] is False
+    assert first["llm"]["local"]["request_timeout_seconds"] == 120
     assert first["harness_routing"]["frameworks"]["trinity"]["roles"][
         "agent_execution"
     ] is True

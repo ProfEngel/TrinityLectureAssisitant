@@ -1,5 +1,9 @@
 # Auftrag für Codex auf der Windows-Maschine – Phase 2
 
+> Ergebnisstand: Die Inventur und der Reset wurden am 22. Juli 2026 ausgeführt.
+> Festgestellte Abweichungen und die kontrollierte Nacharbeit stehen in
+> `PHASE_2_WINDOWS_RESULT.md`.
+
 Stand: 22. Juli 2026
 
 ## Ziel
@@ -29,6 +33,9 @@ verschoben oder installiert.
 4. Vor dem Memory-Reset Trinity und alle zugehörigen Prozesse sauber beenden.
 5. Den Reset nur mit Wiederherstellungskopie durchführen.
 6. Agenten vollständig unangetastet lassen.
+7. Auf `BACKUP_M5` das vorhandene
+   `Trinity_Gesamtsicherung_2026-07-22_123626.sparsebundle` weder öffnen noch
+   verändern, umbenennen oder löschen. Es ist die geprüfte Mac-Sicherung.
 
 ## 1. BizVault feststellen
 
@@ -107,7 +114,33 @@ trinity memory reset --yes --include-generated --include-canvas
 Der Reset darf BizVault, RAG-Quelldokumente, `Soul.md`, `User.md`,
 `config.json` und Telegram-Konfiguration nicht entfernen.
 
-## 5. Ergebnisbericht
+## 5. Unabhängige Windows-Sicherung
+
+Wenn das USB-Laufwerk `BACKUP_M5` physisch mit Windows verbunden ist, lege
+daneben einen neuen, eindeutig benannten und Windows-kompatiblen
+AES-256-verschlüsselten Container oder ein verschlüsseltes Archiv an. Nutze
+eine auf dem konkreten Windows-System verfügbare, überprüfbare Methode; speichere
+das Passwort weder im Skript noch im Bericht oder Repository.
+
+Die Windows-Sicherung muss mindestens enthalten:
+
+- lokale BIZ-Trinity-Installation und Runtime
+- den beim Reset erzeugten Recovery-Ordner einschließlich des Vorzustands
+- Konfiguration, Soul, User-Profil, lokale RAG-Quellen und Memory-Dateien
+- einen kurzen Prüfbericht ohne Secrets
+
+Der OneDrive-BizVault ist bereits im Mac-Container als synchronisierter Stand
+gesichert und muss nicht erneut als unverschlüsselte Kopie abgelegt werden.
+Öffne den neuen Windows-Container nach dem Schreiben erneut schreibgeschützt
+oder nutze die Prüffunktion des gewählten Archivformats. Vergleiche Datei- und
+Ordnerzahlen und dokumentiere Methode, Ergebnis und absoluten Sicherungspfad.
+
+Falls `BACKUP_M5` noch am Mac angeschlossen ist, fahre mit Inventur, Update und
+Reset fort und kennzeichne nur diesen externen Sicherungsschritt als ausstehend.
+Das lokale Recovery-Paket darf bis zur nachgeholten externen Sicherung nicht
+gelöscht werden.
+
+## 6. Ergebnisbericht
 
 Erstelle einen kurzen Bericht mit:
 
@@ -115,6 +148,8 @@ Erstelle einen kurzen Bericht mit:
 - absolutem BizVault-, Installations- und Runtime-Pfad
 - Vorher-/Nachher-Zählern des Resets
 - Recovery-Pfad
+- Pfad, Verfahren und Prüfergebnis der externen Windows-Sicherung oder klarer
+  Status `ausstehend`, falls das Laufwerk noch nicht verbunden ist
 - Ergebnissen von Doctor, SQLite-Prüfung, Canvas und Telegram
 - offenen Punkten und Auffälligkeiten
 

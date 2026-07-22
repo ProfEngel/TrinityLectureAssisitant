@@ -52,6 +52,8 @@ class TrinityPaths:
         home_path = Path(home).expanduser().resolve()
         control = (config or {}).get("control_plane", {})
         profile = str((config or {}).get("system", {}).get("profile", "PRIVAT")).upper()
+        if profile not in {"BIZ", "PRIVAT", "TEST"}:
+            profile = "PRIVAT"
         runtime_value = control.get("runtime_root") or os.environ.get("TRINITY_RUNTIME")
         vault_value = control.get("vault_root") or os.environ.get("TRINITY_VAULT")
         return cls(
@@ -62,9 +64,9 @@ class TrinityPaths:
             ),
             vault_root=_resolve_path(
                 vault_value,
-                default_vault_root(platform_name=platform_name),
+                default_vault_root(platform_name=platform_name, profile=profile),
             ),
-            profile=profile if profile in {"BIZ", "PRIVAT", "TEST"} else "PRIVAT",
+            profile=profile,
         )
 
     def ensure_layout(self) -> dict:
@@ -121,10 +123,20 @@ def default_runtime_root(platform_name: Optional[str] = None, home: Optional[str
     return Path.home() / "Trinity_Assistant" / "TrinityRuntime"
 
 
-def default_vault_root(platform_name: Optional[str] = None) -> Path:
+def default_vault_root(
+    platform_name: Optional[str] = None,
+    profile: Optional[str] = None,
+) -> Path:
     host = platform_name or platform.system()
-    if host == "Windows":
-        return Path.home() / "BrainVault"
+    normalized_profile = str(profile or ("BIZ" if host == "Windows" else "PRIVAT")).upper()
+    if normalized_profile == "TEST":
+        return Path.home() / "Trinity-Testbereich"
+    if normalized_profile == "BIZ":
+        for variable in ("OneDriveCommercial", "OneDrive"):
+            value = os.environ.get(variable)
+            if value:
+                return Path(value).expanduser() / "BizVault"
+        return Path.home() / "BizVault"
     candidate = (
         Path.home()
         / "Library"

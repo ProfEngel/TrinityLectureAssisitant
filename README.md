@@ -15,9 +15,10 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.53:** Große lokale Modelle erhalten beim ersten Laden standardmäßig bis zu 120 Sekunden statt eines zu knappen 30-Sekunden-Limits; danach bleiben Antworten schnell. Thinking lässt sich pro Modellslot eindeutig deaktivieren. Neue Windows-BIZ-Installationen schlagen OneDrive/`BizVault` statt des historischen `BrainVault`-Fallbacks vor, ohne bestehende Konfigurationen automatisch umzuschreiben.
+> - **v0.16.52:** Trinity und Creative Canvas verwenden auf Tailnet-Geräten eine gemeinsam verwaltete, konfigurierte Canvas-Adresse; die Companion-Bridge bleibt profilgesichert und der Mac-/Windows-Phase-2-Stand ist nachvollziehbar dokumentiert.
+> - **v0.16.51:** Der Launcher importiert Canvas-Komponenten robust, startet Canvas zusammen mit Trinity und prüft die gebündelte Produktionsoberfläche über Health- und Starttests.
 > - **v0.16.46:** Trinity startet auf aktuellen Python-Versionen wieder stabil, hält die signierte macOS-App außerhalb des iCloud-Schreibtischs und trennt Inhalts-Vault, lokale Runtime und lokalen Agenten-Werkzeugkasten. Neuinstallationen lassen Profil und Vault-Speicherort ausdrücklich wählen; der BizVault wird nach Hochschulaufgaben, der BrainVault nach privaten Projekten gegliedert. Updates erkennen den bekannten Vault, ergänzen nur fehlende Profilordner und lassen vorhandene Inhalte unverändert.
-> - **v0.16.45:** Bildauftraege laufen standardmaessig lokal ueber ComfyUI; nur ein ausdruecklicher externer Wunsch nutzt fal.ai. Erzeugte Bild-, Audio- und Video-Payloads werden als echte Companion-/G2-Medienanhaenge ausgeliefert, und der Lecture-Heartbeat kann relevante Fachbegriffe als kurze Definitions-Bubble melden.
-> - **v0.16.44:** G2-Spracherkennung mit einstellbarer Whisper-Qualitaet, Trinity-Fachwortbias und robusterer Erkennung kurzer deutscher HUD-Befehle; Companion-App und normales Desktop-STT bleiben unveraendert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

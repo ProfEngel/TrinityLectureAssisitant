@@ -199,7 +199,7 @@ class TrinityControlPlane:
                 "json_mode": True,
                 "vision": False,
                 "long_context": True,
-                "reasoning": True,
+                "reasoning": bool(provider.get("enable_thinking", False)),
             },
             "limits": {
                 "max_parallel_agent_jobs": 2,
