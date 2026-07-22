@@ -29,6 +29,9 @@ def test_macos_installer_uses_supported_python_and_preserves_recovery_copy():
     assert "':(exclude)core/state.txt'" in script
     assert 'mv "$INSTALL_DIR" "$ROLLBACK_DIR"' in script
     assert 'rm -rf "$INSTALL_DIR"' not in script
+    assert "stop_trinity_processes" in script
+    assert "trinity_launcher.py" in script
+    assert 'kill -TERM $targets' in script
 
 
 def test_macos_installer_only_ignores_known_runtime_ui_files():

@@ -42,6 +42,46 @@ BACKUP_DIR="$RECOVERY_ROOT/Nutzerdaten"
 ROLLBACK_DIR="$RECOVERY_ROOT/Trinity_Assistant-vorher"
 REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
 CANVAS_DIR="$INSTALL_DIR/components/TrinityCanvas"
+
+stop_trinity_processes() {
+    local targets=""
+    local pid parent command cwd
+
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+        case "$command" in
+            *"$INSTALL_DIR/core/trinity_bridge.py"*|*"$INSTALL_DIR/trinity_console.py"*|*"$INSTALL_DIR/trinity_app.py"*|*"$INSTALL_DIR/trinity_classic.py"*|*"$INSTALL_DIR/components/TrinityCanvas/"*)
+                targets="$targets $pid"
+                parent="$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || true)"
+                [ -n "$parent" ] && targets="$targets $parent"
+                ;;
+        esac
+    done < <(pgrep -f "$INSTALL_DIR" 2>/dev/null || true)
+
+    # Der Launcher selbst wird mit relativem Skriptpfad gestartet. Sein CWD
+    # identifiziert die betroffene Installation eindeutig.
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)"
+        [ "$cwd" = "$INSTALL_DIR" ] && targets="$targets $pid"
+    done < <(pgrep -f 'trinity_launcher.py' 2>/dev/null || true)
+
+    targets="$(printf '%s\n' $targets | awk 'NF && !seen[$1]++ {print $1}')"
+    [ -n "$targets" ] || return 0
+
+    echo "   🛑 Beende die laufende Trinity-Instanz für das Update..."
+    kill -TERM $targets 2>/dev/null || true
+    for _ in 1 2 3 4 5; do
+        local remaining=""
+        for pid in $targets; do
+            kill -0 "$pid" 2>/dev/null && remaining="$remaining $pid"
+        done
+        [ -z "$remaining" ] && return 0
+        sleep 1
+    done
+    kill -KILL $targets 2>/dev/null || true
+}
 mkdir -p "$RECOVERY_ROOT"
 
 # 3. Update-Modus: Bestehende Configs sichern
@@ -68,6 +108,8 @@ if [ -d "$INSTALL_DIR" ]; then
         echo "   Sichere oder committe die Änderungen und starte den Installer danach erneut."
         exit 2
     fi
+
+    stop_trinity_processes
 
     mkdir -p "$BACKUP_DIR"
 

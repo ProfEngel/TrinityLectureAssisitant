@@ -90,6 +90,52 @@ def _terminate(process):
         process.terminate()
 
 
+def _acquire_launcher_lock(base_dir, platform_name=None):
+    """Hold one OS-level lock so a second app click cannot duplicate Trinity."""
+
+    runtime_dir = os.path.join(base_dir, "TrinityRuntime")
+    os.makedirs(runtime_dir, exist_ok=True)
+    lock_handle = open(os.path.join(runtime_dir, "launcher.lock"), "a+b")
+    host = platform_name or sys.platform
+    try:
+        if host == "win32":
+            import msvcrt
+
+            lock_handle.seek(0, os.SEEK_END)
+            if lock_handle.tell() == 0:
+                lock_handle.write(b"0")
+                lock_handle.flush()
+            lock_handle.seek(0)
+            msvcrt.locking(lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (OSError, ImportError):
+        lock_handle.close()
+        return None
+    return lock_handle
+
+
+def _release_launcher_lock(lock_handle, platform_name=None):
+    if lock_handle is None or lock_handle.closed:
+        return
+    host = platform_name or sys.platform
+    try:
+        if host == "win32":
+            import msvcrt
+
+            lock_handle.seek(0)
+            msvcrt.locking(lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+    except (OSError, ImportError):
+        pass
+    lock_handle.close()
+
+
 def _log_message(log_handle, message):
     line = f"[{datetime.now().isoformat(timespec='seconds')}] {message}"
     print(line)
@@ -149,6 +195,10 @@ def launch_trinity():
     
     # 1. Pfade definieren
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    launcher_lock = _acquire_launcher_lock(base_dir)
+    if launcher_lock is None:
+        print("Trinity läuft bereits. Der zweite Start wird beendet.")
+        return
     eyes_ui_script = os.path.join(base_dir, "trinity_app.py")
     classic_ui_script = os.path.join(base_dir, "trinity_classic.py")
     console_script = os.path.join(base_dir, "trinity_console.py")
@@ -370,6 +420,7 @@ def launch_trinity():
                 except (OSError, ValueError, json.JSONDecodeError) as exc:
                     _log_message(launcher_log, f"Memory-Reset fehlgeschlagen: {exc}")
             _log_message(launcher_log, "Trinity ist schlafen gegangen.")
+            _release_launcher_lock(launcher_lock)
 
 if __name__ == "__main__":
     launch_trinity()

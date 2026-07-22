@@ -256,6 +256,19 @@ def test_launcher_forces_utf8_for_child_processes():
     assert env["PYTHONUTF8"] == "1"
 
 
+def test_launcher_lock_prevents_duplicate_local_instance(tmp_path):
+    first = trinity_launcher._acquire_launcher_lock(str(tmp_path))
+    assert first is not None
+
+    second = trinity_launcher._acquire_launcher_lock(str(tmp_path))
+    assert second is None
+
+    trinity_launcher._release_launcher_lock(first)
+    third = trinity_launcher._acquire_launcher_lock(str(tmp_path))
+    assert third is not None
+    trinity_launcher._release_launcher_lock(third)
+
+
 def test_surface_argument_is_read_for_cli_start():
     assert (
         trinity_launcher._requested_surface(
