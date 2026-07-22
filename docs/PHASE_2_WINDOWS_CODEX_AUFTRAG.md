@@ -85,10 +85,11 @@ verschiedene Bot-Fingerprints sind.
 
 ## 4. Update und vollständiger Test-Reset
 
-Sobald Trinity 0.16.49 auf GitHub veröffentlicht ist:
+Verwende Trinity 0.16.51 oder neuer:
 
 1. laufende Trinity-Prozesse beenden
-2. Trinity mit dem offiziellen Windows-Installer auf 0.16.49 aktualisieren
+2. Trinity mit dem offiziellen Windows-Installer auf die neueste Version,
+   mindestens 0.16.51, aktualisieren
 3. `trinity doctor --online` erneut ausführen
 4. Zustand mit `trinity memory status` dokumentieren
 5. vollständigen, rückholbaren Test-Reset ausführen:
