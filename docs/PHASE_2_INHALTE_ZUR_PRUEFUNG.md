@@ -71,4 +71,3 @@ oder Dateiname einsortiert. Der sichere nächste Schritt ist:
   zuordnen.
 - Development- und Löschkandidaten erst nach dem mobilen Profiltest bereinigen.
 - Die 62 Rohsessions in kleinen, überprüfbaren Blöcken zusammenfassen.
-
