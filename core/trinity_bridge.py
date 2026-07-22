@@ -68,6 +68,7 @@ QUIET_GET_LOG_PATHS = {
     "/bubble",
     "/workspaces",
     "/dashboard",
+    "/memory/graph",
 }
 
 
@@ -937,6 +938,18 @@ class TrinityBridge:
         store = MemoryStore(self.memory_dir / "trinity_memory.sqlite3")
         return {"ok": True, "memories": store.list_memories(limit=max(1, min(int(limit), 200)))}
 
+    def memory_graph(self, limit=90, user=None):
+        tenant_id = self._tenant_id(user)
+        database_path = (
+            tenant_memory_db_path(self.home, tenant_id)
+            if tenant_id
+            else self.memory_dir / "trinity_memory.sqlite3"
+        )
+        graph = MemoryStore(database_path).graph_data(
+            limit=max(1, min(int(limit), 150))
+        )
+        return {"ok": True, "profile": self.profile, **graph}
+
     def delete_memory_record(self, payload):
         if not isinstance(payload, dict):
             raise ValueError("Memory-Loeschen erwartet ein Objekt.")
@@ -1728,6 +1741,13 @@ def make_handler(bridge):
                         )
                     limit = int(query.get("limit", ["50"])[0] or 50)
                     _json_response(self, 200, bridge.list_memory_records(limit))
+                elif parsed.path == "/memory/graph":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Memory-Graph ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    limit = int(query.get("limit", ["90"])[0] or 90)
+                    _json_response(self, 200, bridge.memory_graph(limit, user=user))
                 elif parsed.path == "/media":
                     path = bridge.media_path_from_query(
                         query.get("path", [""])[0], user=user
