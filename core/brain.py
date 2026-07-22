@@ -71,6 +71,22 @@ class TrinityBrain:
             self.url = slot_data.get("url", "")
             self.model = slot_data.get("model", "")
             self.api_key = slot_data.get("api_key", "")
+            self.enable_thinking = slot_data.get("enable_thinking")
+            if self.enable_thinking is None and active_slot == "local":
+                # Lokale Modelle antworten standardmäßig direkt. Das verhindert,
+                # dass ein Konfigurations-Update Thinking versehentlich reaktiviert.
+                self.enable_thinking = False
+            default_timeout = 120 if active_slot == "local" else 90
+            try:
+                configured_timeout = int(
+                    slot_data.get("request_timeout_seconds", default_timeout)
+                )
+            except (TypeError, ValueError):
+                configured_timeout = default_timeout
+            # Große lokale Modelle können beim ersten Aufruf länger laden. Das
+            # Limit bleibt trotzdem begrenzt, damit ein defekter Provider nicht
+            # unbegrenzt die Oberfläche blockiert.
+            self.request_timeout_seconds = max(30, min(configured_timeout, 600))
             
             # LM-Studio Fallback für Key wenn leer im lokalen Slot
             if active_slot == "local" and not self.api_key:
@@ -251,8 +267,15 @@ class TrinityBrain:
             "messages": messages,
             "temperature": 0.0 # Für präzise Fakten/Begriffe
         }
+        if getattr(self, "enable_thinking", None) is not None:
+            data["enable_thinking"] = bool(self.enable_thinking)
         try:
-            resp = requests.post(self.url, headers=headers, json=data, timeout=30)
+            resp = requests.post(
+                self.url,
+                headers=headers,
+                json=data,
+                timeout=getattr(self, "request_timeout_seconds", 90),
+            )
             if resp.status_code == 200:
                 msg = resp.json()['choices'][0]['message']
                 # Qwen3-Fix: Fallback auf reasoning_content wenn content leer
@@ -580,10 +603,17 @@ class TrinityBrain:
                 {"role": "user", "content": attachment_content["content"]}
             ]
         }
+        if getattr(self, "enable_thinking", None) is not None:
+            data["enable_thinking"] = bool(self.enable_thinking)
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
-            response = requests.post(self.url, headers=headers, json=data, timeout=90)
+            response = requests.post(
+                self.url,
+                headers=headers,
+                json=data,
+                timeout=getattr(self, "request_timeout_seconds", 90),
+            )
             if response.status_code >= 400 and primary_image_path:
                 print(
                     "⚠️ Das aktive Modell hat die Bildeingabe abgelehnt. "
@@ -594,7 +624,7 @@ class TrinityBrain:
                     self.url,
                     headers=headers,
                     json=data,
-                    timeout=90,
+                    timeout=getattr(self, "request_timeout_seconds", 90),
                 )
             response.raise_for_status()
             

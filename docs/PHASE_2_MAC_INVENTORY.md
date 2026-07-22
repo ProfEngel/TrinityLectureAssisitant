@@ -1,7 +1,7 @@
 # Phase 2 – Mac-Bestand und Wiederherstellung
 
 Stand: 22. Juli 2026
-Status: Inventur fortgeschritten; keine fachlichen Inhalte migriert oder gelöscht
+Status: Mac-Inventur und externe Sicherung abgeschlossen; keine fachlichen Inhalte migriert oder gelöscht
 
 ## 1. Aktive private Trinity-Installation
 
@@ -10,13 +10,13 @@ Status: Inventur fortgeschritten; keine fachlichen Inhalte migriert oder gelösc
 | Installation | `/Users/matmax/Trinity_Assistant` |
 | App | `/Users/matmax/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
-| Version | `0.16.51` veröffentlicht; kombinierter Launcher-/Canvas-Start lokal geprüft |
+| Version | `0.16.52` veröffentlicht; kombinierter Launcher-/Canvas-Start erneut lokal geprüft |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
 | Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |
 | Inhalts-Vault | iCloud-`BrainVault` |
 | lokale Agentenbasis | `/Users/matmax/.agents` über `external_agents_root=/Users/matmax` |
-| Companion | aktiviert, Port `8766` |
+| Companion | aktiviert, Port `8766`; Apple-Companion `0.16.56` gebaut |
 | Telegram Privat | aktiviert; Token und Chat-ID gesetzt, Secret-Werte nicht ausgegeben |
 
 `trinity doctor --online` meldete Python, SSL, Konfiguration, Desktop-UI,
@@ -39,9 +39,25 @@ Recovery-Verzeichnisse `installer-20260721_193918` und
 `installer-20260721_193931` sind leer und können später nach der Abnahme
 entfernt werden.
 
-Diese Kopien liegen noch auf demselben physischen Mac. Eine verschlüsselte
-zweite Kopie auf einem unabhängigen Datenträger fehlt weiterhin. Cloud-Sync
-ersetzt diese zweite Kopie nicht.
+Die lokalen Rückfallstände liegen weiterhin auf demselben physischen Mac.
+Zusätzlich wurde am 22. Juli 2026 eine unabhängige, verschlüsselte
+Gesamtsicherung auf dem USB-Laufwerk `BACKUP_M5` erstellt:
+
+`Trinity_Gesamtsicherung_2026-07-22_123626.sparsebundle`
+
+Der rund 50 GB große AES-256-verschlüsselte APFS-Container enthält den aktuellen
+BrainVault, den synchronisierten BizVault-Stand, BrainVault_LEGACY,
+Trinity-Recovery, die aktuellen Trinity- und Canvas-Arbeitsstände sowie eine
+reine Sicherheitskopie der lokalen Agentendateien. Alle sieben Bereiche wurden
+objektgenau mit ihren Quellen verglichen. Das schreibgeschützt eingebundene
+APFS-Dateisystem bestand `fsck_apfs` mit Exit-Code 0 und wurde danach sicher
+ausgeworfen. Passwort und sonstige Secrets wurden weder protokolliert noch im
+Repository gespeichert.
+
+Die ausschließlich lokal auf Windows liegende BIZ-Installation und BIZ-Runtime
+sind nicht Teil dieser Mac-Sicherung. Sie benötigen nach der Windows-Inventur
+eine eigene Windows-kompatible verschlüsselte Sicherung auf demselben externen
+Datenträger. Das vorhandene Mac-Sparsebundle darf dabei nicht verändert werden.
 
 ## 3. Vault-Bestand
 
@@ -113,6 +129,11 @@ Session. Die Memory-Datenbank enthält 0 Sessions, 0 Nachrichten, 0 Memories,
 0 Tags und 0 Beziehungen. Backup- und neue SQLite-Datenbank bestanden erneut
 `PRAGMA integrity_check` mit `ok`. BrainVault, neun RAG-Dateien, Soul,
 User-Profil, Konfiguration und Telegram-Zugang blieben unverändert.
+
+Die laufende Bridge wurde anschließend authentifiziert geprüft: Profil
+`PRIVAT`, genau ein Arbeitsraum `Schnellsessions`, genau eine gemeinsame
+Session und HTTP 403 bei einem absichtlich falschen erwarteten BIZ-Profil.
+Canvas antwortete am konfigurierten Tailnet-Endpunkt mit HTTP 200.
 
 ## 5. RAG und Graphify
 
@@ -192,23 +213,30 @@ Vorinstallation und keine automatische Agentenmigration.
 - [x] Vault-Größen und Hauptbestände erfassen
 - [x] ersten nicht-invasiven Duplikat-Scan durchführen
 - [x] lokale Wiederherstellungskopien erstellen und prüfen
-- [ ] Companion-Fix für profilbezogene Session-/Projektlisten auf echtem Gerät abnehmen
+- [ ] Apple-Companion 0.16.56 mit Profilanzeige, Canvas und kompakter
+  Arbeitsraumleiste auf echtem iPhone/iPad abnehmen
 - [x] Creative Canvas lokal aus dem Cloud-Vault herauslösen
 - [x] privaten Testbestand rückholbar auf null setzen
 - [ ] RAG-Quellen einzeln Arbeit, Privat oder Development zuordnen
 - [ ] gesicherte alte Sessions prüfen und nur wertvolle Summaries übernehmen
-- [ ] verschlüsselte zweite Wiederherstellungskopie auf unabhängigem Medium erstellen
-- [ ] Windows-Installation und Windows-Runtime inventarisieren
-- [ ] getrennte Telegram-Zugänge praktisch prüfen
+- [x] Mac-Bestand verschlüsselt auf unabhängigem Medium sichern und prüfen
+- [ ] Windows-lokale BIZ-Runtime separat verschlüsselt auf unabhängigem Medium sichern
+- [x] Windows-Installation, Windows-Runtime und BIZ-Reset inventarisieren
+- [x] getrennte Telegram-Zugänge ohne Testnachricht technisch prüfen
 - [ ] Agenten erst nach Abschluss der übrigen Punkte manuell bearbeiten
 
-Vom Mac aus bestätigt: Die private Telegram-Konfiguration besitzt genau einen
-aktivierten und vollständig konfigurierten Botzugang. Ob der Windows-BIZ-Zugang
-einen getrennten zweiten Bot verwendet, muss auf Windows anhand eines
-Secret-freien Fingerprints geprüft werden.
+Bestätigt: Privat verwendet `Trinity_M5_bot` mit Fingerprint `-roZaf1bcMsO`,
+Arbeit verwendet `Trinity_HFWU_bot` mit Fingerprint `02N8LCwzPked`. Beide Bots
+sind erreichbar und die Fingerprints verschieden. Es wurde keine Testnachricht
+gesendet.
 
-Am Mac war am 22. Juli 2026 kein unabhängiger Datenträger eingehängt und kein
-Time-Machine-Ziel konfiguriert. Eine verschlüsselte zweite Sicherung kann daher
-erst nach Anschluss oder Bereitstellung eines unabhängigen Zielmediums erstellt
-werden; eine weitere Datei auf der internen SSD würde die Backup-Regel nicht
-erfüllen.
+Der Windows-Ergebnisbericht und die kontrollierte Vault-/RAG-Nacharbeit sind in
+`PHASE_2_WINDOWS_RESULT.md` festgehalten. Die Windows-Inventur ist abgeschlossen;
+die BIZ-Vault-Zuordnung und die unabhängige Windows-Sicherung bleiben offen.
+
+Das unabhängige USB-Laufwerk `BACKUP_M5` wurde am 22. Juli 2026 erfolgreich für
+die geprüfte Mac-Gesamtsicherung verwendet. Der verschlüsselte Container ist
+geschlossen; das äußere ExFAT-Volume bleibt bis zum manuellen Auswerfen
+eingehängt. Die Windows-Sicherung muss als eigener verschlüsselter Container
+daneben angelegt werden, weil Windows das Mac-APFS-Sparsebundle nicht als
+Arbeitsformat verwenden soll.

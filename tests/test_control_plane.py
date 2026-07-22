@@ -30,13 +30,20 @@ def test_trinity_paths_create_separated_runtime_and_vault(tmp_path):
 
 def test_platform_defaults_keep_runtime_local_and_vault_syncable(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
+    monkeypatch.setenv("OneDriveCommercial", str(tmp_path / "onedrive-work"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
 
     assert default_runtime_root("Windows").as_posix().endswith(
         "localappdata/Trinity/TrinityRuntime"
     )
     assert default_vault_root("Windows").as_posix().endswith(
+        "onedrive-work/BizVault"
+    )
+    assert default_vault_root("Windows", profile="PRIVAT").as_posix().endswith(
         "BrainVault"
+    )
+    assert default_vault_root("Darwin", profile="TEST").as_posix().endswith(
+        "Trinity-Testbereich"
     )
     assert default_runtime_root("Linux").as_posix().endswith(
         "xdg/trinity/TrinityRuntime"
@@ -72,6 +79,13 @@ def test_control_plane_initializes_vault_catalog_and_adapters(tmp_path):
     assert not (vault / ".ai").exists()
     assert result["adapters"]["script-workflow"]["ok"] is True
     assert result["adapters"]["builder"]["ok"] is True
+
+    model_profile = json.loads(
+        (runtime / "model_profiles" / "local-default.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert model_profile["capabilities"]["reasoning"] is False
 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     assert catalog["schema_version"] == 2
