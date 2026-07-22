@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.57:** Auch der Terminal-Wrapper verarbeitet das externe Beenden kontrolliert und räumt seinen Audio-Kern auf. Damit bleiben nach App-Ende oder Update keine verwaisten Trinity-Prozesse zurück.
 > - **v0.16.56:** Trinity beendet beim Update nun auch ältere, verwaiste Audio-Kernprozesse derselben Installation. Externe Beendigungen des Launchers laufen kontrolliert durch die Kindprozess-Aufräumroutine.
 > - **v0.16.55:** RAG-Indizes sind jetzt strikt profilgebunden. Ein ungekennzeichneter Legacy-Index oder ein Index des falschen Profils wird nicht geladen; neue Indizes speichern zwingend `BIZ`, `PRIVAT` oder `TEST` in ihren Metadaten.
 > - **v0.16.54:** Der macOS-Installer beendet vor einem Update ausschließlich den Prozessbaum der betroffenen Trinity-Installation. Ein betriebssystemweiter Instanz-Lock verhindert außerdem, dass Doppelklicks parallele Launcher, Oberflächen, Bridges oder Canvas-Dienste erzeugen.
