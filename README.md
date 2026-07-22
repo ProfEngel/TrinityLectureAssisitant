@@ -15,10 +15,10 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.55:** RAG-Indizes sind jetzt strikt profilgebunden. Ein ungekennzeichneter Legacy-Index oder ein Index des falschen Profils wird nicht geladen; neue Indizes speichern zwingend `BIZ`, `PRIVAT` oder `TEST` in ihren Metadaten.
 > - **v0.16.54:** Der macOS-Installer beendet vor einem Update ausschließlich den Prozessbaum der betroffenen Trinity-Installation. Ein betriebssystemweiter Instanz-Lock verhindert außerdem, dass Doppelklicks parallele Launcher, Oberflächen, Bridges oder Canvas-Dienste erzeugen.
 > - **v0.16.53:** Große lokale Modelle erhalten beim ersten Laden standardmäßig bis zu 120 Sekunden statt eines zu knappen 30-Sekunden-Limits; danach bleiben Antworten schnell. Thinking lässt sich pro Modellslot eindeutig deaktivieren. Neue Windows-BIZ-Installationen schlagen OneDrive/`BizVault` statt des historischen `BrainVault`-Fallbacks vor, ohne bestehende Konfigurationen automatisch umzuschreiben.
 > - **v0.16.52:** Trinity und Creative Canvas verwenden auf Tailnet-Geräten eine gemeinsam verwaltete, konfigurierte Canvas-Adresse; die Companion-Bridge bleibt profilgesichert und der Mac-/Windows-Phase-2-Stand ist nachvollziehbar dokumentiert.
-> - **v0.16.51:** Der Launcher importiert Canvas-Komponenten robust, startet Canvas zusammen mit Trinity und prüft die gebündelte Produktionsoberfläche über Health- und Starttests.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.

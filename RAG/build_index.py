@@ -15,6 +15,7 @@ komplett neu gebaut.
 
 import os
 import json
+import sys
 import numpy as np
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
@@ -22,6 +23,12 @@ from sentence_transformers import SentenceTransformer
 # Konfiguration
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
+CORE_DIR = os.path.join(PROJECT_DIR, "core")
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
+from rag_profile import configured_profile
+
 INDEX_DIR = os.path.join(SCRIPT_DIR, "index")
 MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 CHUNK_SIZE = 500       # Zeichen pro Chunk (kleiner = präziser)
@@ -160,6 +167,7 @@ def build_index():
 
     # Metadata
     meta = {
+        "profile": configured_profile(),
         "model": MODEL_NAME,
         "chunk_size": CHUNK_SIZE,
         "chunk_overlap": CHUNK_OVERLAP,
