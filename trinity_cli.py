@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.16.48"
+VERSION = "0.16.49"
 
 
 def find_trinity_home(explicit=None):
@@ -115,12 +115,12 @@ def _configure_installation_profile(config, input_fn=input):
 
     system = config.setdefault("system", {})
     current_profile = normalize_profile(system.get("profile"))
-    visible_profile = {"BIZ": "beruf", "PRIVAT": "privat", "TEST": "testbereich"}[
+    visible_profile = {"BIZ": "arbeit", "PRIVAT": "privat", "TEST": "development"}[
         current_profile
     ]
     selected_profile = _prompt_choice(
         "Profil dieser Trinity-Installation",
-        ("beruf", "privat", "testbereich"),
+        ("arbeit", "privat", "development"),
         visible_profile,
         input_fn,
     )
@@ -953,8 +953,88 @@ def run_session_command(home, args):
         if not args.session_id or not args.workspace:
             raise ValueError("session move braucht SESSION_ID und --workspace.")
         result = manager.move_session(args.session_id, args.workspace).as_dict()
+    elif args.session_action == "delete":
+        if not args.session_id or not args.yes:
+            raise ValueError("session delete braucht SESSION_ID und --yes.")
+        core_path = str(Path(home) / "core")
+        if core_path not in sys.path:
+            sys.path.insert(0, core_path)
+        from memory_store import MemoryStore  # pylint: disable=import-outside-toplevel
+        from runtime_reset import delete_session_summary  # pylint: disable=import-outside-toplevel
+        from unified_session import UnifiedSessionStore  # pylint: disable=import-outside-toplevel
+
+        delete_session_summary(home, args.session_id)
+        result = manager.delete_session(args.session_id, archive=args.archive)
+        if not args.archive:
+            result["memory"] = MemoryStore(Path(home) / "memory" / "trinity_memory.sqlite3").delete_session(args.session_id)
+            result["active_session"] = UnifiedSessionStore(home).current(create=True).as_dict()
+    elif args.session_action == "delete-summary":
+        if not args.session_id or not args.yes:
+            raise ValueError("session delete-summary braucht SESSION_ID und --yes.")
+        core_path = str(Path(home) / "core")
+        if core_path not in sys.path:
+            sys.path.insert(0, core_path)
+        from runtime_reset import delete_session_summary  # pylint: disable=import-outside-toplevel
+
+        result = delete_session_summary(home, args.session_id)
     else:
         raise ValueError("Unbekannte Session-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_memory_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from memory_store import MemoryStore  # pylint: disable=import-outside-toplevel
+    from runtime_reset import operational_status, reset_operational_memory  # pylint: disable=import-outside-toplevel
+
+    store = MemoryStore(Path(home) / "memory" / "trinity_memory.sqlite3")
+    if args.memory_action == "status":
+        result = operational_status(home)
+    elif args.memory_action == "list":
+        result = store.list_memories(limit=args.limit)
+    elif args.memory_action == "delete":
+        if not args.memory_id or not args.yes:
+            raise ValueError("memory delete braucht MEMORY_ID und --yes.")
+        result = {"memory_id": args.memory_id, "deleted": store.delete_memory(args.memory_id)}
+    elif args.memory_action == "reset":
+        if not args.yes:
+            raise ValueError("memory reset ist destruktiv und braucht --yes.")
+        result = reset_operational_memory(
+            home,
+            backup=not args.no_backup,
+            include_generated=args.include_generated,
+            include_canvas=args.include_canvas,
+        )
+    else:
+        raise ValueError("Unbekannte Memory-Aktion.")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_canvas_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from canvas_manager import CanvasManager  # pylint: disable=import-outside-toplevel
+
+    manager = CanvasManager(home)
+    if args.canvas_action == "status":
+        result = manager.status()
+    elif args.canvas_action in {"install", "update"}:
+        result = manager.install_or_update()
+    elif args.canvas_action == "start":
+        manager.start()
+        result = manager.status()
+    elif args.canvas_action == "open":
+        manager.open()
+        result = manager.status()
+    elif args.canvas_action == "stop":
+        result = {"stopped": manager.stop(), **manager.status()}
+    else:
+        raise ValueError("Unbekannte Canvas-Aktion.")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
@@ -1075,7 +1155,16 @@ def build_parser():
     vault.add_argument(
         "--profile",
         default="",
-        choices=("beruf", "privat", "testbereich", "BIZ", "PRIVAT", "TEST"),
+        choices=(
+            "arbeit",
+            "privat",
+            "development",
+            "beruf",
+            "testbereich",
+            "BIZ",
+            "PRIVAT",
+            "TEST",
+        ),
         help="Profil des Vaults",
     )
     vault.add_argument(
@@ -1097,12 +1186,32 @@ def build_parser():
         "session",
         help="Sessions in lokalen Arbeitsraeumen verwalten",
     )
-    session.add_argument("session_action", choices=("new", "list", "move"))
-    session.add_argument("session_id", nargs="?", help="Session-ID bei move")
+    session.add_argument("session_action", choices=("new", "list", "move", "delete", "delete-summary"))
+    session.add_argument("session_id", nargs="?", help="Session-ID bei move/delete/delete-summary")
     session.add_argument("--title", default="", help="Sessiontitel bei new")
     session.add_argument("--workspace", default="_inbox", help="Arbeitsraum-ID")
     session.add_argument("--mode", default="lecture", help="Trinity-Modus der Session")
     session.add_argument("--limit", type=int, default=50)
+    session.add_argument("--archive", action="store_true", help="Session statt Löschen lokal archivieren")
+    session.add_argument("--yes", action="store_true", help="Destruktive Aktion ausdrücklich bestätigen")
+
+    memory = subparsers.add_parser(
+        "memory",
+        help="Memory-Inhalte prüfen, einzeln löschen oder vollständig zurücksetzen",
+    )
+    memory.add_argument("memory_action", choices=("status", "list", "delete", "reset"))
+    memory.add_argument("memory_id", nargs="?", help="Memory-ID bei delete")
+    memory.add_argument("--limit", type=int, default=50)
+    memory.add_argument("--yes", action="store_true", help="Destruktive Aktion ausdrücklich bestätigen")
+    memory.add_argument("--no-backup", action="store_true", help="Reset ohne Wiederherstellungskopie")
+    memory.add_argument("--include-generated", action="store_true", help="Auch lokal erzeugte Medien zurücksetzen")
+    memory.add_argument("--include-canvas", action="store_true", help="Auch lokale Canvas-Laufzeitdaten zurücksetzen")
+
+    canvas = subparsers.add_parser(
+        "canvas",
+        help="Trinity Canvas installieren, starten und öffnen – ohne Portangaben",
+    )
+    canvas.add_argument("canvas_action", choices=("status", "install", "update", "start", "open", "stop"))
     return parser
 
 
@@ -1152,6 +1261,10 @@ def main(argv=None):
             return run_workspace_command(home, args)
         if args.command == "session":
             return run_session_command(home, args)
+        if args.command == "memory":
+            return run_memory_command(home, args)
+        if args.command == "canvas":
+            return run_canvas_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1

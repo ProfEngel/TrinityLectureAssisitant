@@ -7,6 +7,9 @@ param(
     [switch]$ValidateEnvironmentOnly
 )
 
+$CanvasInstallDir = Join-Path $InstallDir "components\TrinityCanvas"
+$CanvasRepository = "https://github.com/ProfEngel/TrinityCreativeCanvas.git"
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
@@ -295,7 +298,7 @@ if ($isUpdate) {
 Write-Host "Lade Trinity herunter ..."
 $git = Get-Command "git.exe" -ErrorAction SilentlyContinue
 if ($git) {
-    & $git.Source clone --branch $Branch --single-branch $Repository $InstallDir
+    & $git.Source clone --branch $Branch --single-branch --recurse-submodules --shallow-submodules $Repository $InstallDir
     if ($LASTEXITCODE -ne 0) {
         throw "Git konnte Trinity nicht herunterladen."
     }
@@ -310,6 +313,16 @@ else {
     $sourceDir = Get-ChildItem $extractPath -Directory | Select-Object -First 1
     Move-Item $sourceDir.FullName $InstallDir
     Remove-Item $zipPath, $extractPath -Recurse -Force
+
+    $canvasZipPath = Join-Path $env:TEMP "trinity-canvas-$timestamp.zip"
+    $canvasExtractPath = Join-Path $env:TEMP "trinity-canvas-$timestamp"
+    $canvasZipUrl = "https://github.com/ProfEngel/TrinityCreativeCanvas/archive/refs/heads/main.zip"
+    Invoke-WebRequest -Uri $canvasZipUrl -OutFile $canvasZipPath
+    Expand-Archive -Path $canvasZipPath -DestinationPath $canvasExtractPath -Force
+    $canvasSourceDir = Get-ChildItem $canvasExtractPath -Directory | Select-Object -First 1
+    New-Item -ItemType Directory -Path (Split-Path $CanvasInstallDir) -Force | Out-Null
+    Move-Item $canvasSourceDir.FullName $CanvasInstallDir
+    Remove-Item $canvasZipPath, $canvasExtractPath -Recurse -Force
 }
 
 if ($isUpdate) {
@@ -360,6 +373,26 @@ try {
 }
 finally {
     Pop-Location
+}
+
+Write-Host "Installiere Trinity Canvas ..."
+$node = Get-Command "node.exe" -ErrorAction SilentlyContinue
+$npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
+if (-not $node -or -not $npm) {
+    Write-Warning "Node.js/npm fehlt. Trinity läuft; Canvas kann nach der Node.js-Installation ergänzt werden."
+}
+elseif (Test-Path "$CanvasInstallDir\package.json") {
+    Push-Location $CanvasInstallDir
+    try {
+        & $npm.Source ci
+        if ($LASTEXITCODE -ne 0) { throw "Canvas-Abhängigkeiten konnten nicht installiert werden." }
+        & $npm.Source run build
+        if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht gebaut werden." }
+    }
+    finally { Pop-Location }
+}
+else {
+    throw "Die zu Trinity gehörende Canvas-Komponente fehlt."
 }
 
 $cliBin = "$InstallDir\bin"
@@ -469,5 +502,6 @@ Write-Host "Trinity liegt unter: $InstallDir"
 Write-Host "Trinity startet mit den in den Einstellungen gewählten Oberflächen."
 Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, sofern eine GUI aktiv ist."
 Write-Host "In einer neuen PowerShell steht außerdem der Befehl 'trinity' bereit."
+Write-Host "Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

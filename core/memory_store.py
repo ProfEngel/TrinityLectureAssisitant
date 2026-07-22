@@ -189,6 +189,67 @@ class MemoryStore:
                 )
             ]
 
+    def stats(self):
+        with self.connect() as db:
+            return {
+                table: db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in ("sessions", "messages", "memories", "memory_tags", "memory_edges")
+            }
+
+    def list_memories(self, limit=50):
+        with self.connect() as db:
+            return [
+                dict(row)
+                for row in db.execute(
+                    """
+                    SELECT id, kind, summary, source, session_id, weight,
+                           created_at, updated_at
+                    FROM memories
+                    ORDER BY updated_at DESC
+                    LIMIT ?
+                    """,
+                    (int(limit),),
+                )
+            ]
+
+    def delete_memory(self, memory_id):
+        with self.connect() as db:
+            cursor = db.execute("DELETE FROM memories WHERE id = ?", (str(memory_id),))
+        return cursor.rowcount > 0
+
+    def delete_session_memories(self, session_id, kinds=None):
+        session_id = str(session_id)
+        with self.connect() as db:
+            if kinds:
+                normalized = tuple(str(item) for item in kinds)
+                placeholders = ",".join("?" for _ in normalized)
+                cursor = db.execute(
+                    f"DELETE FROM memories WHERE session_id = ? AND kind IN ({placeholders})",
+                    (session_id, *normalized),
+                )
+            else:
+                cursor = db.execute("DELETE FROM memories WHERE session_id = ?", (session_id,))
+        return cursor.rowcount
+
+    def delete_session(self, session_id):
+        session_id = str(session_id)
+        with self.connect() as db:
+            memories = db.execute(
+                "DELETE FROM memories WHERE session_id = ?", (session_id,)
+            ).rowcount
+            messages = db.execute(
+                "DELETE FROM messages WHERE session_id = ?", (session_id,)
+            ).rowcount
+            sessions = db.execute(
+                "DELETE FROM sessions WHERE id = ?", (session_id,)
+            ).rowcount
+        return {
+            "session_id": session_id,
+            "deleted": sessions > 0,
+            "messages": messages,
+            "memories": memories,
+        }
+
     def add_message(self, session_id, role, content, metadata=None):
         session_id = self.ensure_session(session_id)
         now = _now()

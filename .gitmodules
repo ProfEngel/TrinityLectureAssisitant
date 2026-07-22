@@ -1,0 +1,4 @@
+[submodule "components/TrinityCanvas"]
+	path = components/TrinityCanvas
+	url = https://github.com/ProfEngel/TrinityCreativeCanvas.git
+	branch = main

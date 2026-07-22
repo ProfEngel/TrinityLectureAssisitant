@@ -10,13 +10,14 @@ Status: Inventur fortgeschritten; keine fachlichen Inhalte migriert oder gelösc
 | Installation | `/Users/matmax/Trinity_Assistant` |
 | App | `/Users/matmax/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
-| Version | `0.16.47`, Branch `main`, Installation aktuell |
+| Version | zuletzt veröffentlicht `0.16.48`; `0.16.49` mit Canvas-/Reset-Integration in Prüfung |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
 | Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |
 | Inhalts-Vault | iCloud-`BrainVault` |
 | lokale Agentenbasis | `/Users/matmax/.agents` über `external_agents_root=/Users/matmax` |
 | Companion | aktiviert, Port `8766` |
+| Telegram Privat | aktiviert; Token und Chat-ID gesetzt, Secret-Werte nicht ausgegeben |
 
 `trinity doctor --online` meldete Python, SSL, Konfiguration, Desktop-UI,
 LLM, Codex, Memory, Logs und Aktualität vollständig als `OK`.
@@ -66,6 +67,16 @@ Die CampusHub-Struktur bestätigt die beschlossene BizVault-Zuordnung:
 - `ThesisForge` → `60 Abschlussarbeiten und Betreuung`
 - `projects/Automatismen` bleibt ausdrücklich außerhalb der fachlichen
   Hauptmigration und wird später separat bewertet.
+
+Der OneDrive-BizVault wurde am 22. Juli 2026 zusätzlich über den auf dem Mac
+synchronisierten Pfad bestätigt:
+
+`/Users/matmax/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
+
+Er enthält weiterhin nur die vorbereitete Struktur: 2 Dateien, 11 Ordner und
+rund 8 KB. Damit kann der fachliche OneDrive-Bestand vom Mac aus inventarisiert
+werden; die lokale Windows-Installation und Windows-Runtime sind darüber nicht
+zugänglich.
 
 ## 4. Sessions, Arbeitsräume und Memory
 
@@ -125,18 +136,19 @@ identischen Inhalt. Ein vollständiger Hashlauf wurde bewusst nicht gestartet,
 weil er bis zu 42 GB iCloud-Daten herunterladen könnte. Exakte Hashprüfung
 erfolgt später nur für fachliche Dokumentordner, nicht für Software-Caches.
 
-## 7. Creative Canvas – Mac-Abweichung behoben
+## 7. Creative Canvas – Standalone und Trinity-Komponente
 
-Creative Canvas läuft nun lokal aus `/Users/matmax/TrinityCreativeCanvas`.
-Abhängigkeiten wurden dort neu installiert; Typecheck und Produktions-Build
-waren erfolgreich. Der LaunchAgent `de.trinity.creativecanvas.plist` verwendet
-den lokalen Projektordner. Seine technischen Logs liegen unter
-`/Users/matmax/Library/Logs/TrinityCreativeCanvas` und damit ebenfalls
-außerhalb des BrainVaults.
+Creative Canvas bleibt als eigenständiges Repository und Standalone-Anwendung
+unter `/Users/matmax/TrinityCreativeCanvas` verfügbar. Trinity bindet denselben
+Repository-Stand zusätzlich als fest versionierte Komponente unter
+`components/TrinityCanvas` ein. Damit gibt es einen gepflegten Quellcode, aber
+zwei zulässige Installationsformen. Typecheck und Produktions-Build waren für
+die eingebundene Komponente erfolgreich.
 
-Der lokale Stand ist seinem GitHub-Stand vier bereits vorhandene Commits
-voraus. Diese Historie wurde vor der Umstellung als vollständiges und geprüftes
-Git-Bundle gesichert. Der vollständige Legacy-Quellbestand blieb unverändert.
+Die zuvor vier lokalen Commits und die Produktionsintegration wurden über
+Canvas-PR #1 in den GitHub-Stand übernommen. Diese Historie wurde vor der
+Umstellung zusätzlich als vollständiges und geprüftes Git-Bundle gesichert.
+Der vollständige Legacy-Quellbestand blieb unverändert.
 Der frühere minimale Cloud-Rest wurde nicht gelöscht, sondern in denselben
 Recovery-Ordner verschoben. Im aktiven BrainVault liegen damit weder Runtime-
 noch Build- oder Logdateien von Creative Canvas.
@@ -145,6 +157,11 @@ Der Paketmanager meldet sechs bekannte Abhängigkeitswarnungen (eine niedrige,
 eine mittlere und vier hohe). Eine erzwungene automatische Aktualisierung wurde
 nicht durchgeführt, weil sie inkompatible Versionssprünge verursachen könnte;
 die Abhängigkeiten werden später kontrolliert aktualisiert.
+
+Der frühere eigenständige LaunchAgent im Entwicklungsmodus wird nach der
+Freigabe der Trinity-Integration außer Betrieb genommen; künftig startet
+Trinity seine eingebundene Canvas-Komponente selbst über einen einzigen
+internen Produktionsdienst.
 
 ## 8. Agenten – bewusst zurückgestellt
 
@@ -171,3 +188,14 @@ Vorinstallation und keine automatische Agentenmigration.
 - [ ] Windows-Installation und Windows-Runtime inventarisieren
 - [ ] getrennte Telegram-Zugänge praktisch prüfen
 - [ ] Agenten erst nach Abschluss der übrigen Punkte manuell bearbeiten
+
+Vom Mac aus bestätigt: Die private Telegram-Konfiguration besitzt genau einen
+aktivierten und vollständig konfigurierten Botzugang. Ob der Windows-BIZ-Zugang
+einen getrennten zweiten Bot verwendet, muss auf Windows anhand eines
+Secret-freien Fingerprints geprüft werden.
+
+Am Mac war am 22. Juli 2026 kein unabhängiger Datenträger eingehängt und kein
+Time-Machine-Ziel konfiguriert. Eine verschlüsselte zweite Sicherung kann daher
+erst nach Anschluss oder Bereitstellung eines unabhängigen Zielmediums erstellt
+werden; eine weitere Datei auf der internen SSD würde die Backup-Regel nicht
+erfüllen.

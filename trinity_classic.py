@@ -50,7 +50,9 @@ from chat_protocol import (
     enqueue_chat_request,
     load_chat_events,
 )
+from canvas_manager import CanvasManager
 from memory_store import MemoryStore, render_graph_html
+from runtime_reset import delete_session_summary
 from remote_client import RemoteTrinityClient
 from configuration import load_config, save_config
 from trinity_bridge import TrinityBridge
@@ -450,6 +452,30 @@ class ClassicWindow(QMainWindow):
         web_layout.addLayout(web_toolbar)
         web_layout.addWidget(self.web_workspace, 1)
 
+        canvas_tab = QWidget()
+        canvas_layout = QVBoxLayout(canvas_tab)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_toolbar = QHBoxLayout()
+        canvas_label = QLabel("Trinity Canvas – gemeinsam mit Trinity gestartet")
+        canvas_label.setObjectName("section")
+        canvas_reload_button = QPushButton("Neu laden")
+        canvas_reload_button.setObjectName("subtle")
+        canvas_reload_button.clicked.connect(lambda: self.canvas_workspace.reload())
+        canvas_external_button = QPushButton("Extern öffnen")
+        canvas_external_button.setObjectName("subtle")
+        canvas_manager = CanvasManager(BASE_DIR)
+        canvas_external_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl(canvas_manager.url))
+        )
+        canvas_toolbar.addWidget(canvas_label, 1)
+        canvas_toolbar.addWidget(canvas_reload_button)
+        canvas_toolbar.addWidget(canvas_external_button)
+        self.canvas_workspace = QWebEngineView()
+        self._configure_web_view(self.canvas_workspace)
+        self.canvas_workspace.setUrl(QUrl(canvas_manager.url))
+        canvas_layout.addLayout(canvas_toolbar)
+        canvas_layout.addWidget(self.canvas_workspace, 1)
+
         agents_tab = QWidget()
         agents_layout = QVBoxLayout(agents_tab)
         agents_layout.setContentsMargins(0, 0, 0, 0)
@@ -498,9 +524,18 @@ class ClassicWindow(QMainWindow):
         refresh_memory_button = QPushButton("Graph aktualisieren")
         refresh_memory_button.setObjectName("subtle")
         refresh_memory_button.clicked.connect(self.refresh_memory_graph)
+        reset_memory_button = QPushButton("Memory auf 0 setzen")
+        reset_memory_button.setObjectName("subtle")
+        reset_memory_button.setToolTip("Sessions, Summaries und Memory nach Sicherung vollständig zurücksetzen")
+        reset_memory_button.clicked.connect(self.request_memory_reset)
+        delete_memory_button = QPushButton("Einzelnes Memory löschen")
+        delete_memory_button.setObjectName("subtle")
+        delete_memory_button.clicked.connect(self.delete_memory_from_panel)
         memory_header.addWidget(self.memory_status, 1)
         memory_header.addWidget(bake_button)
         memory_header.addWidget(refresh_memory_button)
+        memory_header.addWidget(delete_memory_button)
+        memory_header.addWidget(reset_memory_button)
         self.memory_graph = QWebEngineView()
         self._configure_web_view(self.memory_graph)
         self.memory_graph.setHtml(
@@ -518,6 +553,7 @@ class ClassicWindow(QMainWindow):
         self.main_tabs.addTab(daily_tab, "Talk")
         self.main_tabs.addTab(lecture_tab, "Vortrag")
         self.main_tabs.addTab(web_tab, "Web")
+        self.main_tabs.addTab(canvas_tab, "Canvas")
         self.main_tabs.addTab(agents_tab, "Agents")
         self.main_tabs.addTab(control_tab, "Control")
         self.main_tabs.addTab(chat_tab, "Chat")
@@ -582,6 +618,50 @@ class ClassicWindow(QMainWindow):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(400)
         self.refresh()
+
+    def request_memory_reset(self):
+        confirmation, accepted = QInputDialog.getText(
+            self,
+            "Trinity-Memory zurücksetzen",
+            "Sessions, Summaries, Arbeitsräume und Memory werden nach einer "
+            "Wiederherstellungskopie gelöscht. Vault, RAG-Quellen, Soul und "
+            "Konfiguration bleiben erhalten.\n\nZum Bestätigen RESET eingeben:",
+        )
+        if not accepted or confirmation.strip() != "RESET":
+            self.status.setText("Memory-Reset abgebrochen")
+            return
+        full_reset = QMessageBox.question(
+            self,
+            "Auch Testmedien und Canvas leeren?",
+            "Sollen zusätzlich lokal erzeugte Medien und alle Canvas-"
+            "Laufzeitdaten gesichert und geleert werden?\n\n"
+            "Ja = vollständiger Test-Neustart\nNein = nur Sessions, Summaries, "
+            "Arbeitsräume und Memory",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        request_path = self.workspace_manager.paths.runtime_root / "reset-request.json"
+        request_path.parent.mkdir(parents=True, exist_ok=True)
+        request_path.write_text(
+            json.dumps(
+                {
+                    "backup": True,
+                    "include_generated": full_reset == QMessageBox.Yes,
+                    "include_canvas": full_reset == QMessageBox.Yes,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        QMessageBox.information(
+            self,
+            "Reset vorgemerkt",
+            "Trinity wird jetzt beendet, sichert den Betriebszustand und startet "
+            "beim nächsten Öffnen mit einem leeren Memory.",
+        )
+        QApplication.instance().quit()
 
     def _build_workspace_sidebar(self):
         sidebar = QWidget()
@@ -858,17 +938,96 @@ class ClassicWindow(QMainWindow):
         if answer != QMessageBox.Yes:
             return
         try:
-            result = self.workspace_manager.delete_session(record.id)
-        except (OSError, ValueError) as exc:
+            if self.remote_client:
+                result = self.remote_client.delete_session(record.id)
+            else:
+                delete_session_summary(BASE_DIR, record.id)
+                result = self.workspace_manager.delete_session(record.id)
+                result["memory"] = self.memory_store.delete_session(record.id)
+                if self.session_id == record.id:
+                    self.session_store.pointer_path.unlink(missing_ok=True)
+                    replacement = self.session_store.current(create=True)
+                    result["active_session"] = replacement.as_dict()
+        except (OSError, RuntimeError, ValueError) as exc:
             self.status.setText(f"Session konnte nicht gelöscht werden: {exc}")
             return
         if self.session_id == record.id:
-            self.session_id = ""
-            self.session_name = ""
+            active = result.get("active_session") or {}
+            self.session_id = str(active.get("id") or "")
+            self.session_name = str(active.get("title") or "")
             self._chat_signature = None
             self.chat_history.setHtml(_render_chat_html([], self.theme))
         self._refresh_workspace_sidebar()
         self.status.setText(f"Session gelöscht: {result.get('title') or record.title}")
+
+    def delete_summary_from_sidebar(self, record):
+        answer = QMessageBox.question(
+            self,
+            "Zusammenfassung löschen",
+            f"Nur die Zusammenfassung dieser Session löschen?\n\n{record.title}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            if self.remote_client:
+                self.remote_client.delete_session_summary(record.id)
+            else:
+                delete_session_summary(BASE_DIR, record.id)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.status.setText(f"Zusammenfassung konnte nicht gelöscht werden: {exc}")
+            return
+        self._refresh_workspace_sidebar()
+        self.status.setText(f"Zusammenfassung gelöscht: {record.title}")
+
+    def delete_memory_from_panel(self):
+        try:
+            if self.remote_client:
+                records = self.remote_client.list_memories(limit=100).get("memories", [])
+            else:
+                records = self.memory_store.list_memories(limit=100)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.memory_status.setText(f"Memory-Liste konnte nicht geladen werden: {exc}")
+            return
+        if not records:
+            self.memory_status.setText("Keine Memory-Inhalte zum Löschen vorhanden.")
+            return
+        labels = [
+            f"{item.get('kind') or 'memory'} · {item.get('summary') or item.get('id')}"
+            for item in records
+        ]
+        selected, accepted = QInputDialog.getItem(
+            self,
+            "Einzelnes Memory löschen",
+            "Memory auswählen:",
+            labels,
+            0,
+            False,
+        )
+        if not accepted:
+            return
+        item = records[labels.index(selected)]
+        answer = QMessageBox.question(
+            self,
+            "Memory löschen",
+            f"Dieses Memory endgültig aus der aktiven Datenbank löschen?\n\n{selected}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            if self.remote_client:
+                result = self.remote_client.delete_memory(item["id"])
+                deleted = bool(result.get("deleted"))
+            else:
+                deleted = self.memory_store.delete_memory(item["id"])
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.memory_status.setText(f"Memory konnte nicht gelöscht werden: {exc}")
+            return
+        self.refresh_memory_graph()
+        self.memory_status.setText("Memory gelöscht." if deleted else "Memory nicht mehr vorhanden.")
 
     def _session_started_timestamp(self, record):
         try:
@@ -990,6 +1149,13 @@ class ClassicWindow(QMainWindow):
                     "Σ",
                     "Diese Session im Hintergrund zusammenfassen",
                     lambda checked=False, item=record: self.summarize_session_from_sidebar(item),
+                )
+            )
+            row.addWidget(
+                self._sidebar_icon_button(
+                    "Σ⌫",
+                    "Nur die Zusammenfassung dieser Session löschen",
+                    lambda checked=False, item=record: self.delete_summary_from_sidebar(item),
                 )
             )
             row.addWidget(

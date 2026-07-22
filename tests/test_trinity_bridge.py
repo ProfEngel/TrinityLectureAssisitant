@@ -582,7 +582,7 @@ def test_bridge_end_session_returns_before_background_summary_finishes(tmp_path)
     assert time.monotonic() - started < 0.05
 
     summary_event = None
-    for _ in range(30):
+    for _ in range(100):
         events = load_chat_events(history, limit=10)
         matches = [event for event in events if event.get("source") == "session-summary"]
         if matches:

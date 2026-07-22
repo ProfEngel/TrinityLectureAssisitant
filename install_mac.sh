@@ -41,6 +41,7 @@ RECOVERY_ROOT="$HOME/Trinity-Recovery/installer-$STAMP"
 BACKUP_DIR="$RECOVERY_ROOT/Nutzerdaten"
 ROLLBACK_DIR="$RECOVERY_ROOT/Trinity_Assistant-vorher"
 REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
+CANVAS_DIR="$INSTALL_DIR/components/TrinityCanvas"
 mkdir -p "$RECOVERY_ROOT"
 
 # 3. Update-Modus: Bestehende Configs sichern
@@ -95,7 +96,7 @@ fi
 echo ""
 echo "📥 Lade aktuelle Trinity-Version herunter..."
 if command -v git &> /dev/null; then
-    if ! git clone --branch main --single-branch "$REPOSITORY" "$INSTALL_DIR"; then
+    if ! git clone --branch main --single-branch --recurse-submodules --shallow-submodules "$REPOSITORY" "$INSTALL_DIR"; then
         [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
         echo "❌ Download fehlgeschlagen; die vorherige Installation wurde wiederhergestellt."
         exit 1
@@ -143,6 +144,18 @@ if ! install_dependencies; then
     echo "❌ Installation der Abhängigkeiten fehlgeschlagen."
     echo "   Die vorherige Installation wurde wiederhergestellt."
     echo "   Der fehlgeschlagene Stand liegt unter: $FAILED_DIR"
+    exit 1
+fi
+
+# 6.4 Trinity Canvas als verwaltete Desktop-Komponente installieren.
+echo "🎨 Installiere Trinity Canvas..."
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "   ⚠️  Node.js/npm fehlt. Trinity läuft, Canvas kann später mit 'trinity canvas install' ergänzt werden."
+elif [ -f "$CANVAS_DIR/package.json" ]; then
+    (cd "$CANVAS_DIR" && npm ci && npm run build)
+    echo "   ✅ Die zu dieser Trinity-Version gehörende Canvas-Komponente ist produktionsbereit."
+else
+    echo "   ❌ Die eingebundene Canvas-Komponente fehlt. Prüfe die Git-Submodule."
     exit 1
 fi
 
@@ -211,6 +224,7 @@ echo "👉 Auf deinem Schreibtisch liegt ein Verweis namens 'Trinity.app'."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
+echo "👉 Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
 echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte, TrinityRuntime)"
