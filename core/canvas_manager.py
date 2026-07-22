@@ -26,12 +26,20 @@ CANVAS_REPOSITORY = "https://github.com/ProfEngel/TrinityCreativeCanvas.git"
 DEFAULT_CANVAS_PORT = 8787
 
 
-def default_canvas_install_dir() -> Path:
+def standalone_canvas_install_dir() -> Path:
     if sys.platform == "win32":
         local_appdata = os.environ.get("LOCALAPPDATA")
         if local_appdata:
             return Path(local_appdata) / "TrinityCanvas"
     return Path.home() / "TrinityCreativeCanvas"
+
+
+def default_canvas_install_dir(home: str | Path | None = None) -> Path:
+    """Return Trinity's pinned component, not a separately updated clone."""
+
+    if home is not None:
+        return Path(home).expanduser().resolve() / "components" / "TrinityCanvas"
+    return standalone_canvas_install_dir()
 
 
 class CanvasManager:
@@ -43,7 +51,11 @@ class CanvasManager:
         self.settings = self.config.get("canvas", {})
         self.paths = TrinityPaths.from_config(self.home, self.config)
         configured_dir = str(self.settings.get("install_dir") or "").strip()
-        self.install_dir = Path(configured_dir).expanduser().resolve() if configured_dir else default_canvas_install_dir()
+        self.install_dir = (
+            Path(configured_dir).expanduser().resolve()
+            if configured_dir
+            else default_canvas_install_dir(self.home)
+        )
         self.port = int(self.settings.get("port") or DEFAULT_CANVAS_PORT)
         self.host = "127.0.0.1"
         self.data_dir = self.paths.runtime_root / "canvas"
@@ -62,6 +74,10 @@ class CanvasManager:
     def server_entrypoint(self) -> Path:
         return self.install_dir / "dist-server" / "server" / "index.js"
 
+    @property
+    def bundled(self) -> bool:
+        return self.install_dir == default_canvas_install_dir(self.home)
+
     def is_running(self, timeout: float = 0.6) -> bool:
         try:
             with urlopen(f"{self.url}/api/health", timeout=timeout) as response:
@@ -76,6 +92,7 @@ class CanvasManager:
             "installed": (self.install_dir / "package.json").is_file(),
             "built": self.server_entrypoint.is_file() and (self.install_dir / "dist" / "index.html").is_file(),
             "running": self.is_running(),
+            "bundled": self.bundled,
             "install_dir": str(self.install_dir),
             "data_dir": str(self.data_dir),
             "url": self.url,
@@ -89,13 +106,21 @@ class CanvasManager:
         if not npm:
             raise ValueError("Node.js/npm fehlt; installiere Node.js und starte die Canvas-Installation erneut.")
 
-        if not self.install_dir.exists():
+        if self.bundled:
+            if not (self.home / ".git").is_dir():
+                raise ValueError("Die gebündelte Canvas-Komponente benötigt eine Git-Installation von Trinity.")
+            subprocess.run(
+                [git, "submodule", "update", "--init", "--recursive", "components/TrinityCanvas"],
+                cwd=self.home,
+                check=True,
+            )
+        elif not self.install_dir.exists():
             self.install_dir.parent.mkdir(parents=True, exist_ok=True)
             subprocess.run(
                 [git, "clone", "--branch", "main", "--single-branch", CANVAS_REPOSITORY, str(self.install_dir)],
                 check=True,
             )
-        elif not (self.install_dir / ".git").is_dir():
+        elif not (self.install_dir / ".git").exists():
             raise ValueError(f"Vorhandener Canvas-Ordner ist kein Git-Repository: {self.install_dir}")
         else:
             dirty = subprocess.run(

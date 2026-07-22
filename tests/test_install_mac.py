@@ -50,8 +50,10 @@ def test_macos_app_is_kept_outside_icloud_managed_desktop():
 
 def test_macos_installer_manages_canvas_outside_the_vault():
     script = INSTALLER.read_text(encoding="utf-8")
+    submodules = (ROOT_DIR / ".gitmodules").read_text(encoding="utf-8")
 
-    assert 'CANVAS_DIR="$HOME/TrinityCreativeCanvas"' in script
-    assert "ProfEngel/TrinityCreativeCanvas.git" in script
+    assert 'CANVAS_DIR="$INSTALL_DIR/components/TrinityCanvas"' in script
+    assert "ProfEngel/TrinityCreativeCanvas.git" in submodules
+    assert "--recurse-submodules" in script
     assert 'npm ci && npm run build' in script
     assert "trinity canvas install" in script

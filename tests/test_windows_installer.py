@@ -21,8 +21,9 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert "vault setup" in script
     assert "vault init" in script
     assert "if ($isUpdate)" in script
-    assert "$env:LOCALAPPDATA\\TrinityCanvas" in script
+    assert 'Join-Path $InstallDir "components\\TrinityCanvas"' in script
     assert "ProfEngel/TrinityCreativeCanvas.git" in script
+    assert "--recurse-submodules" in script
     assert "$npm.Source run build" in script
 
 

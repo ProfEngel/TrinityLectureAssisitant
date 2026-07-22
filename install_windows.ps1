@@ -7,7 +7,7 @@ param(
     [switch]$ValidateEnvironmentOnly
 )
 
-$CanvasInstallDir = "$env:LOCALAPPDATA\TrinityCanvas"
+$CanvasInstallDir = Join-Path $InstallDir "components\TrinityCanvas"
 $CanvasRepository = "https://github.com/ProfEngel/TrinityCreativeCanvas.git"
 
 $ErrorActionPreference = "Stop"
@@ -298,7 +298,7 @@ if ($isUpdate) {
 Write-Host "Lade Trinity herunter ..."
 $git = Get-Command "git.exe" -ErrorAction SilentlyContinue
 if ($git) {
-    & $git.Source clone --branch $Branch --single-branch $Repository $InstallDir
+    & $git.Source clone --branch $Branch --single-branch --recurse-submodules --shallow-submodules $Repository $InstallDir
     if ($LASTEXITCODE -ne 0) {
         throw "Git konnte Trinity nicht herunterladen."
     }
@@ -313,6 +313,16 @@ else {
     $sourceDir = Get-ChildItem $extractPath -Directory | Select-Object -First 1
     Move-Item $sourceDir.FullName $InstallDir
     Remove-Item $zipPath, $extractPath -Recurse -Force
+
+    $canvasZipPath = Join-Path $env:TEMP "trinity-canvas-$timestamp.zip"
+    $canvasExtractPath = Join-Path $env:TEMP "trinity-canvas-$timestamp"
+    $canvasZipUrl = "https://github.com/ProfEngel/TrinityCreativeCanvas/archive/refs/heads/main.zip"
+    Invoke-WebRequest -Uri $canvasZipUrl -OutFile $canvasZipPath
+    Expand-Archive -Path $canvasZipPath -DestinationPath $canvasExtractPath -Force
+    $canvasSourceDir = Get-ChildItem $canvasExtractPath -Directory | Select-Object -First 1
+    New-Item -ItemType Directory -Path (Split-Path $CanvasInstallDir) -Force | Out-Null
+    Move-Item $canvasSourceDir.FullName $CanvasInstallDir
+    Remove-Item $canvasZipPath, $canvasExtractPath -Recurse -Force
 }
 
 if ($isUpdate) {
@@ -368,33 +378,10 @@ finally {
 Write-Host "Installiere Trinity Canvas ..."
 $node = Get-Command "node.exe" -ErrorAction SilentlyContinue
 $npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
-if (-not $node -or -not $npm -or -not $git) {
-    Write-Warning "Node.js/npm oder Git fehlt. Trinity läuft; Canvas kann später mit 'trinity canvas install' ergänzt werden."
+if (-not $node -or -not $npm) {
+    Write-Warning "Node.js/npm fehlt. Trinity läuft; Canvas kann nach der Node.js-Installation ergänzt werden."
 }
-elseif (Test-Path "$CanvasInstallDir\.git") {
-    $canvasChanges = (& $git.Source -C $CanvasInstallDir status --porcelain) -join "`n"
-    if ($canvasChanges.Trim()) {
-        Write-Warning "Canvas enthält lokale Änderungen und wurde zum Schutz dieser Arbeit nicht aktualisiert."
-    }
-    else {
-        & $git.Source -C $CanvasInstallDir pull --ff-only origin main
-        if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht aktualisiert werden." }
-        Push-Location $CanvasInstallDir
-        try {
-            & $npm.Source ci
-            if ($LASTEXITCODE -ne 0) { throw "Canvas-Abhängigkeiten konnten nicht installiert werden." }
-            & $npm.Source run build
-            if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht gebaut werden." }
-        }
-        finally { Pop-Location }
-    }
-}
-elseif (Test-Path $CanvasInstallDir) {
-    Write-Warning "$CanvasInstallDir existiert, ist aber kein Canvas-Git-Repository."
-}
-else {
-    & $git.Source clone --branch main --single-branch $CanvasRepository $CanvasInstallDir
-    if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht heruntergeladen werden." }
+elseif (Test-Path "$CanvasInstallDir\package.json") {
     Push-Location $CanvasInstallDir
     try {
         & $npm.Source ci
@@ -403,6 +390,9 @@ else {
         if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht gebaut werden." }
     }
     finally { Pop-Location }
+}
+else {
+    throw "Die zu Trinity gehörende Canvas-Komponente fehlt."
 }
 
 $cliBin = "$InstallDir\bin"

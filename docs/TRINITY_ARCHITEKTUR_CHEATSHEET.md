@@ -58,12 +58,15 @@ Reiter **Canvas**. Die Weboberfläche und ihre API laufen dabei über genau eine
 internen lokalen Dienst; eine Portnummer muss weder eingegeben noch gemerkt
 werden.
 
-- Canvas-Programmcode liegt lokal außerhalb des Vaults.
+- Canvas-Programmcode liegt als eingebundene Komponente unter
+  `Trinity_Assistant/components/TrinityCanvas` und damit lokal außerhalb des
+  Vaults.
 - Canvas-Testzustand und technische Arbeitsdaten liegen in der lokalen Runtime.
 - Dauerhafte Canvas-Projekte und freigegebene Ergebnisse gehören in den
   gewählten BrainVault oder BizVault.
 - Canvas ist ein Bestandteil des Trinity-Systems, bleibt technisch aber ein
-  eigenes GitHub-Repository und kann deshalb unabhängig aktualisiert werden.
+  eigenes GitHub-Repository. Trinity bindet eine geprüfte Canvas-Version ein;
+  dasselbe Repository kann unabhängig als Standalone-Canvas installiert werden.
 
 ## 2. Nutzbare Agenten – lokal, nicht im Cloud-Ordner
 

@@ -41,8 +41,7 @@ RECOVERY_ROOT="$HOME/Trinity-Recovery/installer-$STAMP"
 BACKUP_DIR="$RECOVERY_ROOT/Nutzerdaten"
 ROLLBACK_DIR="$RECOVERY_ROOT/Trinity_Assistant-vorher"
 REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
-CANVAS_DIR="$HOME/TrinityCreativeCanvas"
-CANVAS_REPOSITORY="https://github.com/ProfEngel/TrinityCreativeCanvas.git"
+CANVAS_DIR="$INSTALL_DIR/components/TrinityCanvas"
 mkdir -p "$RECOVERY_ROOT"
 
 # 3. Update-Modus: Bestehende Configs sichern
@@ -97,7 +96,7 @@ fi
 echo ""
 echo "📥 Lade aktuelle Trinity-Version herunter..."
 if command -v git &> /dev/null; then
-    if ! git clone --branch main --single-branch "$REPOSITORY" "$INSTALL_DIR"; then
+    if ! git clone --branch main --single-branch --recurse-submodules --shallow-submodules "$REPOSITORY" "$INSTALL_DIR"; then
         [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
         echo "❌ Download fehlgeschlagen; die vorherige Installation wurde wiederhergestellt."
         exit 1
@@ -152,20 +151,12 @@ fi
 echo "🎨 Installiere Trinity Canvas..."
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
     echo "   ⚠️  Node.js/npm fehlt. Trinity läuft, Canvas kann später mit 'trinity canvas install' ergänzt werden."
-elif [ -d "$CANVAS_DIR/.git" ]; then
-    if [ -n "$(git -C "$CANVAS_DIR" status --porcelain)" ]; then
-        echo "   ⚠️  Canvas enthält lokale Änderungen und wurde zum Schutz dieser Arbeit nicht aktualisiert."
-    else
-        git -C "$CANVAS_DIR" pull --ff-only origin main
-        (cd "$CANVAS_DIR" && npm ci && npm run build)
-        echo "   ✅ Trinity Canvas aktualisiert und produktionsbereit."
-    fi
-elif [ -e "$CANVAS_DIR" ]; then
-    echo "   ⚠️  $CANVAS_DIR existiert, ist aber kein Canvas-Git-Repository."
-else
-    git clone --branch main --single-branch "$CANVAS_REPOSITORY" "$CANVAS_DIR"
+elif [ -f "$CANVAS_DIR/package.json" ]; then
     (cd "$CANVAS_DIR" && npm ci && npm run build)
-    echo "   ✅ Trinity Canvas installiert und produktionsbereit."
+    echo "   ✅ Die zu dieser Trinity-Version gehörende Canvas-Komponente ist produktionsbereit."
+else
+    echo "   ❌ Die eingebundene Canvas-Komponente fehlt. Prüfe die Git-Submodule."
+    exit 1
 fi
 
 # 6.5 Benutzerweiten CLI-Befehl installieren
