@@ -25,8 +25,18 @@ def test_macos_installer_uses_supported_python_and_preserves_recovery_copy():
     assert "Python 3.10 bis 3.14" in script
     assert 'PYTHON_BIN' in script
     assert 'status --porcelain' in script
+    assert "':(exclude)core/payload.html'" in script
+    assert "':(exclude)core/state.txt'" in script
     assert 'mv "$INSTALL_DIR" "$ROLLBACK_DIR"' in script
     assert 'rm -rf "$INSTALL_DIR"' not in script
+
+
+def test_macos_installer_only_ignores_known_runtime_ui_files():
+    script = INSTALLER.read_text(encoding="utf-8")
+
+    assert 'LOCAL_CODE_CHANGES="$(git -C "$INSTALL_DIR" status --porcelain -- .' in script
+    assert 'if [ -n "$LOCAL_CODE_CHANGES" ]' in script
+    assert script.count("':(exclude)core/") == 2
 
 
 def test_macos_app_is_kept_outside_icloud_managed_desktop():
