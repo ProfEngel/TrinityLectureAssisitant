@@ -10,7 +10,7 @@ Status: Inventur fortgeschritten; keine fachlichen Inhalte migriert oder gelösc
 | Installation | `/Users/matmax/Trinity_Assistant` |
 | App | `/Users/matmax/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
-| Version | `0.16.49` veröffentlicht; localhost-korrigierte Canvas-Komponente für `0.16.50` in Prüfung |
+| Version | `0.16.50` veröffentlicht; Launcher-Importkorrektur für `0.16.51` in Prüfung |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
 | Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |
@@ -80,12 +80,13 @@ zugänglich.
 
 ## 4. Sessions, Arbeitsräume und Memory
 
-Die lokale private Runtime enthält derzeit fünf Arbeitsräume und sechs
-dateibasierte Sessions. Darunter befinden sich historische berufliche Namen
+Vor dem kontrollierten Reset enthielt die lokale private Runtime fünf
+Arbeitsräume und sechs dateibasierte Sessions. Darunter befanden sich
+historische berufliche Namen
 wie `Wirtschaftsinformatik`, `Wissenschaftliches Arbeiten` und mehrere
 Vortragssessions. Sie werden nicht automatisch in Arbeit/BIZ verschoben.
-Zunächst wird für jede Session entschieden, ob nur die Summary, die gesamte
-Session oder gar nichts dauerhaft übernommen werden soll.
+Der vollständige Vorzustand wurde gesichert, sodass wertvolle Summaries später
+gezielt aus der Recovery-Kopie bewertet werden können.
 
 Das ältere `memory/` enthält aktuell:
 
@@ -97,10 +98,21 @@ Das ältere `memory/` enthält aktuell:
 - `jobs.sqlite3`: 22 Jobs, 89 Schritte und 123 Ereignisse
 - `approvals.sqlite3`: eine lokale Freigabeentscheidung
 
-Die neue Runtime-Datenbank `TrinityRuntime/memory/jobs.sqlite3` ist leer. Es
+Die neue Runtime-Datenbank `TrinityRuntime/memory/jobs.sqlite3` war leer. Es
 besteht daher aktuell kein Job-Duplikat zwischen alter und neuer Jobdatenbank.
 Alle vier SQLite-Datenbanken bestanden am 22. Juli 2026 erneut
 `PRAGMA integrity_check` mit `ok`.
+
+Am 22. Juli 2026 wurde der private Testbestand vollständig und rückholbar
+zurückgesetzt. Die Sicherung liegt unter:
+
+`/Users/matmax/Trinity-Recovery/reset-privat-2026-07-22_120749`
+
+Nach dem Reset bestehen genau ein leerer Eingang und eine neue gemeinsame
+Session. Die Memory-Datenbank enthält 0 Sessions, 0 Nachrichten, 0 Memories,
+0 Tags und 0 Beziehungen. Backup- und neue SQLite-Datenbank bestanden erneut
+`PRAGMA integrity_check` mit `ok`. BrainVault, neun RAG-Dateien, Soul,
+User-Profil, Konfiguration und Telegram-Zugang blieben unverändert.
 
 ## 5. RAG und Graphify
 
@@ -158,8 +170,8 @@ eine mittlere und vier hohe). Eine erzwungene automatische Aktualisierung wurde
 nicht durchgeführt, weil sie inkompatible Versionssprünge verursachen könnte;
 die Abhängigkeiten werden später kontrolliert aktualisiert.
 
-Der frühere eigenständige LaunchAgent im Entwicklungsmodus wird nach der
-Freigabe der Trinity-Integration außer Betrieb genommen; künftig startet
+Der frühere eigenständige LaunchAgent im Entwicklungsmodus wurde deaktiviert;
+künftig startet
 Trinity seine eingebundene Canvas-Komponente selbst über einen einzigen
 internen Produktionsdienst.
 
@@ -182,8 +194,9 @@ Vorinstallation und keine automatische Agentenmigration.
 - [x] lokale Wiederherstellungskopien erstellen und prüfen
 - [ ] Companion-Fix für profilbezogene Session-/Projektlisten auf echtem Gerät abnehmen
 - [x] Creative Canvas lokal aus dem Cloud-Vault herauslösen
+- [x] privaten Testbestand rückholbar auf null setzen
 - [ ] RAG-Quellen einzeln Arbeit, Privat oder Development zuordnen
-- [ ] alte Sessions einzeln bewerten und nur wertvolle Summaries übernehmen
+- [ ] gesicherte alte Sessions prüfen und nur wertvolle Summaries übernehmen
 - [ ] verschlüsselte zweite Wiederherstellungskopie auf unabhängigem Medium erstellen
 - [ ] Windows-Installation und Windows-Runtime inventarisieren
 - [ ] getrennte Telegram-Zugänge praktisch prüfen
