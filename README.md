@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.58:** Die profilgesicherte Companion-Bridge liefert den Memory-Graph als eigene Ansicht für iPhone und iPad. Canvas bleibt Bestandteil von Trinity und benötigt in der CompanionApp keine separate Adresse mehr.
 > - **v0.16.57:** Auch der Terminal-Wrapper verarbeitet das externe Beenden kontrolliert und räumt seinen Audio-Kern auf. Damit bleiben nach App-Ende oder Update keine verwaisten Trinity-Prozesse zurück.
 > - **v0.16.56:** Trinity beendet beim Update nun auch ältere, verwaiste Audio-Kernprozesse derselben Installation. Externe Beendigungen des Launchers laufen kontrolliert durch die Kindprozess-Aufräumroutine.
 > - **v0.16.55:** RAG-Indizes sind jetzt strikt profilgebunden. Ein ungekennzeichneter Legacy-Index oder ein Index des falschen Profils wird nicht geladen; neue Indizes speichern zwingend `BIZ`, `PRIVAT` oder `TEST` in ihren Metadaten.
@@ -598,7 +599,7 @@ Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da di
  *   **User Telemetry (Q3 2026):** Nutzungsstatistiken für Lehre und Büro (analog Bildschirmzeit).
  *   **Cognitive Evolution & Dreaming (Q3 2026):** "Dreaming-Funktion" zur Hintergrund-Reflektion (Sessions verarbeiten zu komplexem Verständniswissen, Tagging, Graphen-Verlinkung, Relevanz-Gewichtung und Priorisierung) sowie Fallback-LLM Resilienz.
  *   **Erstbenutzer Onboarding:** Terminal-Onboarding ist ab v0.10.2 verfügbar; ein grafisches Einführungstutorial bleibt geplant.
- *   **Multi-OS & Cross-Platform Packaging:** macOS, Windows 11 und Linux-Server mit WebUI werden unterstützt; als Nächstes folgen signierte Pakete sowie Android.
+ *   **Multi-OS & Cross-Platform Packaging:** macOS, Windows 11 und Linux-Server mit WebUI werden unterstützt; die mobile Companion-App bleibt bewusst auf iPhone und iPad beschränkt.
  *   **Multi-Domain Expansion (Q4 2026):** Erweiterung des Concierges für Jeden (z.B. Ernährungsverläufe, Fitness, SmartHome – Kerndienste bereits erstellt).
 
 Details zu den aktuellen Entwicklungsaufgaben findest du in der [ToDo.md](ToDo.md).

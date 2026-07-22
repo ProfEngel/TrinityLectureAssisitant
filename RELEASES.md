@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.58:** Die Companion-Bridge stellt den profilgebundenen Memory-Graph authentifiziert bereit. Die iPhone-/iPad-App kann ihn als eigene, standardmäßig ausgeschaltete Ansicht aktivieren. Canvas bleibt ein gebündelter Trinity-Dienst; die Companion-App leitet seine Adresse automatisch aus dem gewählten Trinity-Server ab.
 - **v0.16.57:** Der Terminal-Wrapper verarbeitet `SIGTERM` nun über seine vorhandene Aufräumroutine und beendet dabei den von ihm gestarteten Audio-Kern. Zusammen mit v0.16.56 hinterlassen App-Ende und Installer-Update keine verwaisten Trinity-Prozesse mehr.
 - **v0.16.56:** Der macOS-Updater erfasst jetzt auch direkt gestartete oder nach früheren Abbrüchen verwaiste `transcriber.py`-Prozesse der konkreten Trinity-Installation. Der Launcher verarbeitet `SIGTERM` kontrolliert und beendet Canvas, Bridge, Audio-Kern und Oberflächen über seine gemeinsame Aufräumroutine.
 - **v0.16.55:** Der RAG-Agent lädt nur noch Indizes, deren Metadaten exakt zum aktiven Profil `BIZ`, `PRIVAT` oder `TEST` passen. Legacy-Indizes ohne Profil und profilfremde Indizes bleiben sichtbar diagnostizierbar, liefern aber keine Inhalte an Trinity. Der Index-Builder schreibt das aktive Profil bei jeder Neuerstellung mit.

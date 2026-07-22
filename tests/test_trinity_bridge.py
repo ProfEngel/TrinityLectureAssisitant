@@ -160,6 +160,25 @@ def test_bridge_dashboard_exposes_agent_metadata(tmp_path):
     assert "rights" in trinity
 
 
+def test_bridge_exposes_profile_scoped_memory_graph(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    bridge = TrinityBridge(home)
+    store = MemoryStore(home / "memory" / "trinity_memory.sqlite3")
+    store.remember(
+        "Trinity kennt den aktuellen Arbeitsraum.",
+        tags=["trinity", "arbeitsraum"],
+    )
+
+    result = bridge.memory_graph()
+
+    assert result["ok"] is True
+    assert result["profile"] == bridge.profile
+    assert any(node["type"] == "memory" for node in result["nodes"])
+    assert any(node["type"] == "entity" for node in result["nodes"])
+    assert result["links"]
+
+
 def test_bridge_deletes_workspace_session(tmp_path):
     home = tmp_path
     (home / "core").mkdir()
