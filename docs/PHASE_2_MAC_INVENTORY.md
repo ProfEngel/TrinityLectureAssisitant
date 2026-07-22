@@ -10,7 +10,7 @@ Status: Inventur fortgeschritten; keine fachlichen Inhalte migriert oder gelösc
 | Installation | `/Users/matmax/Trinity_Assistant` |
 | App | `/Users/matmax/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
-| Version | `0.16.49` veröffentlicht; localhost-korrigierte Canvas-Komponente für `0.16.50` in Prüfung |
+| Version | `0.16.50` veröffentlicht; Launcher-Importkorrektur für `0.16.51` in Prüfung |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
 | Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |

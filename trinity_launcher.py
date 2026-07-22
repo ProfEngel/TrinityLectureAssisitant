@@ -6,6 +6,11 @@ import webbrowser
 from datetime import datetime
 from html import escape
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CORE_DIR = os.path.join(BASE_DIR, "core")
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
 from core.configuration import load_config
 from core.canvas_manager import CanvasManager
 from core.runtime_reset import reset_operational_memory
