@@ -2,6 +2,7 @@ import subprocess
 import sys
 import time
 import os
+import signal
 import webbrowser
 from datetime import datetime
 from html import escape
@@ -88,6 +89,12 @@ def _graphical_session_available(platform_name=None, environment=None):
 def _terminate(process):
     if process is not None and process.poll() is None:
         process.terminate()
+
+
+def _request_graceful_shutdown(_signum, _frame):
+    """Move external termination through the launcher's cleanup block."""
+
+    raise KeyboardInterrupt
 
 
 def _acquire_launcher_lock(base_dir, platform_name=None):
@@ -199,6 +206,8 @@ def launch_trinity():
     if launcher_lock is None:
         print("Trinity läuft bereits. Der zweite Start wird beendet.")
         return
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, _request_graceful_shutdown)
     eyes_ui_script = os.path.join(base_dir, "trinity_app.py")
     classic_ui_script = os.path.join(base_dir, "trinity_classic.py")
     console_script = os.path.join(base_dir, "trinity_console.py")

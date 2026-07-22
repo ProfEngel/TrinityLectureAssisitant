@@ -51,7 +51,7 @@ stop_trinity_processes() {
         [ -n "$pid" ] || continue
         command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
         case "$command" in
-            *"$INSTALL_DIR/core/trinity_bridge.py"*|*"$INSTALL_DIR/trinity_console.py"*|*"$INSTALL_DIR/trinity_app.py"*|*"$INSTALL_DIR/trinity_classic.py"*|*"$INSTALL_DIR/components/TrinityCanvas/"*)
+            *"$INSTALL_DIR/core/transcriber.py"*|*"$INSTALL_DIR/core/trinity_bridge.py"*|*"$INSTALL_DIR/trinity_console.py"*|*"$INSTALL_DIR/trinity_app.py"*|*"$INSTALL_DIR/trinity_classic.py"*|*"$INSTALL_DIR/components/TrinityCanvas/"*)
                 targets="$targets $pid"
                 parent="$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || true)"
                 [ -n "$parent" ] && targets="$targets $parent"
