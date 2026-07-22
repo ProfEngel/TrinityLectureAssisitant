@@ -1,8 +1,8 @@
 # Trinity-Architektur – Phase 1: verbindliche Spielregeln
 
-Status: verbindliche Fassung 2
+Status: verbindliche Fassung 3
 Ursprünglich beschlossen: 20. Juli 2026
-Nachgebessert: 21. Juli 2026
+Nachgebessert: 22. Juli 2026
 Grundlage: Codex-Aufgabe `019f7b1e-e6c9-7fc0-8c92-aa10c0c3c6b3`
 
 ## 1. Die Architektur in einem Satz
@@ -25,10 +25,10 @@ erzeugen aber keine zweite fachliche Wahrheit.
 
 ```mermaid
 flowchart LR
-    TrinityRepo["GitHub: Trinity-Bauplan"] --> Windows["Windows: Trinity Beruf"]
+    TrinityRepo["GitHub: Trinity-Bauplan"] --> Windows["Windows: Trinity Arbeit"]
     TrinityRepo --> MacPrivat["Mac: Trinity Privat"]
-    TrinityRepo --> MacTest["Mac: getrennter Testbereich"]
-    AgentRepo["GitHub: Agenten-Werkzeugkasten"] --> WindowsAgents["Windows lokal: Gemeinsam + Beruf"]
+    TrinityRepo --> MacTest["Mac: getrenntes Development-Profil"]
+    AgentRepo["GitHub: Agenten-Werkzeugkasten"] --> WindowsAgents["Windows lokal: Gemeinsam + Arbeit"]
     AgentRepo --> MacAgents["Mac lokal: Gemeinsam + Privat"]
     AgentRepo --> TestAgents["Test lokal: Agenten in Erprobung"]
     Windows --> BizVault["OneDrive: BizVault – berufliche Datenwahrheit"]
@@ -44,10 +44,10 @@ Die kurzen technischen Namen bleiben nur für Konfigurationen und Regeln.
 
 | Sichtbarer Name | Technischer Name | Bedeutung |
 |---|---|---|
-| **Beruf** | `BIZ` | Lehre, Forschung, Hochschule, Verwaltung und sonstige berufliche Arbeit |
+| **Arbeit** | `BIZ` | Lehre, Forschung, Hochschule, Verwaltung und sonstige berufliche Arbeit |
 | **Privat** | `PRIVAT` | persönliche, familiäre und private kreative Arbeit |
-| **Testbereich** | `TEST` | isolierte Versuche mit Testdaten; keine Ablage für ungeklärte Inhalte |
-| **Gemeinsam** | `SHARED` | Agentenklasse, die in Beruf und Privat installiert werden darf; kein Datenprofil |
+| **Development** | `TEST` | isolierte Versuche mit Testdaten; keine Ablage für ungeklärte Inhalte |
+| **Gemeinsam** | `SHARED` | Agentenklasse, die in Arbeit und Privat installiert werden darf; kein Datenprofil |
 
 ### BizVault
 
@@ -82,12 +82,12 @@ auf der Windows-Autorität.
 
 | Profil | Trinity-Autorität | Inhalts-Vault | Darf das Profil lokal ausführen? |
 |---|---|---|---|
-| Beruf | **Windows-System** (derzeit Windows-VM) | OneDrive/`BizVault` | nur Windows |
+| Arbeit | **Windows-System** (derzeit Windows-VM) | OneDrive/`BizVault` | nur Windows |
 | Privat | **Mac** | iCloud/`BrainVault` | nur Mac |
-| Testbereich | separate Test-Runtime auf dem Mac | zunächst kein Cloud-Vault | nur die Test-Runtime |
+| Development | separate Test-Runtime auf dem Mac | zunächst kein Cloud-Vault | nur die Test-Runtime |
 
 Der Ubuntu-Rechner ist keine vierte Autorität. Er darf als abgesicherter
-LLM-Inferenzdienst für Beruf arbeiten, besitzt aber weder berufliches Memory
+LLM-Inferenzdienst für Arbeit dienen, besitzt aber weder berufliches Memory
 noch einen eigenen Inhalts-Vault.
 
 ## 4. Was lokal auf jedem Autoritätsrechner liegt
@@ -107,13 +107,13 @@ für den Rechner erlaubten Klassen:
 
 | Rechner | Erlaubte Agentenklassen |
 |---|---|
-| Windows | Gemeinsam + Beruf |
+| Windows | Gemeinsam + Arbeit |
 | Mac, private Runtime | Gemeinsam + Privat |
-| Mac, Test-Runtime | Testbereich; bei Bedarf ausdrücklich freigegebene Testkopien |
+| Mac, Development-Runtime | Development; bei Bedarf ausdrücklich freigegebene Testkopien |
 
 Ein Agent aus `Gemeinsam` ist derselbe versionierte Bauplan, wird aber auf jedem
 Rechner lokal installiert. Seine Memories, Logs und Ergebnisse werden nicht
-zwischen Beruf und Privat geteilt.
+zwischen Arbeit und Privat geteilt.
 
 ### C. Trinity-Runtime
 
@@ -154,7 +154,7 @@ BizVault und BrainVault sind absichtlich **nicht gleich aufgebaut**. Der
 berufliche Bestand wird nach den tatsächlich wiederkehrenden Hochschulaufgaben
 geordnet; der private Bestand bleibt projektbezogen.
 
-### BizVault – Beruf
+### BizVault – Arbeit
 
 ```text
 BizVault/
@@ -220,7 +220,7 @@ Lehrbuch liegt beruflich beispielsweise direkt hier:
 
 ### Beruflicher Auftrag
 
-1. Ein beruflich angemeldeter Client sendet den Auftrag an Trinity Beruf auf
+1. Ein im Profil Arbeit angemeldeter Client sendet den Auftrag an Trinity Arbeit auf
    Windows.
 2. Trinity und die beruflichen Harnesses arbeiten auf Windows.
 3. Dauerhafte Arbeitsdateien werden direkt im BizVault geöffnet und gespeichert.
@@ -229,7 +229,7 @@ Lehrbuch liegt beruflich beispielsweise direkt hier:
    Runtime oder ausführbaren Agenten.
 
 Der Mac darf BizVault-Dateien als normaler OneDrive-Dateiclient öffnen und
-bearbeiten. Für Trinity-, Codex-, Goose- oder OpenCode-Aufträge im Profil Beruf
+bearbeiten. Für Trinity-, Codex-, Goose- oder OpenCode-Aufträge im Profil Arbeit
 bleibt er jedoch Remote-Client der Windows-Autorität.
 
 ### Privater Auftrag
@@ -253,7 +253,7 @@ bleibt er jedoch Remote-Client der Windows-Autorität.
 
 ## 8. Profilübergreifende Übernahmen
 
-Zwischen Beruf und Privat gibt es keine automatische Synchronisation. Eine
+Zwischen Arbeit und Privat gibt es keine automatische Synchronisation. Eine
 Übernahme ist nur erlaubt, wenn der Nutzer sie für einen konkret benannten
 Zweck bestätigt.
 
@@ -271,21 +271,21 @@ Verschieben.
 
 ## 9. Erlaubte Clients und eindeutige Profilwahl
 
-| Client oder System | Beruf | Privat | Testbereich | Verbindliche Rolle |
+| Client oder System | Arbeit | Privat | Development | Verbindliche Rolle |
 |---|:---:|:---:|:---:|---|
-| Windows-System | lokal | nein | nein | Autorität für Beruf |
+| Windows-System | lokal | nein | nein | Autorität für Arbeit |
 | Mac | remote + Dateien | lokal | lokal, getrennt | Autorität für Privat; Testhost |
 | iPhone-App | remote | remote | nein | bewusste Profilwahl |
 | iPad-App | remote | remote | nein | bewusste Profilwahl |
 | Even G2 über Telefon | remote | remote | nein | übernimmt das am Telefon sichtbare Profil |
-| Telegram Beruf | remote | nein | nein | eigener Bot nur für Beruf |
+| Telegram Arbeit | remote | nein | nein | eigener Bot nur für Arbeit |
 | Telegram Privat | nein | remote | nein | eigener Bot nur für Privat |
 | Ubuntu-Inferenzhost | Backend | nein | nein | beruflicher LLM-Dienst ohne Nutzerprofil |
 
 Für iPhone und iPad gelten zwingend:
 
 - getrennte Serveradressen und Zugangsdaten
-- klar sichtbarer Profilname **Beruf** oder **Privat**
+- klar sichtbarer Profilname **Arbeit**, **Privat** oder **Development**
 - getrennte lokale Caches und Sitzungskennungen
 - kein automatischer Wechsel anhand des zuletzt geöffneten Dokuments
 - vor einem Profilwechsel Abschluss oder ausdrückliches Parken der laufenden
@@ -298,7 +298,7 @@ Für Telegram werden zwei getrennte Bots verwendet. Die frühere Alternative
 
 ### Sessions und Memory
 
-- Beruf und Privat besitzen vollständig getrennte Sessions und Memories.
+- Arbeit und Privat besitzen vollständig getrennte Sessions und Memories.
 - Pro Profil gibt es eine gemeinsam sichtbare aktuelle Sitzung; ältere
   Sitzungen können gespeichert und später wieder geöffnet werden.
 - Ein Clientwechsel innerhalb desselben Profils darf dieselbe aktuelle Sitzung
@@ -375,22 +375,22 @@ Windows-Pfad dieselbe fachliche Datenwahrheit.
 
 Verbindlich entschieden sind:
 
-- die sichtbaren Namen Beruf, Privat und Testbereich
-- Windows als einzige Trinity-Autorität für Beruf
+- die sichtbaren Namen Arbeit, Privat und Development
+- Windows als einzige Trinity-Autorität für Arbeit
 - Mac als einzige Trinity-Autorität für Privat
-- eine separate Mac-Test-Runtime als initialer Testbereich
+- eine separate Mac-Test-Runtime als initiales Development-Profil
 - BizVault und BrainVault als einzige dauerhafte Datenwahrheiten
 - lokale Runtime, lokale Agenten und lokale Indizes
 - das private Agenten-Repository als Agentenquelle
 - die erlaubten Clients und ihre Profile
 - die oben beschriebene flache deutsche Vault-Struktur
-- getrennte Telegram-Bots für Beruf und Privat
+- getrennte Telegram-Bots für Arbeit und Privat
 - kontrollierte statt automatische Profilübernahmen
 
 Noch nicht entschieden oder noch nicht ausgeführt sind:
 
-- welche einzelnen Legacy-Dateien nach Beruf oder Privat migriert werden
-- welche Agenten Beruf, Privat, Gemeinsam, Testbereich oder Löschen erhalten
+- welche einzelnen Legacy-Dateien nach Arbeit oder Privat migriert werden
+- welche Agenten Arbeit, Privat, Gemeinsam, Development oder Löschen erhalten
 - welche alten Sessions dauerhaft aufgehoben werden
 - welche RAG-Quellen welchem Profil angehören
 - die exakten Windows-Installations- und Runtime-Pfade
@@ -402,7 +402,7 @@ Die Architekturentscheidung ist fachlich vollständig. Technisch gilt Phase 1
 erst als umgesetzt, wenn folgende Kontrollen protokolliert sind:
 
 - [x] Begriffe und verständliche Namen verbindlich definiert
-- [x] Windows als Trinity-Autorität für Beruf festgelegt
+- [x] Windows als Trinity-Autorität für Arbeit festgelegt
 - [x] Mac als Trinity-Autorität für Privat festgelegt
 - [x] Datenwahrheit und Trinity-Autorität eindeutig unterschieden
 - [x] Profile aller geplanten Clients entschieden
@@ -410,23 +410,32 @@ erst als umgesetzt, wenn folgende Kontrollen protokolliert sind:
 - [x] flache deutsche Vault-Struktur festgelegt
 - [x] flache deutsche Hauptordner in BizVault und BrainVault angelegt
 - [x] Agenten, Runtime, RAG und Graphify von den Vaults getrennt
-- [ ] Mac-Konfiguration vollständig gegen diese Regeln geprüft
+- [x] Mac-Konfiguration vollständig gegen diese Regeln geprüft
 - [ ] Windows-Konfiguration vollständig gegen diese Regeln geprüft
 - [ ] mobile Clients auf getrennte Profile und Caches geprüft
 - [ ] getrennte Telegram-Bots eingerichtet und geprüft
 
-Bis die vier technischen Prüfungen abgeschlossen sind, finden keine
+Bis die drei verbleibenden technischen Prüfungen abgeschlossen sind, finden keine
 automatischen Inhaltsmigrationen und keine Löschungen im Legacy-Bestand statt.
 Eine spätere Änderung dieser Regeln benötigt eine neue versionierte
 Architekturentscheidung.
 
-### Festgestellte Mac-Abweichung
+### Behobene Mac-Abweichung
 
-Die wesentlichen Mac-Pfade sind bereits korrekt getrennt: Runtime lokal,
-BrainVault in iCloud und Agenten lokal. In der Konfiguration fehlt noch die
-explizite Profilkennzeichnung `PRIVAT`. Außerdem zeigt der LaunchAgent
-`de.trinity.creativecanvas.plist` noch auf
-`BrainVault/Ideaverse/projects/TrinityCreativeCanvas` und schreibt dort
-technische Logs. Dieser Sonderfall wird vor einer Verschiebung separat
-gesichert und umgestellt; er wurde bei der Phase-1-Nachbesserung bewusst nicht
-blind verändert.
+Die wesentlichen Mac-Pfade sind korrekt getrennt: Runtime lokal, BrainVault in
+iCloud und Agenten lokal. Die Konfiguration trägt inzwischen ausdrücklich das
+Profil `PRIVAT`. Creative Canvas wurde am 22. Juli 2026 nach
+`/Users/matmax/TrinityCreativeCanvas` verlegt. Der LaunchAgent
+`de.trinity.creativecanvas.plist` und seine technischen Logs verwenden nun
+ausschließlich lokale Pfade. Der vorherige Cloud-Rest sowie ein geprüftes
+Git-Bundle der vier lokalen Commits liegen wiederherstellbar unter
+`/Users/matmax/Trinity-Recovery/2026-07-22-creative-canvas-localization`.
+
+### Beschlossene Reihenfolge für Agenten
+
+Die fachliche Agentenklassifizierung wird bewusst zurückgestellt, bis
+Installation, Profile, Vaults, Sessions, Memory und Wiederherstellung sauber
+inventarisiert sind. Agenten werden später nicht pauschal verteilt, sondern
+bei tatsächlichem Bedarf manuell über Codex in die lokale Umgebung für Arbeit
+oder Privat übernommen. Bis dahin findet keine automatische Agentenmigration
+aus `BrainVault_LEGACY` statt.

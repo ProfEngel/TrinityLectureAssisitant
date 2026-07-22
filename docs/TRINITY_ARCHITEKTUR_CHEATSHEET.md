@@ -1,7 +1,7 @@
 # Trinity-Architektur – Cheatsheet
 
-Stand: 21. Juli 2026
-Zielbild: Windows = **BIZ-Autorität**, Mac = **PRIVAT-Autorität**
+Stand: 22. Juli 2026
+Zielbild: Windows = **Arbeit/BIZ-Autorität**, Mac = **Privat/PRIVAT-Autorität**
 
 ## Der wichtigste Merksatz
 
@@ -57,8 +57,8 @@ benötigt, jeweils mit ihren lokal erforderlichen Abhängigkeiten.
 
 | Rechner | Erlaubte installierte Agenten |
 |---|---|
-| Windows | Gemeinsam + Beruf (BIZ) |
-| Mac | Gemeinsam + Privat + isolierte Test-Agenten |
+| Windows | Gemeinsam + Arbeit (BIZ) |
+| Mac | Gemeinsam + Privat + isolierte Development-Agenten |
 
 Der private **Agenten-Werkzeugkasten auf GitHub** ist die maßgebliche Quelle
 für Agentencode, Beschreibungen, Tests und Versionen. Sinnvolle Bereiche sind:
@@ -66,13 +66,13 @@ für Agentencode, Beschreibungen, Tests und Versionen. Sinnvolle Bereiche sind:
 ```text
 Agenten-Werkzeugkasten/
 ├── Gemeinsam/
-├── Beruf/
+├── Arbeit/
 ├── Privat/
-└── In-Erprobung/
+└── Development/
 ```
 
 `Gemeinsam` ist dabei kein viertes Datenprofil: Diese Agenten werden lokal in
-BIZ und PRIVAT installiert. `In-Erprobung` wird nur im Testbereich ausgefuehrt.
+BIZ und PRIVAT installiert. `Development` wird nur in der Test-Runtime ausgeführt.
 
 Von dort werden Agenten bewusst und profilbezogen lokal installiert. Die
 Cloud-Vaults sind weder Softwareverteilung noch Quelle der Wahrheit für
@@ -220,11 +220,11 @@ ersetzt aber kein Backup der Vault-Inhalte oder Runtime-Zustände.
 
 | Gerät oder Zugang | Erlaubte Nutzung |
 |---|---|
-| Windows | Beruf lokal |
-| Mac | Privat lokal, Testbereich getrennt, Beruf nur remote oder als Dateiclient |
-| iPhone und iPad | Beruf oder Privat nach sichtbarer, bewusster Profilwahl |
+| Windows | Arbeit lokal |
+| Mac | Privat lokal, Development getrennt, Arbeit nur remote oder als Dateiclient |
+| iPhone und iPad | Arbeit, Privat oder Development nach sichtbarer, bewusster Profilwahl |
 | Even G2 | übernimmt das am Telefon ausgewählte Profil |
-| Telegram | zwei getrennte Bots: einer für Beruf, einer für Privat |
+| Telegram | zwei getrennte Bots: einer für Arbeit, einer für Privat |
 | Ubuntu | nur beruflicher LLM-Dienst, kein eigenes Profil und kein Vault |
 
 **Autorität** bedeutet Trinity-Ausführung, Memory, Sessions und Freigaben.
@@ -239,7 +239,7 @@ ersetzt aber kein Backup der Vault-Inhalte oder Runtime-Zustände.
 | Ist es ein dauerhaftes BIZ-Dokument oder -Projekt? | OneDrive/BizVault |
 | Ist es ein dauerhaftes privates Dokument oder -Projekt? | iCloud/BrainVault |
 | Ist es ein Such- oder Beziehungsindex? | lokal bei Graphify/RAG |
-| Ist es eine berufliche Trinity-Sitzung? | Windows-Runtime, auch wenn der Mac der Client ist |
+| Ist es eine Trinity-Sitzung im Profil Arbeit? | Windows-Runtime, auch wenn der Mac der Client ist |
 | Ist es eine private Trinity-Sitzung? | Mac-Runtime |
 | Soll es einen Ausfall überleben? | zusätzlich unabhängiges Backup |
 
