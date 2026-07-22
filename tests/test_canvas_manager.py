@@ -68,3 +68,13 @@ def test_canvas_start_uses_one_local_production_service(tmp_path, monkeypatch):
     assert captured["env"]["PORT"] == "8787"
     assert captured["env"]["DATA_DIR"] == str(runtime / "canvas")
     assert (runtime / "canvas" / "canvas.pid").read_text(encoding="utf-8") == "4242"
+
+
+def test_canvas_can_bind_to_one_explicit_tailnet_address(tmp_path):
+    manager, _, _ = _manager(tmp_path)
+    manager.settings["host"] = "100.64.0.42"
+
+    configured = CanvasManager(manager.home, manager.config)
+
+    assert configured.host == "100.64.0.42"
+    assert configured.url == "http://100.64.0.42:8787"
