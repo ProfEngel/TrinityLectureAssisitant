@@ -15,6 +15,7 @@ komplett neu gebaut.
 
 import os
 import json
+import sys
 import numpy as np
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
@@ -27,6 +28,22 @@ MEMORY_DIR = os.path.join(PROJECT_DIR, "memory")
 CHUNK_SIZE = 500       # Zeichen pro Chunk (kleiner = präziser)
 CHUNK_OVERLAP = 100    # Überlappung
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"  # ~120MB, Deutsch-optimiert
+
+
+def configured_profile(project_dir=PROJECT_DIR, platform_name=None):
+    """Return the one profile this local, rebuildable index belongs to."""
+
+    config_path = os.path.join(project_dir, "core", "config.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        profile = str(config.get("system", {}).get("profile") or "").upper()
+    except (OSError, ValueError, TypeError):
+        profile = ""
+    if profile in {"BIZ", "PRIVAT", "TEST"}:
+        return profile
+    host = platform_name or sys.platform
+    return "BIZ" if host == "win32" else "PRIVAT"
 
 
 def extract_text_from_pdf(pdf_path):
@@ -160,6 +177,7 @@ def build_index():
 
     # Metadata
     meta = {
+        "profile": configured_profile(),
         "model": MODEL_NAME,
         "chunk_size": CHUNK_SIZE,
         "chunk_overlap": CHUNK_OVERLAP,

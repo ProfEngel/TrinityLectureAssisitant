@@ -1,11 +1,32 @@
 import os
 import subprocess
 import sys
+import json
 
 rag_chunks = []
 rag_embeddings = None
 rag_model = None
 index_loaded = False
+
+
+def _configured_profile(project_dir=None):
+    project_dir = project_dir or os.path.dirname(
+        os.path.dirname(os.path.dirname(__file__))
+    )
+    config_path = os.path.join(project_dir, "core", "config.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        profile = str(config.get("system", {}).get("profile") or "").upper()
+    except (OSError, ValueError, TypeError):
+        profile = ""
+    if profile in {"BIZ", "PRIVAT", "TEST"}:
+        return profile
+    return "BIZ" if sys.platform == "win32" else "PRIVAT"
+
+
+def _index_profile_is_allowed(meta, active_profile):
+    return str((meta or {}).get("profile") or "").strip().upper() == active_profile
 
 def _load_rag_index():
     global rag_chunks, rag_embeddings, index_loaded
@@ -36,9 +57,18 @@ def _load_rag_index():
         needs_rebuild = True
     else:
         try:
-            import json as _json
             with open(meta_path, "r") as f:
-                meta = _json.load(f)
+                meta = json.load(f)
+            active_profile = _configured_profile()
+            if not _index_profile_is_allowed(meta, active_profile):
+                index_profile = str(meta.get("profile") or "LEGACY_UNSCOPED").upper()
+                print(
+                    "📚 RAG-Index deaktiviert: "
+                    f"Index={index_profile}, Trinity={active_profile}. "
+                    "Baue den Index erst aus bestätigten Quellen dieses Profils neu."
+                )
+                index_loaded = True
+                return
             indexed_sources = sorted(meta.get("sources", []))
             current_sources = sorted([f.replace('.pdf', '') for f in current_pdfs])
             if indexed_sources != current_sources:
@@ -83,11 +113,10 @@ def _load_rag_index():
         return
 
     try:
-        import json as _json
         import numpy as np
 
         with open(chunks_path, "r", encoding="utf-8") as f:
-            rag_chunks = _json.load(f)
+            rag_chunks = json.load(f)
         raw_embeddings = np.load(embeddings_path).astype(np.float32)
 
         norms = np.linalg.norm(raw_embeddings, axis=1, keepdims=True)
@@ -96,7 +125,15 @@ def _load_rag_index():
         rag_embeddings = np.nan_to_num(rag_embeddings, nan=0.0, posinf=0.0, neginf=0.0)
 
         with open(meta_path, "r") as f:
-            meta = _json.load(f)
+            meta = json.load(f)
+
+        active_profile = _configured_profile()
+        if not _index_profile_is_allowed(meta, active_profile):
+            rag_chunks = []
+            rag_embeddings = None
+            print("📚 RAG-Index nach dem Build wegen falschem Profil deaktiviert.")
+            index_loaded = True
+            return
 
         sources = meta.get("sources", [])
         print(f"📚 RAG-Index geladen: {len(rag_chunks)} Chunks aus {len(sources)} Dokumenten ({', '.join(sources)})")
