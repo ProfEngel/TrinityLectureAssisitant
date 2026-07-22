@@ -41,6 +41,8 @@ RECOVERY_ROOT="$HOME/Trinity-Recovery/installer-$STAMP"
 BACKUP_DIR="$RECOVERY_ROOT/Nutzerdaten"
 ROLLBACK_DIR="$RECOVERY_ROOT/Trinity_Assistant-vorher"
 REPOSITORY="https://github.com/ProfEngel/TrinityLectureAssisitant.git"
+CANVAS_DIR="$HOME/TrinityCreativeCanvas"
+CANVAS_REPOSITORY="https://github.com/ProfEngel/TrinityCreativeCanvas.git"
 mkdir -p "$RECOVERY_ROOT"
 
 # 3. Update-Modus: Bestehende Configs sichern
@@ -146,6 +148,26 @@ if ! install_dependencies; then
     exit 1
 fi
 
+# 6.4 Trinity Canvas als verwaltete Desktop-Komponente installieren.
+echo "🎨 Installiere Trinity Canvas..."
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "   ⚠️  Node.js/npm fehlt. Trinity läuft, Canvas kann später mit 'trinity canvas install' ergänzt werden."
+elif [ -d "$CANVAS_DIR/.git" ]; then
+    if [ -n "$(git -C "$CANVAS_DIR" status --porcelain)" ]; then
+        echo "   ⚠️  Canvas enthält lokale Änderungen und wurde zum Schutz dieser Arbeit nicht aktualisiert."
+    else
+        git -C "$CANVAS_DIR" pull --ff-only origin main
+        (cd "$CANVAS_DIR" && npm ci && npm run build)
+        echo "   ✅ Trinity Canvas aktualisiert und produktionsbereit."
+    fi
+elif [ -e "$CANVAS_DIR" ]; then
+    echo "   ⚠️  $CANVAS_DIR existiert, ist aber kein Canvas-Git-Repository."
+else
+    git clone --branch main --single-branch "$CANVAS_REPOSITORY" "$CANVAS_DIR"
+    (cd "$CANVAS_DIR" && npm ci && npm run build)
+    echo "   ✅ Trinity Canvas installiert und produktionsbereit."
+fi
+
 # 6.5 Benutzerweiten CLI-Befehl installieren
 CLI_BIN="$HOME/.local/bin"
 CLI_PATH="$CLI_BIN/trinity"
@@ -211,6 +233,7 @@ echo "👉 Auf deinem Schreibtisch liegt ein Verweis namens 'Trinity.app'."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
+echo "👉 Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
 echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte, TrinityRuntime)"

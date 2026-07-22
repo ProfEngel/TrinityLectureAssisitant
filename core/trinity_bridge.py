@@ -34,6 +34,7 @@ from chat_protocol import (
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
 from memory_store import MemoryStore
+from runtime_reset import delete_session_summary
 from platform_adapters import (
     find_codex_executable,
     find_goose_executable,
@@ -908,7 +909,12 @@ class TrinityBridge:
             raise ValueError("session_id fehlt.")
         manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
         was_active = session_id == self.current_session()["id"]
+        delete_session_summary(self.home, session_id)
         result = manager.delete_session(session_id, archive=bool(payload.get("archive", False)))
+        if not bool(payload.get("archive", False)):
+            result["memory"] = MemoryStore(
+                self.memory_dir / "trinity_memory.sqlite3"
+            ).delete_session(session_id)
         if was_active:
             try:
                 self.sessions.pointer_path.unlink()
@@ -918,6 +924,27 @@ class TrinityBridge:
             result["active_session"] = self.current_session()
             result["replacement_session_id"] = replacement.id
         return {"ok": True, **result}
+
+    def delete_session_summary_record(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Summary-Loeschen erwartet ein Objekt.")
+        session_id = str(payload.get("session_id") or payload.get("id") or "").strip()
+        if not session_id:
+            raise ValueError("session_id fehlt.")
+        return {"ok": True, **delete_session_summary(self.home, session_id)}
+
+    def list_memory_records(self, limit=50):
+        store = MemoryStore(self.memory_dir / "trinity_memory.sqlite3")
+        return {"ok": True, "memories": store.list_memories(limit=max(1, min(int(limit), 200)))}
+
+    def delete_memory_record(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Memory-Loeschen erwartet ein Objekt.")
+        memory_id = str(payload.get("memory_id") or payload.get("id") or "").strip()
+        if not memory_id:
+            raise ValueError("memory_id fehlt.")
+        deleted = MemoryStore(self.memory_dir / "trinity_memory.sqlite3").delete_memory(memory_id)
+        return {"ok": True, "memory_id": memory_id, "deleted": deleted}
 
     def delete_event(self, payload, user=None):
         if not isinstance(payload, dict):
@@ -1694,6 +1721,13 @@ def make_handler(bridge):
                             "Einstellungen sind nur lokal oder fuer Administratoren verfuegbar."
                         )
                     _json_response(self, 200, bridge.get_web_settings())
+                elif parsed.path == "/memory":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Memory ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    limit = int(query.get("limit", ["50"])[0] or 50)
+                    _json_response(self, 200, bridge.list_memory_records(limit))
                 elif parsed.path == "/media":
                     path = bridge.media_path_from_query(
                         query.get("path", [""])[0], user=user
@@ -1802,6 +1836,22 @@ def make_handler(bridge):
                             "Sessions loeschen ist nur fuer angemeldete oder lokale Clients verfuegbar."
                         )
                     _json_response(self, 200, bridge.delete_session(_read_json(self)))
+                elif parsed.path == "/session/delete-summary":
+                    if not bridge.can_manage_workspaces(self, user):
+                        raise PermissionError(
+                            "Summaries loeschen ist nur fuer angemeldete oder lokale Clients verfuegbar."
+                        )
+                    _json_response(
+                        self,
+                        200,
+                        bridge.delete_session_summary_record(_read_json(self)),
+                    )
+                elif parsed.path == "/memory/delete":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError(
+                            "Memory ist nur lokal oder fuer Administratoren verfuegbar."
+                        )
+                    _json_response(self, 200, bridge.delete_memory_record(_read_json(self)))
                 elif parsed.path == "/event/delete":
                     _json_response(self, 200, bridge.delete_event(_read_json(self), user=user))
                 elif parsed.path == "/offline/events":

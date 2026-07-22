@@ -32,10 +32,54 @@ def test_cli_exposes_requested_commands():
         "server",
         "control-plane",
         "vault",
+        "session",
+        "memory",
+        "canvas",
     ):
-        arguments = [command, "status"] if command in {"control-plane", "vault"} else [command]
+        arguments = [command, "status"] if command in {"control-plane", "vault", "memory", "canvas"} else [command]
+        if command == "session":
+            arguments = [command, "list"]
         parsed = parser.parse_args(arguments)
         assert parsed.command == command
+
+
+def test_destructive_cli_commands_require_explicit_confirmation(tmp_path):
+    for runner, args, message in (
+        (
+            trinity_cli.run_memory_command,
+            SimpleNamespace(
+                memory_action="reset",
+                memory_id=None,
+                limit=50,
+                yes=False,
+                no_backup=False,
+                include_generated=False,
+                include_canvas=False,
+            ),
+            "--yes",
+        ),
+        (
+            trinity_cli.run_session_command,
+            SimpleNamespace(
+                session_action="delete",
+                session_id="session-test",
+                title="",
+                workspace="_inbox",
+                mode="chat",
+                limit=50,
+                archive=False,
+                yes=False,
+            ),
+            "--yes",
+        ),
+    ):
+        (tmp_path / "core").mkdir(exist_ok=True)
+        try:
+            runner(tmp_path, args)
+        except ValueError as exc:
+            assert message in str(exc)
+        else:
+            raise AssertionError("Destructive command must require confirmation")
 
 
 def test_surface_settings_force_terminal_without_graphical_ui():

@@ -50,6 +50,21 @@ Die lokale Installation ist **nicht** der Vault und **nicht** die Runtime.
 Ein lokaler Git-Clone kann der Entwicklungsarbeitsplatz sein; die verbindliche
 Code-Historie liegt im GitHub-Repository.
 
+### Trinity Canvas gehört zur Installation
+
+Canvas wird ab Trinity 0.16.49 automatisch zusammen mit Trinity Desktop
+installiert, gebaut, gestartet und beendet. In Trinity erscheint es als eigener
+Reiter **Canvas**. Die Weboberfläche und ihre API laufen dabei über genau einen
+internen lokalen Dienst; eine Portnummer muss weder eingegeben noch gemerkt
+werden.
+
+- Canvas-Programmcode liegt lokal außerhalb des Vaults.
+- Canvas-Testzustand und technische Arbeitsdaten liegen in der lokalen Runtime.
+- Dauerhafte Canvas-Projekte und freigegebene Ergebnisse gehören in den
+  gewählten BrainVault oder BizVault.
+- Canvas ist ein Bestandteil des Trinity-Systems, bleibt technisch aber ein
+  eigenes GitHub-Repository und kann deshalb unabhängig aktualisiert werden.
+
 ## 2. Nutzbare Agenten – lokal, nicht im Cloud-Ordner
 
 Auf jedem Rechner liegen nur die Agenten, die das dort erlaubte Profil
@@ -100,6 +115,17 @@ Windows-Ziel:
 **Wichtige Korrektur:** Trinity-Quellcode und Agenten-Quellcode gehören nicht
 in die Runtime. Die Runtime soll aus Installation, Konfiguration,
 Vault-Inhalten und Wiederherstellungskopien neu aufgebaut werden können.
+
+### Löschen und auf null setzen
+
+Einzelne Sessions, deren Zusammenfassungen und einzelne Memory-Einträge lassen
+sich getrennt löschen. Für Testinstallationen gibt es außerdem **Memory auf 0
+setzen**. Trinity beendet dazu zuerst die laufenden Dienste und erstellt eine
+datierte Wiederherstellungskopie unter `~/Trinity-Recovery`.
+
+Der Reset entfernt auf Wunsch Sessions, Summaries, Arbeitsräume, Memory,
+erzeugte Testmedien und Canvas-Laufzeitdaten. Er entfernt niemals den Vault,
+RAG-Quelldokumente, `Soul.md`, `User.md` oder die Installationskonfiguration.
 
 ## 4. Die beiden Vaults – als Einzige in Cloud-Ordnern
 

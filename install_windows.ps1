@@ -7,6 +7,9 @@ param(
     [switch]$ValidateEnvironmentOnly
 )
 
+$CanvasInstallDir = "$env:LOCALAPPDATA\TrinityCanvas"
+$CanvasRepository = "https://github.com/ProfEngel/TrinityCreativeCanvas.git"
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
@@ -362,6 +365,46 @@ finally {
     Pop-Location
 }
 
+Write-Host "Installiere Trinity Canvas ..."
+$node = Get-Command "node.exe" -ErrorAction SilentlyContinue
+$npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
+if (-not $node -or -not $npm -or -not $git) {
+    Write-Warning "Node.js/npm oder Git fehlt. Trinity läuft; Canvas kann später mit 'trinity canvas install' ergänzt werden."
+}
+elseif (Test-Path "$CanvasInstallDir\.git") {
+    $canvasChanges = (& $git.Source -C $CanvasInstallDir status --porcelain) -join "`n"
+    if ($canvasChanges.Trim()) {
+        Write-Warning "Canvas enthält lokale Änderungen und wurde zum Schutz dieser Arbeit nicht aktualisiert."
+    }
+    else {
+        & $git.Source -C $CanvasInstallDir pull --ff-only origin main
+        if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht aktualisiert werden." }
+        Push-Location $CanvasInstallDir
+        try {
+            & $npm.Source ci
+            if ($LASTEXITCODE -ne 0) { throw "Canvas-Abhängigkeiten konnten nicht installiert werden." }
+            & $npm.Source run build
+            if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht gebaut werden." }
+        }
+        finally { Pop-Location }
+    }
+}
+elseif (Test-Path $CanvasInstallDir) {
+    Write-Warning "$CanvasInstallDir existiert, ist aber kein Canvas-Git-Repository."
+}
+else {
+    & $git.Source clone --branch main --single-branch $CanvasRepository $CanvasInstallDir
+    if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht heruntergeladen werden." }
+    Push-Location $CanvasInstallDir
+    try {
+        & $npm.Source ci
+        if ($LASTEXITCODE -ne 0) { throw "Canvas-Abhängigkeiten konnten nicht installiert werden." }
+        & $npm.Source run build
+        if ($LASTEXITCODE -ne 0) { throw "Trinity Canvas konnte nicht gebaut werden." }
+    }
+    finally { Pop-Location }
+}
+
 $cliBin = "$InstallDir\bin"
 $cliWrapper = "$cliBin\trinity.cmd"
 New-Item -ItemType Directory -Path $cliBin -Force | Out-Null
@@ -469,5 +512,6 @@ Write-Host "Trinity liegt unter: $InstallDir"
 Write-Host "Trinity startet mit den in den Einstellungen gewählten Oberflächen."
 Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, sofern eine GUI aktiv ist."
 Write-Host "In einer neuen PowerShell steht außerdem der Befehl 'trinity' bereit."
+Write-Host "Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

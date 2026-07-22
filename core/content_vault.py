@@ -48,10 +48,12 @@ TEST_VAULT_DIRECTORIES = (
 PHASE1_VAULT_DIRECTORIES = PRIVATE_VAULT_DIRECTORIES
 
 PROFILE_ALIASES = {
+    "arbeit": "BIZ",
     "beruf": "BIZ",
     "biz": "BIZ",
     "privat": "PRIVAT",
     "private": "PRIVAT",
+    "development": "TEST",
     "test": "TEST",
     "testbereich": "TEST",
 }
@@ -69,7 +71,7 @@ def normalize_profile(value: object, platform_name: Optional[str] = None) -> str
 
 
 def profile_label(profile: object) -> str:
-    return {"BIZ": "Beruf", "PRIVAT": "Privat", "TEST": "Testbereich"}[
+    return {"BIZ": "Arbeit", "PRIVAT": "Privat", "TEST": "Development"}[
         normalize_profile(profile)
     ]
 

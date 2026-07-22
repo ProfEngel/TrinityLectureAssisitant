@@ -82,6 +82,24 @@ class RemoteTrinityClient:
             {"session_id": session_id, **updates},
         )
 
+    def delete_session(self, session_id, archive=False):
+        return self._request(
+            "/session/delete",
+            {"session_id": session_id, "archive": bool(archive)},
+        )
+
+    def delete_session_summary(self, session_id):
+        return self._request(
+            "/session/delete-summary",
+            {"session_id": session_id},
+        )
+
+    def list_memories(self, limit=50):
+        return self._request(f"/memory?{urlencode({'limit': int(limit)})}", method="GET")
+
+    def delete_memory(self, memory_id):
+        return self._request("/memory/delete", {"memory_id": memory_id})
+
     def set_runtime(self, updates):
         return self._request("/runtime", dict(updates or {}))
 

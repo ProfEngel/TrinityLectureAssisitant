@@ -7,6 +7,8 @@ from datetime import datetime
 from html import escape
 
 from core.configuration import load_config
+from core.canvas_manager import CanvasManager
+from core.runtime_reset import reset_operational_memory
 from core.ui_modes import resolve_ui_modes
 
 
@@ -199,7 +201,9 @@ def launch_trinity():
         os.path.join(logs_dir, "runtime.log"), "a", encoding="utf-8"
     ) as runtime_log, open(
         os.path.join(logs_dir, "ui.log"), "a", encoding="utf-8"
-    ) as ui_log:
+    ) as ui_log, open(
+        os.path.join(logs_dir, "canvas.log"), "a", encoding="utf-8"
+    ) as canvas_log:
         _log_message(
             launcher_log,
             "Starte Trinity-Laufzeit mit Oberflächen: "
@@ -210,6 +214,17 @@ def launch_trinity():
             console_flags = subprocess.CREATE_NEW_CONSOLE
 
         bridge_process = None
+        canvas_process = None
+        canvas_manager = CanvasManager(base_dir)
+        if canvas_manager.enabled:
+            try:
+                canvas_process = canvas_manager.start(log_handle=canvas_log)
+                _log_message(
+                    launcher_log,
+                    "Canvas ist bereit und wird von Trinity verwaltet.",
+                )
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                _log_message(launcher_log, f"Canvas konnte nicht gestartet werden: {exc}")
         web_enabled = ui_modes["web"]
         companion_enabled = companion_config.get("enabled", False)
         if companion_enabled or web_enabled:
@@ -329,6 +344,26 @@ def launch_trinity():
                 _terminate(process)
             _terminate(ear_process)
             _terminate(bridge_process)
+            _terminate(canvas_process)
+            reset_request_path = canvas_manager.paths.runtime_root / "reset-request.json"
+            if reset_request_path.is_file():
+                try:
+                    import json
+
+                    request = json.loads(reset_request_path.read_text(encoding="utf-8"))
+                    reset_request_path.unlink(missing_ok=True)
+                    result = reset_operational_memory(
+                        base_dir,
+                        backup=bool(request.get("backup", True)),
+                        include_generated=bool(request.get("include_generated", False)),
+                        include_canvas=bool(request.get("include_canvas", False)),
+                    )
+                    _log_message(
+                        launcher_log,
+                        "Memory wurde zurückgesetzt; Sicherung: " + str(result.get("backup") or "keine"),
+                    )
+                except (OSError, ValueError, json.JSONDecodeError) as exc:
+                    _log_message(launcher_log, f"Memory-Reset fehlgeschlagen: {exc}")
             _log_message(launcher_log, "Trinity ist schlafen gegangen.")
 
 if __name__ == "__main__":

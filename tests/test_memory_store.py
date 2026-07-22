@@ -78,3 +78,26 @@ def test_dreaming_decays_old_memory_and_keeps_recent_memory_relevant(tmp_path):
     memories = {item["id"]: item for item in store.search("", limit=10)}
 
     assert memories[old_id]["weight"] < memories[recent_id]["weight"]
+
+
+def test_memory_store_deletes_individual_memory_and_whole_session(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    first_session = store.create_session("Erste Session")
+    second_session = store.create_session("Zweite Session")
+    first_memory = store.remember("Nur diese Erinnerung", session_id=first_session)
+    store.remember("Session-Erinnerung", session_id=first_session)
+    store.remember("Bleibt bestehen", session_id=second_session)
+    store.add_message(first_session, "user", "Wird entfernt")
+
+    assert store.delete_memory(first_memory) is True
+    assert store.delete_memory(first_memory) is False
+    result = store.delete_session(first_session)
+
+    assert result == {
+        "session_id": first_session,
+        "deleted": True,
+        "messages": 1,
+        "memories": 1,
+    }
+    assert store.stats()["sessions"] == 1
+    assert [item["session_id"] for item in store.list_memories()] == [second_session]
