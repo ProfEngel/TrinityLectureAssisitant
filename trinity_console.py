@@ -3,6 +3,7 @@
 import argparse
 import os
 import queue
+import signal
 import subprocess
 import sys
 import threading
@@ -14,6 +15,12 @@ def _runtime_env(environment=None):
     env.setdefault("PYTHONIOENCODING", "utf-8")
     env.setdefault("PYTHONUTF8", "1")
     return env
+
+
+def _request_graceful_shutdown(_signum, _frame):
+    """Let SIGTERM reach the existing runtime cleanup path."""
+
+    raise KeyboardInterrupt
 
 
 def _read_commands(command_queue):
@@ -83,6 +90,8 @@ def run_console(runtime_script):
 
 
 def main():
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, _request_graceful_shutdown)
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime", required=True)
     args = parser.parse_args()

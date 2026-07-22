@@ -1,5 +1,6 @@
 import builtins
 
+import pytest
 import trinity_console
 
 
@@ -68,3 +69,8 @@ def test_console_runtime_uses_utf8_environment():
     assert env["PATH"] == "demo"
     assert env["PYTHONIOENCODING"] == "utf-8"
     assert env["PYTHONUTF8"] == "1"
+
+
+def test_console_routes_termination_through_runtime_cleanup():
+    with pytest.raises(KeyboardInterrupt):
+        trinity_console._request_graceful_shutdown(None, None)
