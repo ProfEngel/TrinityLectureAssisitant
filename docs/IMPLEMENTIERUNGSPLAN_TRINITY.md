@@ -1,8 +1,9 @@
 # Implementierungsplan: Trinity kontrolliert fertigstellen
 
 Stand: 23. Juli 2026
-Status: **einzige aktuelle Resteliste**; T0 abgenommen, T1 lokal validiert,
-Versionierung und Windows-/Companion-Abnahme ausstehend
+Status: **einzige aktuelle Resteliste**; T0 abgenommen, T1 als geprüfte
+Draft-PRs veröffentlicht; Merge/Release und Windows-/Companion-Abnahme
+ausstehend
 
 Dieser Plan behandelt ausschließlich die bestehende Trinity-Anwendung. Trinity
 Voice Studio besitzt einen eigenen Implementierungsplan und ein späteres eigenes
@@ -146,11 +147,17 @@ einer Portnummer erreichbar.
   erfolgreich geprüft.
 - [x] Plattformübergreifenden Produktions-Smoke-Test für macOS und Windows in
   die CI-Konfiguration aufgenommen.
-- [ ] Canvas-Änderung kontrolliert im eigenständigen Canvas-Repository
-  versionieren und danach den geprüften Submodule-Stand in Trinity festhalten.
+- [x] Canvas-Änderung als Commit
+  `21099e2d17181be2d3e0ad62210abfe1fda87cf8` im eigenständigen
+  Canvas-Repository veröffentlicht (Draft-PR #3) und denselben geprüften
+  Submodule-Stand in Trinity festgehalten.
 - [x] Vollständigen Trinity-Testbestand auf dem fertigen lokalen Stand
   ausgeführt: 238 Tests unter Python 3.13 bestanden; Python-Compile-Checks,
   Canvas-Lint, Typecheck, Build und Produktions-Smoke ebenfalls bestanden.
+- [x] Trinity v0.16.59 als Draft-PR #28 veröffentlicht; GitHub Actions für
+  `macos-14` und `windows-latest` vollständig bestanden.
+- [ ] Canvas-PR #3 vor Trinity-PR #28 mergen und anschließend Trinity
+  v0.16.59 taggen/veröffentlichen.
 - [ ] Aktualisierten Stand unter Windows installieren/aktualisieren und Start,
   Neustart, Doctor, Root-GET, Desktop-Reiter und Beenden prüfen.
 - [ ] Companion-Aufruf auf iPhone oder iPad gegen die BIZ-Trinity prüfen.

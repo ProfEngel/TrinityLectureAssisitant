@@ -87,8 +87,10 @@ Erwartet:
 | Mac Produktions-Smoke | bestanden |
 | Mac verwalteter Start/Stop | bestanden |
 | Vollständige Trinity-Tests | bestanden: 238 |
-| CI macOS | offen |
-| CI Windows | offen |
+| Canvas-Veröffentlichung | Draft-PR #3, Commit `21099e2` |
+| Trinity-Veröffentlichung | Draft-PR #28, CI grün |
+| CI macOS | bestanden |
+| CI Windows | bestanden |
 | Windows Installation/Update | offen |
 | Windows Desktop | offen |
 | iPhone/iPad Companion | offen |
