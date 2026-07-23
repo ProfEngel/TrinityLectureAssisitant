@@ -1,6 +1,8 @@
 # 🧞‍♂️ Projekt: Trinity Assistant
 
-> **Status:** Initialisierungsphase
+> **Status:** Historischer Initialentwurf. Die aktuelle Architektur steht in
+> `docs/PHASE_1_PROFILE_ARCHITECTURE.md`; offene Arbeiten ausschließlich in
+> `docs/IMPLEMENTIERUNGSPLAN_TRINITY.md`.
 > **Ziel:** Ein KI-gestützter Lehr-Assistent für den Mac, der ambient mithört, via OpenClaw agiert und als schwebendes HTML-Widget visualisiert wird.
 
 ---

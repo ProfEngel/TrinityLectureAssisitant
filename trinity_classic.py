@@ -460,19 +460,19 @@ class ClassicWindow(QMainWindow):
         canvas_label.setObjectName("section")
         canvas_reload_button = QPushButton("Neu laden")
         canvas_reload_button.setObjectName("subtle")
-        canvas_reload_button.clicked.connect(lambda: self.canvas_workspace.reload())
+        canvas_reload_button.clicked.connect(self.reload_canvas)
         canvas_external_button = QPushButton("Extern öffnen")
         canvas_external_button.setObjectName("subtle")
-        canvas_manager = CanvasManager(BASE_DIR)
-        canvas_external_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl(canvas_manager.url))
-        )
+        self.canvas_manager = CanvasManager(BASE_DIR)
+        self._canvas_status_cache = (0.0, {})
+        canvas_external_button.clicked.connect(self.open_canvas_externally)
         canvas_toolbar.addWidget(canvas_label, 1)
         canvas_toolbar.addWidget(canvas_reload_button)
         canvas_toolbar.addWidget(canvas_external_button)
         self.canvas_workspace = QWebEngineView()
         self._configure_web_view(self.canvas_workspace)
-        self.canvas_workspace.setUrl(QUrl(canvas_manager.url))
+        self.canvas_workspace.loadFinished.connect(self._canvas_load_finished)
+        self.reload_canvas()
         canvas_layout.addLayout(canvas_toolbar)
         canvas_layout.addWidget(self.canvas_workspace, 1)
 
@@ -1538,6 +1538,7 @@ class ClassicWindow(QMainWindow):
         ]
         open_jobs = sum(int(record.job_open) for record in catalog)
         failed_jobs = sum(int(record.job_failed) for record in catalog)
+        canvas = self._current_canvas_status()
         return {
             "agents_total": len(catalog),
             "agents_active": len(active_agents),
@@ -1551,6 +1552,7 @@ class ClassicWindow(QMainWindow):
             "payloads": len(payload_events),
             "latest_session": sessions[0].title if sessions else "",
             "latest_result": str(payload_events[-1].get("text") or payload_events[-1].get("source") or "")[:120] if payload_events else "",
+            "canvas": canvas,
             "top_agents": triggerable[:5],
             "catalog": catalog,
         }
@@ -1636,6 +1638,12 @@ class ClassicWindow(QMainWindow):
                     "body": f"Aktuelle Session: {snapshot['latest_session'] or 'keine aktive Workspace-Session'}",
                     "badge": "Prompts",
                 },
+                {
+                    "icon": "▱",
+                    "title": "Canvas",
+                    "body": snapshot["canvas"]["message"],
+                    "badge": snapshot["canvas"]["state"],
+                },
             ],
         )
 
@@ -1674,6 +1682,40 @@ class ClassicWindow(QMainWindow):
             QDesktopServices.openUrl(QUrl.fromLocalFile(self._lecture_path))
         else:
             self.choose_lecture_pdf()
+
+    def _current_canvas_status(self, refresh=False):
+        checked_at, cached = self._canvas_status_cache
+        if not refresh and cached and time.monotonic() - checked_at < 2.0:
+            return dict(cached)
+        status = self.canvas_manager.status(timeout=0.2)
+        self._canvas_status_cache = (time.monotonic(), status)
+        return dict(status)
+
+    def reload_canvas(self):
+        status = self._current_canvas_status(refresh=True)
+        if status["running"]:
+            self.canvas_workspace.setUrl(QUrl(status["url"]))
+        else:
+            self.canvas_workspace.setHtml(
+                self.canvas_manager.unavailable_page(status),
+                QUrl("about:blank"),
+            )
+
+    def _canvas_load_finished(self, ok):
+        if ok:
+            return
+        status = self._current_canvas_status(refresh=True)
+        self.canvas_workspace.setHtml(
+            self.canvas_manager.unavailable_page(status),
+            QUrl("about:blank"),
+        )
+
+    def open_canvas_externally(self):
+        status = self._current_canvas_status(refresh=True)
+        if status["running"]:
+            QDesktopServices.openUrl(QUrl(status["url"]))
+            return
+        QMessageBox.warning(self, "Trinity Canvas", status["message"])
 
     def open_web_address(self):
         url = QUrl.fromUserInput(self.web_address.text().strip())

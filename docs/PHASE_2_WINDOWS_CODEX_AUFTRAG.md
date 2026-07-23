@@ -1,5 +1,11 @@
 # Auftrag für Codex auf der Windows-Maschine – Phase 2
 
+> **Ausgeführt und historisch:** Dieser Reset-/Inventurauftrag wurde am
+> 22. Juli 2026 abgearbeitet und darf nicht erneut als aktueller Auftrag
+> ausgeführt werden. Das Ergebnis und die verbliebenen reinen Nachprüfungen
+> stehen in `PHASE_2_WINDOWS_RESULT.md`; die einzige aktuelle Resteliste ist
+> `IMPLEMENTIERUNGSPLAN_TRINITY.md`.
+
 > Ergebnisstand: Die Inventur und der Reset wurden am 22. Juli 2026 ausgeführt.
 > Festgestellte Abweichungen und die kontrollierte Nacharbeit stehen in
 > `PHASE_2_WINDOWS_RESULT.md`.

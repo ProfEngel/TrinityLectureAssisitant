@@ -31,6 +31,7 @@ from chat_protocol import (
     load_chat_events,
     remove_chat_event,
 )
+from canvas_manager import CanvasManager
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
 from memory_store import MemoryStore
@@ -161,6 +162,7 @@ class TrinityBridge:
         self._session_close_lock = threading.Lock()
         self._summary_jobs = set()
         self._audio_transcriber = None
+        self._canvas_status_cache = (0.0, {})
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
 
     @property
@@ -708,6 +710,22 @@ class TrinityBridge:
             "tts_enabled": bool(system.get("tts_enabled", True)),
         }
 
+    def canvas_status(self, max_age=2.0):
+        checked_at, cached = self._canvas_status_cache
+        if cached and time.monotonic() - checked_at < max_age:
+            return dict(cached)
+        status = CanvasManager(self.home).status(timeout=0.2)
+        public_status = {
+            "enabled": status["enabled"],
+            "running": status["running"],
+            "state": status["state"],
+            "message": status["message"],
+            "url": status["url"],
+            "http_status": status["http_status"],
+        }
+        self._canvas_status_cache = (time.monotonic(), public_status)
+        return dict(public_status)
+
     def dashboard(self, user=None):
         """Return lightweight dashboard data for Agents and Control pages."""
 
@@ -777,6 +795,7 @@ class TrinityBridge:
                 "total": sum(item["job_total"] for item in agents),
                 "recent": self._recent_jobs(),
             },
+            "canvas": self.canvas_status(),
             "control": {
                 "workspaces": len(workspaces),
                 "sessions": len(sessions),

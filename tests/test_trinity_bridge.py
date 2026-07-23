@@ -158,6 +158,9 @@ def test_bridge_dashboard_exposes_agent_metadata(tmp_path):
     assert "description" in trinity
     assert "allowed_tools" in trinity
     assert "rights" in trinity
+    assert result["canvas"]["url"] == "http://127.0.0.1:8787"
+    assert result["canvas"]["state"] == "not_installed"
+    assert "message" in result["canvas"]
 
 
 def test_bridge_exposes_profile_scoped_memory_graph(tmp_path):

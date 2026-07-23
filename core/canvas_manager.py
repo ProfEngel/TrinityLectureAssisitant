@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import shutil
@@ -11,7 +12,7 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 try:
@@ -68,7 +69,8 @@ class CanvasManager:
 
     @property
     def url(self) -> str:
-        return f"http://{self.host}:{self.port}"
+        browser_host = "127.0.0.1" if self.host in {"0.0.0.0", "::", "[::]"} else self.host
+        return f"http://{browser_host}:{self.port}"
 
     @property
     def server_entrypoint(self) -> Path:
@@ -78,25 +80,118 @@ class CanvasManager:
     def bundled(self) -> bool:
         return self.install_dir == default_canvas_install_dir(self.home)
 
-    def is_running(self, timeout: float = 0.6) -> bool:
+    def probe(self, timeout: float = 0.6) -> dict:
+        health_ok = False
+        health_payload = {}
+        root_status = None
+        detail = ""
         try:
             with urlopen(f"{self.url}/api/health", timeout=timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-            return bool(payload.get("ok") and payload.get("service") == "trinity-creative-canvas")
-        except (OSError, URLError, ValueError, json.JSONDecodeError):
-            return False
+                health_payload = json.loads(response.read().decode("utf-8"))
+            health_ok = bool(
+                health_payload.get("ok")
+                and health_payload.get("service") == "trinity-creative-canvas"
+            )
+        except (OSError, URLError, ValueError, json.JSONDecodeError) as exc:
+            detail = str(exc)
 
-    def status(self) -> dict:
+        if health_ok:
+            try:
+                with urlopen(self.url, timeout=timeout) as response:
+                    root_status = int(getattr(response, "status", response.getcode()))
+            except HTTPError as exc:
+                root_status = int(exc.code)
+                detail = str(exc)
+            except (OSError, URLError, ValueError) as exc:
+                detail = str(exc)
+
+        health_ui_ready = health_payload.get("uiReady")
+        running = bool(
+            health_ok
+            and root_status is not None
+            and 200 <= root_status < 400
+            and health_ui_ready is not False
+        )
+        return {
+            "health_ok": health_ok,
+            "ui_ready": health_ui_ready is not False if health_ok else False,
+            "http_status": root_status,
+            "running": running,
+            "detail": detail,
+        }
+
+    def is_running(self, timeout: float = 0.6) -> bool:
+        return bool(self.probe(timeout=timeout)["running"])
+
+    def status(self, timeout: float = 0.6) -> dict:
+        installed = (self.install_dir / "package.json").is_file()
+        built = self.server_entrypoint.is_file() and (self.install_dir / "dist" / "index.html").is_file()
+        probe = {
+            "health_ok": False,
+            "ui_ready": False,
+            "http_status": None,
+            "running": False,
+            "detail": "",
+        }
+        if self.enabled and installed and built:
+            probe = self.probe(timeout=timeout)
+        if not self.enabled:
+            state = "disabled"
+            message = "Trinity Canvas ist in der Konfiguration deaktiviert."
+        elif not installed:
+            state = "not_installed"
+            message = "Die Canvas-Komponente fehlt. Nutze `trinity canvas install`."
+        elif not built:
+            state = "not_built"
+            message = "Canvas ist installiert, aber noch nicht gebaut. Nutze `trinity canvas install`."
+        elif probe["running"]:
+            state = "ready"
+            message = "Trinity Canvas ist bereit."
+        elif probe["health_ok"]:
+            state = "ui_unavailable"
+            status_text = (
+                f"HTTP {probe['http_status']}"
+                if probe["http_status"] is not None
+                else "keine HTTP-Antwort"
+            )
+            message = (
+                "Der Canvas-Dienst läuft, aber die Weboberfläche ist nicht erreichbar "
+                f"({status_text}). Nutze `trinity canvas install` und starte Trinity neu."
+            )
+        else:
+            state = "stopped"
+            message = "Canvas ist derzeit nicht erreichbar und wird beim Start von Trinity erneut gestartet."
         return {
             "enabled": self.enabled,
-            "installed": (self.install_dir / "package.json").is_file(),
-            "built": self.server_entrypoint.is_file() and (self.install_dir / "dist" / "index.html").is_file(),
-            "running": self.is_running(),
+            "installed": installed,
+            "built": built,
+            "running": probe["running"],
+            "health_ok": probe["health_ok"],
+            "ui_ready": probe["ui_ready"],
+            "http_status": probe["http_status"],
+            "state": state,
+            "message": message,
             "bundled": self.bundled,
             "install_dir": str(self.install_dir),
             "data_dir": str(self.data_dir),
             "url": self.url,
         }
+
+    def unavailable_page(self, status: dict | None = None) -> str:
+        current = status or self.status()
+        title = "Trinity Canvas ist nicht erreichbar"
+        message = str(current.get("message") or "Canvas konnte nicht geladen werden.")
+        return f"""<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f172a;color:#e2e8f0;font:15px system-ui,sans-serif}}
+main{{width:min(620px,calc(100% - 48px));padding:32px;border:1px solid #334155;border-radius:20px;background:#111827}}
+h1{{margin:0 0 12px;font-size:1.6rem}}p{{line-height:1.55;color:#cbd5e1}}
+code{{color:#7dd3fc}}
+</style><title>{html.escape(title)}</title></head><body><main>
+<h1>{html.escape(title)}</h1><p>{html.escape(message)}</p>
+<p>Diagnose: <code>trinity canvas status</code></p>
+</main></body></html>"""
 
     def install_or_update(self) -> dict:
         git = shutil.which("git")

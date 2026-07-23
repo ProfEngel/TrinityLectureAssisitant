@@ -1,5 +1,9 @@
 # Trinity auf Windows 11
 
+> **Historischer Portierungsplan:** Die Windows-Basisportierung ist umgesetzt.
+> Aktuelle offene Arbeiten stehen ausschließlich in
+> `docs/IMPLEMENTIERUNGSPLAN_TRINITY.md`.
+
 ## Umsetzungsstand
 
 Die erste Portierungsstufe ist mit Release `v0.10.0` umgesetzt:

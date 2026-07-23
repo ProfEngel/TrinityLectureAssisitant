@@ -1,6 +1,9 @@
 # Trinity Arbeitsraeume, Sessions und Notizen
 
-Status: geplanter grosser Arbeitsschritt ab vNext
+Status: **historische Roadmap**. Das Fundament wurde seit v0.16.17 umgesetzt.
+Offene Arbeiten werden ausschließlich in
+`IMPLEMENTIERUNGSPLAN_TRINITY.md` geführt. Bei abweichenden Aussagen gelten
+`PHASE_1_PROFILE_ARCHITECTURE.md` und der aktuelle Implementierungsplan.
 
 Dieses Dokument legt die naechste Ordnungsschicht fuer Trinity fest. Ziel ist
 nicht, Trinity in einen weiteren Chatbot zu verwandeln. Trinity soll mehrere
@@ -49,9 +52,10 @@ Arbeitsraum `Agentenbau` spaeter ein Codex- oder Pi-Job weitergefuehrt wird.
    erst spaeter zugeordnet werden.
 7. **Runtime bleibt lokal.** Aktive Sessions, Jobs, Locks, Datenbanken und
    temporaere Dateien bleiben in der lokalen TrinityRuntime.
-8. **BrainVault bleibt Agenten- und Wissenspool.** Externe Agenten und
-   freigegebene Wissensstrukturen liegen im Cloud-Ordner; aktive Runtime-Daten
-   nicht.
+8. **Vault und Agentencode bleiben getrennt.** Dauerhafte fachliche
+   Wissensquellen liegen im profilgebundenen Vault. Ausführbare externe Agenten
+   liegen lokal und werden aus dem privaten Agenten-Repository installiert;
+   aktive Runtime-Daten liegen ebenfalls nicht im Vault.
 9. **HITL bleibt Standard bei riskanten Aktionen.** Externe Harnesses duerfen
    planen, pruefen und bauen, aber Versand, Loeschung, Publishing, Aktivierung
    und Rechteausweitung brauchen Freigabe.

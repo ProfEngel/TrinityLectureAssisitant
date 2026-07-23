@@ -1,5 +1,9 @@
 # 🗺️ Trinity Implementierungsplan - Phase 2
 
+> **Historischer Plan:** Dieses Dokument beschreibt einen früheren
+> Entwicklungsstand. Die einzige aktuelle Resteliste ist
+> `docs/IMPLEMENTIERUNGSPLAN_TRINITY.md`.
+
 ## 1. Hermes als Subagent (Spezialist)
 - **Ziel**: Hermes als spezialisiertes Werkzeug für Trinity etablieren.
 - **Rolle**: Trinity bleibt der IMMER verfügbare Direktkontakt und das primäre Interface. Sie filtert 90% der Anfragen.

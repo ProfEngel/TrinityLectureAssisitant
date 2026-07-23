@@ -298,8 +298,9 @@ Sitzung für alle Geräte aktiviert. Summary, Transkript und Sitzungsmedien blei
 erhalten. Wird die geschlossene Sitzung am Desktop einem Projekt oder
 Vorlesungsmodul zugeordnet, wandern diese Unterlagen gemeinsam mit.
 
-Android Tablet/Phone ist als schlanker Bridge-Companion im separaten
-`android/`-Teil des Companion-Repositories vorbereitet.
+Android gehört nicht mehr zu Trinity. Die gepflegte CompanionApp unterstützt
+ausschließlich iPhone und iPad; ein früherer Android-Prototyp ist weder
+Build-Ziel noch Roadmap-Bestandteil.
 
 ## 7. Lokale Codex-, OpenCode- und Pi-Agenten
 

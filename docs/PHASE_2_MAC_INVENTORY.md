@@ -10,7 +10,7 @@ Status: Mac-Inventur und externe Sicherung abgeschlossen; keine fachlichen Inhal
 | Installation | `/Users/matmax/Trinity_Assistant` |
 | App | `/Users/matmax/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
-| Version | `0.16.52` veröffentlicht; kombinierter Launcher-/Canvas-Start erneut lokal geprüft |
+| Version | `0.16.58`; Git-Commit `48dfbae0b96164c923fc1eb0f55832afae787fae`; `origin/main` und Release-Tag stimmen überein |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
 | Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |
@@ -19,8 +19,9 @@ Status: Mac-Inventur und externe Sicherung abgeschlossen; keine fachlichen Inhal
 | Companion | aktiviert, Port `8766`; Apple-Companion `0.16.56` gebaut |
 | Telegram Privat | aktiviert; Token und Chat-ID gesetzt, Secret-Werte nicht ausgegeben |
 
-`trinity doctor --online` meldete Python, SSL, Konfiguration, Desktop-UI,
-LLM, Codex, Memory, Logs und Aktualität vollständig als `OK`.
+`trinity doctor --online` meldete am 23. Juli 2026 Python, SSL,
+Konfiguration, Desktop-UI, LLM, Codex, Goose, Memory, Logs und Aktualität
+vollständig als `OK`.
 
 ## 2. Wiederherstellungskopien
 
@@ -134,6 +135,22 @@ Die laufende Bridge wurde anschließend authentifiziert geprüft: Profil
 `PRIVAT`, genau ein Arbeitsraum `Schnellsessions`, genau eine gemeinsame
 Session und HTTP 403 bei einem absichtlich falschen erwarteten BIZ-Profil.
 Canvas antwortete am konfigurierten Tailnet-Endpunkt mit HTTP 200.
+
+Die Aussage „genau ein Arbeitsraum“ beschreibt den Abnahmezeitpunkt des
+Resets. Bis zur T0-Prüfung am 23. Juli wurden durch normale lokale Nutzung die
+Arbeitsräume `Erendria`, `genAI in a Brainshell` und `Trinity-Project`
+angelegt. Weiterhin existiert genau eine aktive gemeinsame Session im Profil
+`PRIVAT`. Diese späteren Arbeitsräume sind Nutzerdaten und wurden bei T0 weder
+verändert noch entfernt.
+
+Die kontrollierte Pfadprüfung ergab außerdem:
+
+- Runtime: `/Users/matmax/Trinity_Assistant/TrinityRuntime`
+- Inhalts-Vault: iCloud-`BrainVault`
+- Agentenbasis: `/Users/matmax/.agents`
+- `control_plane.brainvault_root=/Users/matmax` bleibt ein historisch
+  benanntes Kompatibilitätsfeld; maßgeblich für Inhalte ist ausschließlich
+  `control_plane.vault_root`.
 
 ## 5. RAG und Graphify
 

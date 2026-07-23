@@ -9,6 +9,7 @@ param(
 
 $CanvasInstallDir = Join-Path $InstallDir "components\TrinityCanvas"
 $CanvasRepository = "https://github.com/ProfEngel/TrinityCreativeCanvas.git"
+$CanvasRevision = "21099e2d17181be2d3e0ad62210abfe1fda87cf8"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -316,7 +317,7 @@ else {
 
     $canvasZipPath = Join-Path $env:TEMP "trinity-canvas-$timestamp.zip"
     $canvasExtractPath = Join-Path $env:TEMP "trinity-canvas-$timestamp"
-    $canvasZipUrl = "https://github.com/ProfEngel/TrinityCreativeCanvas/archive/refs/heads/main.zip"
+    $canvasZipUrl = "https://github.com/ProfEngel/TrinityCreativeCanvas/archive/$CanvasRevision.zip"
     Invoke-WebRequest -Uri $canvasZipUrl -OutFile $canvasZipPath
     Expand-Archive -Path $canvasZipPath -DestinationPath $canvasExtractPath -Force
     $canvasSourceDir = Get-ChildItem $canvasExtractPath -Directory | Select-Object -First 1

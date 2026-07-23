@@ -1,6 +1,9 @@
 # Phase 2 – Inhalte zur späteren Zuordnung
 
 Stand: 22. Juli 2026
+Status: gesicherte Inventarliste, keine eigenständige aktuelle Resteliste.
+Eine Bearbeitung erfolgt nur in der passenden Phase von
+`IMPLEMENTIERUNGSPLAN_TRINITY.md`.
 
 Dieses Blatt ist eine **vorläufige Sortierhilfe**, keine Migration. Es wurden
 keine Quellen, Sessions oder Arbeitsräume verschoben, kopiert oder gelöscht.
