@@ -1,8 +1,8 @@
 # Trinity-Architektur – Phase 1: verbindliche Spielregeln
 
-Status: verbindliche Fassung 3
+Status: verbindliche Fassung 4
 Ursprünglich beschlossen: 20. Juli 2026
-Nachgebessert: 22. Juli 2026
+Nachgebessert: 23. Juli 2026
 Grundlage: Codex-Aufgabe `019f7b1e-e6c9-7fc0-8c92-aa10c0c3c6b3`
 
 ## 1. Die Architektur in einem Satz
@@ -366,10 +366,16 @@ ausgeführt.
 - Aktive lokale Trinity-Installation auf dem Mac: `/Users/matmax/Trinity_Assistant`
 - Aktive lokale Mac-App: `/Users/matmax/Applications/Trinity.app`
 - Lokaler Agenten-Werkzeugkasten auf dem Mac: `/Users/matmax/.agents`
+- Aktive lokale Windows-Installation:
+  `C:\Users\matmax\AppData\Local\Trinity`
+- Lokale Windows-Runtime:
+  `C:\Users\matmax\AppData\Local\Trinity\TrinityRuntime`
+- Beruflicher Inhalts-Vault auf Windows:
+  `C:\Users\matmax\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
 
-Die exakten lokalen Windows-Pfade werden bei der Windows-Inventur bestätigt.
-Der per OneDrive synchronisierte BizVault bleibt unabhängig vom lokalen
-Windows-Pfad dieselbe fachliche Datenwahrheit.
+Die Windows-Pfade wurden in Phase 2 bestätigt. Der per OneDrive synchronisierte
+BizVault bleibt unabhängig vom jeweiligen lokalen Synchronisationspfad dieselbe
+fachliche Datenwahrheit.
 
 ## 14. Was Phase 1 entschieden hat – und was noch nicht
 
@@ -393,7 +399,6 @@ Noch nicht entschieden oder noch nicht ausgeführt sind:
 - welche Agenten Arbeit, Privat, Gemeinsam, Development oder Löschen erhalten
 - welche alten Sessions dauerhaft aufgehoben werden
 - welche RAG-Quellen welchem Profil angehören
-- die exakten Windows-Installations- und Runtime-Pfade
 - der Neuaufbau der getrennten RAG- und Graphify-Indizes
 
 ## 15. Abnahme von Phase 1
@@ -411,11 +416,11 @@ erst als umgesetzt, wenn folgende Kontrollen protokolliert sind:
 - [x] flache deutsche Hauptordner in BizVault und BrainVault angelegt
 - [x] Agenten, Runtime, RAG und Graphify von den Vaults getrennt
 - [x] Mac-Konfiguration vollständig gegen diese Regeln geprüft
-- [ ] Windows-Konfiguration vollständig gegen diese Regeln geprüft
+- [x] Windows-Konfiguration, Pfade und Profil gegen diese Regeln inventarisiert
 - [ ] mobile Clients auf getrennte Profile und Caches geprüft
-- [ ] getrennte Telegram-Bots eingerichtet und geprüft
+- [x] getrennte Telegram-Bots eingerichtet und technisch geprüft
 
-Bis die drei verbleibenden technischen Prüfungen abgeschlossen sind, finden keine
+Bis die verbleibende mobile technische Prüfung abgeschlossen ist, finden keine
 automatischen Inhaltsmigrationen und keine Löschungen im Legacy-Bestand statt.
 Eine spätere Änderung dieser Regeln benötigt eine neue versionierte
 Architekturentscheidung.

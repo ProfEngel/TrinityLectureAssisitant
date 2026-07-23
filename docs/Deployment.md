@@ -1,5 +1,10 @@
 # Trinity Deployment Guide 🧞‍♀️
 
+> **Historische macOS-Anleitung:** Für aktuelle Installationen, Profile,
+> Vault-Trennung und Wiederherstellung gilt
+> `docs/ONBOARDING.md`. Dieses Dokument bleibt als früherer
+> Entwicklungsstand erhalten.
+
 Diese Anleitung beschreibt die vollständige Installation von Trinity auf einem frischen macOS System (optimiert für Apple Silicon).
 
 ## 1. System-Voraussetzungen

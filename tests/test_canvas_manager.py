@@ -26,7 +26,17 @@ def _manager(tmp_path):
 
 def test_canvas_status_hides_internal_service_details_from_installation(tmp_path, monkeypatch):
     manager, install, runtime = _manager(tmp_path)
-    monkeypatch.setattr(manager, "is_running", lambda timeout=0.6: False)
+    monkeypatch.setattr(
+        manager,
+        "probe",
+        lambda timeout=0.6: {
+            "health_ok": False,
+            "ui_ready": False,
+            "http_status": None,
+            "running": False,
+            "detail": "",
+        },
+    )
 
     status = manager.status()
 
@@ -35,6 +45,8 @@ def test_canvas_status_hides_internal_service_details_from_installation(tmp_path
     assert status["install_dir"] == str(install)
     assert status["data_dir"] == str(runtime / "canvas")
     assert status["url"] == "http://127.0.0.1:8787"
+    assert status["state"] == "stopped"
+    assert "beim Start von Trinity" in status["message"]
 
 
 def test_canvas_start_uses_one_local_production_service(tmp_path, monkeypatch):
@@ -78,3 +90,35 @@ def test_canvas_can_bind_to_one_explicit_tailnet_address(tmp_path):
 
     assert configured.host == "100.64.0.42"
     assert configured.url == "http://100.64.0.42:8787"
+
+
+def test_canvas_status_explains_broken_root_route(tmp_path, monkeypatch):
+    manager, _, _ = _manager(tmp_path)
+    monkeypatch.setattr(
+        manager,
+        "probe",
+        lambda timeout=0.6: {
+            "health_ok": True,
+            "ui_ready": True,
+            "http_status": 404,
+            "running": False,
+            "detail": "HTTP Error 404",
+        },
+    )
+
+    status = manager.status()
+
+    assert status["state"] == "ui_unavailable"
+    assert "HTTP 404" in status["message"]
+    assert "trinity canvas install" in status["message"]
+    assert "Cannot GET" not in manager.unavailable_page(status)
+
+
+def test_canvas_any_address_uses_loopback_for_local_browser(tmp_path):
+    manager, _, _ = _manager(tmp_path)
+    manager.settings["host"] = "0.0.0.0"
+
+    configured = CanvasManager(manager.home, manager.config)
+
+    assert configured.host == "0.0.0.0"
+    assert configured.url == "http://127.0.0.1:8787"

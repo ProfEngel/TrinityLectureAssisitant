@@ -15,6 +15,7 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.59:** Canvas startet auf macOS und Windows unabhängig vom aktuellen Arbeitsverzeichnis. Doctor, Desktop-Control und Companion-Dashboard zeigen einen gemeinsamen verständlichen Canvas-Status; ein plattformübergreifender Produktions-Smoke-Test schützt den Startpfad.
 > - **v0.16.58:** Die profilgesicherte Companion-Bridge liefert den Memory-Graph als eigene Ansicht für iPhone und iPad. Canvas bleibt Bestandteil von Trinity und benötigt in der CompanionApp keine separate Adresse mehr.
 > - **v0.16.57:** Auch der Terminal-Wrapper verarbeitet das externe Beenden kontrolliert und räumt seinen Audio-Kern auf. Damit bleiben nach App-Ende oder Update keine verwaisten Trinity-Prozesse zurück.
 > - **v0.16.56:** Trinity beendet beim Update nun auch ältere, verwaiste Audio-Kernprozesse derselben Installation. Externe Beendigungen des Launchers laufen kontrolliert durch die Kindprozess-Aufräumroutine.
@@ -23,6 +24,16 @@
 > - **v0.16.53:** Große lokale Modelle erhalten beim ersten Laden standardmäßig bis zu 120 Sekunden statt eines zu knappen 30-Sekunden-Limits; danach bleiben Antworten schnell. Thinking lässt sich pro Modellslot eindeutig deaktivieren. Neue Windows-BIZ-Installationen schlagen OneDrive/`BizVault` statt des historischen `BrainVault`-Fallbacks vor, ohne bestehende Konfigurationen automatisch umzuschreiben.
 > - **v0.16.52:** Trinity und Creative Canvas verwenden auf Tailnet-Geräten eine gemeinsam verwaltete, konfigurierte Canvas-Adresse; die Companion-Bridge bleibt profilgesichert und der Mac-/Windows-Phase-2-Stand ist nachvollziehbar dokumentiert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
+
+> [!IMPORTANT]
+> Die verbindliche aktuelle Architektur trennt **Arbeit/BIZ auf Windows**,
+> **Privat/PRIVAT auf dem Mac** und **Development/TEST**. Dauerhafte Inhalte
+> liegen profilbezogen in BizVault beziehungsweise BrainVault; Runtime,
+> Datenbanken, Indizes und ausführbare Agenten bleiben lokal. Die einzige
+> aktuelle Resteliste ist der
+> **[Implementierungsplan Trinity](docs/IMPLEMENTIERUNGSPLAN_TRINITY.md)**.
+> Ältere Roadmaps und Release Notes bleiben als historische
+> Entwicklungsdokumentation erhalten.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
@@ -69,7 +80,7 @@ Als Dozent steht man oft vor der Herausforderung, den Fluss der Vorlesung beizub
 *   **Wissen on the fly:** Du möchtest einen neuen Blickwinkel auf eine Definition hören oder eine komplexe Metapher visualisieren? Trinity generiert (dank fal.ai oder lokal via ComfyUI) in Sekunden ein passendes **Schaubild oder Skizze**.
 *   **Heartbeat-Souffleur (Audio-Routing):** Trinity fungiert als dein privater Souffleur auf dem AirPods. Hörst du eine Erklärung, die das Plenum (die Klasse) hören sollte, reicht ein *"Trinity, wiederhole das für alle"*, und sie wechselt automatisch die Audioausgabe auf die externen Lautsprecher.
 *   **Proaktiver Begleiter (Telegram-DM):** Trinity analysiert deine Vorlesung live im Hintergrund. Fällt ihr ein logischer Fehler auf, zeigt sie im UI eine rote "Bubble". Arbeitest du im Vollbildmodus am Beamer? Kein Problem, die Telegram-Bridge sendet dir Trinitys Anmerkungen lautlos als Direktnachricht aufs Smartphone.
-*   **Deep Memory (RAG Automation):** Am Ende einer Vorlesung generiert Trinity ein Summary. Damit das Wissen nicht verloren geht, fügt sie diese Zusammenfassungen ab sofort automatisch in ihr Langzeitgedächtnis (RAG-Index) ein. So weiß sie nächste Woche noch genau, worüber gesprochen wurde.
+*   **Deep Memory:** Am Ende einer Vorlesung kann Trinity ein Summary erzeugen und es im lokalen, profilgebundenen Memory/RAG verfügbar machen. Das veröffentlicht nichts automatisch im Vault und überträgt keine Inhalte zwischen Arbeit, Privat und Development.
 *   **Natürliche Interaktion:** Trinity hört aktiv zu und erkennt ihr Wake-Word egal ob am Anfang (*"Trinity, was ist..."*) oder am Ende (*"... findest du nicht auch, Trinity?"*) des Satzes. Sie nutzt den vollen Kontext davor und danach.
 *   **Duale Modi (Lecture, Office & Chat Mode):** Trinity passt ihr Verhalten dem Kontext an. Im **Lecture Mode** agiert sie als rhetorische Unterstützung, im **Office Mode** als produktiver Begleiter, und im ressourcenschonenden **Chat Mode** kommuniziert sie rein über Text/UI ohne aktive Mikrofone. Du kannst jederzeit nahtlos zwischen den Modi wechseln.
 *   **Fenster-Management:** Alle Fenster sind frei verschiebbar – ideal für Multi-Monitor-Setups.
@@ -92,7 +103,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  | **Simulation-Agent** | *Lecture* | Interaktive Simulationen (Bienen, Sortierung, NNs). |
  | **PowerPoint-Agent** | *Lecture* | Native Steuerung via AppleScript (macOS) oder COM (Windows). |
  | **ComfyUI-Agent** | *Beide* | Standardroute für lokale Bilder sowie Musik und Videos. |
- | **Summary-Agent** | *Beide* | Automatische Zusammenfassung & RAG-Indexierung. |
+ | **Summary-Agent** | *Beide* | Profilgebundene Zusammenfassung und lokale Memory-/RAG-Aufbereitung. |
  | **Sandbox-Agent** | *Beide* | **NEU:** Sichere Python/WASM-Sandbox für Berechnungen & Data Science (Plotly). |
  | **Deep-Research-Agent** | *Beide* | **NEU:** Agentische, mehrstufige Tiefenrecherche mit lokaler Websuche (DDG) & Scraping. |
  | **Codex-Agent** | *Office/Chat* | Übergibt ausdrücklich adressierte Aufgaben an lokale Codex-Projekte samt Skills und Subagenten. |
@@ -156,14 +167,21 @@ Trinity_Assistant/
 │   ├── Soul.md                ← Persona & Systemrolle von Trinity
 │   ├── User.md                ← Kontext über den Nutzer (Mathias)
 │   ├── config.json            ← Alle Einstellungen (LLM, STT, TTS, APIs)
-│   ├── state.txt              ← IPC-Status (idle/listening/thinking/speaking)
-│   └── payload.html           ← Aktives UI-Widget (wird zur Laufzeit befüllt)
-├── RAG/                       ← PDF-Skripte hier ablegen → auto-indexiert
-│   ├── index/                 ← Vorberechneter Embedding-Index
+│   ├── state.txt              ← Legacy-IPC-Ausgabe; wird zur Laufzeit verändert
+│   └── payload.html           ← Legacy-UI-Ausgabe; wird zur Laufzeit verändert
+├── RAG/                       ← lokale RAG-Kompatibilitätsablage, kein Cloud-Vault
+│   ├── index/                 ← lokaler, profilgebundener Embedding-Index
 │   └── build_index.py         ← Index manuell neu bauen
 ├── gen_images/                ← Generierte Schaubilder (PNG)
-└── memory/                    ← Sitzungs-Transkripte, Chat-History und SQLite-Memory
+└── memory/                    ← lokale Legacy-/Kompatibilitätsdaten; kein Vault
 ```
+
+Produktive Originalquellen gehören dauerhaft in den zum Profil passenden
+Vault. Trinity baut daraus beziehungsweise aus ausdrücklich ausgewählten
+lokalen Quellen einen neu erzeugbaren, profilgebundenen Index. Die noch
+vorhandenen Verzeichnisse `RAG/`, `memory/`, `core/state.txt` und
+`core/payload.html` sind technische Kompatibilitätspfade und dürfen nicht als
+fachliche Cloud-Datenwahrheit oder normale Quellcodeänderung behandelt werden.
 
 ---
 

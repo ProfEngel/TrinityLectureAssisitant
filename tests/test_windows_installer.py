@@ -23,6 +23,9 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert "if ($isUpdate)" in script
     assert 'Join-Path $InstallDir "components\\TrinityCanvas"' in script
     assert "ProfEngel/TrinityCreativeCanvas.git" in script
+    assert '$CanvasRevision = "21099e2d17181be2d3e0ad62210abfe1fda87cf8"' in script
+    assert "archive/$CanvasRevision.zip" in script
+    assert "archive/refs/heads/main.zip" not in script
     assert "--recurse-submodules" in script
     assert "$npm.Source run build" in script
 

@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.59:** Der Canvas-Produktionsserver bestimmt Web- und Standard-Datenpfade aus seiner eigenen Installation statt aus dem aktuellen Arbeitsverzeichnis. Damit bleibt die Root-Route auch beim absoluten Windows-Start erreichbar. Doctor, CLI, Desktop-Control und Companion-Dashboard verwenden denselben verständlichen Canvas-Zustand; ein plattformübergreifender Produktions-Smoke-Test prüft Health, Root-GET und API-404.
 - **v0.16.58:** Die Companion-Bridge stellt den profilgebundenen Memory-Graph authentifiziert bereit. Die iPhone-/iPad-App kann ihn als eigene, standardmäßig ausgeschaltete Ansicht aktivieren. Canvas bleibt ein gebündelter Trinity-Dienst; die Companion-App leitet seine Adresse automatisch aus dem gewählten Trinity-Server ab.
 - **v0.16.57:** Der Terminal-Wrapper verarbeitet `SIGTERM` nun über seine vorhandene Aufräumroutine und beendet dabei den von ihm gestarteten Audio-Kern. Zusammen mit v0.16.56 hinterlassen App-Ende und Installer-Update keine verwaisten Trinity-Prozesse mehr.
 - **v0.16.56:** Der macOS-Updater erfasst jetzt auch direkt gestartete oder nach früheren Abbrüchen verwaiste `transcriber.py`-Prozesse der konkreten Trinity-Installation. Der Launcher verarbeitet `SIGTERM` kontrolliert und beendet Canvas, Bridge, Audio-Kern und Oberflächen über seine gemeinsame Aufräumroutine.

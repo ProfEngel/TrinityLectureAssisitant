@@ -1,5 +1,10 @@
 # Trinity Agenten-Oekosystem
 
+Status: technisches Bestandsdokument. Die aktuelle Restereihenfolge und die
+verbindlichen Profil-/Vault-Regeln stehen in
+`IMPLEMENTIERUNGSPLAN_TRINITY.md` und
+`PHASE_1_PROFILE_ARCHITECTURE.md`.
+
 Dieses Dokument beschreibt den technischen Entwicklungsstand der neuen
 dreigeteilten Agentenkiste. Es ergaenzt [Onboarding](ONBOARDING.md): Dort steht
 die Einrichtung, hier stehen Architektur, Sicherheitsgrenzen und die offenen
@@ -186,7 +191,7 @@ unvollstaendiges System aktiviert:
 4. Artefakt-, Knowledge- und Projekt-Memory-Manager: getrennte Projektkontexte
    mit Hashes, Herkunft und Zugriffskontrolle.
 5. Notification Bus und Gateway API: Jobs, Freigaben und Skill-Status an
-   ClassicUI, WebUI, iPhone, iPad und Android-Clients liefern.
+   ClassicUI, WebUI, iPhone und iPad liefern.
 6. Tool Broker in allen neuen Skills erzwingen und alte Skills schrittweise
    migrieren.
 

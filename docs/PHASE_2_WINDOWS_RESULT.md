@@ -1,6 +1,7 @@
 # Phase 2 – Windows-Ergebnis und kontrollierte Nacharbeit
 
 Stand: 22. Juli 2026
+T0-Nachprüfung: 23. Juli 2026
 
 ## Ergebnis
 
@@ -22,35 +23,41 @@ abgeschlossen:
 - BizVault, Konfiguration, Soul, User und RAG-Dateien blieben beim Reset
   unverändert
 
+Die T0-Nachprüfung auf Windows hat den fehlenden Versions- und
+Installationsnachweis ergänzt:
+
+- Trinity: `0.16.58`, laut Online-Doctor aktuell
+- Python: `3.11.9`
+- SSL: OpenSSL `3.0.13`
+- Oberflächen: Eyes und Terminal; PySide6 verfügbar
+- lokaler LLM-Provider konfiguriert
+- Goose verfügbar
+- Codex CLI nicht installiert
+- OpenCode CLI nicht installiert
+- Memory und Logs schreibbar
+
+Die fehlenden Codex-/OpenCode-Programme sind keine Profil- oder
+Vault-Abweichung. Codex bleibt als benötigter BIZ-Builder-/Heavy-Duty-Harness
+offen; OpenCode wird nur bei einem konkreten Bedarf installiert.
+
 Die private Mac-Trinity verwendet nach erneuter Prüfung einen anderen,
 erreichbaren Telegram-Bot: `Trinity_M5_bot`, Fingerprint `-roZaf1bcMsO`.
 Damit sind die Telegram-Zugänge technisch getrennt. Es wurde keine
 Testnachricht gesendet.
 
-## Verbliebene Architekturabweichung
+## Behobene Architekturabweichung
 
-Die Windows-Konfiguration zeigt trotz Profil `BIZ` noch auf einen Ordner
-`BrainVault`. Ursache war ein inzwischen korrigierter alter Windows-Fallback im
-Trinity-Code. Neue BIZ-Installationen schlagen OneDrive/`BizVault` vor.
-Bestehende Konfigurationen werden aus Sicherheitsgründen nicht automatisch
-umgeschrieben.
+Die frühere Windows-Konfiguration zeigte trotz Profil `BIZ` noch auf einen
+historischen Ordner `BrainVault`. Die T0-Nachprüfung bestätigt, dass diese
+Abweichung inzwischen behoben ist:
 
-Auf Windows muss Trinity beendet und anschließend genau der bereits geprüfte
-BizVault übernommen werden:
+- Root:
+  `C:\Users\matmax\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
+- Profil: `BIZ`
+- zehn vorhandene Hauptordner plus `README.md`
+- keine fehlenden oder unklassifizierten Einträge
 
-```powershell
-$Trinity = "$env:LOCALAPPDATA\Trinity"
-$BizVault = Join-Path $env:OneDriveCommercial "BizVault"
-& "$Trinity\venv\Scripts\trinity.exe" --home $Trinity vault init `
-  --profile BIZ `
-  --root $BizVault `
-  --accept-existing
-& "$Trinity\venv\Scripts\trinity.exe" --home $Trinity vault status
-```
-
-Der Status muss danach `profile: BIZ`, den vorhandenen OneDrive-BizVault und
-keine fehlenden Hauptordner melden. Der Befehl ergänzt nur fehlende
-Strukturordner; vorhandene Inhalte werden nicht verschoben oder überschrieben.
+Eine erneute Vault-Initialisierung ist nicht erforderlich.
 
 ## RAG-Nacharbeit
 

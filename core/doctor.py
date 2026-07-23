@@ -12,6 +12,7 @@ from configuration import (
     load_config,
     save_config,
 )
+from canvas_manager import CanvasManager
 from ui_modes import resolve_ui_modes
 
 
@@ -209,6 +210,16 @@ def run_doctor(trinity_home, fix=False, online=False):
                 str(found) if found else "Goose CLI wurde nicht gefunden.",
             )
         )
+
+    canvas = CanvasManager(home, config).status()
+    canvas_state = canvas["state"]
+    if canvas_state == "ready":
+        canvas_level = "OK"
+    elif canvas_state in {"disabled", "stopped"}:
+        canvas_level = "OK" if canvas_state == "disabled" else "WARN"
+    else:
+        canvas_level = "ERROR"
+    results.append(_result(canvas_level, "Canvas", canvas["message"]))
 
     for directory in ("memory", "logs"):
         path = home / directory
