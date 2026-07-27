@@ -74,4 +74,5 @@ def test_macos_installer_enables_login_start_for_trinity_workbench():
     assert "de.profengel.trinity" in autostart
     assert "<key>RunAtLoad</key>" in autostart
     assert "trinity_launcher.py" in autostart
-    assert "http://127.0.0.1:8765/#werkstatt" in app
+    assert "scripts/workbench_url.py" in app
+    assert 'open location (workbenchURL & "/#werkstatt")' in app

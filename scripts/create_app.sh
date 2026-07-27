@@ -32,21 +32,25 @@ fi
 cat << 'EOF' > /tmp/trinity_app.applescript
 set configFile to "PROJECT_DIR/core/config.json"
 set showTerminal to false
+set workbenchURL to "http://127.0.0.1:8765"
 try
     set configText to do shell script "cat '" & configFile & "'"
     if configText contains "\"show_terminal\": true" then
         set showTerminal to true
     end if
 end try
+try
+    set workbenchURL to do shell script "'PROJECT_DIR/venv/bin/python3' 'PROJECT_DIR/scripts/workbench_url.py'"
+end try
 
 set trinityRunning to false
 try
-    do shell script "/usr/bin/curl --silent --fail --max-time 1 http://127.0.0.1:8765/health >/dev/null"
+    do shell script "/usr/bin/curl --silent --fail --max-time 1 " & quoted form of (workbenchURL & "/health") & " >/dev/null"
     set trinityRunning to true
 end try
 
 if trinityRunning then
-    open location "http://127.0.0.1:8765/#werkstatt"
+    open location (workbenchURL & "/#werkstatt")
 else if showTerminal then
     tell application "Terminal"
         do script "cd 'PROJECT_DIR' && ./venv/bin/python3 trinity_launcher.py"

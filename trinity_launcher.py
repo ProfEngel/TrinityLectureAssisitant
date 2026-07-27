@@ -58,6 +58,13 @@ def _read_server_config(config_file):
         return {}
 
 
+def _read_workbench_config(config_file):
+    try:
+        return load_config(config_file).get("workbench", {})
+    except Exception:
+        return {}
+
+
 def _console_python_executable(executable=None, platform_name=None):
     executable = executable or sys.executable
     host = platform_name or sys.platform
@@ -258,6 +265,7 @@ def launch_trinity():
     child_env = _trinity_subprocess_env()
     companion_config = _read_companion_config(config_file)
     server_config = _read_server_config(config_file)
+    workbench_config = _read_workbench_config(config_file)
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -291,7 +299,8 @@ def launch_trinity():
                 _log_message(launcher_log, f"Canvas konnte nicht gestartet werden: {exc}")
         web_enabled = ui_modes["web"]
         companion_enabled = companion_config.get("enabled", False)
-        if companion_enabled or web_enabled:
+        workbench_enabled = workbench_config.get("enabled", True)
+        if companion_enabled or web_enabled or workbench_enabled:
             bridge_config = companion_config if companion_enabled else server_config
             bridge_host = str(bridge_config.get("host") or "127.0.0.1")
             bridge_port = int(bridge_config.get("port") or 8765)
