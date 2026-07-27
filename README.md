@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.62:** Der macOS-Anmeldestart erhält denselben ausführbaren Suchpfad wie ein normales Terminal. Dadurch findet die automatisch gestartete Trinity-Instanz Homebrew-Node und startet das gebündelte Canvas zuverlässig mit.
 > - **v0.16.61:** Die Werkstatt startet auch ohne aktivierte Weboberfläche oder Companion-Bridge zuverlässig mit Trinity und verwendet automatisch deren tatsächlich konfigurierte lokale Adresse. Der letzte historische Goose-Standardverweis wird beim Update ebenfalls auf OpenCode umgestellt.
 > - **v0.16.60:** Die neue Trinity-Werkstatt bietet profilgesicherte, Fiori-inspirierte Agentenkacheln. Der Gutachter-Pilot läuft ausschließlich im Profil BIZ über OpenCode; frühere Goose-Projekte und Agentenzuordnungen werden beim Update kontrolliert übernommen. Trinity und Werkstatt können auf macOS und Windows automatisch bei der Anmeldung starten.
-> - **v0.16.59:** Canvas startet auf macOS und Windows unabhängig vom aktuellen Arbeitsverzeichnis. Doctor, Desktop-Control und Companion-Dashboard zeigen einen gemeinsamen verständlichen Canvas-Status; ein plattformübergreifender Produktions-Smoke-Test schützt den Startpfad.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
