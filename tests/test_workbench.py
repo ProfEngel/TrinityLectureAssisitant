@@ -33,19 +33,22 @@ def test_catalog_exposes_thesis_tile_profile_and_only_opencode(monkeypatch, tmp_
     assert catalog["categories"][0]["tiles"][0]["available"] is True
 
 
-def test_thesis_tile_is_visible_but_locked_outside_biz(tmp_path):
+@pytest.mark.parametrize("profile", ["BIZ", "PRIVAT", "TEST"])
+def test_thesis_tile_is_available_in_every_profile(tmp_path, profile):
     manager = WorkbenchManager(tmp_path)
-    catalog = manager.catalog(default_config("Linux"), "PRIVAT")
+    catalog = manager.catalog(default_config("Linux"), profile)
 
     tile = catalog["categories"][0]["tiles"][0]
-    assert tile["available"] is False
-    assert tile["status"] == "nur im Profil BIZ"
+    assert catalog["profile"] == profile
+    assert tile["available"] is True
+    assert tile["status"] == "bereit"
+    assert tile["profiles"] == ["BIZ", "PRIVAT", "TEST"]
 
-    with pytest.raises(PermissionError, match="nur im Profil BIZ"):
+    with pytest.raises(ValueError, match="OpenCode"):
         manager.submit(
             {"tile_id": "thesis-reviewer", "harness": "opencode"},
             default_config("Linux"),
-            "PRIVAT",
+            profile,
         )
 
 

@@ -6,6 +6,7 @@ Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
 
+- **v0.16.63:** Werkstatt und Agentenkacheln sind vorerst profilunabhängig in BIZ, PRIVAT und TEST nutzbar. Das aktive Profil bleibt als Arbeitskontext sichtbar, bewirkt aber keine automatische Kachelsperre. Spätere Geschäfts-/Privat-Kategorien dienen zunächst der Ordnung; gezielte Rechte können später pro Agent ergänzt werden.
 - **v0.16.62:** Der macOS-LaunchAgent setzt einen vollständigen lokalen Suchpfad einschließlich Homebrew. Trinity findet dadurch beim automatischen Anmeldestart Node.js und kann das gebündelte Canvas genauso starten wie aus einem normalen Terminal.
 - **v0.16.61:** Die Werkstatt startet nun unabhängig davon, ob WebUI oder Companion zuvor eingeschaltet waren. Trinity ermittelt für App-Klick und Browserhinweis automatisch die tatsächlich konfigurierte lokale Bridge-Adresse. Die Legacy-Migration ersetzt außerdem `default_brainvault_harness: goose` und einen möglichen Goose-Builder durch OpenCode.
 - **v0.16.60:** Die neue Trinity-Werkstatt stellt verständliche, profilgesicherte Agentenkacheln im Browser und in Trinity bereit. Als erster Pilot verarbeitet der Gutachter Thesis- und optionale Docoloc-PDFs ausschließlich im Profil BIZ über OpenCode. Frühere Goose-Projekte und Agentenzuordnungen werden verlustfrei nach OpenCode übernommen; Goose ist aus der aktiven Installation entfernt. macOS und Windows können Trinity samt Werkstatt automatisch bei der Anmeldung starten.

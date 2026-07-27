@@ -34,7 +34,6 @@ class WorkbenchManager:
         opencode = config.get("opencode", {})
         projects = self._configured_projects(opencode)
         normalized_profile = str(profile or "PRIVAT").upper()
-        thesis_available = normalized_profile == "BIZ"
         return {
             "ok": True,
             "title": "Trinity-Werkstatt",
@@ -72,11 +71,9 @@ class WorkbenchManager:
                                 "Literatur- und Integritätsprüfung"
                             ),
                             "icon": "document-check",
-                            "status": (
-                                "bereit" if thesis_available else "nur im Profil BIZ"
-                            ),
-                            "available": thesis_available,
-                            "profiles": ["BIZ"],
+                            "status": "bereit",
+                            "available": True,
+                            "profiles": ["BIZ", "PRIVAT", "TEST"],
                             "agent": "thesis-reviewer",
                             "compatible_harnesses": ["opencode"],
                         }
@@ -106,10 +103,6 @@ class WorkbenchManager:
         tile_id = str(payload.get("tile_id") or "").strip()
         if tile_id != THESIS_TILE_ID:
             raise ValueError("Diese Werkstatt-Kachel ist noch nicht verfügbar.")
-        if str(profile or "").upper() != "BIZ":
-            raise PermissionError(
-                "Der Gutachter verarbeitet BIZ-Daten und ist nur im Profil BIZ freigegeben."
-            )
         harness = str(payload.get("harness") or "opencode").strip().casefold()
         if harness != "opencode":
             raise ValueError("Der Gutachter-Pilot ist derzeit für OpenCode freigegeben.")
