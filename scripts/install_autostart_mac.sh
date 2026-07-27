@@ -29,6 +29,11 @@ cat > "$PLIST_PATH" <<EOF
   </array>
   <key>WorkingDirectory</key>
   <string>$PROJECT_DIR</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>$HOME/.local/bin:$HOME/.opencode/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
