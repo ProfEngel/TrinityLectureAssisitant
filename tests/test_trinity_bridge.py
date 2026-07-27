@@ -332,6 +332,30 @@ def test_web_settings_are_local_or_administrator_only(tmp_path):
     assert account_bridge.can_manage_settings(RemoteHandler(), {"role": "admin"}) is True
 
 
+def test_legacy_token_mode_allows_loopback_ui_but_protects_remote_clients(tmp_path):
+    class Headers(dict):
+        def get(self, key, default=""):
+            return super().get(key, default)
+
+    class LocalHandler:
+        client_address = ("127.0.0.1", 12345)
+        headers = Headers()
+
+    class RemoteHandler:
+        client_address = ("100.90.5.25", 12345)
+        headers = Headers()
+
+    class AuthorizedRemoteHandler:
+        client_address = ("100.90.5.25", 12345)
+        headers = Headers({"Authorization": "Bearer secret"})
+
+    bridge = TrinityBridge(tmp_path, token="secret")
+
+    assert bridge.current_user(LocalHandler()) == {}
+    assert bridge.current_user(RemoteHandler()) is None
+    assert bridge.current_user(AuthorizedRemoteHandler()) == {}
+
+
 def test_workspace_sessions_are_available_to_authenticated_users(tmp_path):
     class LocalHandler:
         client_address = ("127.0.0.1", 12345)

@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.64:** Beim lokalen Öffnen über `127.0.0.1` werden Profil und Werkstatt ohne manuell gespeicherten Bridge-Token geladen. Remote-Zugriffe von Companion-Geräten und anderen Rechnern bleiben geschützt.
 > - **v0.16.63:** Die Trinity-Werkstatt und ihre Agentenkacheln sind vorerst in Arbeit/BIZ, Privat/PRIVAT und Development/TEST gleichermaßen nutzbar. Profile bleiben als sichtbarer Arbeitskontext erhalten; spätere Kategorien wie „Geschäftlich“ und „Privat“ ordnen die Werkzeuge, ohne sie automatisch zu sperren.
 > - **v0.16.62:** Der macOS-Anmeldestart erhält denselben ausführbaren Suchpfad wie ein normales Terminal. Dadurch findet die automatisch gestartete Trinity-Instanz Homebrew-Node und startet das gebündelte Canvas zuverlässig mit.
-> - **v0.16.61:** Die Werkstatt startet auch ohne aktivierte Weboberfläche oder Companion-Bridge zuverlässig mit Trinity und verwendet automatisch deren tatsächlich konfigurierte lokale Adresse. Der letzte historische Goose-Standardverweis wird beim Update ebenfalls auf OpenCode umgestellt.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]

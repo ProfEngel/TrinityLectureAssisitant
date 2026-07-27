@@ -227,9 +227,20 @@ class TrinityBridge:
             return query.get("token", [""])[0]
         return ""
 
+    @staticmethod
+    def is_loopback_request(handler):
+        """Return whether the HTTP request originates on this computer."""
+        address = str(getattr(handler, "client_address", ("",))[0]).strip().lower()
+        return address in {"127.0.0.1", "::1", "localhost"}
+
     def current_user(self, handler, query=None):
         """Return an authenticated tenant, or ``None`` for legacy token mode."""
         if not self.auth_enabled:
+            # The browser UI opened on the same computer must not depend on a
+            # token stored in one particular browser profile. Remote clients
+            # remain protected by the configured bearer token.
+            if self.is_loopback_request(handler):
+                return {}
             return {} if self.check_auth(handler, query) else None
         return self.auth.authenticate(self._bearer_token(handler, query))
 
@@ -1099,8 +1110,7 @@ class TrinityBridge:
             return bool(user and user.get("role") == "admin")
         if self.token:
             return True
-        address = str(getattr(handler, "client_address", ("",))[0])
-        return address in {"127.0.0.1", "::1", "localhost"}
+        return self.is_loopback_request(handler)
 
     def can_manage_workspaces(self, handler, user):
         """Workspace/session changes are user actions, not privileged settings."""
