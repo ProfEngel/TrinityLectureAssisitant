@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.63:** Die Trinity-Werkstatt und ihre Agentenkacheln sind vorerst in Arbeit/BIZ, Privat/PRIVAT und Development/TEST gleichermaßen nutzbar. Profile bleiben als sichtbarer Arbeitskontext erhalten; spätere Kategorien wie „Geschäftlich“ und „Privat“ ordnen die Werkzeuge, ohne sie automatisch zu sperren.
 > - **v0.16.62:** Der macOS-Anmeldestart erhält denselben ausführbaren Suchpfad wie ein normales Terminal. Dadurch findet die automatisch gestartete Trinity-Instanz Homebrew-Node und startet das gebündelte Canvas zuverlässig mit.
 > - **v0.16.61:** Die Werkstatt startet auch ohne aktivierte Weboberfläche oder Companion-Bridge zuverlässig mit Trinity und verwendet automatisch deren tatsächlich konfigurierte lokale Adresse. Der letzte historische Goose-Standardverweis wird beim Update ebenfalls auf OpenCode umgestellt.
-> - **v0.16.60:** Die neue Trinity-Werkstatt bietet profilgesicherte, Fiori-inspirierte Agentenkacheln. Der Gutachter-Pilot läuft ausschließlich im Profil BIZ über OpenCode; frühere Goose-Projekte und Agentenzuordnungen werden beim Update kontrolliert übernommen. Trinity und Werkstatt können auf macOS und Windows automatisch bei der Anmeldung starten.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
@@ -519,9 +519,12 @@ nichts versenden, löschen, veröffentlichen oder deployen.
 
 Die Weboberfläche enthält unter der konfigurierten lokalen Trinity-Adresse im
 Reiter `#werkstatt` ein Fiori-inspiriertes Kachel-Dashboard für formgeführte
-Agenten. Die Kacheln zeigen
-immer das aktive Profil und lassen nur die dafür freigegebenen Werkzeuge starten.
-Als erster Pilot ist **Abschlussarbeit begutachten** im Profil **BIZ** verfügbar:
+Agenten. Die Kacheln zeigen immer das aktive Profil. In der aktuellen
+Ausbaustufe sind sie jedoch in **Arbeit/BIZ**, **Privat/PRIVAT** und
+**Development/TEST** gleichermaßen nutzbar. Spätere Kategorien wie
+„Geschäftlich“ oder „Privat“ dienen zunächst der verständlichen Ordnung und
+sperren eine Kachel nicht automatisch. Als erster Pilot ist
+**Abschlussarbeit begutachten** verfügbar:
 Thesis-PDF und optionaler Docoloc-Bericht werden lokal an den vorhandenen
 `thesis-reviewer` übergeben, OpenCode führt den Auftrag im ausgewählten
 freigegebenen Projekt aus. Uploads werden nach Abschluss aus Trinitys
