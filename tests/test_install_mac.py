@@ -61,3 +61,17 @@ def test_macos_installer_manages_canvas_outside_the_vault():
     assert "--recurse-submodules" in script
     assert 'npm ci && npm run build' in script
     assert "trinity canvas install" in script
+
+
+def test_macos_installer_enables_login_start_for_trinity_workbench():
+    installer = INSTALLER.read_text(encoding="utf-8")
+    autostart = (ROOT_DIR / "scripts" / "install_autostart_mac.sh").read_text(
+        encoding="utf-8"
+    )
+    app = (ROOT_DIR / "scripts" / "create_app.sh").read_text(encoding="utf-8")
+
+    assert "./scripts/install_autostart_mac.sh" in installer
+    assert "de.profengel.trinity" in autostart
+    assert "<key>RunAtLoad</key>" in autostart
+    assert "trinity_launcher.py" in autostart
+    assert "http://127.0.0.1:8765/#werkstatt" in app

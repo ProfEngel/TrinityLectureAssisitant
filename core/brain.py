@@ -116,7 +116,6 @@ class TrinityBrain:
             self._codex_cfg = self._with_agent_pool_project(config.get("codex", {}), config)
             self._opencode_cfg = self._with_agent_pool_project(config.get("opencode", {}), config)
             self._pi_cfg = self._with_agent_pool_project(config.get("pi", {}), config)
-            self._goose_cfg = self._with_agent_pool_project(config.get("goose", {}), config)
             
             print("⚙️ Konfiguration geladen ✓")
 
@@ -505,7 +504,6 @@ class TrinityBrain:
                         "codex_cfg": getattr(self, '_codex_cfg', {}),
                         "opencode_cfg": getattr(self, '_opencode_cfg', {}),
                         "pi_cfg": getattr(self, '_pi_cfg', {}),
-                        "goose_cfg": getattr(self, '_goose_cfg', {}),
                         "full_config": getattr(self, "config", {}),
                         "image_path": primary_image_path,
                         "attachments": attachments or [],
@@ -532,7 +530,6 @@ class TrinityBrain:
                     "codex_cfg": getattr(self, '_codex_cfg', {}),
                     "opencode_cfg": getattr(self, '_opencode_cfg', {}),
                     "pi_cfg": getattr(self, '_pi_cfg', {}),
-                    "goose_cfg": getattr(self, '_goose_cfg', {}),
                     "full_config": getattr(self, "config", {}),
                     "image_path": primary_image_path,
                     "attachments": attachments or [],

@@ -68,19 +68,6 @@ def test_pi_capability_is_detected_with_user_wrapper(monkeypatch):
     assert "pi_cli" in detected
 
 
-def test_goose_capability_is_detected_with_local_cli(monkeypatch):
-    monkeypatch.setattr(
-        capabilities.shutil,
-        "which",
-        lambda name: "/usr/local/bin/goose" if name == "goose" else None,
-    )
-    monkeypatch.setattr(capabilities, "_module_available", lambda _name: False)
-
-    detected = capabilities.detect_capabilities("Linux")
-
-    assert "goose_cli" in detected
-
-
 def test_codex_finder_checks_desktop_launcher_locations(monkeypatch):
     expected = str(capabilities.Path("/opt/homebrew/bin/codex"))
     monkeypatch.setattr(capabilities.shutil, "which", lambda _name: None)

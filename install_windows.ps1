@@ -466,10 +466,12 @@ $launcher = "$InstallDir\trinity_launcher.py"
 $shell = New-Object -ComObject WScript.Shell
 $desktop = [Environment]::GetFolderPath("Desktop")
 $startMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
+$startup = [Environment]::GetFolderPath("Startup")
 
 foreach ($shortcutPath in @(
     (Join-Path $desktop "Trinity.lnk"),
-    (Join-Path $startMenu "Trinity.lnk")
+    (Join-Path $startMenu "Trinity.lnk"),
+    (Join-Path $startup "Trinity.lnk")
 )) {
     $shortcut = $shell.CreateShortcut($shortcutPath)
     $shortcut.TargetPath = $pythonw
@@ -504,5 +506,7 @@ Write-Host "Trinity startet mit den in den Einstellungen gewählten Oberflächen
 Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, sofern eine GUI aktiv ist."
 Write-Host "In einer neuen PowerShell steht außerdem der Befehl 'trinity' bereit."
 Write-Host "Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
+Write-Host "Trinity und die Werkstatt starten künftig automatisch bei der Windows-Anmeldung."
+Write-Host "Im Browser ist die Werkstatt unter http://127.0.0.1:8765/#werkstatt erreichbar."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

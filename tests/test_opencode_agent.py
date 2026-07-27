@@ -79,6 +79,30 @@ def test_run_opencode_uses_run_model_agent_and_project_cwd(monkeypatch, tmp_path
     assert captured["kwargs"]["cwd"] == str(tmp_path)
 
 
+def test_run_opencode_can_attach_to_existing_service(monkeypatch, tmp_path):
+    agent = _load_agent()
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        return subprocess.CompletedProcess(command, 0, stdout="Fertig.", stderr="")
+
+    monkeypatch.setattr(agent.subprocess, "run", fake_run)
+    monkeypatch.setattr(agent, "_needs_posix_shell", lambda _executable: False)
+
+    agent._run_opencode(
+        executable="/usr/local/bin/opencode",
+        project_path=tmp_path,
+        prompt="Prüfe das Projekt.",
+        timeout=120,
+        server_url="http://127.0.0.1:4096",
+    )
+
+    command = captured["command"]
+    assert command[command.index("--attach") + 1] == "http://127.0.0.1:4096"
+    assert command[command.index("--dir") + 1] == str(tmp_path)
+
+
 def test_windows_cmd_launcher_uses_shell_argument_escaping(monkeypatch, tmp_path):
     agent = _load_agent()
     captured = {}

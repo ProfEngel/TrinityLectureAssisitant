@@ -6,9 +6,10 @@ Draft-PRs veröffentlicht; Merge/Release und Windows-/Companion-Abnahme
 ausstehend
 
 Dieser Plan behandelt ausschließlich die bestehende Trinity-Anwendung. Trinity
-Voice Studio besitzt einen eigenen Implementierungsplan und ein späteres eigenes
-Repository. Beide Produkte dürfen unabhängig voneinander installiert, gestartet,
-aktualisiert und entfernt werden.
+Voice Studio besitzt einen
+[eigenen Implementierungsplan](IMPLEMENTIERUNGSPLAN_TRINITY_VOICE_STUDIO.md)
+und ein späteres eigenes Repository. Beide Produkte dürfen unabhängig
+voneinander installiert, gestartet, aktualisiert und entfernt werden.
 
 ## 1. Verbindlicher Ausgangspunkt
 
@@ -94,10 +95,9 @@ Repository, Installationen und Dokumentation beschreiben denselben Stand.
 - [x] Windows-Installation geprüft: Trinity `0.16.58`, Python `3.11.9`,
   Profil `BIZ`, vollständiger OneDrive-`BizVault`, keine fehlenden oder
   unklassifizierten Hauptordner und laut Doctor aktuelle Installation.
-- [x] Windows-Harnesszustand festgehalten: Goose ist verfügbar; Codex und
-  OpenCode sind nicht installiert. Codex wird vor der ersten produktiven
-  BIZ-Builder-/Heavy-Duty-Aufgabe kontrolliert ergänzt. OpenCode bleibt
-  optional und wird nicht automatisch installiert.
+- [x] Harnessstrategie vereinheitlicht: OpenCode übernimmt die bisherigen
+  lokalen Goose-Aufgaben. Bestehende Goose-Projektfreigaben werden beim ersten
+  Laden nach OpenCode migriert; Goose bleibt außerhalb der aktiven Installation.
 
 **T0 ist am 23. Juli 2026 abgenommen.** T1 beginnt erst nach ausdrücklicher
 Freigabe.
@@ -169,7 +169,7 @@ und erwarteten Ergebnisse stehen in `T1_CANVAS_ABNAHME.md`.
 
 ### Ziel
 
-Trinity, Goose, Codex, Subagenten und Companion-Geräte zeigen denselben
+Trinity, OpenCode, Codex, Subagenten und Companion-Geräte zeigen denselben
 aktuellen Arbeitsstand.
 
 ### Arbeiten
@@ -269,13 +269,13 @@ Der Werkzeugkasten bleibt vollständig, die Installationen bleiben schlank.
 
 - `agent.yaml` mit Zweck, Profil, Harness und Rechten vervollständigen.
 - benötigte Pfade, Subagenten und Teststatus eintragen.
-- Zuständigkeit von Trinity, Goose oder Codex festlegen.
-- Pi und OpenCode erst nach Prüfung deaktivieren oder behalten.
+- Zuständigkeit von Trinity, OpenCode oder Codex festlegen.
+- Pi erst nach Prüfung deaktivieren oder behalten.
 - Test und Freigabestatus ergänzen.
 - keine pauschale Migration aus BrainVault_LEGACY.
 - Codex auf Windows vor der ersten produktiven BIZ-Builder- oder
   Heavy-Duty-Aufgabe installieren und im Doctor prüfen.
-- OpenCode nur installieren, wenn ein konkret benötigter Agent davon abhängt.
+- OpenCode als bevorzugten lokalen Ausführungsharness prüfen und dokumentieren.
 
 ### Abnahme je Agent
 

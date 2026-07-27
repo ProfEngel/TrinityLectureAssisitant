@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from platform_adapters import (
     create_tts_backend,
     find_codex_executable,
-    find_goose_executable,
     find_opencode_executable,
     find_pi_executable,
 )
@@ -237,6 +236,11 @@ class SettingsWindow(QMainWindow):
             self.config["opencode"]["executable"] = (
                 self.opencode_executable_edit.text().strip() or "opencode"
             )
+            self.config["opencode"]["server_url"] = (
+                self.opencode_server_url_edit.text().strip()
+                if hasattr(self, "opencode_server_url_edit")
+                else "http://127.0.0.1:4096"
+            )
             self.config["opencode"]["default_project"] = (
                 self.opencode_default_project_edit.text().strip()
             )
@@ -280,28 +284,6 @@ class SettingsWindow(QMainWindow):
                 self.config["pi"]["arguments"] = arguments.split() if arguments else []
             self.config["pi"]["timeout_seconds"] = self.pi_timeout_spin.value()
             self.config["pi"]["max_output_chars"] = self.pi_output_spin.value()
-
-        # Goose
-        if "goose" not in self.config:
-            self.config["goose"] = {}
-        if hasattr(self, "goose_cb"):
-            self.config["goose"]["enabled"] = self.goose_cb.isChecked()
-            self.config["goose"]["executable"] = (
-                self.goose_executable_edit.text().strip() or "goose"
-            )
-            self.config["goose"]["projects"] = self._projects_from_text(
-                self.goose_projects_edit.toPlainText()
-            )
-            self.config["goose"]["default_project"] = (
-                self.goose_default_project_edit.text().strip()
-            )
-            arguments = self.goose_arguments_edit.text().strip()
-            try:
-                self.config["goose"]["arguments"] = shlex.split(arguments) if arguments else []
-            except ValueError:
-                self.config["goose"]["arguments"] = arguments.split() if arguments else []
-            self.config["goose"]["timeout_seconds"] = self.goose_timeout_spin.value()
-            self.config["goose"]["max_output_chars"] = self.goose_output_spin.value()
 
         # Harness routing: roles and per-agent execution matrix
         if hasattr(self, "harness_role_checks"):
@@ -1024,8 +1006,6 @@ class SettingsWindow(QMainWindow):
             layout.addWidget(self._create_codex_harness_group())
         if self._is_harness_active("pi"):
             layout.addWidget(self._create_pi_harness_group())
-        if self._is_harness_active("goose"):
-            layout.addWidget(self._create_goose_harness_group())
         if self._is_harness_active("opencode"):
             layout.addWidget(self._create_opencode_harness_group())
         layout.addWidget(self._create_harness_agent_matrix_group(), 1)
@@ -1044,7 +1024,6 @@ class SettingsWindow(QMainWindow):
             "trinity": "Trinity",
             "codex": "Codex",
             "pi": "Pi",
-            "goose": "Goose",
             "opencode": "OpenCode",
         }
 
@@ -1310,76 +1289,6 @@ class SettingsWindow(QMainWindow):
         group.setLayout(form)
         return group
 
-    def _create_goose_harness_group(self):
-        group = QGroupBox("Goose")
-        form = QFormLayout()
-        self._tidy_form(form)
-        goose_conf = self.config.get("goose", {})
-
-        top_row = QWidget()
-        top_layout = QHBoxLayout(top_row)
-        top_layout.setContentsMargins(0, 0, 0, 0)
-        self.goose_cb = QCheckBox("Goose-Auftraege erlauben")
-        self.goose_cb.setChecked(goose_conf.get("enabled", False))
-        top_layout.addWidget(self.goose_cb)
-        test_btn = QPushButton("Anbindung testen")
-        test_btn.clicked.connect(lambda: self._test_harness_connection("goose"))
-        top_layout.addWidget(test_btn)
-        top_layout.addStretch()
-        form.addRow(top_row)
-
-        detected = find_goose_executable()
-        status = QLabel("Gefunden" if detected else "Nicht gefunden")
-        if detected:
-            status.setToolTip(str(detected))
-        self._set_status_label_style(status, bool(detected))
-        form.addRow("Status:", status)
-        self._add_harness_roles(form, "goose")
-
-        self.goose_executable_edit = QLineEdit(goose_conf.get("executable", "goose"))
-        form.addRow("Programm:", self.goose_executable_edit)
-
-        self.goose_projects_edit = QTextEdit()
-        self.goose_projects_edit.setPlainText(self._projects_to_text(goose_conf.get("projects", {})))
-        self.goose_projects_edit.setPlaceholderText(
-            "BrainVault = /vollstaendiger/Pfad/zum/BrainVault\n"
-            "Sandbox = /vollstaendiger/Pfad/zur/Sandbox"
-        )
-        self.goose_projects_edit.setMinimumHeight(150)
-        form.addRow("Freigegebene Projekte:", self.goose_projects_edit)
-
-        self.goose_default_project_edit = QLineEdit(goose_conf.get("default_project", ""))
-        form.addRow("Standardprojekt:", self.goose_default_project_edit)
-
-        raw_arguments = goose_conf.get("arguments", [])
-        arguments_text = " ".join(str(item) for item in raw_arguments) if isinstance(raw_arguments, list) else str(raw_arguments or "")
-        self.goose_arguments_edit = QLineEdit(arguments_text)
-        self.goose_arguments_edit.setPlaceholderText("run --no-session --quiet --text {prompt}")
-        form.addRow("Argumente:", self.goose_arguments_edit)
-
-        self.goose_timeout_spin = QSpinBox()
-        self.goose_timeout_spin.setRange(30, 7200)
-        self.goose_timeout_spin.setSuffix(" Sekunden")
-        self.goose_timeout_spin.setValue(int(goose_conf.get("timeout_seconds", 900)))
-        form.addRow("Zeitlimit:", self.goose_timeout_spin)
-
-        self.goose_output_spin = QSpinBox()
-        self.goose_output_spin.setRange(500, 12000)
-        self.goose_output_spin.setSingleStep(500)
-        self.goose_output_spin.setSuffix(" Zeichen")
-        self.goose_output_spin.setValue(int(goose_conf.get("max_output_chars", 3200)))
-        form.addRow("Antwortlaenge:", self.goose_output_spin)
-
-        hint = QLabel(
-            "Goose wird ausschliesslich im ausgewaehlten, freigegebenen Projektordner "
-            "gestartet. Der Standardlauf ist nicht interaktiv und liefert Trinity einen Abschlussbericht."
-        )
-        hint.setWordWrap(True)
-        hint.setStyleSheet("color: #d29922; font-size: 11px;")
-        form.addRow("", hint)
-        group.setLayout(form)
-        return group
-
     def _create_opencode_harness_group(self):
         group = QGroupBox("OpenCode")
         form = QFormLayout()
@@ -1408,6 +1317,11 @@ class SettingsWindow(QMainWindow):
 
         self.opencode_executable_edit = QLineEdit(opencode_conf.get("executable", "opencode"))
         form.addRow("Programm:", self.opencode_executable_edit)
+
+        self.opencode_server_url_edit = QLineEdit(
+            opencode_conf.get("server_url", "http://127.0.0.1:4096")
+        )
+        form.addRow("Laufender OpenCode-Dienst:", self.opencode_server_url_edit)
 
         self.opencode_projects_edit = QTextEdit()
         self.opencode_projects_edit.setPlainText(self._projects_to_text(opencode_conf.get("projects", {})))
@@ -1518,7 +1432,7 @@ class SettingsWindow(QMainWindow):
         )
         if value in self._harness_ids():
             return value
-        for harness_id in ("pi", "codex", "goose", "opencode", "trinity"):
+        for harness_id in ("pi", "codex", "opencode", "trinity"):
             if harness_id in self._harness_ids():
                 return harness_id
         return "trinity"
@@ -1594,7 +1508,7 @@ class SettingsWindow(QMainWindow):
         agents_dir = root if os.path.basename(root) == ".agents" else os.path.join(root, ".agents")
         if not os.path.isdir(agents_dir):
             return
-        for harness_id in ("codex", "pi", "goose", "opencode"):
+        for harness_id in ("codex", "pi", "opencode"):
             if not self._is_harness_active(harness_id):
                 continue
             harness_conf = self.config.setdefault(harness_id, {})
@@ -1687,7 +1601,6 @@ class SettingsWindow(QMainWindow):
             "trinity": None,
             "codex": getattr(self, "codex_executable_edit", None),
             "pi": getattr(self, "pi_executable_edit", None),
-            "goose": getattr(self, "goose_executable_edit", None),
             "opencode": getattr(self, "opencode_executable_edit", None),
         }
         field = fields.get(harness_id)
@@ -1704,7 +1617,6 @@ class SettingsWindow(QMainWindow):
         finders = {
             "codex": find_codex_executable,
             "pi": find_pi_executable,
-            "goose": find_goose_executable,
             "opencode": find_opencode_executable,
         }
         if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:

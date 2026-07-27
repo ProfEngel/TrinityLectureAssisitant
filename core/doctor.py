@@ -195,22 +195,6 @@ def run_doctor(trinity_home, fix=False, online=False):
             )
         )
 
-    goose = config.get("goose", {})
-    if goose.get("enabled"):
-        executable = goose.get("executable", "goose")
-        found = Path(executable).is_file() if os.path.dirname(executable) else None
-        if found is None:
-            from shutil import which
-
-            found = which(executable)
-        results.append(
-            _result(
-                "OK" if found else "WARN",
-                "Goose",
-                str(found) if found else "Goose CLI wurde nicht gefunden.",
-            )
-        )
-
     canvas = CanvasManager(home, config).status()
     canvas_state = canvas["state"]
     if canvas_state == "ready":

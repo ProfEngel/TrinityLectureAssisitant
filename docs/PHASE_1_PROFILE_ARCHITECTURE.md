@@ -229,7 +229,7 @@ Lehrbuch liegt beruflich beispielsweise direkt hier:
    Runtime oder ausführbaren Agenten.
 
 Der Mac darf BizVault-Dateien als normaler OneDrive-Dateiclient öffnen und
-bearbeiten. Für Trinity-, Codex-, Goose- oder OpenCode-Aufträge im Profil Arbeit
+bearbeiten. Für Trinity-, Codex- oder OpenCode-Aufträge im Profil Arbeit
 bleibt er jedoch Remote-Client der Windows-Autorität.
 
 ### Privater Auftrag
@@ -335,7 +335,7 @@ Trinity-Code wird über das Trinity-Repository und versionierte Releases
 verteilt. Agentencode wird über ein getrenntes privates Repository
 **Agenten-Werkzeugkasten** verteilt.
 
-Kein Harness bildet eine eigene Datenwelt. Trinity, Codex, Goose, OpenCode und
+Kein Harness bildet eine eigene Datenwelt. Trinity, Codex, OpenCode und
 weitere Harnesses greifen innerhalb eines Profils auf denselben Vault zu und
 verwenden die lokal installierten, für dieses Profil erlaubten Agenten.
 

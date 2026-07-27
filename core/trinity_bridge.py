@@ -38,7 +38,6 @@ from memory_store import MemoryStore
 from runtime_reset import delete_session_summary
 from platform_adapters import (
     find_codex_executable,
-    find_goose_executable,
     find_opencode_executable,
     find_pi_executable,
 )
@@ -47,20 +46,23 @@ from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_up
 from trinity_paths import TrinityPaths
 from unified_session import UnifiedSessionStore
 from web_ui import render_web_ui
+from workbench import WorkbenchManager
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
 
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
-MAX_BODY_BYTES = 50 * 1024 * 1024
+# Zwei PDF-Anlagen mit jeweils bis zu 30 MB werden als Base64 übertragen.
+# Dafür braucht der JSON-Request etwas mehr Platz als die reinen Dateien.
+MAX_BODY_BYTES = 85 * 1024 * 1024
 MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024
 MAX_EVENTS = 200
 MAX_SETTINGS_TEXT_BYTES = 100 * 1024
 SETTINGS_SECTIONS = {
     "llm", "apis", "persona", "image", "stt", "tts", "proactive", "system",
-    "audio_routing", "telegram", "codex", "opencode", "pi", "goose", "comfyui",
+    "audio_routing", "telegram", "codex", "opencode", "pi", "comfyui",
     "companion", "server", "client", "control_plane", "harness_routing",
-    "agent_catalog",
+    "agent_catalog", "workbench",
 }
 QUIET_GET_LOG_PATHS = {
     "/health",
@@ -164,6 +166,7 @@ class TrinityBridge:
         self._audio_transcriber = None
         self._canvas_status_cache = (0.0, {})
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
+        self.workbench = WorkbenchManager(self.home)
 
     @property
     def profile(self):
@@ -1168,7 +1171,7 @@ class TrinityBridge:
         if not isinstance(payload, dict):
             raise ValueError("Harness-Test erwartet ein Objekt.")
         harness_id = str(payload.get("harness") or "").strip().lower()
-        if harness_id not in {"trinity", "codex", "pi", "opencode", "goose"}:
+        if harness_id not in {"trinity", "codex", "pi", "opencode"}:
             raise ValueError("Unbekanntes Harness.")
 
         if harness_id == "trinity":
@@ -1191,7 +1194,6 @@ class TrinityBridge:
             "codex": "Codex",
             "pi": "Pi",
             "opencode": "OpenCode",
-            "goose": "Goose",
         }[harness_id]
         if not resolved:
             return {
@@ -1614,7 +1616,6 @@ class TrinityBridge:
             "codex": find_codex_executable,
             "pi": find_pi_executable,
             "opencode": find_opencode_executable,
-            "goose": find_goose_executable,
         }
         if value.casefold() in {harness_id, f"{harness_id}.exe", f"{harness_id}.cmd"}:
             finder = finders.get(harness_id)
@@ -1741,6 +1742,24 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/dashboard":
                     _json_response(self, 200, bridge.dashboard(user=user))
+                elif parsed.path == "/workbench/catalog":
+                    config = load_config(bridge.config_path)
+                    if not config.get("workbench", {}).get("enabled", True):
+                        raise PermissionError("Die Trinity-Werkstatt ist deaktiviert.")
+                    _json_response(
+                        self,
+                        200,
+                        bridge.workbench.catalog(config, bridge.profile),
+                    )
+                elif parsed.path == "/workbench/job":
+                    job_id = str(query.get("job_id", [""])[0] or "").strip()
+                    if not job_id:
+                        raise ValueError("Eine Job-ID wird benötigt.")
+                    _json_response(
+                        self,
+                        200,
+                        {"ok": True, "job": bridge.workbench.public_job(job_id)},
+                    )
                 elif parsed.path == "/prompts":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
@@ -1827,6 +1846,17 @@ def make_handler(bridge):
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
+                elif parsed.path == "/workbench/run":
+                    config = load_config(bridge.config_path)
+                    if not config.get("workbench", {}).get("enabled", True):
+                        raise PermissionError("Die Trinity-Werkstatt ist deaktiviert.")
+                    _json_response(
+                        self,
+                        202,
+                        bridge.workbench.submit(
+                            _read_json(self), config, bridge.profile
+                        ),
+                    )
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
                 elif parsed.path == "/audio/transcribe":
