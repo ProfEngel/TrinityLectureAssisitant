@@ -39,7 +39,15 @@ try
     end if
 end try
 
-if showTerminal then
+set trinityRunning to false
+try
+    do shell script "/usr/bin/curl --silent --fail --max-time 1 http://127.0.0.1:8765/health >/dev/null"
+    set trinityRunning to true
+end try
+
+if trinityRunning then
+    open location "http://127.0.0.1:8765/#werkstatt"
+else if showTerminal then
     tell application "Terminal"
         do script "cd 'PROJECT_DIR' && ./venv/bin/python3 trinity_launcher.py"
         activate

@@ -25,8 +25,8 @@ def test_missing_config_uses_independent_defaults(tmp_path):
     assert first["harness_routing"]["frameworks"]["trinity"]["roles"][
         "agent_execution"
     ] is True
-    assert first["goose"]["enabled"] is False
-    assert first["harness_routing"]["frameworks"]["goose"]["active"] is False
+    assert "goose" not in first
+    assert "goose" not in first["harness_routing"]["frameworks"]
     assert first["harness_routing"]["agent_assignments"]["trinity-core"] == [
         "trinity"
     ]
@@ -112,23 +112,16 @@ def test_existing_harness_roles_are_not_overwritten_by_enabled_flags(tmp_path):
     assert config["harness_routing"]["agent_assignments"] == {}
 
 
-def test_harness_master_switch_migrates_from_legacy_enabled_flag(tmp_path):
-    path = tmp_path / "config.json"
-    path.write_text(json.dumps({"goose": {"enabled": True}}), encoding="utf-8")
-
-    config = load_config(path, platform_name="Linux")
-
-    assert is_harness_active(config, "goose") is True
-    assert config["harness_routing"]["frameworks"]["goose"]["active"] is True
-
-
-def test_explicit_harness_master_switch_overrides_enabled_flag(tmp_path):
+def test_legacy_goose_settings_are_adopted_by_opencode(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(
         json.dumps(
             {
-                "goose": {"enabled": True},
-                "harness_routing": {"frameworks": {"goose": {"active": False}}},
+                "goose": {
+                    "enabled": True,
+                    "projects": {"Lehre": "/tmp/lehre"},
+                    "default_project": "Lehre",
+                }
             }
         ),
         encoding="utf-8",
@@ -136,4 +129,67 @@ def test_explicit_harness_master_switch_overrides_enabled_flag(tmp_path):
 
     config = load_config(path, platform_name="Linux")
 
-    assert is_harness_active(config, "goose") is False
+    assert "goose" not in config
+    assert "goose" not in config["harness_routing"]["frameworks"]
+    assert config["opencode"]["enabled"] is True
+    assert config["opencode"]["projects"] == {"Lehre": "/tmp/lehre"}
+    assert is_harness_active(config, "opencode") is True
+
+
+def test_legacy_goose_projects_extend_existing_opencode_projects(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "opencode": {
+                    "enabled": False,
+                    "projects": {"BrainVault": "/tmp/brain"},
+                    "default_project": "BrainVault",
+                },
+                "goose": {
+                    "enabled": True,
+                    "projects": {
+                        "BrainVault": "/tmp/legacy-brain",
+                        "Agenten": "/tmp/agents",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(path, platform_name="Linux")
+
+    assert config["opencode"]["enabled"] is True
+    assert config["opencode"]["default_project"] == "BrainVault"
+    assert config["opencode"]["projects"] == {
+        "BrainVault": "/tmp/brain",
+        "Agenten": "/tmp/agents",
+    }
+
+
+def test_legacy_goose_assignments_migrate_to_opencode(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "goose": {"enabled": True},
+                "harness_routing": {
+                    "frameworks": {"goose": {"active": True}},
+                    "agent_assignments": {
+                        "skills.example": ["trinity", "goose"],
+                        "legacy-goose-agent": ["trinity", "goose"],
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(path, platform_name="Linux")
+
+    assert config["harness_routing"]["agent_assignments"]["skills.example"] == [
+        "trinity",
+        "opencode",
+    ]
+    assert "legacy-goose-agent" not in config["harness_routing"]["agent_assignments"]

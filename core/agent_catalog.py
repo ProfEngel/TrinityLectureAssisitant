@@ -106,10 +106,8 @@ def default_harnesses_for_agent(agent_id: str) -> list[str]:
         return ["trinity", "opencode"]
     if normalized in {"pi-agent", "legacy-pi-agent", "pi_agent"}:
         return ["trinity", "pi"]
-    if normalized in {"goose-agent", "legacy-goose-agent", "goose_agent"}:
-        return ["trinity", "goose"]
     if normalized.startswith("brainvault.") or "." in normalized:
-        return ["trinity", "pi", "codex", "opencode", "goose"]
+        return ["trinity", "pi", "codex", "opencode"]
     return ["trinity"]
 
 
@@ -325,7 +323,6 @@ def _agent_id_for_route(route: str) -> str:
         "codex": "legacy-codex-agent",
         "opencode": "legacy-opencode-agent",
         "pi": "legacy-pi-agent",
-        "goose": "legacy-goose-agent",
         "agent_forge": "agent-builder",
         "agent_builder": "agent-builder",
     }

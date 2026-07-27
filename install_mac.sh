@@ -252,6 +252,8 @@ echo "🧭 Prüfe lokale MainHub-/Control-Plane-Ordner..."
 echo "📝 Erstelle native macOS-App..."
 rm -f "$HOME/Desktop/Starte_Trinity.command"
 TRINITY_APP_BACKUP_DIR="$RECOVERY_ROOT/App" ./scripts/create_app.sh
+echo "🧰 Richte Trinity und die Werkstatt für den automatischen Anmeldestart ein..."
+./scripts/install_autostart_mac.sh
 
 echo ""
 if [ "$IS_UPDATE" = true ]; then
@@ -267,6 +269,8 @@ echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
 echo "👉 Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
+echo "👉 Die Trinity-Werkstatt startet künftig automatisch bei deiner macOS-Anmeldung."
+echo "👉 Im Browser erreichst du sie unter http://127.0.0.1:8765/#werkstatt."
 if [ "$IS_UPDATE" = true ]; then
 echo ""
 echo "✅ Alle deine Konfigurationen (API-Keys, Soul.md, User.md, RAG, Transkripte, TrinityRuntime)"

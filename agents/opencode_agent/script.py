@@ -72,6 +72,7 @@ def execute(query: str, context: dict = None) -> dict:
             timeout=timeout,
             model=str(config.get("model") or "").strip(),
             agent=str(config.get("agent") or "").strip(),
+            server_url=str(config.get("server_url") or "").strip(),
         )
     except subprocess.TimeoutExpired:
         return _result(
@@ -199,8 +200,11 @@ def _run_opencode(
     timeout: int,
     model: str = "",
     agent: str = "",
+    server_url: str = "",
 ) -> str:
     command = [executable, "run"]
+    if server_url:
+        command.extend(["--attach", server_url, "--dir", str(project_path)])
     if model:
         command.extend(["--model", model])
     if agent:

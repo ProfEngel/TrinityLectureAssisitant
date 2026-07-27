@@ -101,6 +101,7 @@ def default_config(platform_name=None):
         "opencode": {
             "enabled": False,
             "executable": "opencode",
+            "server_url": "http://127.0.0.1:4096",
             "default_project": "",
             "projects": {},
             "agent": "build",
@@ -115,15 +116,6 @@ def default_config(platform_name=None):
             "projects": {},
             "arguments": ["-p", "{prompt}"],
             "timeout_seconds": 600,
-            "max_output_chars": 3200,
-        },
-        "goose": {
-            "enabled": False,
-            "executable": "goose",
-            "default_project": "",
-            "projects": {},
-            "arguments": ["run", "--no-session", "--quiet", "--text", "{prompt}"],
-            "timeout_seconds": 900,
             "max_output_chars": 3200,
         },
         "comfyui": {
@@ -142,6 +134,10 @@ def default_config(platform_name=None):
             "host": "127.0.0.1",
             "port": 8765,
             "token": "",
+        },
+        "workbench": {
+            "enabled": True,
+            "default_harness": "opencode",
         },
         "server": {
             "host": "127.0.0.1",
@@ -232,15 +228,6 @@ def default_config(platform_name=None):
                         "agent_execution": True,
                     },
                 },
-                "goose": {
-                    "label": "Goose",
-                    "active": False,
-                    "roles": {
-                        "agent_builder": False,
-                        "complex_cases": True,
-                        "agent_execution": True,
-                    },
-                },
             },
             "agent_assignments": {
                 "trinity-core": ["trinity"],
@@ -248,7 +235,6 @@ def default_config(platform_name=None):
                 "legacy-codex-agent": ["trinity", "codex"],
                 "legacy-pi-agent": ["trinity", "pi"],
                 "legacy-opencode-agent": ["trinity", "opencode"],
-                "legacy-goose-agent": ["trinity", "goose"],
             },
         },
     }
@@ -308,6 +294,7 @@ def load_config(config_path, platform_name=None):
 def _migrate_config(config, had_harness_routing=True, explicit_active_harnesses=None):
     """Keep older configs usable after schema additions."""
 
+    _migrate_goose_to_opencode(config)
     routing = config.setdefault("harness_routing", {})
     frameworks = routing.setdefault("frameworks", {})
     defaults = DEFAULT_CONFIG["harness_routing"]
@@ -340,7 +327,7 @@ def _migrate_config(config, had_harness_routing=True, explicit_active_harnesses=
     if had_harness_routing:
         return config
 
-    for harness_id in ("codex", "opencode", "pi", "goose"):
+    for harness_id in ("codex", "opencode", "pi"):
         enabled = bool(config.get(harness_id, {}).get("enabled", False))
         framework = frameworks.setdefault(harness_id, {})
         roles = framework.setdefault("roles", {})
@@ -350,6 +337,45 @@ def _migrate_config(config, had_harness_routing=True, explicit_active_harnesses=
             if harness_id == "codex":
                 roles["agent_builder"] = True
     return config
+
+
+def _migrate_goose_to_opencode(config):
+    """Adopt useful legacy Goose settings, then remove Goose from active config."""
+
+    goose = config.pop("goose", None)
+    opencode = config.setdefault("opencode", {})
+    if isinstance(goose, dict):
+        if goose.get("enabled"):
+            opencode["enabled"] = True
+        goose_projects = goose.get("projects")
+        if isinstance(goose_projects, dict):
+            opencode_projects = opencode.setdefault("projects", {})
+            if isinstance(opencode_projects, dict):
+                for alias, path in goose_projects.items():
+                    opencode_projects.setdefault(alias, copy.deepcopy(path))
+        for key in ("default_project", "timeout_seconds", "max_output_chars"):
+            current = opencode.get(key)
+            empty = current in (None, "", {}, [])
+            if empty and goose.get(key) not in (None, "", {}, []):
+                opencode[key] = copy.deepcopy(goose[key])
+
+    routing = config.get("harness_routing")
+    if not isinstance(routing, dict):
+        return
+    frameworks = routing.get("frameworks")
+    if isinstance(frameworks, dict):
+        old = frameworks.pop("goose", None)
+        current = frameworks.setdefault("opencode", {})
+        if isinstance(old, dict) and old.get("active"):
+            current["active"] = True
+    assignments = routing.get("agent_assignments")
+    if isinstance(assignments, dict):
+        for agent_id, harnesses in list(assignments.items()):
+            if not isinstance(harnesses, list):
+                continue
+            migrated = ["opencode" if item == "goose" else item for item in harnesses]
+            assignments[agent_id] = list(dict.fromkeys(migrated))
+        assignments.pop("legacy-goose-agent", None)
 
 
 def is_harness_active(config, harness_id: str) -> bool:

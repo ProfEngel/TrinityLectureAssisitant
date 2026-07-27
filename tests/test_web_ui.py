@@ -14,3 +14,16 @@ def test_web_settings_group_harness_frameworks_together():
     assert "title:'Codex'" not in html
     assert "title:'OpenCode'" not in html
     assert "title:'Pi'" not in html
+    assert "Goose" not in html
+
+
+def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
+    html = render_web_ui()
+
+    assert 'data-view="workbench"' in html
+    assert 'id="profileBadge"' in html
+    assert "Trinity-Werkstatt" in html
+    assert "Abschlussarbeit begutachten" in html
+    assert "'/workbench/catalog'" in html
+    assert "'/workbench/run'" in html
+    assert "#werkstatt" in html

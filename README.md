@@ -15,14 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.60:** Die neue Trinity-Werkstatt bietet profilgesicherte, Fiori-inspirierte Agentenkacheln. Der Gutachter-Pilot läuft ausschließlich im Profil BIZ über OpenCode; frühere Goose-Projekte und Agentenzuordnungen werden beim Update kontrolliert übernommen. Trinity und Werkstatt können auf macOS und Windows automatisch bei der Anmeldung starten.
 > - **v0.16.59:** Canvas startet auf macOS und Windows unabhängig vom aktuellen Arbeitsverzeichnis. Doctor, Desktop-Control und Companion-Dashboard zeigen einen gemeinsamen verständlichen Canvas-Status; ein plattformübergreifender Produktions-Smoke-Test schützt den Startpfad.
 > - **v0.16.58:** Die profilgesicherte Companion-Bridge liefert den Memory-Graph als eigene Ansicht für iPhone und iPad. Canvas bleibt Bestandteil von Trinity und benötigt in der CompanionApp keine separate Adresse mehr.
-> - **v0.16.57:** Auch der Terminal-Wrapper verarbeitet das externe Beenden kontrolliert und räumt seinen Audio-Kern auf. Damit bleiben nach App-Ende oder Update keine verwaisten Trinity-Prozesse zurück.
-> - **v0.16.56:** Trinity beendet beim Update nun auch ältere, verwaiste Audio-Kernprozesse derselben Installation. Externe Beendigungen des Launchers laufen kontrolliert durch die Kindprozess-Aufräumroutine.
-> - **v0.16.55:** RAG-Indizes sind jetzt strikt profilgebunden. Ein ungekennzeichneter Legacy-Index oder ein Index des falschen Profils wird nicht geladen; neue Indizes speichern zwingend `BIZ`, `PRIVAT` oder `TEST` in ihren Metadaten.
-> - **v0.16.54:** Der macOS-Installer beendet vor einem Update ausschließlich den Prozessbaum der betroffenen Trinity-Installation. Ein betriebssystemweiter Instanz-Lock verhindert außerdem, dass Doppelklicks parallele Launcher, Oberflächen, Bridges oder Canvas-Dienste erzeugen.
-> - **v0.16.53:** Große lokale Modelle erhalten beim ersten Laden standardmäßig bis zu 120 Sekunden statt eines zu knappen 30-Sekunden-Limits; danach bleiben Antworten schnell. Thinking lässt sich pro Modellslot eindeutig deaktivieren. Neue Windows-BIZ-Installationen schlagen OneDrive/`BizVault` statt des historischen `BrainVault`-Fallbacks vor, ohne bestehende Konfigurationen automatisch umzuschreiben.
-> - **v0.16.52:** Trinity und Creative Canvas verwenden auf Tailnet-Geräten eine gemeinsam verwaltete, konfigurierte Canvas-Adresse; die Companion-Bridge bleibt profilgesichert und der Mac-/Windows-Phase-2-Stand ist nachvollziehbar dokumentiert.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
@@ -520,6 +515,22 @@ Beispiel:
 Fernausgelöste OpenCode-Läufe sollen Entwürfe und lokale Dateien vorbereiten, aber
 nichts versenden, löschen, veröffentlichen oder deployen.
 
+### Trinity-Werkstatt
+
+Die Weboberfläche enthält unter `http://127.0.0.1:8765/#werkstatt` ein
+Fiori-inspiriertes Kachel-Dashboard für formgeführte Agenten. Die Kacheln zeigen
+immer das aktive Profil und lassen nur die dafür freigegebenen Werkzeuge starten.
+Als erster Pilot ist **Abschlussarbeit begutachten** im Profil **BIZ** verfügbar:
+Thesis-PDF und optionaler Docoloc-Bericht werden lokal an den vorhandenen
+`thesis-reviewer` übergeben, OpenCode führt den Auftrag im ausgewählten
+freigegebenen Projekt aus. Uploads werden nach Abschluss aus Trinitys
+Zwischenablage entfernt; Versand und Veröffentlichung bleiben gesperrt.
+
+Auf dem Mac startet Trinity nach der Installation automatisch. Ein erneuter Klick
+auf die Trinity-App öffnet die Werkstatt im Browser, wenn der Hintergrunddienst
+bereits läuft. Unter Windows legt die Installationsroutine zusätzlich einen
+Autostart-Eintrag für Trinity an.
+
 ### Pi als lokaler CLI-Hintergrundagent
 
 Pi kann ueber einen eigenen lokalen CLI-Wrapper angebunden werden. Trinity startet
@@ -534,18 +545,6 @@ eingesetzt.
 Beispiel:
 
 > „Trinity, nutze Pi und erklaere in drei Saetzen, wie Du angebunden bist.“
-
-### Goose als optionaler CLI-Harness
-
-Goose kann als weiterer lokaler Harness für ausdrücklich adressierte Aufgaben
-aktiviert werden. Öffne **Einstellungen -> Harnesses**, schalte **Goose** im
-Bereich *Aktive Harnesses* ein, speichere und öffne die Seite erneut. Danach
-Programm, freigegebene Projekte, optionales Standardprojekt und Zeitlimit
-eintragen sowie **Goose-Aufträge erlauben** aktivieren. Deaktivierte Harnesses
-werden weder in der Agentenmatrix noch als Standard-Harness angeboten.
-
-Beispiel: `Trinity, nutze Goose im Projekt BrainVault und prüfe die
-Projektregeln. Ändere keine Dateien.`
 
 ### Agenten erstellen, importieren oder erweitern
 
@@ -588,7 +587,7 @@ In den Desktop-Einstellungen liegt das unter **Trinity-Ablagen**.
 Getrennt sichtbar sind die lokale **Runtime**, der **Cloud-Vault fuer Inhalte**,
 der lokale **Agenten-Werkzeugkasten** und der **Standard-Extern-Harness**. Der
 Werkzeugkasten ist der lokale Ordner, in dem `.agents` und `AGENTS.md` liegen.
-Trinity kann dessen `.agents`-Ordner Codex, Pi, Goose und OpenCode als Projekt
+Trinity kann dessen `.agents`-Ordner Codex, Pi und OpenCode als Projekt
 `Agenten` bereitstellen. Pi ist der Standard fuer laufende externe Agentenarbeit;
 Codex bleibt fuer neue Agenten, Imports, Refactorings, Tests und Quality-Gates
 vorgesehen. Aeltere Einstellungen, die noch auf

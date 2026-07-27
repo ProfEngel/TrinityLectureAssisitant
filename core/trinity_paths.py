@@ -19,7 +19,6 @@ RUNTIME_DIRS = (
     "harnesses/codex",
     "harnesses/pi",
     "harnesses/opencode",
-    "harnesses/goose",
     "harnesses/future",
     "workspaces",
     "sessions",

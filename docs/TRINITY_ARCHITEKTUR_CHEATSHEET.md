@@ -133,7 +133,7 @@ RAG-Quelldokumente, `Soul.md`, `User.md` oder die Installationskonfiguration.
 ## 4. Die beiden Vaults – als Einzige in Cloud-Ordnern
 
 Ein Vault enthält die **dauerhaften fachlichen Inhalte**, mit denen Trinity,
-Codex, Goose, OpenCode und andere Harnesses arbeiten. Er ist keine Kopie der
+Codex, OpenCode und andere Harnesses arbeiten. Er ist keine Kopie der
 Runtime, sondern die einzige fachliche Datenwahrheit seines Profils.
 
 | Profil | Name | Cloud | Autoritative Trinity-Instanz |
