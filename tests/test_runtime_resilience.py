@@ -235,6 +235,15 @@ def test_launcher_reads_companion_bridge_config(tmp_path):
     assert companion["token"] == "secret"
 
 
+def test_launcher_enables_workbench_bridge_by_default(tmp_path):
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{}", encoding="utf-8")
+
+    workbench = trinity_launcher._read_workbench_config(str(config_path))
+
+    assert workbench["enabled"] is True
+
+
 def test_windows_terminal_uses_console_python_from_pythonw(tmp_path):
     pythonw = tmp_path / "pythonw.exe"
     python = tmp_path / "python.exe"

@@ -174,6 +174,10 @@ def test_legacy_goose_assignments_migrate_to_opencode(tmp_path):
         json.dumps(
             {
                 "goose": {"enabled": True},
+                "control_plane": {
+                    "default_brainvault_harness": "goose",
+                    "builder_harness": "goose",
+                },
                 "harness_routing": {
                     "frameworks": {"goose": {"active": True}},
                     "agent_assignments": {
@@ -193,3 +197,5 @@ def test_legacy_goose_assignments_migrate_to_opencode(tmp_path):
         "opencode",
     ]
     assert "legacy-goose-agent" not in config["harness_routing"]["agent_assignments"]
+    assert config["control_plane"]["default_brainvault_harness"] == "opencode"
+    assert config["control_plane"]["builder_harness"] == "opencode"

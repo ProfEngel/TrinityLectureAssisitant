@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.16.61:** Die Werkstatt startet auch ohne aktivierte Weboberfläche oder Companion-Bridge zuverlässig mit Trinity und verwendet automatisch deren tatsächlich konfigurierte lokale Adresse. Der letzte historische Goose-Standardverweis wird beim Update ebenfalls auf OpenCode umgestellt.
 > - **v0.16.60:** Die neue Trinity-Werkstatt bietet profilgesicherte, Fiori-inspirierte Agentenkacheln. Der Gutachter-Pilot läuft ausschließlich im Profil BIZ über OpenCode; frühere Goose-Projekte und Agentenzuordnungen werden beim Update kontrolliert übernommen. Trinity und Werkstatt können auf macOS und Windows automatisch bei der Anmeldung starten.
 > - **v0.16.59:** Canvas startet auf macOS und Windows unabhängig vom aktuellen Arbeitsverzeichnis. Doctor, Desktop-Control und Companion-Dashboard zeigen einen gemeinsamen verständlichen Canvas-Status; ein plattformübergreifender Produktions-Smoke-Test schützt den Startpfad.
-> - **v0.16.58:** Die profilgesicherte Companion-Bridge liefert den Memory-Graph als eigene Ansicht für iPhone und iPad. Canvas bleibt Bestandteil von Trinity und benötigt in der CompanionApp keine separate Adresse mehr.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
@@ -517,8 +517,9 @@ nichts versenden, löschen, veröffentlichen oder deployen.
 
 ### Trinity-Werkstatt
 
-Die Weboberfläche enthält unter `http://127.0.0.1:8765/#werkstatt` ein
-Fiori-inspiriertes Kachel-Dashboard für formgeführte Agenten. Die Kacheln zeigen
+Die Weboberfläche enthält unter der konfigurierten lokalen Trinity-Adresse im
+Reiter `#werkstatt` ein Fiori-inspiriertes Kachel-Dashboard für formgeführte
+Agenten. Die Kacheln zeigen
 immer das aktive Profil und lassen nur die dafür freigegebenen Werkzeuge starten.
 Als erster Pilot ist **Abschlussarbeit begutachten** im Profil **BIZ** verfügbar:
 Thesis-PDF und optionaler Docoloc-Bericht werden lokal an den vorhandenen

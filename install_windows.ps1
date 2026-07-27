@@ -507,6 +507,10 @@ Write-Host "Eine zusätzliche Desktop-Verknüpfung unterdrückt das Terminal, so
 Write-Host "In einer neuen PowerShell steht außerdem der Befehl 'trinity' bereit."
 Write-Host "Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
 Write-Host "Trinity und die Werkstatt starten künftig automatisch bei der Windows-Anmeldung."
-Write-Host "Im Browser ist die Werkstatt unter http://127.0.0.1:8765/#werkstatt erreichbar."
+$workbenchUrl = (& $venvPython "$InstallDir\scripts\workbench_url.py").Trim()
+if (-not $workbenchUrl) {
+    $workbenchUrl = "http://127.0.0.1:8765"
+}
+Write-Host "Im Browser ist die Werkstatt unter $workbenchUrl/#werkstatt erreichbar."
 Write-Host ""
 Write-Host "Beim ersten Start fragt Windows gegebenenfalls nach Mikrofonzugriff."

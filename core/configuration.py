@@ -376,6 +376,11 @@ def _migrate_goose_to_opencode(config):
             migrated = ["opencode" if item == "goose" else item for item in harnesses]
             assignments[agent_id] = list(dict.fromkeys(migrated))
         assignments.pop("legacy-goose-agent", None)
+    control_plane = config.get("control_plane")
+    if isinstance(control_plane, dict):
+        for key in ("default_brainvault_harness", "builder_harness"):
+            if str(control_plane.get(key) or "").casefold() == "goose":
+                control_plane[key] = "opencode"
 
 
 def is_harness_active(config, harness_id: str) -> bool:

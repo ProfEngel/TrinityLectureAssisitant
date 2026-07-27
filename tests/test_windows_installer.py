@@ -13,7 +13,8 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert '"Trinity ohne Terminal.lnk"' in script
     assert '[Environment]::GetFolderPath("Startup")' in script
     assert '(Join-Path $startup "Trinity.lnk")' in script
-    assert "http://127.0.0.1:8765/#werkstatt" in script
+    assert 'scripts\\workbench_url.py' in script
+    assert '$workbenchUrl/#werkstatt' in script
     assert "$shortcut.TargetPath = $pythonw" in script
     assert '$shortcut.Arguments = "`"$launcher`""' in script
     assert '--no-terminal' in script
