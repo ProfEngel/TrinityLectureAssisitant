@@ -7,15 +7,18 @@ import hashlib
 import json
 import os
 import signal
+import socket
 import shutil
 import subprocess
 import threading
 import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from job_manager import JobManager
 from platform_adapters import find_codex_executable, find_opencode_executable
+from presentation_vision import prepare_visual_context
 
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
@@ -476,6 +479,7 @@ class WorkbenchManager:
             metadata={
                 "tile_id": tile_id,
                 "agent": "thesis-reviewer",
+                "skill": "thesis-reviewer",
                 "harness": harness,
                 "model": self._selected_model(payload, harness, harness_config),
                 "project": alias,
@@ -546,6 +550,7 @@ class WorkbenchManager:
             metadata={
                 "tile_id": PRESENTATION_SCAFFOLD_TILE_ID,
                 "agent": "html-praesentationswerkstatt",
+                "skill": "html-praesentationswerkstatt",
                 "harness": "trinity",
                 "project": alias,
                 "profile": str(profile or ""),
@@ -662,8 +667,14 @@ class WorkbenchManager:
             route=harness,
             risk_level="medium",
             plan=[
-                {"title": "Eingaben, Materialien und Pfade übernehmen", "quality_gate": True},
-                {"title": "Recherche und Präsentationsplan erstellen", "quality_gate": True},
+                {
+                    "title": "Eingaben, Pfade und visuelles Inventar übernehmen",
+                    "quality_gate": True,
+                },
+                {
+                    "title": "Recherche, Bildverständnis und Präsentationsplan",
+                    "quality_gate": True,
+                },
                 {"title": "Plan durch Nutzer prüfen und freigeben", "quality_gate": True},
                 {"title": "HTML-Präsentation und Medien bauen"},
                 {"title": "Offline-, Quellen- und Qualitätsprüfung", "quality_gate": True},
@@ -671,6 +682,7 @@ class WorkbenchManager:
             metadata={
                 "tile_id": tile_id,
                 "agent": "html-praesentationswerkstatt",
+                "skill": "html-praesentationswerkstatt",
                 "presentation_mode": presentation_mode,
                 "harness": harness,
                 "model": self._selected_model(payload, harness, harness_config),
@@ -1098,6 +1110,7 @@ class WorkbenchManager:
                     f"{self._harness_name(harness)} übergeben."
                 ),
             )
+            visual_context = prepare_visual_context(preserved, output_path)
             self.jobs.update_step(
                 job_id,
                 current["steps"][0]["step_id"],
@@ -1110,6 +1123,10 @@ class WorkbenchManager:
                         {"name": item["name"], "sha256": item["sha256"]}
                         for item in preserved
                     ],
+                    "research_agent": "Agent 00: Research & Evidence",
+                    "vision_items": visual_context["item_count"],
+                    "vision_inventory": str(visual_context["inventory_path"]),
+                    "vision_warnings": visual_context["warnings"],
                 },
             )
             self.jobs.update_step(
@@ -1124,6 +1141,7 @@ class WorkbenchManager:
                 provider=provider,
                 image_model=image_model,
                 secret_status=self.secret_status(config),
+                visual_context=visual_context,
             )
             timeout = self._bounded_int(
                 harness_config.get("timeout_seconds"), 1800, 900, 7200
@@ -1138,9 +1156,12 @@ class WorkbenchManager:
                     executable=executable,
                     project_path=project_path,
                     prompt=prompt,
-                    attachments=[item["path"] for item in preserved],
+                    attachments=self._deduplicated_paths(
+                        [item["path"] for item in preserved]
+                        + visual_context["attachments"]
+                    ),
                     model=self._selected_model(payload, harness, harness_config),
-                    agent="html-praesentationswerkstatt",
+                    skill="html-praesentationswerkstatt",
                     harness_config=harness_config,
                     timeout=timeout,
                     extra_env=self._presentation_environment(
@@ -1160,6 +1181,11 @@ class WorkbenchManager:
                     f"{self._harness_name(harness)} hat keinen "
                     "presentation-plan.md und keinen Plantext geliefert."
                 )
+            self._validate_presentation_plan_artifacts(
+                output_path=output_path,
+                presentation_mode=str(payload.get("presentation_mode") or "new"),
+                visual_item_count=int(visual_context["item_count"]),
+            )
             self.jobs.update_step(
                 job_id,
                 current["steps"][1]["step_id"],
@@ -1180,6 +1206,7 @@ class WorkbenchManager:
             pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
+                self._fail_running_steps(job_id, exc)
                 self.jobs.fail(
                     job_id,
                     "Präsentationsplanung fehlgeschlagen.",
@@ -1227,13 +1254,13 @@ class WorkbenchManager:
                     executable=executable,
                     project_path=project_path,
                     prompt=prompt,
-                    attachments=[],
+                    attachments=self._presentation_visual_attachments(output_path),
                     model=str(
                         metadata.get("model")
                         or harness_config.get("model")
                         or ("gpt-5.6-sol" if harness == "codex" else "")
                     ).strip(),
-                    agent="html-praesentationswerkstatt",
+                    skill="html-praesentationswerkstatt",
                     harness_config=harness_config,
                     timeout=timeout,
                     extra_env=self._presentation_environment(
@@ -1291,15 +1318,7 @@ class WorkbenchManager:
             pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
-                current = self.jobs.get(job_id)
-                for step in current["steps"]:
-                    if step["status"] == "RUNNING":
-                        self.jobs.update_step(
-                            job_id,
-                            step["step_id"],
-                            "FAILED",
-                            {"error": str(exc)[:4000]},
-                        )
+                self._fail_running_steps(job_id, exc)
                 self.jobs.fail(
                     job_id,
                     "Präsentationserstellung fehlgeschlagen.",
@@ -1403,6 +1422,17 @@ class WorkbenchManager:
 
     def _presentation_template_root(self) -> Path:
         return self.presentation_resources / "template"
+
+    def _presentation_skill_root(self) -> Path:
+        bundled = self.presentation_resources / "agent"
+        if (bundled / "SKILL.md").is_file():
+            return bundled
+        return (
+            Path.home()
+            / ".agents"
+            / "skills"
+            / "html-praesentationswerkstatt"
+        )
 
     @staticmethod
     def _harness_name(harness: str) -> str:
@@ -1617,7 +1647,7 @@ class WorkbenchManager:
                     prompt=prompt,
                     attachments=[item["path"] for item in staged],
                     model=self._selected_model(payload, harness, harness_config),
-                    agent="thesis-reviewer",
+                    skill="thesis-reviewer",
                     harness_config=harness_config,
                     timeout=timeout,
                 ),
@@ -1654,6 +1684,7 @@ class WorkbenchManager:
             pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
+                self._fail_running_steps(job_id, exc)
                 self.jobs.fail(
                     job_id,
                     "Gutachter-Auftrag fehlgeschlagen.",
@@ -1677,15 +1708,17 @@ class WorkbenchManager:
         provider: str,
         image_model: str,
         secret_status: dict,
+        visual_context: dict,
     ) -> str:
-        skill_path = (
-            Path.home()
-            / ".agents"
-            / "skills"
-            / "html-praesentationswerkstatt"
-            / "SKILL.md"
-        )
+        skill_root = self._presentation_skill_root()
+        skill_path = skill_root / "SKILL.md"
         contract_path = skill_path.parent / "references" / "ARBEITSVERTRAG.md"
+        research_role_path = (
+            skill_root / "references" / "rollen" / "00_recherche-und-evidenz.md"
+        )
+        briefing_role_path = (
+            skill_root / "references" / "rollen" / "01_briefing-auswertung.md"
+        )
         reference_lines = "\n".join(
             f"- {item['name']}: {item['path']}" for item in preserved
         ) or "- keine hochgeladenen Dateien"
@@ -1702,6 +1735,28 @@ class WorkbenchManager:
             for item in preserved
             if Path(item["name"]).suffix.casefold() in {".pptx", ".pdf"}
         ]
+        if visual_context["item_count"]:
+            visual_contract = f"""
+Verbindlicher Vision-Adapter:
+- Technisches Eingangsinventar: {visual_context["inventory_path"]}
+- Extrahierter Folien-/Seitentext: {visual_context["content_path"]}
+- Zu prüfende Bildansichten: {visual_context["item_count"]}
+
+Öffne jede als Bildanlage übergebene Ansicht tatsächlich mit den multimodalen
+Fähigkeiten des gewählten Modells. Dateiname, OCR-Text oder Folientext allein
+gelten nicht als Bildanalyse. Erstelle `visual-analysis.md` mit einem Abschnitt
+je Inventar-ID: sichtbarer Inhalt, Aussage, wichtige Details/Randbereiche,
+Text/Labels, fachliche Verwendbarkeit, geeignete neue Folien-ID sowie die
+Entscheidung `übernehmen`, `neu aufbauen` oder `nicht verwenden`. Ordne ein Bild
+nur dann einer Folie zu, wenn es deren Kernaussage wirklich trägt. Wenn das
+gewählte Modell eine Bilddatei nicht sehen kann, stoppe mit einer eindeutigen
+Meldung; erfinde keine Bildbeschreibung.
+"""
+        else:
+            visual_contract = """
+Es wurden keine visuellen Referenzen erkannt. Erfinde daher keine Analyse
+angeblich beigelegter Bilder.
+"""
         modernization_contract = ""
         if presentation_mode == "modernize":
             source_deck = source_decks[0]
@@ -1727,7 +1782,7 @@ als sauberes HTML/CSS/SVG-Schaubild oder – nur nach Planfreigabe – als neues
 rekonstruiert. Nichts darf verzerrt, abgeschnitten oder ohne Herkunftsnachweis
 übernommen werden. Die zusätzlichen Änderungswünsche des Nutzers haben Vorrang.
 """
-        return f"""Führe den installierten Agenten `html-praesentationswerkstatt` aus.
+        return f"""Führe den fachlichen Skill `html-praesentationswerkstatt` aus.
 
 Dies ist ausschließlich Phase A/B: Recherche, Briefing-Auswertung und
 `presentation-plan.md`. Baue noch KEINE Präsentation. Das Freigabewort wurde
@@ -1735,6 +1790,8 @@ noch nicht erteilt.
 
 Verbindliche Agentenanweisung: {skill_path}
 Verbindlicher Arbeitsvertrag: {contract_path}
+Verbindlicher Recherche-Agent (zuerst vollständig ausführen): {research_role_path}
+Verbindliche Briefing-Rolle (danach ausführen): {briefing_role_path}
 Vollständiger lokaler Vorlagenbaukasten: {self.presentation_resources}
 Freigegebenes Projekt: {project_alias}
 Zusätzlicher Quellpfad: {source_path or "(keiner)"}
@@ -1749,6 +1806,8 @@ Sprachen: {languages}
 Arbeitsmodus: {presentation_mode}
 
 {modernization_contract}
+
+{visual_contract}
 
 Grobstruktur und Kernideen:
 {outline or "(nicht vorgegeben – entwickle selbst eine sinnvolle Grobstruktur)"}
@@ -1774,8 +1833,15 @@ vorgegeben sind, stelle keine Rückfrage und brich nicht ab. Entwickle stattdess
 eine belastbare professionelle Ausgangsidee, kennzeichne deine Annahmen sichtbar
 und mache sie im anschließend bearbeitbaren Plan leicht änderbar.
 
-Erstelle nach Recherche und einer Gap-/Gegenprüfung im
-Ordner {output_path} die Datei `presentation-plan.md`. Der Plan muss je Folie
+Führe Agent 00 mit echter, in dieser Umgebung verfügbarer Web- bzw.
+wissenschaftlicher Recherche aus: mindestens zwei Suchzyklen, danach
+Gap-/Gegenprüfung. Erzeuge dabei zwingend `sources/sources.json` mit mindestens
+einer tatsächlich geprüften Quelle und `sources/source-overview.md`. Wenn keine
+Recherchefunktion erreichbar ist, brich transparent ab; ersetze Recherche
+niemals durch Modellwissen oder erfundene Quellen.
+
+Erstelle anschließend im Ordner {output_path} die Datei
+`presentation-plan.md`. Der Plan muss je Folie
 eine stabile Folien-ID, Kernaussage, Quellenbedarf, Visualisierungsidee,
 Interaktion, Zeitbudget und beabsichtigte Wirkung enthalten. Gib den Plan
 zusätzlich vollständig in deiner Abschlussantwort aus und stoppe dann. Warte auf
@@ -1785,13 +1851,7 @@ das exakte Wort FREIGABE.
     def _presentation_build_prompt(
         self, *, output_path: Path, metadata: dict, secret_status: dict
     ) -> str:
-        skill_path = (
-            Path.home()
-            / ".agents"
-            / "skills"
-            / "html-praesentationswerkstatt"
-            / "SKILL.md"
-        )
+        skill_path = self._presentation_skill_root() / "SKILL.md"
         provider = str(metadata.get("image_provider") or "kie")
         provider_ready = secret_status["kie_configured"]
         modernization_contract = ""
@@ -1816,6 +1876,9 @@ Präsentationsordner: {output_path}
 Freigegebener Plan: {output_path / "presentation-plan.md"}
 Anfrageprotokoll: {output_path / "presentation-request.json"}
 Referenzmaterial: {output_path / "reference-material"}
+Verbindliche visuelle Analyse: {output_path / "visual-analysis.md"}
+Technisches Bildinventar:
+{output_path / "reference-material" / "visual-analysis" / "visual-inventory.json"}
 
 {modernization_contract}
 
@@ -1833,6 +1896,12 @@ und den lokalen Zielpfad über `--output`. Übergib niemals einen Schlüssel als
 Befehlsargument. Nutze Kie.ai nur, wenn der Schlüssel tatsächlich vorhanden
 ist. Schlägt eine Bildgenerierung fehl, verwende ein lokales HTML/CSS-Schaubild
 oder kennzeichne die spätere Medienergänzung im Review.
+
+Nutze für übernommene Bilder zwingend `visual-analysis.md`. Öffne die zugehörige
+Bildanlage erneut, bevor du sie einbaust. Platziere sie anhand ihrer tatsächlichen
+Aussage, nicht anhand ihres Dateinamens. Entscheide `contain` oder `cover` aus
+dem sichtbaren Inhalt; Bilder mit Text, Diagrammen, Labels oder wichtigen
+Randdetails werden vollständig und unverzerrt dargestellt.
 
 Erstelle alle im Arbeitsvertrag geforderten lokalen Dateien einschließlich
 `presentation.html`, sprachspezifischer Fassungen, `review.html`,
@@ -1882,7 +1951,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
         prompt: str,
         attachments: list[Path],
         model: str,
-        agent: str,
+        skill: str,
         harness_config: dict,
         timeout: int,
         extra_env: Optional[dict] = None,
@@ -1903,6 +1972,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
                 extra_env=extra_env,
             )
         if harness == "opencode":
+            harness_agent = str(harness_config.get("agent") or "build").strip()
             return self._run_opencode(
                 job_id=job_id,
                 executable=executable,
@@ -1910,7 +1980,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
                 prompt=prompt,
                 attachments=attachments,
                 model=model,
-                agent=agent,
+                agent=harness_agent,
                 server_url=str(harness_config.get("server_url") or "").strip(),
                 timeout=timeout,
                 extra_env=extra_env,
@@ -2005,6 +2075,15 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
         )
         for directory in attachment_dirs:
             command.extend(["--add-dir", directory])
+        image_attachments = [
+            str(Path(attachment).resolve())
+            for attachment in (attachments or [])
+            if Path(attachment).suffix.casefold()
+            in {".gif", ".jpeg", ".jpg", ".png", ".webp"}
+        ]
+        if image_attachments:
+            command.append("--image")
+            command.extend(image_attachments)
         command.extend(["--model", model or "gpt-5.6-sol"])
         if ephemeral:
             command.append("--ephemeral")
@@ -2063,6 +2142,13 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
         timeout: int,
         extra_env: Optional[dict] = None,
     ) -> str:
+        self._preflight_opencode(
+            executable=executable,
+            project_path=project_path,
+            agent=agent,
+            model=model,
+            server_url=server_url,
+        )
         command = [executable, "run"]
         if server_url:
             command.extend(["--attach", server_url, "--dir", str(project_path)])
@@ -2162,6 +2248,172 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
             stdout=stdout,
             stderr=stderr,
         )
+
+    def _preflight_opencode(
+        self,
+        *,
+        executable: str,
+        project_path: Path,
+        agent: str,
+        model: str,
+        server_url: str,
+    ) -> None:
+        """Fail quickly before a workbench job enters a misleading heartbeat."""
+
+        clean_agent = str(agent or "build").strip() or "build"
+        command = [executable, "debug", "agent", clean_agent]
+        use_shell = os.name == "nt" and str(executable).casefold().endswith(
+            (".cmd", ".bat")
+        )
+        run_command = subprocess.list2cmdline(command) if use_shell else command
+        try:
+            completed = subprocess.run(
+                run_command,
+                cwd=str(project_path),
+                env={**os.environ, "NO_COLOR": "1"},
+                shell=use_shell,
+                capture_output=True,
+                text=True,
+                timeout=8,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise OSError(
+                "OpenCode konnte seinen ausführbaren Arbeitsagenten nicht prüfen."
+            ) from exc
+        if completed.returncode != 0:
+            raise ValueError(
+                f"Der ausführbare OpenCode-Agent „{clean_agent}“ ist nicht vorhanden. "
+                "Fachliche Skills dürfen hier nicht als --agent übergeben werden."
+            )
+
+        if server_url:
+            self._check_tcp_endpoint(
+                server_url,
+                "Der konfigurierte OpenCode-Dienst ist nicht erreichbar",
+            )
+        provider_url = self._opencode_provider_url(model)
+        if provider_url:
+            self._check_tcp_endpoint(
+                provider_url,
+                (
+                    "Der für das gewählte OpenCode-Modell konfigurierte "
+                    "Modellserver ist nicht erreichbar"
+                ),
+            )
+
+    @staticmethod
+    def _check_tcp_endpoint(url: str, label: str) -> None:
+        parsed = urlparse(str(url or "").strip())
+        host = parsed.hostname
+        if not host:
+            raise ValueError(f"{label}: ungültige URL.")
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        try:
+            with socket.create_connection((host, port), timeout=3):
+                return
+        except OSError as exc:
+            raise ConnectionError(
+                f"{label}: {host}:{port}. "
+                "Der Auftrag wurde vor dem eigentlichen Agentenlauf beendet."
+            ) from exc
+
+    @staticmethod
+    def _opencode_provider_url(model: str) -> str:
+        provider_id = str(model or "").partition("/")[0].strip()
+        if not provider_id:
+            return ""
+        path = Path.home() / ".config" / "opencode" / "opencode.jsonc"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return ""
+        provider = (data.get("provider") or {}).get(provider_id) or {}
+        options = provider.get("options") if isinstance(provider, dict) else {}
+        if not isinstance(options, dict):
+            return ""
+        return str(options.get("baseURL") or options.get("baseUrl") or "").strip()
+
+    @staticmethod
+    def _deduplicated_paths(paths: list[Path]) -> list[Path]:
+        result = []
+        seen = set()
+        for raw_path in paths:
+            path = Path(raw_path).resolve()
+            key = str(path)
+            if key not in seen and path.is_file():
+                seen.add(key)
+                result.append(path)
+        return result
+
+    @staticmethod
+    def _presentation_visual_attachments(output_path: Path) -> list[Path]:
+        inventory_path = (
+            output_path
+            / "reference-material"
+            / "visual-analysis"
+            / "visual-inventory.json"
+        )
+        try:
+            inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        paths = []
+        for item in inventory.get("items") or []:
+            path = Path(str(item.get("inspect_path") or ""))
+            if path.is_file() and path.suffix.casefold() in {
+                ".gif",
+                ".jpeg",
+                ".jpg",
+                ".png",
+                ".webp",
+            }:
+                paths.append(path)
+        return WorkbenchManager._deduplicated_paths(paths)[:80]
+
+    @staticmethod
+    def _validate_presentation_plan_artifacts(
+        *, output_path: Path, presentation_mode: str, visual_item_count: int
+    ) -> None:
+        required = [
+            output_path / "sources" / "sources.json",
+            output_path / "sources" / "source-overview.md",
+        ]
+        if presentation_mode == "modernize":
+            required.extend(
+                [
+                    output_path / "source-deck-analysis.md",
+                    output_path / "source-media-inventory.json",
+                ]
+            )
+        if visual_item_count:
+            required.append(output_path / "visual-analysis.md")
+        missing = [str(path.relative_to(output_path)) for path in required if not path.is_file()]
+        if missing:
+            raise RuntimeError(
+                "Der Agentenlauf hat verbindliche Recherche-/Analyseartefakte "
+                "nicht erzeugt: " + ", ".join(missing)
+            )
+        try:
+            sources = json.loads(required[0].read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("sources/sources.json ist kein valides JSON.") from exc
+        if not isinstance(sources, list) or not sources:
+            raise RuntimeError(
+                "Der Recherche-Agent hat keine geprüften Quellen geliefert. "
+                "Der Folienplan wird deshalb nicht zur Freigabe weitergereicht."
+            )
+
+    def _fail_running_steps(self, job_id: str, exc: BaseException) -> None:
+        current = self.jobs.get(job_id)
+        for step in current.get("steps", []):
+            if step.get("status") == "RUNNING":
+                self.jobs.update_step(
+                    job_id,
+                    step["step_id"],
+                    "FAILED",
+                    {"error": str(exc)[:4000]},
+                )
 
     @staticmethod
     def _opencode_models(config: dict) -> list[dict]:
