@@ -46,7 +46,8 @@ def test_web_ui_contains_file_upload_and_token_login():
     page = render_web_ui()
 
     assert 'id="files"' in page
-    assert "Bearer Token" in page
+    assert 'id="credentialDialog"' in page
+    assert 'id="saveToken"' in page
     assert "'/message'" in page
     assert 'id="settingsView"' in page
     assert "'/settings'" in page
@@ -54,8 +55,10 @@ def test_web_ui_contains_file_upload_and_token_login():
     assert 'id="microphoneToggle"' in page
     assert 'id="ttsToggle"' in page
     assert "'/runtime'" in page
-    for view in ("Talk", "Vortrag", "Web", "Chat", "Live"):
-        assert view in page
+    assert 'data-view="workbench"' in page
+    assert 'data-view="chat"' in page
+    for view in ("daily", "lecture", "web", "debug"):
+        assert f'data-view="{view}"' not in page
     assert 'id="lectureFrame"' in page
     assert 'id="presenterFrame"' in page
     assert "'/payload'" in page

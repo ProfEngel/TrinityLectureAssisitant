@@ -37,6 +37,8 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert 'id="jobCenterToggle"' in html
     assert "'/workbench/jobs?limit=40'" in html
     assert "'/workbench/presentation/approve'" in html
+    assert "'/workbench/job/cancel'" in html
+    assert "'/workbench/job/delete'" in html
     assert "'/workbench/secrets'" in html
     assert 'src="/trinity-logo"' in html
     assert "Codex / ChatGPT oder OpenCode" in html
@@ -47,3 +49,4 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert "Kie.ai API-Schlüssel" in html
     assert "gpt-image-2-text-to-image" not in html
     assert "fal.ai API-Schlüssel · Fallback" not in html
+    assert "get('embedded')==='1'" in html

@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import os
+import signal
 import shutil
 import subprocess
 import threading
@@ -86,6 +87,10 @@ CODEX_MODELS = [
 CODEX_MODEL_IDS = {model["id"] for model in CODEX_MODELS}
 
 
+class WorkbenchJobCancelled(RuntimeError):
+    """Raised internally after a user cancels a running workbench job."""
+
+
 class WorkbenchManager:
     """Catalog and execute explicit, form-driven agent jobs."""
 
@@ -98,6 +103,8 @@ class WorkbenchManager:
             self.home / "resources" / "html_presentation_workshop"
         )
         self._threads: dict[str, threading.Thread] = {}
+        self._processes: dict[str, subprocess.Popen] = {}
+        self._cancelled: set[str] = set()
         self._lock = threading.Lock()
 
     def catalog(self, config: dict, profile: str) -> dict:
@@ -838,6 +845,86 @@ class WorkbenchManager:
             compact.append(public)
         return compact
 
+    def cancel_job(self, job_id: str, profile: str) -> dict:
+        """Cancel one profile-owned workbench job and stop its harness process."""
+
+        job = self._profile_job(job_id, profile)
+        if job["status"] in {"SUCCEEDED", "FAILED", "NEEDS_ESCALATION"}:
+            raise ValueError("Dieser Auftrag ist bereits abgeschlossen.")
+        if job["status"] == "CANCELLED":
+            return {"ok": True, "job": self.public_job(job_id)}
+
+        with self._lock:
+            self._cancelled.add(job_id)
+            process = self._processes.get(job_id)
+        if process is not None:
+            self._stop_process(process)
+
+        current = self.jobs.get(job_id)
+        for step in current.get("steps", []):
+            if step["status"] in {"PENDING", "RUNNING"}:
+                self.jobs.update_step(
+                    job_id,
+                    step["step_id"],
+                    "SKIPPED",
+                    {"cancelled_by_user": True},
+                )
+        self.jobs.set_status(
+            job_id,
+            "CANCELLED",
+            "Der Auftrag wurde durch den Nutzer abgebrochen.",
+            {"cancelled_by_user": True},
+        )
+        return {"ok": True, "job": self.public_job(job_id)}
+
+    def delete_job(self, job_id: str, profile: str) -> dict:
+        """Remove one terminal workbench record without deleting its output files."""
+
+        self._profile_job(job_id, profile)
+        self.jobs.delete(job_id)
+        shutil.rmtree(self.upload_root / job_id, ignore_errors=True)
+        with self._lock:
+            self._cancelled.discard(job_id)
+            self._threads.pop(job_id, None)
+            self._processes.pop(job_id, None)
+        return {"ok": True, "deleted_job_id": job_id}
+
+    def _profile_job(self, job_id: str, profile: str) -> dict:
+        clean_id = str(job_id or "").strip()
+        if not clean_id:
+            raise ValueError("Eine Job-ID wird benötigt.")
+        job = self.jobs.get(clean_id)
+        if job.get("source") != "workbench":
+            raise PermissionError("Dieser Auftrag gehört nicht zur Werkstatt.")
+        expected = str((job.get("metadata") or {}).get("profile") or "").upper()
+        current = str(profile or "").upper()
+        if expected and expected != current:
+            raise PermissionError("Der Auftrag gehört zu einem anderen Profil.")
+        return job
+
+    def _job_cancelled(self, job_id: str) -> bool:
+        with self._lock:
+            return job_id in self._cancelled
+
+    @staticmethod
+    def _stop_process(process: subprocess.Popen) -> None:
+        if process.poll() is not None:
+            return
+        try:
+            if os.name == "nt":
+                process.terminate()
+            else:
+                os.killpg(process.pid, signal.SIGTERM)
+            process.wait(timeout=2)
+        except (OSError, subprocess.TimeoutExpired):
+            try:
+                if os.name == "nt":
+                    process.kill()
+                else:
+                    os.killpg(process.pid, signal.SIGKILL)
+            except OSError:
+                pass
+
     def secret_status(self, config: dict) -> dict:
         secrets = self._load_secrets(config)
         return {
@@ -955,6 +1042,10 @@ class WorkbenchManager:
                 "Kachel „HTML-Präsentation erstellen“.\n",
                 encoding="utf-8",
             )
+            if self._job_cancelled(job_id):
+                raise WorkbenchJobCancelled(
+                    "Der Werkstattauftrag wurde durch den Nutzer abgebrochen."
+                )
             self.jobs.update_step(
                 job_id,
                 current["steps"][1]["step_id"],
@@ -969,6 +1060,8 @@ class WorkbenchManager:
                 "Präsentationsgrundgerüst ist bereit.",
                 {"summary": f"Öffne: {output_path / 'briefing.html'}"},
             )
+        except WorkbenchJobCancelled:
+            pass
         except Exception as exc:  # pylint: disable=broad-except
             self.jobs.fail(
                 job_id,
@@ -1040,6 +1133,7 @@ class WorkbenchManager:
                 harness=harness,
                 phase="Recherche und Folienplan",
                 runner=lambda: self._run_harness(
+                    job_id=job_id,
                     harness=harness,
                     executable=executable,
                     project_path=project_path,
@@ -1082,6 +1176,8 @@ class WorkbenchManager:
                     "approval_word": "FREIGABE",
                 },
             )
+        except WorkbenchJobCancelled:
+            pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
                 self.jobs.fail(
@@ -1126,6 +1222,7 @@ class WorkbenchManager:
                 harness=harness,
                 phase="HTML-Präsentation, Medien und Qualitätsprüfung",
                 runner=lambda: self._run_harness(
+                    job_id=job_id,
                     harness=harness,
                     executable=executable,
                     project_path=project_path,
@@ -1190,6 +1287,8 @@ class WorkbenchManager:
                     "review_path": str(output_path / "review.html"),
                 },
             )
+        except WorkbenchJobCancelled:
+            pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
                 current = self.jobs.get(job_id)
@@ -1511,6 +1610,7 @@ class WorkbenchManager:
                 harness=harness,
                 phase="Prüfung und Gutachtenentwurf",
                 runner=lambda: self._run_harness(
+                    job_id=job_id,
                     harness=harness,
                     executable=executable,
                     project_path=project_path,
@@ -1550,6 +1650,8 @@ class WorkbenchManager:
                 "Gutachter-Auftrag abgeschlossen.",
                 {"summary": output[-8000:]},
             )
+        except WorkbenchJobCancelled:
+            pass
         except Exception as exc:  # pylint: disable=broad-except
             try:
                 self.jobs.fail(
@@ -1773,6 +1875,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
     def _run_harness(
         self,
         *,
+        job_id: str,
         harness: str,
         executable: str,
         project_path: Path,
@@ -1786,6 +1889,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
     ) -> str:
         if harness == "codex":
             return self._run_codex(
+                job_id=job_id,
                 executable=executable,
                 project_path=project_path,
                 prompt=prompt,
@@ -1800,6 +1904,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
             )
         if harness == "opencode":
             return self._run_opencode(
+                job_id=job_id,
                 executable=executable,
                 project_path=project_path,
                 prompt=prompt,
@@ -1835,27 +1940,44 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
             worker.join(20)
             if not worker.is_alive():
                 break
+            if self._job_cancelled(job_id):
+                worker.join(2)
+                raise WorkbenchJobCancelled(
+                    "Der Werkstattauftrag wurde durch den Nutzer abgebrochen."
+                )
             elapsed = int(time.monotonic() - started)
-            self.jobs.set_status(
-                job_id,
-                "RUNNING",
-                (
-                    f"{self._harness_name(harness)} arbeitet weiter an „{phase}“ "
-                    f"· bisher {elapsed // 60} min {elapsed % 60:02d} s."
-                ),
-                {
-                    "heartbeat": True,
-                    "phase": phase,
-                    "elapsed_seconds": elapsed,
-                },
+            try:
+                self.jobs.set_status(
+                    job_id,
+                    "RUNNING",
+                    (
+                        f"{self._harness_name(harness)} arbeitet weiter an „{phase}“ "
+                        f"· bisher {elapsed // 60} min {elapsed % 60:02d} s."
+                    ),
+                    {
+                        "heartbeat": True,
+                        "phase": phase,
+                        "elapsed_seconds": elapsed,
+                    },
+                )
+            except ValueError:
+                if self._job_cancelled(job_id):
+                    raise WorkbenchJobCancelled(
+                        "Der Werkstattauftrag wurde durch den Nutzer abgebrochen."
+                    )
+                raise
+        if self._job_cancelled(job_id):
+            raise WorkbenchJobCancelled(
+                "Der Werkstattauftrag wurde durch den Nutzer abgebrochen."
             )
         if errors:
             raise errors[0]
         return result.get("output", "")
 
-    @staticmethod
     def _run_codex(
+        self,
         *,
+        job_id: str = "",
         executable: str,
         project_path: Path,
         prompt: str,
@@ -1895,15 +2017,13 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
         )
         run_command = subprocess.list2cmdline(command) if use_shell else command
         try:
-            completed = subprocess.run(
+            completed = self._execute_process(
                 run_command,
-                input=prompt,
-                text=True,
-                capture_output=True,
+                job_id=job_id,
+                input_text=prompt,
                 timeout=timeout,
-                check=False,
                 shell=use_shell,
-                cwd=str(project_path),
+                cwd=project_path,
                 env={
                     **os.environ,
                     "NO_COLOR": "1",
@@ -1913,7 +2033,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
                         if value is not None
                     },
                 },
-                creationflags=creation_flags,
+                creation_flags=creation_flags,
             )
         except subprocess.TimeoutExpired as exc:
             raise TimeoutError(
@@ -1929,9 +2049,10 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
             )
         return (completed.stdout or "").strip()
 
-    @staticmethod
     def _run_opencode(
+        self,
         *,
+        job_id: str = "",
         executable: str,
         project_path: Path,
         prompt: str,
@@ -1960,14 +2081,13 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
         )
         run_command = subprocess.list2cmdline(command) if use_shell else command
         try:
-            completed = subprocess.run(
+            completed = self._execute_process(
                 run_command,
-                text=True,
-                capture_output=True,
+                job_id=job_id,
+                input_text=None,
                 timeout=timeout,
-                check=False,
                 shell=use_shell,
-                cwd=str(project_path),
+                cwd=project_path,
                 env={
                     **os.environ,
                     "NO_COLOR": "1",
@@ -1977,7 +2097,7 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
                         if value is not None
                     },
                 },
-                creationflags=creation_flags,
+                creation_flags=creation_flags,
             )
         except subprocess.TimeoutExpired as exc:
             raise TimeoutError(
@@ -1992,6 +2112,56 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
                 f"{details[-2500:]}"
             )
         return (completed.stdout or "").strip()
+
+    def _execute_process(
+        self,
+        command,
+        *,
+        job_id: str,
+        input_text: Optional[str],
+        timeout: int,
+        shell: bool,
+        cwd: Path,
+        env: dict,
+        creation_flags: int,
+    ) -> subprocess.CompletedProcess:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE if input_text is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=shell,
+            cwd=str(cwd),
+            env=env,
+            creationflags=creation_flags,
+            start_new_session=os.name != "nt",
+        )
+        if job_id:
+            with self._lock:
+                if job_id in self._cancelled:
+                    self._stop_process(process)
+                    raise WorkbenchJobCancelled(
+                        "Der Werkstattauftrag wurde durch den Nutzer abgebrochen."
+                    )
+                self._processes[job_id] = process
+        try:
+            stdout, stderr = process.communicate(input=input_text, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self._stop_process(process)
+            stdout, stderr = process.communicate()
+            raise
+        finally:
+            if job_id:
+                with self._lock:
+                    if self._processes.get(job_id) is process:
+                        self._processes.pop(job_id, None)
+        return subprocess.CompletedProcess(
+            command,
+            process.returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
 
     @staticmethod
     def _opencode_models(config: dict) -> list[dict]:

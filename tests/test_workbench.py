@@ -125,6 +125,45 @@ def test_workbench_rejects_non_pdf_input(tmp_path):
         )
 
 
+def test_workbench_job_can_be_cancelled_then_deleted(tmp_path):
+    manager = WorkbenchManager(tmp_path)
+    job = manager.jobs.create_job(
+        "Präsentation erstellen",
+        source="workbench",
+        metadata={"profile": "PRIVAT"},
+        plan=[{"title": "Planen"}, {"title": "Bauen"}],
+    )
+    manager.jobs.start(job["job_id"])
+    manager.jobs.update_step(
+        job["job_id"], job["steps"][0]["step_id"], "RUNNING"
+    )
+
+    cancelled = manager.cancel_job(job["job_id"], "PRIVAT")
+
+    assert cancelled["job"]["status"] == "CANCELLED"
+    assert all(
+        step["status"] == "SKIPPED" for step in cancelled["job"]["steps"]
+    )
+    deleted = manager.delete_job(job["job_id"], "PRIVAT")
+    assert deleted == {"ok": True, "deleted_job_id": job["job_id"]}
+    with pytest.raises(ValueError, match="nicht gefunden"):
+        manager.jobs.get(job["job_id"])
+
+
+def test_workbench_job_actions_are_profile_scoped(tmp_path):
+    manager = WorkbenchManager(tmp_path)
+    job = manager.jobs.create_job(
+        "Privater Auftrag",
+        source="workbench",
+        metadata={"profile": "PRIVAT"},
+    )
+
+    with pytest.raises(PermissionError, match="anderen Profil"):
+        manager.cancel_job(job["job_id"], "BIZ")
+    with pytest.raises(ValueError, match="zuerst abgebrochen"):
+        manager.jobs.delete(job["job_id"])
+
+
 def test_opencode_runner_uses_running_service_model_and_files(
     monkeypatch, tmp_path
 ):
@@ -132,14 +171,15 @@ def test_opencode_runner_uses_running_service_model_and_files(
     thesis = tmp_path / "Thesis.pdf"
     thesis.write_bytes(b"%PDF-test")
 
-    def fake_run(command, **kwargs):
+    def fake_execute(command, **kwargs):
         captured["command"] = command
         captured["kwargs"] = kwargs
         return subprocess.CompletedProcess(command, 0, stdout="Fertig", stderr="")
 
-    monkeypatch.setattr(workbench.subprocess, "run", fake_run)
+    manager = WorkbenchManager(tmp_path)
+    monkeypatch.setattr(manager, "_execute_process", fake_execute)
 
-    result = WorkbenchManager._run_opencode(
+    result = manager._run_opencode(
         executable="/bin/opencode",
         project_path=tmp_path,
         prompt="Begutachten",
@@ -168,14 +208,15 @@ def test_codex_runner_uses_saved_chatgpt_login_model_and_stdin(
     attachment = attachment_dir / "thesis.pdf"
     attachment.write_bytes(b"%PDF")
 
-    def fake_run(command, **kwargs):
+    def fake_execute(command, **kwargs):
         captured["command"] = command
         captured["kwargs"] = kwargs
         return subprocess.CompletedProcess(command, 0, stdout="Plan erstellt", stderr="")
 
-    monkeypatch.setattr(workbench.subprocess, "run", fake_run)
+    manager = WorkbenchManager(tmp_path)
+    monkeypatch.setattr(manager, "_execute_process", fake_execute)
 
-    result = WorkbenchManager._run_codex(
+    result = manager._run_codex(
         executable="/bin/codex",
         project_path=tmp_path,
         prompt="Erstelle einen Präsentationsplan.",
@@ -192,7 +233,7 @@ def test_codex_runner_uses_saved_chatgpt_login_model_and_stdin(
     assert command[command.index("--model") + 1] == "gpt-5.6-terra"
     assert command[command.index("--add-dir") + 1] == str(attachment_dir)
     assert "--ephemeral" in command
-    assert captured["kwargs"]["input"] == "Erstelle einen Präsentationsplan."
+    assert captured["kwargs"]["input_text"] == "Erstelle einen Präsentationsplan."
 
 
 def test_codex_model_selection_is_limited_to_visible_models():
@@ -492,13 +533,14 @@ def test_workbench_provider_secrets_are_persistent_but_never_returned(tmp_path):
 
 
 def test_opencode_timeout_error_never_exposes_full_command(monkeypatch, tmp_path):
-    def fake_run(command, **kwargs):
+    def fake_execute(command, **kwargs):
         raise subprocess.TimeoutExpired(command, kwargs["timeout"])
 
-    monkeypatch.setattr(workbench.subprocess, "run", fake_run)
+    manager = WorkbenchManager(tmp_path)
+    monkeypatch.setattr(manager, "_execute_process", fake_execute)
 
     with pytest.raises(TimeoutError, match="Zeitlimit von 15 Minuten") as error:
-        WorkbenchManager._run_opencode(
+        manager._run_opencode(
             executable="/bin/opencode",
             project_path=tmp_path,
             prompt="privater sehr langer Prompt",
