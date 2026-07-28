@@ -27,3 +27,12 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert "'/workbench/catalog'" in html
     assert "'/workbench/run'" in html
     assert "#werkstatt" in html
+    assert 'id="presentationPanel"' in html
+    assert 'id="presentationScaffoldPanel"' in html
+    assert 'id="presentationPlanEditor"' in html
+    assert 'id="jobCenterToggle"' in html
+    assert "'/workbench/jobs?limit=40'" in html
+    assert "'/workbench/presentation/approve'" in html
+    assert "'/workbench/secrets'" in html
+    assert "Kie.ai API-Schlüssel" in html
+    assert "fal.ai API-Schlüssel" in html

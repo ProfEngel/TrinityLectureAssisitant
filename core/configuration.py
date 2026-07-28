@@ -138,6 +138,11 @@ def default_config(platform_name=None):
         "workbench": {
             "enabled": True,
             "default_harness": "opencode",
+            "presentation": {
+                "image_provider": "kie",
+                "image_model": "nano-banana-2",
+                "fallback_image_model": "fal-ai/nano-banana-2",
+            },
         },
         "server": {
             "host": "127.0.0.1",

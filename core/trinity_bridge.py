@@ -1116,6 +1116,12 @@ class TrinityBridge:
         """Workspace/session changes are user actions, not privileged settings."""
         return user is not None
 
+    def can_manage_workbench_secrets(self, handler, user):
+        """Provider secrets are writable only locally or by an account admin."""
+        if self.auth_enabled:
+            return bool(user and user.get("role") == "admin")
+        return self.is_loopback_request(handler)
+
     def get_web_settings(self):
         return {
             "ok": True,
@@ -1770,6 +1776,13 @@ def make_handler(bridge):
                         200,
                         {"ok": True, "job": bridge.workbench.public_job(job_id)},
                     )
+                elif parsed.path == "/workbench/jobs":
+                    limit = int(query.get("limit", ["30"])[0] or 30)
+                    _json_response(
+                        self,
+                        200,
+                        {"ok": True, "jobs": bridge.workbench.public_jobs(limit)},
+                    )
                 elif parsed.path == "/prompts":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError(
@@ -1866,6 +1879,27 @@ def make_handler(bridge):
                         bridge.workbench.submit(
                             _read_json(self), config, bridge.profile
                         ),
+                    )
+                elif parsed.path == "/workbench/presentation/approve":
+                    config = load_config(bridge.config_path)
+                    _json_response(
+                        self,
+                        202,
+                        bridge.workbench.approve_presentation(
+                            _read_json(self), config, bridge.profile
+                        ),
+                    )
+                elif parsed.path == "/workbench/secrets":
+                    if not bridge.can_manage_workbench_secrets(self, user):
+                        raise PermissionError(
+                            "Provider-Schlüssel können nur lokal oder durch "
+                            "Administratoren geändert werden."
+                        )
+                    config = load_config(bridge.config_path)
+                    _json_response(
+                        self,
+                        200,
+                        bridge.workbench.save_secrets(_read_json(self), config),
                     )
                 elif parsed.path == "/stt":
                     _json_response(self, 200, bridge.send_stt(_read_json(self), user=user))
