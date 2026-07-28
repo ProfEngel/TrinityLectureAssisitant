@@ -178,6 +178,7 @@ def test_opencode_runner_uses_running_service_model_and_files(
 
     manager = WorkbenchManager(tmp_path)
     monkeypatch.setattr(manager, "_execute_process", fake_execute)
+    monkeypatch.setattr(manager, "_preflight_opencode", lambda **_kwargs: None)
 
     result = manager._run_opencode(
         executable="/bin/opencode",
@@ -197,6 +198,35 @@ def test_opencode_runner_uses_running_service_model_and_files(
     assert command[command.index("--dir") + 1] == str(tmp_path)
     assert command[command.index("--file") + 1] == str(thesis)
     assert command[command.index("--model") + 1] == "ws_home/model"
+
+
+def test_workbench_passes_real_opencode_agent_instead_of_domain_skill(
+    monkeypatch, tmp_path
+):
+    captured = {}
+    manager = WorkbenchManager(tmp_path)
+
+    def fake_run_opencode(**kwargs):
+        captured.update(kwargs)
+        return "Fertig"
+
+    monkeypatch.setattr(manager, "_run_opencode", fake_run_opencode)
+
+    result = manager._run_harness(
+        job_id="job_test",
+        harness="opencode",
+        executable="/bin/opencode",
+        project_path=tmp_path,
+        prompt="Arbeite nach dem Skill.",
+        attachments=[],
+        model="ws_home/model",
+        skill="html-praesentationswerkstatt",
+        harness_config={"agent": "build", "server_url": ""},
+        timeout=120,
+    )
+
+    assert result == "Fertig"
+    assert captured["agent"] == "build"
 
 
 def test_codex_runner_uses_saved_chatgpt_login_model_and_stdin(
@@ -236,6 +266,33 @@ def test_codex_runner_uses_saved_chatgpt_login_model_and_stdin(
     assert captured["kwargs"]["input_text"] == "Erstelle einen Präsentationsplan."
 
 
+def test_codex_runner_attaches_visuals_to_multimodal_model(monkeypatch, tmp_path):
+    captured = {}
+    image = tmp_path / "visual.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\nvisual")
+
+    def fake_execute(command, **kwargs):
+        captured["command"] = command
+        return subprocess.CompletedProcess(command, 0, stdout="gesehen", stderr="")
+
+    manager = WorkbenchManager(tmp_path)
+    monkeypatch.setattr(manager, "_execute_process", fake_execute)
+
+    manager._run_codex(
+        executable="/bin/codex",
+        project_path=tmp_path,
+        prompt="Analysiere das Bild.",
+        attachments=[image],
+        model="gpt-5.6-sol",
+        sandbox="workspace-write",
+        ephemeral=True,
+        timeout=120,
+    )
+
+    command = captured["command"]
+    assert command[command.index("--image") + 1] == str(image.resolve())
+
+
 def test_codex_model_selection_is_limited_to_visible_models():
     assert (
         WorkbenchManager._selected_model(
@@ -257,6 +314,18 @@ def _wait_for_status(manager, job_id, statuses, timeout=3):
             return job
         time.sleep(0.01)
     raise AssertionError(f"Job {job_id} erreichte {statuses} nicht.")
+
+
+def _write_research_artifacts(output_path):
+    sources = output_path / "sources"
+    sources.mkdir(parents=True, exist_ok=True)
+    (sources / "sources.json").write_text(
+        '[{"id":"P1","title":"Geprüfte Quelle","url":"https://example.org"}]\n',
+        encoding="utf-8",
+    )
+    (sources / "source-overview.md").write_text(
+        "# Quellen\n\n- P1\n", encoding="utf-8"
+    )
 
 
 def test_presentation_scaffold_copies_complete_local_template(tmp_path):
@@ -309,6 +378,7 @@ def test_presentation_plan_waits_for_edited_approval_then_builds(
         calls.append(kwargs)
         output_path = Path(kwargs["extra_env"]["TRINITY_PRESENTATION_OUTPUT"])
         if len(calls) == 1:
+            _write_research_artifacts(output_path)
             (output_path / "presentation-plan.md").write_text(
                 "# Plan\n\n- slide-01: Einstieg\n", encoding="utf-8"
             )
@@ -368,7 +438,7 @@ def test_presentation_plan_waits_for_edited_approval_then_builds(
     assert "Neuer Einstieg" in (output / "presentation-plan.md").read_text()
     assert (output / "presentation.html").is_file()
     assert (output / "review.html").is_file()
-    assert calls[0]["agent"] == "html-praesentationswerkstatt"
+    assert calls[0]["agent"] == "build"
     assert calls[0]["timeout"] >= 900
     assert calls[1]["prompt"].startswith("FREIGABE")
 
@@ -392,6 +462,7 @@ def test_presentation_plan_accepts_empty_content_and_creates_own_structure(
 
     def fake_run_opencode(**kwargs):
         output_path = Path(kwargs["extra_env"]["TRINITY_PRESENTATION_OUTPUT"])
+        _write_research_artifacts(output_path)
         (output_path / "presentation-plan.md").write_text(
             "# Eigene Grobstruktur\n", encoding="utf-8"
         )
@@ -454,6 +525,7 @@ def test_presentation_modernization_requires_one_deck_and_creates_analysis_contr
     def fake_run_opencode(**kwargs):
         captured.update(kwargs)
         output_path = Path(kwargs["extra_env"]["TRINITY_PRESENTATION_OUTPUT"])
+        _write_research_artifacts(output_path)
         (output_path / "source-deck-analysis.md").write_text(
             "# Ausgangspräsentation\n", encoding="utf-8"
         )
@@ -538,6 +610,7 @@ def test_opencode_timeout_error_never_exposes_full_command(monkeypatch, tmp_path
 
     manager = WorkbenchManager(tmp_path)
     monkeypatch.setattr(manager, "_execute_process", fake_execute)
+    monkeypatch.setattr(manager, "_preflight_opencode", lambda **_kwargs: None)
 
     with pytest.raises(TimeoutError, match="Zeitlimit von 15 Minuten") as error:
         manager._run_opencode(
