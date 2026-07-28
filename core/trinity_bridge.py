@@ -1902,6 +1902,24 @@ def make_handler(bridge):
                             _read_json(self), config, bridge.profile
                         ),
                     )
+                elif parsed.path == "/workbench/job/cancel":
+                    payload = _read_json(self)
+                    _json_response(
+                        self,
+                        200,
+                        bridge.workbench.cancel_job(
+                            payload.get("job_id"), bridge.profile
+                        ),
+                    )
+                elif parsed.path == "/workbench/job/delete":
+                    payload = _read_json(self)
+                    _json_response(
+                        self,
+                        200,
+                        bridge.workbench.delete_job(
+                            payload.get("job_id"), bridge.profile
+                        ),
+                    )
                 elif parsed.path == "/workbench/secrets":
                     if not bridge.can_manage_workbench_secrets(self, user):
                         raise PermissionError(

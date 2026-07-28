@@ -131,6 +131,23 @@ class JobManager:
             identifiers = [row["job_id"] for row in conn.execute(query, params)]
         return [self.get(job_id) for job_id in identifiers]
 
+    def delete(self, job_id: str) -> None:
+        """Delete one finished job and its dependent records."""
+
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT status FROM jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"Job nicht gefunden: {job_id}")
+            if row["status"] not in TERMINAL_STATUSES:
+                raise ValueError(
+                    "Ein laufender Auftrag muss zuerst abgebrochen werden."
+                )
+            conn.execute("DELETE FROM job_events WHERE job_id = ?", (job_id,))
+            conn.execute("DELETE FROM job_steps WHERE job_id = ?", (job_id,))
+            conn.execute("DELETE FROM jobs WHERE job_id = ?", (job_id,))
+
     def set_status(
         self,
         job_id: str,
