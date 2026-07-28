@@ -1669,6 +1669,19 @@ def make_handler(bridge):
             if parsed.path in {"/", "/web"}:
                 _html_response(self, 200, render_web_ui(auth_enabled=bridge.auth_enabled))
                 return
+            if parsed.path == "/trinity-logo":
+                logo_path = bridge.core_dir / "icon.png"
+                if not logo_path.is_file():
+                    _json_response(self, 404, {"ok": False, "error": "not found"})
+                    return
+                data = logo_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Cache-Control", "public, max-age=86400")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if parsed.path == "/auth/status":
                 _json_response(
                     self,

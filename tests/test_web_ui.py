@@ -34,5 +34,12 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert "'/workbench/jobs?limit=40'" in html
     assert "'/workbench/presentation/approve'" in html
     assert "'/workbench/secrets'" in html
+    assert 'src="/trinity-logo"' in html
+    assert "Codex / ChatGPT oder OpenCode" in html
+    assert "updateHarnessFields" in html
+    assert "job-meter" in html
+    assert "Aktuell: Schritt" in html
+    assert "Eingaben dürfen dabei leer bleiben" in html
     assert "Kie.ai API-Schlüssel" in html
-    assert "fal.ai API-Schlüssel" in html
+    assert "gpt-image-2-text-to-image" not in html
+    assert "fal.ai API-Schlüssel · Fallback" not in html

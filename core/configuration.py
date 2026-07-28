@@ -90,6 +90,7 @@ def default_config(platform_name=None):
         "codex": {
             "enabled": False,
             "executable": "codex",
+            "model": "gpt-5.6-sol",
             "default_project": "",
             "projects": {},
             "sandbox": "workspace-write",
@@ -140,8 +141,7 @@ def default_config(platform_name=None):
             "default_harness": "opencode",
             "presentation": {
                 "image_provider": "kie",
-                "image_model": "nano-banana-2",
-                "fallback_image_model": "fal-ai/nano-banana-2",
+                "image_model": "gpt-image-2-text-to-image",
             },
         },
         "server": {
@@ -326,6 +326,15 @@ def _migrate_config(config, had_harness_routing=True, explicit_active_harnesses=
     elif not had_harness_routing:
         for agent_id, harnesses in defaults["agent_assignments"].items():
             assignments.setdefault(agent_id, list(harnesses))
+
+    presentation = config.setdefault("workbench", {}).setdefault("presentation", {})
+    if presentation.get("image_model") not in {
+        "gpt-image-2-text-to-image",
+        "nano-banana-2-lite",
+        "flux-2/pro-text-to-image",
+    }:
+        presentation["image_model"] = "gpt-image-2-text-to-image"
+    presentation.pop("fallback_image_model", None)
 
     # Older installations only had codex/opencode/pi enabled flags. When no
     # explicit role data existed yet, mirror those choices into the new layer.

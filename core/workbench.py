@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from job_manager import JobManager
-from platform_adapters import find_opencode_executable
+from platform_adapters import find_codex_executable, find_opencode_executable
 
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
@@ -42,14 +42,47 @@ PRESENTATION_ALLOWED_SUFFIXES = {
 }
 PRESENTATION_IMAGE_MODELS = {
     "kie": [
-        {"id": "nano-banana-2", "name": "Nano Banana 2"},
-        {"id": "google/nano-banana", "name": "Nano Banana"},
-    ],
-    "fal": [
-        {"id": "fal-ai/nano-banana-2", "name": "Nano Banana 2"},
-        {"id": "fal-ai/nano-banana-pro", "name": "Nano Banana Pro"},
+        {
+            "id": "gpt-image-2-text-to-image",
+            "name": "GPT Image 2 · Text zu Bild",
+        },
+        {
+            "id": "nano-banana-2-lite",
+            "name": "Nano Banana 2 Lite · schnell",
+        },
+        {
+            "id": "flux-2/pro-text-to-image",
+            "name": "FLUX.2 Pro · Text zu Bild",
+        },
     ],
 }
+CODEX_MODELS = [
+    {
+        "id": "gpt-5.6-sol",
+        "name": "GPT-5.6 Sol · höchste Qualität",
+        "provider": "Codex / ChatGPT",
+        "harness": "codex",
+    },
+    {
+        "id": "gpt-5.6-terra",
+        "name": "GPT-5.6 Terra · ausgewogen",
+        "provider": "Codex / ChatGPT",
+        "harness": "codex",
+    },
+    {
+        "id": "gpt-5.6-luna",
+        "name": "GPT-5.6 Luna · schnell",
+        "provider": "Codex / ChatGPT",
+        "harness": "codex",
+    },
+    {
+        "id": "gpt-5.5",
+        "name": "GPT-5.5 · bisheriges Modell",
+        "provider": "Codex / ChatGPT",
+        "harness": "codex",
+    },
+]
+CODEX_MODEL_IDS = {model["id"] for model in CODEX_MODELS}
 
 
 class WorkbenchManager:
@@ -68,10 +101,30 @@ class WorkbenchManager:
 
     def catalog(self, config: dict, profile: str) -> dict:
         opencode = config.get("opencode", {})
-        projects = self._configured_projects(opencode)
+        codex = config.get("codex", {})
+        workbench = config.get("workbench", {})
+        default_harness = str(
+            workbench.get("default_harness") or "opencode"
+        ).strip().casefold()
+        if default_harness not in {"opencode", "codex"}:
+            default_harness = "opencode"
+        harness_configs = {"opencode": opencode, "codex": codex}
+        projects_by_harness = {
+            harness_id: [
+                {"id": alias, "name": alias, "path": str(path)}
+                for alias, path in self._configured_projects(section).items()
+            ]
+            for harness_id, section in harness_configs.items()
+        }
+        default_config = harness_configs[default_harness]
+        projects = self._configured_projects(default_config)
         normalized_profile = str(profile or "PRIVAT").upper()
-        presentation = config.get("workbench", {}).get("presentation", {})
+        presentation = workbench.get("presentation", {})
         secret_status = self.secret_status(config)
+        opencode_models = [
+            {**model, "harness": "opencode"}
+            for model in self._opencode_models(opencode)
+        ]
         return {
             "ok": True,
             "title": "Trinity-Werkstatt",
@@ -87,26 +140,54 @@ class WorkbenchManager:
                         "Nutzt den laufenden OpenCode-Dienst oder startet "
                         "einen geschützten lokalen Lauf."
                     ),
-                }
+                },
+                {
+                    "id": "codex",
+                    "name": "Codex / ChatGPT",
+                    "available": bool(
+                        codex.get("enabled") and find_codex_executable()
+                    ),
+                    "description": (
+                        "Nutzt Codex mit deiner vorhandenen ChatGPT-Anmeldung "
+                        "und einem ausdrücklich gewählten GPT-Modell."
+                    ),
+                },
             ],
-            "models": self._opencode_models(opencode),
+            "models": opencode_models + CODEX_MODELS,
+            "models_by_harness": {
+                "opencode": opencode_models,
+                "codex": CODEX_MODELS,
+            },
             "projects": [
                 {"id": alias, "name": alias, "path": str(path)}
                 for alias, path in projects.items()
             ],
-            "default_project": str(opencode.get("default_project") or ""),
-            "default_model": str(opencode.get("model") or ""),
+            "projects_by_harness": projects_by_harness,
+            "default_harness": default_harness,
+            "default_project": str(default_config.get("default_project") or ""),
+            "default_project_by_harness": {
+                harness_id: str(section.get("default_project") or "")
+                for harness_id, section in harness_configs.items()
+            },
+            "default_model": str(
+                (
+                    codex.get("model")
+                    if default_harness == "codex"
+                    else opencode.get("model")
+                )
+                or ("gpt-5.6-sol" if default_harness == "codex" else "")
+            ),
+            "default_model_by_harness": {
+                "opencode": str(opencode.get("model") or ""),
+                "codex": str(codex.get("model") or "gpt-5.6-sol"),
+            },
             "presentation": {
                 "default_image_provider": str(
                     presentation.get("image_provider") or "kie"
                 ),
                 "default_image_model": str(
-                    presentation.get("image_model") or "nano-banana-2"
-                ),
-                "fallback_image_provider": "fal",
-                "fallback_image_model": str(
-                    presentation.get("fallback_image_model")
-                    or "fal-ai/nano-banana-2"
+                    presentation.get("image_model")
+                    or "gpt-image-2-text-to-image"
                 ),
                 "image_providers": [
                     {
@@ -115,13 +196,6 @@ class WorkbenchManager:
                         "configured": secret_status["kie_configured"],
                         "preferred": True,
                         "models": PRESENTATION_IMAGE_MODELS["kie"],
-                    },
-                    {
-                        "id": "fal",
-                        "name": "fal.ai",
-                        "configured": secret_status["fal_configured"],
-                        "preferred": False,
-                        "models": PRESENTATION_IMAGE_MODELS["fal"],
                     },
                 ],
             },
@@ -142,7 +216,7 @@ class WorkbenchManager:
                             "available": True,
                             "profiles": ["BIZ", "PRIVAT", "TEST"],
                             "agent": "thesis-reviewer",
-                            "compatible_harnesses": ["opencode"],
+                            "compatible_harnesses": ["opencode", "codex"],
                         }
                     ],
                 },
@@ -162,7 +236,7 @@ class WorkbenchManager:
                             "available": True,
                             "profiles": ["BIZ", "PRIVAT", "TEST"],
                             "agent": "html-praesentationswerkstatt",
-                            "compatible_harnesses": ["opencode"],
+                            "compatible_harnesses": ["opencode", "codex"],
                         },
                         {
                             "id": PRESENTATION_SCAFFOLD_TILE_ID,
@@ -211,28 +285,13 @@ class WorkbenchManager:
 
     def _submit_thesis(self, payload: dict, config: dict, profile: str) -> dict:
         tile_id = THESIS_TILE_ID
-        harness = str(payload.get("harness") or "opencode").strip().casefold()
-        if harness != "opencode":
-            raise ValueError("Der Gutachter-Pilot ist derzeit für OpenCode freigegeben.")
-
-        opencode = config.get("opencode", {})
-        if not opencode.get("enabled"):
-            raise ValueError("OpenCode ist in Trinity noch nicht aktiviert.")
-        executable = find_opencode_executable()
-        if not executable:
-            raise ValueError("OpenCode wurde auf diesem Rechner nicht gefunden.")
-
-        projects = self._configured_projects(opencode)
-        alias = str(
-            payload.get("project")
-            or opencode.get("default_project")
-            or (next(iter(projects)) if len(projects) == 1 else "")
-        ).strip()
-        project_path = projects.get(alias)
-        if project_path is None:
-            raise ValueError(
-                "Bitte wähle einen in Trinity freigegebenen OpenCode-Projektordner."
-            )
+        (
+            harness,
+            harness_config,
+            executable,
+            alias,
+            project_path,
+        ) = self._harness_context(payload, config)
 
         review_type = str(payload.get("review_type") or "erstgutachten").strip()
         if review_type not in {"erstgutachten", "zweitgutachten"}:
@@ -248,11 +307,11 @@ class WorkbenchManager:
                 + ("Erstgutachten" if review_type == "erstgutachten" else "Zweitgutachten")
             ),
             source="workbench",
-            route="opencode",
+            route=harness,
             risk_level="medium",
             plan=[
                 {"title": "Eingaben sicher übernehmen", "quality_gate": True},
-                {"title": "Gutachter-Agent mit OpenCode ausführen"},
+                {"title": f"Gutachter-Agent mit {self._harness_name(harness)} ausführen"},
                 {"title": "Ergebnis und Pflichtbestandteile prüfen", "quality_gate": True},
                 {"title": "Abschlussbericht bereitstellen", "quality_gate": True},
             ],
@@ -260,7 +319,7 @@ class WorkbenchManager:
                 "tile_id": tile_id,
                 "agent": "thesis-reviewer",
                 "harness": harness,
-                "model": str(payload.get("model") or opencode.get("model") or ""),
+                "model": self._selected_model(payload, harness, harness_config),
                 "project": alias,
                 "profile": str(profile or ""),
                 "review_type": review_type,
@@ -276,7 +335,8 @@ class WorkbenchManager:
                 "job_dir": job_dir,
                 "staged": staged,
                 "payload": payload,
-                "opencode": opencode,
+                "harness": harness,
+                "harness_config": harness_config,
                 "executable": executable,
                 "project_alias": alias,
                 "project_path": project_path,
@@ -293,8 +353,14 @@ class WorkbenchManager:
     def _submit_presentation_scaffold(
         self, payload: dict, config: dict, profile: str
     ) -> dict:
-        opencode = config.get("opencode", {})
-        alias, project_path = self._project_context(payload, opencode)
+        default_harness = str(
+            config.get("workbench", {}).get("default_harness") or "opencode"
+        ).strip().casefold()
+        project_config = config.get(
+            default_harness if default_harness in {"opencode", "codex"} else "opencode",
+            {},
+        )
+        alias, project_path = self._project_context(payload, project_config)
         output_path = self._project_member(
             project_path,
             payload.get("output_path"),
@@ -346,19 +412,13 @@ class WorkbenchManager:
     def _submit_presentation_plan(
         self, payload: dict, config: dict, profile: str
     ) -> dict:
-        harness = str(payload.get("harness") or "opencode").strip().casefold()
-        if harness != "opencode":
-            raise ValueError(
-                "Die HTML-Präsentationswerkstatt ist derzeit für OpenCode freigegeben."
-            )
-        opencode = config.get("opencode", {})
-        if not opencode.get("enabled"):
-            raise ValueError("OpenCode ist in Trinity noch nicht aktiviert.")
-        executable = find_opencode_executable()
-        if not executable:
-            raise ValueError("OpenCode wurde auf diesem Rechner nicht gefunden.")
-
-        alias, project_path = self._project_context(payload, opencode)
+        (
+            harness,
+            harness_config,
+            executable,
+            alias,
+            project_path,
+        ) = self._harness_context(payload, config)
         source_path = None
         if str(payload.get("source_path") or "").strip():
             source_path = self._project_member(
@@ -368,9 +428,16 @@ class WorkbenchManager:
                 require_exists=True,
                 allow_project_root=True,
             )
+        title_input = str(payload.get("title") or "").strip()
+        raw_output_path = str(payload.get("output_path") or "").strip()
+        if not raw_output_path:
+            raw_output_path = (
+                "HTML-Präsentationen/"
+                + (title_input or f"Neuer Entwurf {time.strftime('%Y-%m-%d_%H%M')}")
+            )
         output_path = self._project_member(
             project_path,
-            payload.get("output_path"),
+            raw_output_path,
             label="Ausgabeordner",
             require_exists=False,
             allow_project_root=False,
@@ -381,31 +448,27 @@ class WorkbenchManager:
                 "Präsentation bitte einen neuen, sprechenden Ordner wählen."
             )
 
-        title = str(payload.get("title") or "").strip()
+        title = title_input or output_path.name or "Neue Präsentation"
         outline = str(payload.get("outline") or "").strip()
-        if not title:
-            raise ValueError("Die Präsentation braucht einen Titel.")
-        if not outline:
-            raise ValueError("Bitte eine Grobstruktur oder Kernidee eingeben.")
+        payload = {**payload, "title": title, "output_path": raw_output_path}
         duration = self._optional_int(payload.get("duration_minutes"), 1, 480)
         slide_count = self._optional_int(payload.get("slide_count"), 3, 100)
-        if duration is None and slide_count is None:
-            raise ValueError("Bitte Vortragsdauer oder gewünschte Folienzahl angeben.")
 
         provider = str(payload.get("image_provider") or "kie").strip().casefold()
-        if provider not in PRESENTATION_IMAGE_MODELS:
-            raise ValueError("Bildprovider muss Kie.ai oder fal.ai sein.")
+        if provider != "kie":
+            raise ValueError("Für diese Werkstatt ist derzeit nur Kie.ai freigegeben.")
         image_model = str(payload.get("image_model") or "").strip()
         if not image_model:
             image_model = PRESENTATION_IMAGE_MODELS[provider][0]["id"]
-        fallback_model = str(
-            payload.get("fallback_image_model") or "fal-ai/nano-banana-2"
-        ).strip()
+        if image_model not in {
+            model["id"] for model in PRESENTATION_IMAGE_MODELS["kie"]
+        }:
+            raise ValueError("Bitte eines der freigegebenen Kie.ai-Modelle wählen.")
 
         job = self.jobs.create_job(
             title=f"HTML-Präsentation · {title}",
             source="workbench",
-            route="opencode",
+            route=harness,
             risk_level="medium",
             plan=[
                 {"title": "Eingaben, Materialien und Pfade übernehmen", "quality_gate": True},
@@ -418,7 +481,7 @@ class WorkbenchManager:
                 "tile_id": PRESENTATION_BUILD_TILE_ID,
                 "agent": "html-praesentationswerkstatt",
                 "harness": harness,
-                "model": str(payload.get("model") or opencode.get("model") or ""),
+                "model": self._selected_model(payload, harness, harness_config),
                 "project": alias,
                 "profile": str(profile or ""),
                 "title": title,
@@ -428,8 +491,6 @@ class WorkbenchManager:
                 "output_path": str(output_path.relative_to(project_path)),
                 "image_provider": provider,
                 "image_model": image_model,
-                "fallback_image_provider": "fal",
-                "fallback_image_model": fallback_model,
             },
         )
         job_dir = self.upload_root / job["job_id"]
@@ -455,8 +516,6 @@ class WorkbenchManager:
             "output_path": str(output_path),
             "image_provider": provider,
             "image_model": image_model,
-            "fallback_image_provider": "fal",
-            "fallback_image_model": fallback_model,
             "reference_files": [item["name"] for item in preserved],
         }
         (output_path / "presentation-request.json").write_text(
@@ -470,7 +529,8 @@ class WorkbenchManager:
                 "job_id": job["job_id"],
                 "job_dir": job_dir,
                 "payload": payload,
-                "opencode": opencode,
+                "harness": harness,
+                "harness_config": harness_config,
                 "executable": executable,
                 "project_alias": alias,
                 "project_path": project_path,
@@ -479,7 +539,6 @@ class WorkbenchManager:
                 "preserved": preserved,
                 "provider": provider,
                 "image_model": image_model,
-                "fallback_model": fallback_model,
                 "config": config,
             },
             daemon=True,
@@ -511,12 +570,15 @@ class WorkbenchManager:
         if len(plan_text.encode("utf-8")) > 300_000:
             raise ValueError("Der Präsentationsplan ist ungewöhnlich groß.")
 
-        opencode = config.get("opencode", {})
-        executable = find_opencode_executable()
-        if not opencode.get("enabled") or not executable:
-            raise ValueError("OpenCode ist für die Fortsetzung nicht verfügbar.")
+        harness = str(metadata.get("harness") or "opencode").strip().casefold()
+        harness_config = config.get(harness, {})
+        executable = self._find_harness_executable(harness)
+        if not harness_config.get("enabled") or not executable:
+            raise ValueError(
+                f"{self._harness_name(harness)} ist für die Fortsetzung nicht verfügbar."
+            )
         alias = str(metadata.get("project") or "")
-        projects = self._configured_projects(opencode)
+        projects = self._configured_projects(harness_config)
         project_path = projects.get(alias)
         if project_path is None:
             raise ValueError("Der freigegebene Projektordner ist nicht mehr verfügbar.")
@@ -546,7 +608,8 @@ class WorkbenchManager:
             target=self._run_presentation_build,
             kwargs={
                 "job_id": job_id,
-                "opencode": opencode,
+                "harness": harness,
+                "harness_config": harness_config,
                 "executable": executable,
                 "project_path": project_path,
                 "output_path": output_path,
@@ -590,14 +653,13 @@ class WorkbenchManager:
         return {
             "ok": True,
             "kie_configured": bool(secrets.get("kie_ai")),
-            "fal_configured": bool(secrets.get("fal_ai")),
         }
 
     def save_secrets(self, payload: dict, config: dict) -> dict:
         if not isinstance(payload, dict):
             raise ValueError("API-Schlüssel müssen als Objekt übergeben werden.")
         secrets = self._load_secrets(config)
-        for key in ("kie_ai", "fal_ai"):
+        for key in ("kie_ai",):
             if payload.get(f"clear_{key}"):
                 secrets.pop(key, None)
                 continue
@@ -634,6 +696,18 @@ class WorkbenchManager:
             step.get("status") in {"SUCCEEDED", "SKIPPED"}
             for step in job.get("steps", [])
         )
+        current_step = next(
+            (
+                step
+                for step in job.get("steps", [])
+                if step.get("status") == "RUNNING"
+            ),
+            None,
+        )
+        total_steps = len(job.get("steps", []))
+        progress_percent = (
+            int((completed_steps / total_steps) * 100) if total_steps else 0
+        )
         terminal = job.get("status") in {
             "SUCCEEDED",
             "FAILED",
@@ -646,7 +720,16 @@ class WorkbenchManager:
             "events": events,
             "progress": {
                 "completed_steps": completed_steps,
-                "total_steps": len(job.get("steps", [])),
+                "total_steps": total_steps,
+                "percent": progress_percent,
+                "current_step": (
+                    {
+                        "position": current_step.get("position"),
+                        "title": current_step.get("title"),
+                    }
+                    if current_step
+                    else None
+                ),
             },
             "elapsed_seconds": max(
                 0, int(float(elapsed_until or 0) - float(job.get("created_at") or 0))
@@ -712,7 +795,8 @@ class WorkbenchManager:
         job_id: str,
         job_dir: Path,
         payload: dict,
-        opencode: dict,
+        harness: str,
+        harness_config: dict,
         executable: str,
         project_alias: str,
         project_path: Path,
@@ -721,12 +805,15 @@ class WorkbenchManager:
         preserved: list[dict],
         provider: str,
         image_model: str,
-        fallback_model: str,
         config: dict,
     ) -> None:
         try:
             current = self.jobs.start(
-                job_id, "Präsentationsauftrag wurde an OpenCode übergeben."
+                job_id,
+                (
+                    "Präsentationsauftrag wurde an "
+                    f"{self._harness_name(harness)} übergeben."
+                ),
             )
             self.jobs.update_step(
                 job_id,
@@ -753,22 +840,28 @@ class WorkbenchManager:
                 preserved=preserved,
                 provider=provider,
                 image_model=image_model,
-                fallback_model=fallback_model,
                 secret_status=self.secret_status(config),
             )
-            output = self._run_opencode(
-                executable=executable,
-                project_path=project_path,
-                prompt=prompt,
-                attachments=[item["path"] for item in preserved],
-                model=str(payload.get("model") or opencode.get("model") or "").strip(),
-                agent="html-praesentationswerkstatt",
-                server_url=str(opencode.get("server_url") or "").strip(),
-                timeout=self._bounded_int(
-                    opencode.get("timeout_seconds"), 1800, 60, 7200
-                ),
-                extra_env=self._presentation_environment(
-                    config, provider, image_model, fallback_model, output_path
+            timeout = self._bounded_int(
+                harness_config.get("timeout_seconds"), 1800, 900, 7200
+            )
+            output = self._run_harness_with_heartbeat(
+                job_id=job_id,
+                harness=harness,
+                phase="Recherche und Folienplan",
+                runner=lambda: self._run_harness(
+                    harness=harness,
+                    executable=executable,
+                    project_path=project_path,
+                    prompt=prompt,
+                    attachments=[item["path"] for item in preserved],
+                    model=self._selected_model(payload, harness, harness_config),
+                    agent="html-praesentationswerkstatt",
+                    harness_config=harness_config,
+                    timeout=timeout,
+                    extra_env=self._presentation_environment(
+                        config, provider, image_model, output_path
+                    ),
                 ),
             )
             plan_path = output_path / "presentation-plan.md"
@@ -780,7 +873,8 @@ class WorkbenchManager:
                     plan_path.write_text(plan_text.rstrip() + "\n", encoding="utf-8")
             if not plan_text:
                 raise RuntimeError(
-                    "OpenCode hat keinen presentation-plan.md und keinen Plantext geliefert."
+                    f"{self._harness_name(harness)} hat keinen "
+                    "presentation-plan.md und keinen Plantext geliefert."
                 )
             self.jobs.update_step(
                 job_id,
@@ -816,7 +910,8 @@ class WorkbenchManager:
         self,
         *,
         job_id: str,
-        opencode: dict,
+        harness: str,
+        harness_config: dict,
         executable: str,
         project_path: Path,
         output_path: Path,
@@ -833,26 +928,36 @@ class WorkbenchManager:
                 metadata=metadata,
                 secret_status=self.secret_status(config),
             )
-            output = self._run_opencode(
-                executable=executable,
-                project_path=project_path,
-                prompt=prompt,
-                attachments=[],
-                model=str(metadata.get("model") or opencode.get("model") or "").strip(),
-                agent="html-praesentationswerkstatt",
-                server_url=str(opencode.get("server_url") or "").strip(),
-                timeout=self._bounded_int(
-                    opencode.get("timeout_seconds"), 3600, 60, 7200
-                ),
-                extra_env=self._presentation_environment(
-                    config,
-                    str(metadata.get("image_provider") or "kie"),
-                    str(metadata.get("image_model") or "nano-banana-2"),
-                    str(
-                        metadata.get("fallback_image_model")
-                        or "fal-ai/nano-banana-2"
+            timeout = self._bounded_int(
+                harness_config.get("timeout_seconds"), 3600, 1800, 7200
+            )
+            output = self._run_harness_with_heartbeat(
+                job_id=job_id,
+                harness=harness,
+                phase="HTML-Präsentation, Medien und Qualitätsprüfung",
+                runner=lambda: self._run_harness(
+                    harness=harness,
+                    executable=executable,
+                    project_path=project_path,
+                    prompt=prompt,
+                    attachments=[],
+                    model=str(
+                        metadata.get("model")
+                        or harness_config.get("model")
+                        or ("gpt-5.6-sol" if harness == "codex" else "")
+                    ).strip(),
+                    agent="html-praesentationswerkstatt",
+                    harness_config=harness_config,
+                    timeout=timeout,
+                    extra_env=self._presentation_environment(
+                        config,
+                        str(metadata.get("image_provider") or "kie"),
+                        str(
+                            metadata.get("image_model")
+                            or "gpt-image-2-text-to-image"
+                        ),
+                        output_path,
                     ),
-                    output_path,
                 ),
             )
             self.jobs.update_step(
@@ -991,15 +1096,12 @@ class WorkbenchManager:
         config: dict,
         provider: str,
         image_model: str,
-        fallback_model: str,
         output_path: Path,
     ) -> dict:
         secrets = self._load_secrets(config)
         environment = {
             "TRINITY_IMAGE_PROVIDER": provider,
             "TRINITY_IMAGE_MODEL": image_model,
-            "TRINITY_FALLBACK_IMAGE_PROVIDER": "fal",
-            "TRINITY_FALLBACK_IMAGE_MODEL": fallback_model,
             "TRINITY_PRESENTATION_OUTPUT": str(output_path),
             "TRINITY_PRESENTATION_TOOLKIT": str(self.presentation_resources),
             "TRINITY_PRESENTATION_IMAGE_HELPER": str(
@@ -1008,12 +1110,59 @@ class WorkbenchManager:
         }
         if secrets.get("kie_ai"):
             environment["KIE_API_KEY"] = str(secrets["kie_ai"])
-        if secrets.get("fal_ai"):
-            environment["FAL_KEY"] = str(secrets["fal_ai"])
         return environment
 
     def _presentation_template_root(self) -> Path:
         return self.presentation_resources / "template"
+
+    @staticmethod
+    def _harness_name(harness: str) -> str:
+        return {
+            "codex": "Codex / ChatGPT",
+            "opencode": "OpenCode",
+        }.get(str(harness or "").casefold(), str(harness or "Agent"))
+
+    @staticmethod
+    def _find_harness_executable(harness: str) -> Optional[str]:
+        if harness == "codex":
+            return find_codex_executable()
+        if harness == "opencode":
+            return find_opencode_executable()
+        return None
+
+    @staticmethod
+    def _selected_model(payload: dict, harness: str, harness_config: dict) -> str:
+        model = str(
+            payload.get("model")
+            or harness_config.get("model")
+            or ("gpt-5.6-sol" if harness == "codex" else "")
+        ).strip()
+        if harness == "codex" and model not in CODEX_MODEL_IDS:
+            raise ValueError("Bitte eines der freigegebenen Codex-/ChatGPT-Modelle wählen.")
+        return model
+
+    def _harness_context(
+        self, payload: dict, config: dict
+    ) -> tuple[str, dict, str, str, Path]:
+        harness = str(
+            payload.get("harness")
+            or config.get("workbench", {}).get("default_harness")
+            or "opencode"
+        ).strip().casefold()
+        if harness not in {"opencode", "codex"}:
+            raise ValueError("Bitte OpenCode oder Codex / ChatGPT wählen.")
+        harness_config = config.get(harness, {})
+        if not harness_config.get("enabled"):
+            raise ValueError(
+                f"{self._harness_name(harness)} ist in Trinity noch nicht aktiviert."
+            )
+        executable = self._find_harness_executable(harness)
+        if not executable:
+            raise ValueError(
+                f"{self._harness_name(harness)} wurde auf diesem Rechner nicht gefunden."
+            )
+        alias, project_path = self._project_context(payload, harness_config)
+        return harness, harness_config, executable, alias, project_path
 
     @staticmethod
     def _project_context(payload: dict, config: dict) -> tuple[str, Path]:
@@ -1026,7 +1175,7 @@ class WorkbenchManager:
         project_path = projects.get(alias)
         if project_path is None:
             raise ValueError(
-                "Bitte einen in Trinity freigegebenen OpenCode-Projektordner wählen."
+                "Bitte einen in Trinity freigegebenen Projektordner wählen."
             )
         return alias, project_path
 
@@ -1128,7 +1277,8 @@ class WorkbenchManager:
         job_dir: Path,
         staged: list[dict],
         payload: dict,
-        opencode: dict,
+        harness: str,
+        harness_config: dict,
         executable: str,
         project_alias: str,
         project_path: Path,
@@ -1136,7 +1286,8 @@ class WorkbenchManager:
     ) -> None:
         try:
             current = self.jobs.start(
-                job_id, "Gutachter-Auftrag wurde an OpenCode übergeben."
+                job_id,
+                f"Gutachter-Auftrag wurde an {self._harness_name(harness)} übergeben.",
             )
             self.jobs.update_step(
                 job_id,
@@ -1162,16 +1313,23 @@ class WorkbenchManager:
                 review_type=review_type,
                 notes=str(payload.get("notes") or "").strip(),
             )
-            output = self._run_opencode(
-                executable=executable,
-                project_path=project_path,
-                prompt=prompt,
-                attachments=[item["path"] for item in staged],
-                model=str(payload.get("model") or opencode.get("model") or "").strip(),
-                agent="thesis-reviewer",
-                server_url=str(opencode.get("server_url") or "").strip(),
-                timeout=self._bounded_int(
-                    opencode.get("timeout_seconds"), 1800, 60, 7200
+            timeout = self._bounded_int(
+                harness_config.get("timeout_seconds"), 1800, 900, 7200
+            )
+            output = self._run_harness_with_heartbeat(
+                job_id=job_id,
+                harness=harness,
+                phase="Prüfung und Gutachtenentwurf",
+                runner=lambda: self._run_harness(
+                    harness=harness,
+                    executable=executable,
+                    project_path=project_path,
+                    prompt=prompt,
+                    attachments=[item["path"] for item in staged],
+                    model=self._selected_model(payload, harness, harness_config),
+                    agent="thesis-reviewer",
+                    harness_config=harness_config,
+                    timeout=timeout,
                 ),
             )
             self.jobs.update_step(
@@ -1186,7 +1344,7 @@ class WorkbenchManager:
                 "SUCCEEDED",
                 {
                     "quality_gate": (
-                        "OpenCode hat einen Abschlussbericht geliefert. "
+                        f"{self._harness_name(harness)} hat einen Abschlussbericht geliefert. "
                         "Die fachliche Endfreigabe bleibt beim Nutzer."
                     )
                 },
@@ -1226,7 +1384,6 @@ class WorkbenchManager:
         preserved: list[dict],
         provider: str,
         image_model: str,
-        fallback_model: str,
         secret_status: dict,
     ) -> str:
         skill_path = (
@@ -1243,11 +1400,8 @@ class WorkbenchManager:
         languages = ", ".join(payload.get("languages") or ["de"])
         duration = payload.get("duration_minutes") or "(nicht vorgegeben)"
         slide_count = payload.get("slide_count") or "(nicht vorgegeben)"
-        provider_ready = (
-            secret_status["kie_configured"]
-            if provider == "kie"
-            else secret_status["fal_configured"]
-        )
+        provider_ready = secret_status["kie_configured"]
+        outline = str(payload.get("outline") or "").strip()
         return f"""Führe den installierten Agenten `html-praesentationswerkstatt` aus.
 
 Dies ist ausschließlich Phase A/B: Recherche, Briefing-Auswertung und
@@ -1269,7 +1423,7 @@ Gewünschte Folienzahl: {slide_count}
 Sprachen: {languages}
 
 Grobstruktur und Kernideen:
-{str(payload.get("outline") or "").strip()}
+{outline or "(nicht vorgegeben – entwickle selbst eine sinnvolle Grobstruktur)"}
 
 Zusätzliche Hinweise:
 {str(payload.get("notes") or "").strip() or "(keine)"}
@@ -1280,16 +1434,19 @@ Unverändert übernommene Referenzmaterialien:
 Bildplanung:
 - bevorzugter Provider: {provider}
 - bevorzugtes Modell: {image_model}
-- Fallback: fal / {fallback_model}
 - API-Schlüssel für den bevorzugten Provider vorhanden: {str(provider_ready).lower()}
-- fal.ai-Fallback konfiguriert: {str(secret_status["fal_configured"]).lower()}
 
 Die Schlüssel selbst dürfen niemals ausgegeben, in Dateien geschrieben oder in
 die Präsentation übernommen werden. Plane nur tatsächlich verfügbare
 Bildgenerierung ein. Wenn ein Schlüssel fehlt, kennzeichne das im Plan und plane
 vorhandene Bilder, HTML/CSS-Schaubilder oder eine spätere manuelle Ergänzung.
 
-Erstelle nach mindestens zwei Recherchezyklen und einer Gap-/Gegenprüfung im
+Wenn Titel, Zielgruppe, Dauer, Folienzahl, Materialien oder Grobstruktur nicht
+vorgegeben sind, stelle keine Rückfrage und brich nicht ab. Entwickle stattdessen
+eine belastbare professionelle Ausgangsidee, kennzeichne deine Annahmen sichtbar
+und mache sie im anschließend bearbeitbaren Plan leicht änderbar.
+
+Erstelle nach Recherche und einer Gap-/Gegenprüfung im
 Ordner {output_path} die Datei `presentation-plan.md`. Der Plan muss je Folie
 eine stabile Folien-ID, Kernaussage, Quellenbedarf, Visualisierungsidee,
 Interaktion, Zeitbudget und beabsichtigte Wirkung enthalten. Gib den Plan
@@ -1308,11 +1465,7 @@ das exakte Wort FREIGABE.
             / "SKILL.md"
         )
         provider = str(metadata.get("image_provider") or "kie")
-        provider_ready = (
-            secret_status["kie_configured"]
-            if provider == "kie"
-            else secret_status["fal_configured"]
-        )
+        provider_ready = secret_status["kie_configured"]
         return f"""FREIGABE
 
 Setze jetzt den vom Nutzer überarbeiteten und ausdrücklich freigegebenen Plan
@@ -1328,19 +1481,18 @@ Referenzmaterial: {output_path / "reference-material"}
 
 Bildkonfiguration:
 - bevorzugter Provider: {provider}
-- bevorzugtes Modell: {metadata.get("image_model") or "nano-banana-2"}
+- bevorzugtes Modell: {metadata.get("image_model") or "gpt-image-2-text-to-image"}
 - bevorzugter Schlüssel vorhanden: {str(provider_ready).lower()}
-- Fallback: fal / {metadata.get("fallback_image_model") or "fal-ai/nano-banana-2"}
-- fal.ai-Schlüssel vorhanden: {str(secret_status["fal_configured"]).lower()}
 
-Die Provider-Schlüssel stehen nur als KIE_API_KEY beziehungsweise FAL_KEY in
-der Prozessumgebung. Gib sie niemals aus und schreibe sie niemals in Dateien.
+Der Provider-Schlüssel steht nur als KIE_API_KEY in der Prozessumgebung.
+Gib ihn niemals aus und schreibe ihn niemals in Dateien.
 Nutze für eine tatsächlich freigegebene Bildgenerierung ausschließlich die
 serverseitige Brücke in `TRINITY_PRESENTATION_IMAGE_HELPER`. Übergib den Prompt
 über `--prompt-file`, den Provider über `--provider`, das Modell über `--model`
 und den lokalen Zielpfad über `--output`. Übergib niemals einen Schlüssel als
-Befehlsargument. Nutze einen Provider nur, wenn sein Schlüssel tatsächlich
-vorhanden ist; bei einem Fehler darfst du kontrolliert auf fal.ai zurückfallen.
+Befehlsargument. Nutze Kie.ai nur, wenn der Schlüssel tatsächlich vorhanden
+ist. Schlägt eine Bildgenerierung fehl, verwende ein lokales HTML/CSS-Schaubild
+oder kennzeichne die spätere Medienergänzung im Review.
 
 Erstelle alle im Arbeitsvertrag geforderten lokalen Dateien einschließlich
 `presentation.html`, sprachspezifischer Fassungen, `review.html`,
@@ -1380,6 +1532,165 @@ Plausibilitätsbefunde ausdrücklich als Indizien. Antworte abschließend auf De
 mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
 """
 
+    def _run_harness(
+        self,
+        *,
+        harness: str,
+        executable: str,
+        project_path: Path,
+        prompt: str,
+        attachments: list[Path],
+        model: str,
+        agent: str,
+        harness_config: dict,
+        timeout: int,
+        extra_env: Optional[dict] = None,
+    ) -> str:
+        if harness == "codex":
+            return self._run_codex(
+                executable=executable,
+                project_path=project_path,
+                prompt=prompt,
+                attachments=attachments,
+                model=model or "gpt-5.6-sol",
+                sandbox=str(
+                    harness_config.get("sandbox") or "workspace-write"
+                ).strip(),
+                ephemeral=bool(harness_config.get("ephemeral", True)),
+                timeout=timeout,
+                extra_env=extra_env,
+            )
+        if harness == "opencode":
+            return self._run_opencode(
+                executable=executable,
+                project_path=project_path,
+                prompt=prompt,
+                attachments=attachments,
+                model=model,
+                agent=agent,
+                server_url=str(harness_config.get("server_url") or "").strip(),
+                timeout=timeout,
+                extra_env=extra_env,
+            )
+        raise ValueError("Unbekanntes ausführendes System.")
+
+    def _run_harness_with_heartbeat(
+        self, *, job_id: str, harness: str, phase: str, runner
+    ) -> str:
+        result: dict[str, str] = {}
+        errors: list[BaseException] = []
+
+        def execute():
+            try:
+                result["output"] = runner()
+            except BaseException as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+
+        worker = threading.Thread(
+            target=execute,
+            daemon=True,
+            name=f"trinity-harness-{job_id[-8:]}",
+        )
+        started = time.monotonic()
+        worker.start()
+        while worker.is_alive():
+            worker.join(20)
+            if not worker.is_alive():
+                break
+            elapsed = int(time.monotonic() - started)
+            self.jobs.set_status(
+                job_id,
+                "RUNNING",
+                (
+                    f"{self._harness_name(harness)} arbeitet weiter an „{phase}“ "
+                    f"· bisher {elapsed // 60} min {elapsed % 60:02d} s."
+                ),
+                {
+                    "heartbeat": True,
+                    "phase": phase,
+                    "elapsed_seconds": elapsed,
+                },
+            )
+        if errors:
+            raise errors[0]
+        return result.get("output", "")
+
+    @staticmethod
+    def _run_codex(
+        *,
+        executable: str,
+        project_path: Path,
+        prompt: str,
+        attachments: Optional[list[Path]] = None,
+        model: str,
+        sandbox: str,
+        ephemeral: bool,
+        timeout: int,
+        extra_env: Optional[dict] = None,
+    ) -> str:
+        command = [
+            executable,
+            "exec",
+            "--skip-git-repo-check",
+            "--sandbox",
+            sandbox if sandbox in {"read-only", "workspace-write"} else "workspace-write",
+            "--cd",
+            str(project_path),
+        ]
+        attachment_dirs = sorted(
+            {
+                str(Path(attachment).resolve().parent)
+                for attachment in (attachments or [])
+            }
+        )
+        for directory in attachment_dirs:
+            command.extend(["--add-dir", directory])
+        command.extend(["--model", model or "gpt-5.6-sol"])
+        if ephemeral:
+            command.append("--ephemeral")
+        command.append("-")
+        creation_flags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+        )
+        use_shell = os.name == "nt" and str(executable).casefold().endswith(
+            (".cmd", ".bat")
+        )
+        run_command = subprocess.list2cmdline(command) if use_shell else command
+        try:
+            completed = subprocess.run(
+                run_command,
+                input=prompt,
+                text=True,
+                capture_output=True,
+                timeout=timeout,
+                check=False,
+                shell=use_shell,
+                cwd=str(project_path),
+                env={
+                    **os.environ,
+                    "NO_COLOR": "1",
+                    **{
+                        str(key): str(value)
+                        for key, value in (extra_env or {}).items()
+                        if value is not None
+                    },
+                },
+                creationflags=creation_flags,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(
+                "Codex / ChatGPT hat das Zeitlimit von "
+                f"{max(1, timeout // 60)} Minuten erreicht. "
+                "Der Auftrag wurde sicher beendet und kann erneut gestartet werden."
+            ) from exc
+        if completed.returncode != 0:
+            details = (completed.stderr or completed.stdout or "").strip()
+            raise OSError(
+                "Codex / ChatGPT wurde mit Fehlercode "
+                f"{completed.returncode} beendet: {details[-2500:]}"
+            )
+        return (completed.stdout or "").strip()
+
     @staticmethod
     def _run_opencode(
         *,
@@ -1410,25 +1721,32 @@ mit den erzeugten Dateipfaden, dem Prüfstatus und offenen Freigaben.
             (".cmd", ".bat")
         )
         run_command = subprocess.list2cmdline(command) if use_shell else command
-        completed = subprocess.run(
-            run_command,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-            shell=use_shell,
-            cwd=str(project_path),
-            env={
-                **os.environ,
-                "NO_COLOR": "1",
-                **{
-                    str(key): str(value)
-                    for key, value in (extra_env or {}).items()
-                    if value is not None
+        try:
+            completed = subprocess.run(
+                run_command,
+                text=True,
+                capture_output=True,
+                timeout=timeout,
+                check=False,
+                shell=use_shell,
+                cwd=str(project_path),
+                env={
+                    **os.environ,
+                    "NO_COLOR": "1",
+                    **{
+                        str(key): str(value)
+                        for key, value in (extra_env or {}).items()
+                        if value is not None
+                    },
                 },
-            },
-            creationflags=creation_flags,
-        )
+                creationflags=creation_flags,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(
+                "OpenCode hat das Zeitlimit von "
+                f"{max(1, timeout // 60)} Minuten erreicht. "
+                "Der Auftrag wurde sicher beendet und kann erneut gestartet werden."
+            ) from exc
         if completed.returncode != 0:
             details = (completed.stderr or completed.stdout or "").strip()
             raise OSError(
