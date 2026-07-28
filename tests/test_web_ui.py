@@ -50,3 +50,27 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert "gpt-image-2-text-to-image" not in html
     assert "fal.ai API-Schlüssel · Fallback" not in html
     assert "get('embedded')==='1'" in html
+
+
+def test_web_header_uses_accessible_symbol_controls():
+    html = render_web_ui()
+
+    assert 'class="header-actions" aria-label="Trinity-Steuerung"' in html
+    assert 'id="newSession" title="Neue Session" aria-label="Neue Session"' in html
+    assert 'id="jobCenterToggle" title="Agentenstatus"' in html
+    assert 'id="jobCount"' in html
+    assert 'id="runtimeModeControl" title="Modus: Vorlesung"' in html
+    assert 'id="microphoneToggle" title="Mikrofon"' in html
+    assert 'id="ttsToggle" title="Lautsprecher"' in html
+    assert 'id="settingsView" title="Einstellungen"' in html
+    assert 'id="saveToken" title="Zugang: Zugriffstoken"' in html
+    assert 'class="toolbar-icon"' in html
+    assert "microphoneToggle.textContent" not in html
+    assert "ttsToggle.textContent" not in html
+
+
+def test_authenticated_web_header_uses_symbolic_access_control():
+    html = render_web_ui(auth_enabled=True)
+
+    assert 'id="login" title="Zugang: Anmelden"' in html
+    assert "Zugang: Administrator anlegen" in html
