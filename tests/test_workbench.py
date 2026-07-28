@@ -44,14 +44,22 @@ def test_catalog_exposes_codex_and_opencode_with_separate_models(monkeypatch, tm
     assert catalog["models_by_harness"]["codex"][0]["id"] == "gpt-5.6-sol"
     assert catalog["models_by_harness"]["codex"][1]["id"] == "gpt-5.6-terra"
     assert catalog["projects"][0]["name"] == "Lehre"
-    assert catalog["categories"][0]["tiles"][0]["id"] == "thesis-reviewer"
-    assert catalog["categories"][0]["tiles"][0]["available"] is True
-    presentation_tiles = catalog["categories"][1]["tiles"]
-    assert [tile["id"] for tile in presentation_tiles] == [
+    assert catalog["categories"][0]["name"] == "Präsentationen, Papers und Lehrbücher"
+    assert catalog["categories"][1]["name"] == "Begutachtungen und Prüfungen"
+    assert catalog["categories"][2]["name"] == "Medienerstellung"
+    assert catalog["categories"][3]["name"] == "Romanerstellung"
+    assert catalog["categories"][1]["tiles"][0]["id"] == "thesis-reviewer"
+    assert catalog["categories"][1]["tiles"][0]["available"] is True
+    presentation_tiles = catalog["categories"][0]["tiles"]
+    assert [tile["id"] for tile in presentation_tiles[:3]] == [
         "html-presentation-workshop",
+        "html-presentation-modernize",
         "html-presentation-scaffold",
     ]
     assert presentation_tiles[0]["available"] is True
+    assert presentation_tiles[1]["available"] is True
+    assert presentation_tiles[3]["title"] == "Lehrbuch erstellen"
+    assert presentation_tiles[3]["available"] is False
     assert catalog["presentation"]["default_image_provider"] == "kie"
     assert [
         model["id"]
@@ -69,7 +77,7 @@ def test_thesis_tile_is_available_in_every_profile(tmp_path, profile):
     manager = WorkbenchManager(tmp_path)
     catalog = manager.catalog(default_config("Linux"), profile)
 
-    tile = catalog["categories"][0]["tiles"][0]
+    tile = catalog["categories"][1]["tiles"][0]
     assert catalog["profile"] == profile
     assert tile["available"] is True
     assert tile["status"] == "bereit"
@@ -370,6 +378,82 @@ def test_presentation_plan_accepts_empty_content_and_creates_own_structure(
     assert waiting["status"] == "WAITING_FOR_APPROVAL"
     assert waiting["metadata"]["title"].startswith("Neuer Entwurf")
     assert Path(waiting["metadata"]["output_path"]).parts[0] == "HTML-Präsentationen"
+
+
+def test_presentation_modernization_requires_one_deck_and_creates_analysis_contract(
+    monkeypatch, tmp_path
+):
+    project = tmp_path / "BrainVault"
+    project.mkdir()
+    manager = WorkbenchManager(tmp_path)
+    config = default_config("Linux")
+    config["opencode"].update(
+        {
+            "enabled": True,
+            "projects": {"BrainVault": str(project)},
+            "default_project": "BrainVault",
+        }
+    )
+    monkeypatch.setattr(workbench, "find_opencode_executable", lambda: "/bin/opencode")
+
+    with pytest.raises(ValueError, match="genau eine"):
+        manager.submit(
+            {
+                "tile_id": "html-presentation-modernize",
+                "harness": "opencode",
+                "project": "BrainVault",
+                "attachments": [],
+            },
+            config,
+            "PRIVAT",
+        )
+
+    captured = {}
+
+    def fake_run_opencode(**kwargs):
+        captured.update(kwargs)
+        output_path = Path(kwargs["extra_env"]["TRINITY_PRESENTATION_OUTPUT"])
+        (output_path / "source-deck-analysis.md").write_text(
+            "# Ausgangspräsentation\n", encoding="utf-8"
+        )
+        (output_path / "source-media-inventory.json").write_text(
+            "{}\n", encoding="utf-8"
+        )
+        (output_path / "presentation-plan.md").write_text(
+            "# Modernisierungsplan\n", encoding="utf-8"
+        )
+        return "Modernisierungsplan erstellt"
+
+    monkeypatch.setattr(manager, "_run_opencode", fake_run_opencode)
+    result = manager.submit(
+        {
+            "tile_id": "html-presentation-modernize",
+            "presentation_mode": "modernize",
+            "harness": "opencode",
+            "project": "BrainVault",
+            "attachments": [
+                {
+                    "role": "source-deck",
+                    "name": "Alte Vorlesung.pptx",
+                    "data_base64": base64.b64encode(b"pptx-test").decode(),
+                }
+            ],
+        },
+        config,
+        "PRIVAT",
+    )
+    waiting = _wait_for_status(
+        manager, result["job"]["job_id"], {"WAITING_FOR_APPROVAL", "FAILED"}
+    )
+
+    assert waiting["status"] == "WAITING_FOR_APPROVAL"
+    assert waiting["metadata"]["presentation_mode"] == "modernize"
+    assert waiting["metadata"]["title"] == "Alte Vorlesung"
+    assert "source-deck-analysis.md" in captured["prompt"]
+    output = project / waiting["metadata"]["output_path"]
+    request = (output / "presentation-request.json").read_text(encoding="utf-8")
+    assert '"presentation_mode": "modernize"' in request
+    assert (output / "reference-material" / "Alte Vorlesung.pptx").is_file()
 
 
 def test_presentation_paths_cannot_escape_configured_project(tmp_path):
