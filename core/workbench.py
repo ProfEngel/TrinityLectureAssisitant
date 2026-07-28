@@ -22,6 +22,7 @@ MAX_PRESENTATION_UPLOAD_BYTES = 60 * 1024 * 1024
 THESIS_TILE_ID = "thesis-reviewer"
 PRESENTATION_SCAFFOLD_TILE_ID = "html-presentation-scaffold"
 PRESENTATION_BUILD_TILE_ID = "html-presentation-workshop"
+PRESENTATION_MODERNIZE_TILE_ID = "html-presentation-modernize"
 PRESENTATION_ALLOWED_SUFFIXES = {
     ".csv",
     ".docx",
@@ -199,77 +200,227 @@ class WorkbenchManager:
                     },
                 ],
             },
-            "categories": [
-                {
-                    "id": "begutachten",
-                    "name": "Begutachten",
-                    "tiles": [
-                        {
-                            "id": THESIS_TILE_ID,
-                            "title": "Abschlussarbeit begutachten",
-                            "subtitle": (
-                                "Strukturiertes Erst- oder Zweitgutachten mit "
-                                "Literatur- und Integritätsprüfung"
-                            ),
-                            "icon": "document-check",
-                            "status": "bereit",
-                            "available": True,
-                            "profiles": ["BIZ", "PRIVAT", "TEST"],
-                            "agent": "thesis-reviewer",
-                            "compatible_harnesses": ["opencode", "codex"],
-                        }
-                    ],
-                },
-                {
-                    "id": "lehre",
-                    "name": "Lehre & Präsentationen",
-                    "tiles": [
-                        {
-                            "id": PRESENTATION_BUILD_TILE_ID,
-                            "title": "HTML-Präsentation erstellen",
-                            "subtitle": (
-                                "Grobstruktur und Materialien in einen prüfbaren "
-                                "Plan und nach Freigabe in eine portable Präsentation verwandeln"
-                            ),
-                            "icon": "presentation",
-                            "status": "bereit",
-                            "available": True,
-                            "profiles": ["BIZ", "PRIVAT", "TEST"],
-                            "agent": "html-praesentationswerkstatt",
-                            "compatible_harnesses": ["opencode", "codex"],
-                        },
-                        {
-                            "id": PRESENTATION_SCAFFOLD_TILE_ID,
-                            "title": "Präsentationsgrundgerüst anlegen",
-                            "subtitle": (
-                                "Das visuelle Briefing samt Medienablage und "
-                                "Review-Grundlage in einen neuen Projektordner kopieren"
-                            ),
-                            "icon": "layout",
-                            "status": (
-                                "bereit"
-                                if self._presentation_template_root().is_dir()
-                                else "Vorlage fehlt"
-                            ),
-                            "available": self._presentation_template_root().is_dir(),
-                            "profiles": ["BIZ", "PRIVAT", "TEST"],
-                            "agent": "html-praesentationswerkstatt",
-                            "compatible_harnesses": ["trinity"],
-                        },
-                    ],
-                },
-                {
-                    "id": "schreiben",
-                    "name": "Schreiben & Veröffentlichen",
-                    "tiles": [],
-                },
-                {
-                    "id": "organisation",
-                    "name": "Organisation",
-                    "tiles": [],
-                },
-            ],
+            "categories": self._catalog_categories(),
         }
+
+    def _catalog_categories(self) -> list[dict]:
+        """Return the visible roadmap in the user's preferred reading order."""
+
+        ready = {
+            "status": "bereit",
+            "available": True,
+            "profiles": ["BIZ", "PRIVAT", "TEST"],
+        }
+        return [
+            {
+                "id": "wissen-gestalten",
+                "name": "Präsentationen, Papers und Lehrbücher",
+                "tiles": [
+                    {
+                        **ready,
+                        "id": PRESENTATION_BUILD_TILE_ID,
+                        "title": "HTML-Präsentation erstellen",
+                        "subtitle": (
+                            "Aus Ideen und Materialien einen prüfbaren Plan und "
+                            "nach Freigabe eine portable Präsentation bauen"
+                        ),
+                        "icon": "presentation",
+                        "agent": "html-praesentationswerkstatt",
+                        "compatible_harnesses": ["opencode", "codex"],
+                    },
+                    {
+                        **ready,
+                        "id": PRESENTATION_MODERNIZE_TILE_ID,
+                        "title": "Vorhandene Präsentation modernisieren",
+                        "subtitle": (
+                            "PPTX oder PDF vollständig analysieren, Schaubilder "
+                            "übernehmen und im neuen HTML-Format neu aufbauen"
+                        ),
+                        "icon": "presentation-import",
+                        "agent": "html-praesentationswerkstatt",
+                        "compatible_harnesses": ["opencode", "codex"],
+                    },
+                    {
+                        **ready,
+                        "id": PRESENTATION_SCAFFOLD_TILE_ID,
+                        "title": "Präsentationsgrundgerüst anlegen",
+                        "subtitle": (
+                            "Visuelles Briefing, Medienablage und Review-Grundlage "
+                            "in einen neuen Projektordner kopieren"
+                        ),
+                        "icon": "layout",
+                        "status": (
+                            "bereit"
+                            if self._presentation_template_root().is_dir()
+                            else "Vorlage fehlt"
+                        ),
+                        "available": self._presentation_template_root().is_dir(),
+                        "agent": "html-praesentationswerkstatt",
+                        "compatible_harnesses": ["trinity"],
+                    },
+                    self._planned_tile(
+                        "textbook-workshop",
+                        "Lehrbuch erstellen",
+                        "Kapitel planen, recherchieren, schreiben, lektorieren und veröffentlichen",
+                        agent="lehrbuchwerkstatt",
+                    ),
+                    self._planned_tile(
+                        "paper-workshop",
+                        "Paper erstellen",
+                        "Wissenschaftliche Arbeiten strukturiert entwickeln und ausarbeiten",
+                        status="Agent wird geprüft",
+                    ),
+                    self._planned_tile(
+                        "research-open",
+                        "Wissenschaftlich recherchieren",
+                        "Offene Quellen suchen, prüfen und nachvollziehbar dokumentieren",
+                    ),
+                    self._planned_tile(
+                        "research-hitl",
+                        "Recherche mit Browser-Freigabe",
+                        "Paywall-Quellen nur nach deiner sichtbaren Browser-Freigabe einbeziehen",
+                        status="HITL in Vorbereitung",
+                    ),
+                    self._planned_tile(
+                        "diagram-workshop",
+                        "Schaubild erstellen",
+                        "Inhalte als verständliches, editierbares Schaubild aufbereiten",
+                    ),
+                    self._planned_tile(
+                        "infographic-workshop",
+                        "Infografik erstellen",
+                        "Daten und Kernaussagen als eigenständige visuelle Erklärung gestalten",
+                    ),
+                ],
+            },
+            {
+                "id": "begutachten-pruefen",
+                "name": "Begutachtungen und Prüfungen",
+                "tiles": [
+                    {
+                        **ready,
+                        "id": THESIS_TILE_ID,
+                        "title": "Abschlussarbeit begutachten",
+                        "subtitle": (
+                            "Strukturiertes Erst- oder Zweitgutachten mit "
+                            "Literatur- und Integritätsprüfung"
+                        ),
+                        "icon": "document-check",
+                        "agent": "thesis-reviewer",
+                        "compatible_harnesses": ["opencode", "codex"],
+                    },
+                    self._planned_tile(
+                        "seminar-paper-review",
+                        "Seminararbeit begutachten",
+                        "Seminararbeiten transparent prüfen und nachvollziehbar bewerten",
+                        status="Agent wird geprüft",
+                    ),
+                    self._planned_tile(
+                        "scientific-writing-review",
+                        "Wissenschaftliches Arbeiten begutachten",
+                        "Aufbau, Methodik, Quellenarbeit und formale Qualität prüfen",
+                        status="Agent wird geprüft",
+                    ),
+                ],
+            },
+            {
+                "id": "medien",
+                "name": "Medienerstellung",
+                "tiles": [
+                    self._planned_tile(
+                        "image-cloud-workshop",
+                        "Bild erstellen",
+                        "Bilder über freigegebene Cloud-Modelle entwickeln",
+                    ),
+                    self._planned_tile(
+                        "image-comfy-workshop",
+                        "Bild mit ComfyUI erstellen",
+                        "Lokale Workflows kontrolliert an den privaten Renderer übergeben",
+                    ),
+                    self._planned_tile(
+                        "video-workshop",
+                        "Video erstellen",
+                        "Videoaufträge planen, erzeugen und prüfen",
+                    ),
+                    self._planned_tile(
+                        "music-workshop",
+                        "Musik erstellen",
+                        "Musikaufträge planen, erzeugen und prüfen",
+                    ),
+                ],
+            },
+            {
+                "id": "romane",
+                "name": "Romanerstellung",
+                "tiles": [
+                    self._planned_tile(
+                        "fiction-workshop",
+                        "Erzählprojekt steuern",
+                        "Roman, Novelle oder Kurzgeschichte planen und koordinieren",
+                        agent="erzaehlwerkstatt",
+                    ),
+                    self._planned_tile(
+                        "fiction-plot",
+                        "Plot und Szenen planen",
+                        "Beats, Wendepunkte, Subplots und Szenenfolgen entwickeln",
+                        agent="erzaehlwerkstatt-plotarchitekt",
+                    ),
+                    self._planned_tile(
+                        "fiction-write",
+                        "Szene oder Kapitel schreiben",
+                        "Fiktionale Texte in der jeweiligen Projektstimme ausarbeiten",
+                        agent="erzaehlwerkstatt-romanschreiber",
+                    ),
+                    self._planned_tile(
+                        "fiction-edit",
+                        "Romantext lektorieren",
+                        "Stil, Perspektive, Tempo, Dialog und Kontinuität prüfen",
+                        agent="erzaehlwerkstatt-lektor",
+                    ),
+                    self._planned_tile(
+                        "fiction-continuity",
+                        "Kanon und Kontinuität prüfen",
+                        "Figurenwissen, Timeline, Weltregeln und Enthüllungen abgleichen",
+                        agent="erzaehlwerkstatt-chronist",
+                    ),
+                    self._planned_tile(
+                        "fiction-visuals",
+                        "Szenenbilder und Storyboards",
+                        "Szenenbilder, Figurenreferenzen oder Storyboards vorbereiten",
+                        agent="erzaehlwerkstatt-szenenbild",
+                    ),
+                    self._planned_tile(
+                        "fiction-publish",
+                        "Buchausgabe erstellen",
+                        "Fiktion als EPUB und gesetztes PDF bauen und prüfen",
+                        agent="erzaehlwerkstatt-buchausgabe",
+                    ),
+                ],
+            },
+        ]
+
+    @staticmethod
+    def _planned_tile(
+        tile_id: str,
+        title: str,
+        subtitle: str,
+        *,
+        status: str = "UI in Vorbereitung",
+        agent: str = "",
+    ) -> dict:
+        tile = {
+            "id": tile_id,
+            "title": title,
+            "subtitle": subtitle,
+            "icon": "planned",
+            "status": status,
+            "available": False,
+            "profiles": ["BIZ", "PRIVAT", "TEST"],
+            "compatible_harnesses": ["opencode", "codex"],
+        }
+        if agent:
+            tile["agent"] = agent
+        return tile
 
     def submit(self, payload: dict, config: dict, profile: str) -> dict:
         if not isinstance(payload, dict):
@@ -279,7 +430,7 @@ class WorkbenchManager:
             return self._submit_thesis(payload, config, profile)
         if tile_id == PRESENTATION_SCAFFOLD_TILE_ID:
             return self._submit_presentation_scaffold(payload, config, profile)
-        if tile_id == PRESENTATION_BUILD_TILE_ID:
+        if tile_id in {PRESENTATION_BUILD_TILE_ID, PRESENTATION_MODERNIZE_TILE_ID}:
             return self._submit_presentation_plan(payload, config, profile)
         raise ValueError("Diese Werkstatt-Kachel ist noch nicht verfügbar.")
 
@@ -412,6 +563,28 @@ class WorkbenchManager:
     def _submit_presentation_plan(
         self, payload: dict, config: dict, profile: str
     ) -> dict:
+        tile_id = str(payload.get("tile_id") or PRESENTATION_BUILD_TILE_ID).strip()
+        presentation_mode = str(
+            payload.get("presentation_mode")
+            or (
+                "modernize"
+                if tile_id == PRESENTATION_MODERNIZE_TILE_ID
+                else "new"
+            )
+        ).strip().casefold()
+        if presentation_mode not in {"new", "modernize"}:
+            raise ValueError("Bitte eine neue oder zu modernisierende Präsentation wählen.")
+        source_deck_names = [
+            Path(str(item.get("name") or "")).name
+            for item in (payload.get("attachments") or [])
+            if Path(str(item.get("name") or "")).suffix.casefold()
+            in {".pptx", ".pdf"}
+        ]
+        if presentation_mode == "modernize" and len(source_deck_names) != 1:
+            raise ValueError(
+                "Zum Modernisieren wird genau eine vorhandene PPTX- oder "
+                "PDF-Präsentation benötigt."
+            )
         (
             harness,
             harness_config,
@@ -429,6 +602,8 @@ class WorkbenchManager:
                 allow_project_root=True,
             )
         title_input = str(payload.get("title") or "").strip()
+        if not title_input and source_deck_names:
+            title_input = Path(source_deck_names[0]).stem
         raw_output_path = str(payload.get("output_path") or "").strip()
         if not raw_output_path:
             raw_output_path = (
@@ -450,7 +625,12 @@ class WorkbenchManager:
 
         title = title_input or output_path.name or "Neue Präsentation"
         outline = str(payload.get("outline") or "").strip()
-        payload = {**payload, "title": title, "output_path": raw_output_path}
+        payload = {
+            **payload,
+            "title": title,
+            "output_path": raw_output_path,
+            "presentation_mode": presentation_mode,
+        }
         duration = self._optional_int(payload.get("duration_minutes"), 1, 480)
         slide_count = self._optional_int(payload.get("slide_count"), 3, 100)
 
@@ -466,7 +646,11 @@ class WorkbenchManager:
             raise ValueError("Bitte eines der freigegebenen Kie.ai-Modelle wählen.")
 
         job = self.jobs.create_job(
-            title=f"HTML-Präsentation · {title}",
+            title=(
+                f"Präsentation modernisieren · {title}"
+                if presentation_mode == "modernize"
+                else f"HTML-Präsentation · {title}"
+            ),
             source="workbench",
             route=harness,
             risk_level="medium",
@@ -478,8 +662,9 @@ class WorkbenchManager:
                 {"title": "Offline-, Quellen- und Qualitätsprüfung", "quality_gate": True},
             ],
             metadata={
-                "tile_id": PRESENTATION_BUILD_TILE_ID,
+                "tile_id": tile_id,
                 "agent": "html-praesentationswerkstatt",
+                "presentation_mode": presentation_mode,
                 "harness": harness,
                 "model": self._selected_model(payload, harness, harness_config),
                 "project": alias,
@@ -503,6 +688,7 @@ class WorkbenchManager:
         preserved = self._preserve_presentation_attachments(staged, reference_dir)
         request_record = {
             "schema_version": 1,
+            "presentation_mode": presentation_mode,
             "title": title,
             "audience": str(payload.get("audience") or "").strip(),
             "purpose": str(payload.get("purpose") or "").strip(),
@@ -517,6 +703,7 @@ class WorkbenchManager:
             "image_provider": provider,
             "image_model": image_model,
             "reference_files": [item["name"] for item in preserved],
+            "source_deck": source_deck_names[0] if source_deck_names else "",
         }
         (output_path / "presentation-request.json").write_text(
             json.dumps(request_record, ensure_ascii=False, indent=2) + "\n",
@@ -559,7 +746,10 @@ class WorkbenchManager:
         if job["status"] != "WAITING_FOR_APPROVAL":
             raise ValueError("Dieser Auftrag wartet nicht auf eine Planfreigabe.")
         metadata = job.get("metadata") or {}
-        if metadata.get("tile_id") != PRESENTATION_BUILD_TILE_ID:
+        if metadata.get("tile_id") not in {
+            PRESENTATION_BUILD_TILE_ID,
+            PRESENTATION_MODERNIZE_TILE_ID,
+        }:
             raise ValueError("Die Freigabe gehört nicht zu einer HTML-Präsentation.")
         if str(metadata.get("profile") or "").upper() != str(profile or "").upper():
             raise PermissionError("Der Präsentationsauftrag gehört zu einem anderen Profil.")
@@ -1402,6 +1592,39 @@ class WorkbenchManager:
         slide_count = payload.get("slide_count") or "(nicht vorgegeben)"
         provider_ready = secret_status["kie_configured"]
         outline = str(payload.get("outline") or "").strip()
+        presentation_mode = str(
+            payload.get("presentation_mode") or "new"
+        ).strip().casefold()
+        source_decks = [
+            item
+            for item in preserved
+            if Path(item["name"]).suffix.casefold() in {".pptx", ".pdf"}
+        ]
+        modernization_contract = ""
+        if presentation_mode == "modernize":
+            source_deck = source_decks[0]
+            modernization_contract = f"""
+Dies ist eine Modernisierung einer vorhandenen Präsentation.
+Verbindliche Ausgangspräsentation: {source_deck["path"]}
+
+Analysiere die Ausgangspräsentation vollständig, nicht nur einzelne Vorschauseiten.
+Erfasse Reihenfolge, Titel, Kernaussagen, Sprechernotizen soweit zugänglich,
+Schaubilder, Bilder, Tabellen und wiederkehrende Gestaltungsmuster. Bewahre das
+Original unverändert unter `reference-material`.
+
+Erstelle zusätzlich:
+- `source-deck-analysis.md` mit einer vollständigen Folie-für-Folie-Analyse,
+- `source-media-inventory.json` mit Herkunft, Foliennummer, Dateityp,
+  Wiederverwendbarkeit und geplanter Verwendung jedes extrahierbaren Mediums.
+
+Der Präsentationsplan muss jede Ausgangsfolie einer oder mehreren neuen stabilen
+Folien-IDs zuordnen und die Entscheidung `behalten`, `überarbeiten`, `teilen`,
+`zusammenführen` oder `entfernen` begründen. Übernimm brauchbare Schaubilder und
+Bilder. Textlastige, veraltete oder technisch ungeeignete Darstellungen werden
+als sauberes HTML/CSS/SVG-Schaubild oder – nur nach Planfreigabe – als neues Bild
+rekonstruiert. Nichts darf verzerrt, abgeschnitten oder ohne Herkunftsnachweis
+übernommen werden. Die zusätzlichen Änderungswünsche des Nutzers haben Vorrang.
+"""
         return f"""Führe den installierten Agenten `html-praesentationswerkstatt` aus.
 
 Dies ist ausschließlich Phase A/B: Recherche, Briefing-Auswertung und
@@ -1421,6 +1644,9 @@ Ziel und Anlass: {str(payload.get("purpose") or "").strip() or "(offen)"}
 Vortragsdauer: {duration} Minuten
 Gewünschte Folienzahl: {slide_count}
 Sprachen: {languages}
+Arbeitsmodus: {presentation_mode}
+
+{modernization_contract}
 
 Grobstruktur und Kernideen:
 {outline or "(nicht vorgegeben – entwickle selbst eine sinnvolle Grobstruktur)"}
@@ -1466,6 +1692,16 @@ das exakte Wort FREIGABE.
         )
         provider = str(metadata.get("image_provider") or "kie")
         provider_ready = secret_status["kie_configured"]
+        modernization_contract = ""
+        if str(metadata.get("presentation_mode") or "new") == "modernize":
+            modernization_contract = f"""
+Dies ist die freigegebene Modernisierung einer vorhandenen Präsentation.
+Nutze `source-deck-analysis.md` und `source-media-inventory.json` im Ordner
+{output_path}. Übernommene Bilder und Schaubilder müssen vollständig sichtbar,
+unverzerrt und im Medienmanifest auf ihre Ausgangsfolie zurückführbar sein.
+Rekonstruiere ungeeignete Darstellungen nach dem freigegebenen Plan als
+HTML/CSS/SVG oder über die freigegebene Bildbrücke.
+"""
         return f"""FREIGABE
 
 Setze jetzt den vom Nutzer überarbeiteten und ausdrücklich freigegebenen Plan
@@ -1478,6 +1714,8 @@ Präsentationsordner: {output_path}
 Freigegebener Plan: {output_path / "presentation-plan.md"}
 Anfrageprotokoll: {output_path / "presentation-request.json"}
 Referenzmaterial: {output_path / "reference-material"}
+
+{modernization_contract}
 
 Bildkonfiguration:
 - bevorzugter Provider: {provider}

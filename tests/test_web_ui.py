@@ -30,6 +30,10 @@ def test_web_ui_contains_workbench_profile_badge_and_thesis_pilot():
     assert 'id="presentationPanel"' in html
     assert 'id="presentationScaffoldPanel"' in html
     assert 'id="presentationPlanEditor"' in html
+    assert "Vorhandene Präsentation modernisieren" in html
+    assert "html-presentation-modernize" in html
+    assert "presentationMode:'new'" in html
+    assert "genau eine Ausgangspräsentation als PPTX oder PDF" in html
     assert 'id="jobCenterToggle"' in html
     assert "'/workbench/jobs?limit=40'" in html
     assert "'/workbench/presentation/approve'" in html
