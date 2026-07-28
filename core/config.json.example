@@ -89,7 +89,11 @@
   },
   "workbench": {
     "enabled": true,
-    "default_harness": "opencode"
+    "default_harness": "opencode",
+    "presentation": {
+      "image_provider": "kie",
+      "image_model": "gpt-image-2-text-to-image"
+    }
   },
   "pi": {
     "enabled": false,

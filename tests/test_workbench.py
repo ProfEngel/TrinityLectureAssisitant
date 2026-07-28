@@ -11,7 +11,7 @@ from configuration import default_config
 from workbench import WorkbenchManager
 
 
-def test_catalog_exposes_thesis_tile_profile_and_only_opencode(monkeypatch, tmp_path):
+def test_catalog_exposes_codex_and_opencode_with_separate_models(monkeypatch, tmp_path):
     project = tmp_path / "Lehre"
     project.mkdir()
     manager = WorkbenchManager(tmp_path)
@@ -23,7 +23,15 @@ def test_catalog_exposes_thesis_tile_profile_and_only_opencode(monkeypatch, tmp_
             "default_project": "Lehre",
         }
     )
+    config["codex"].update(
+        {
+            "enabled": True,
+            "projects": {"Lehre": str(project)},
+            "default_project": "Lehre",
+        }
+    )
     monkeypatch.setattr(workbench, "find_opencode_executable", lambda: "/bin/opencode")
+    monkeypatch.setattr(workbench, "find_codex_executable", lambda: "/bin/codex")
     monkeypatch.setattr(manager, "_opencode_models", lambda _config: [])
 
     catalog = manager.catalog(config, "BIZ")
@@ -31,6 +39,10 @@ def test_catalog_exposes_thesis_tile_profile_and_only_opencode(monkeypatch, tmp_
     assert catalog["profile"] == "BIZ"
     assert catalog["harnesses"][0]["id"] == "opencode"
     assert catalog["harnesses"][0]["available"] is True
+    assert catalog["harnesses"][1]["id"] == "codex"
+    assert catalog["harnesses"][1]["available"] is True
+    assert catalog["models_by_harness"]["codex"][0]["id"] == "gpt-5.6-sol"
+    assert catalog["models_by_harness"]["codex"][1]["id"] == "gpt-5.6-terra"
     assert catalog["projects"][0]["name"] == "Lehre"
     assert catalog["categories"][0]["tiles"][0]["id"] == "thesis-reviewer"
     assert catalog["categories"][0]["tiles"][0]["available"] is True
@@ -41,6 +53,15 @@ def test_catalog_exposes_thesis_tile_profile_and_only_opencode(monkeypatch, tmp_
     ]
     assert presentation_tiles[0]["available"] is True
     assert catalog["presentation"]["default_image_provider"] == "kie"
+    assert [
+        model["id"]
+        for model in catalog["presentation"]["image_providers"][0]["models"]
+    ] == [
+        "gpt-image-2-text-to-image",
+        "nano-banana-2-lite",
+        "flux-2/pro-text-to-image",
+    ]
+    assert len(catalog["presentation"]["image_providers"]) == 1
 
 
 @pytest.mark.parametrize("profile", ["BIZ", "PRIVAT", "TEST"])
@@ -128,7 +149,55 @@ def test_opencode_runner_uses_running_service_model_and_files(
     assert command[command.index("--dir") + 1] == str(tmp_path)
     assert command[command.index("--file") + 1] == str(thesis)
     assert command[command.index("--model") + 1] == "ws_home/model"
-    assert command[command.index("--agent") + 1] == "thesis-reviewer"
+
+
+def test_codex_runner_uses_saved_chatgpt_login_model_and_stdin(
+    monkeypatch, tmp_path
+):
+    captured = {}
+    attachment_dir = tmp_path.parent / "private-upload"
+    attachment_dir.mkdir()
+    attachment = attachment_dir / "thesis.pdf"
+    attachment.write_bytes(b"%PDF")
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout="Plan erstellt", stderr="")
+
+    monkeypatch.setattr(workbench.subprocess, "run", fake_run)
+
+    result = WorkbenchManager._run_codex(
+        executable="/bin/codex",
+        project_path=tmp_path,
+        prompt="Erstelle einen Präsentationsplan.",
+        attachments=[attachment],
+        model="gpt-5.6-terra",
+        sandbox="workspace-write",
+        ephemeral=True,
+        timeout=900,
+    )
+
+    assert result == "Plan erstellt"
+    command = captured["command"]
+    assert command[:2] == ["/bin/codex", "exec"]
+    assert command[command.index("--model") + 1] == "gpt-5.6-terra"
+    assert command[command.index("--add-dir") + 1] == str(attachment_dir)
+    assert "--ephemeral" in command
+    assert captured["kwargs"]["input"] == "Erstelle einen Präsentationsplan."
+
+
+def test_codex_model_selection_is_limited_to_visible_models():
+    assert (
+        WorkbenchManager._selected_model(
+            {"model": "gpt-5.6-luna"}, "codex", {}
+        )
+        == "gpt-5.6-luna"
+    )
+    with pytest.raises(ValueError, match="freigegebenen Codex"):
+        WorkbenchManager._selected_model(
+            {"model": "invented-model"}, "codex", {}
+        )
 
 
 def _wait_for_status(manager, job_id, statuses, timeout=3):
@@ -216,7 +285,7 @@ def test_presentation_plan_waits_for_edited_approval_then_builds(
             "outline": "Einstieg, Architektur, Übung, Synthese",
             "languages": ["de"],
             "image_provider": "kie",
-            "image_model": "nano-banana-2",
+            "image_model": "gpt-image-2-text-to-image",
             "attachments": [],
         },
         config,
@@ -251,7 +320,56 @@ def test_presentation_plan_waits_for_edited_approval_then_builds(
     assert (output / "presentation.html").is_file()
     assert (output / "review.html").is_file()
     assert calls[0]["agent"] == "html-praesentationswerkstatt"
+    assert calls[0]["timeout"] >= 900
     assert calls[1]["prompt"].startswith("FREIGABE")
+
+
+def test_presentation_plan_accepts_empty_content_and_creates_own_structure(
+    monkeypatch, tmp_path
+):
+    project = tmp_path / "BrainVault"
+    project.mkdir()
+    manager = WorkbenchManager(tmp_path)
+    config = default_config("Linux")
+    config["opencode"].update(
+        {
+            "enabled": True,
+            "projects": {"BrainVault": str(project)},
+            "default_project": "BrainVault",
+            "timeout_seconds": 180,
+        }
+    )
+    monkeypatch.setattr(workbench, "find_opencode_executable", lambda: "/bin/opencode")
+
+    def fake_run_opencode(**kwargs):
+        output_path = Path(kwargs["extra_env"]["TRINITY_PRESENTATION_OUTPUT"])
+        (output_path / "presentation-plan.md").write_text(
+            "# Eigene Grobstruktur\n", encoding="utf-8"
+        )
+        assert "entwickle selbst eine sinnvolle Grobstruktur" in kwargs["prompt"]
+        assert kwargs["timeout"] == 900
+        return "Eigene Grobstruktur erstellt"
+
+    monkeypatch.setattr(manager, "_run_opencode", fake_run_opencode)
+    result = manager.submit(
+        {
+            "tile_id": "html-presentation-workshop",
+            "harness": "opencode",
+            "project": "BrainVault",
+            "attachments": [],
+        },
+        config,
+        "PRIVAT",
+    )
+
+    waiting = _wait_for_status(
+        manager,
+        result["job"]["job_id"],
+        {"WAITING_FOR_APPROVAL", "FAILED"},
+    )
+    assert waiting["status"] == "WAITING_FOR_APPROVAL"
+    assert waiting["metadata"]["title"].startswith("Neuer Entwurf")
+    assert waiting["metadata"]["output_path"].startswith("HTML-Präsentationen/")
 
 
 def test_presentation_paths_cannot_escape_configured_project(tmp_path):
@@ -279,9 +397,31 @@ def test_workbench_provider_secrets_are_persistent_but_never_returned(tmp_path):
     assert result == {
         "ok": True,
         "kie_configured": True,
-        "fal_configured": True,
     }
     assert "secret" not in str(result)
     assert manager.secret_status(config)["kie_configured"] is True
+    stored = manager._load_secrets(config)
+    assert stored["kie_ai"] == "kie-secret"
+    assert "fal_ai" not in stored
     if os.name != "nt":
         assert manager.secrets_path.stat().st_mode & 0o077 == 0
+
+
+def test_opencode_timeout_error_never_exposes_full_command(monkeypatch, tmp_path):
+    def fake_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(workbench.subprocess, "run", fake_run)
+
+    with pytest.raises(TimeoutError, match="Zeitlimit von 15 Minuten") as error:
+        WorkbenchManager._run_opencode(
+            executable="/bin/opencode",
+            project_path=tmp_path,
+            prompt="privater sehr langer Prompt",
+            attachments=[],
+            model="model",
+            agent="agent",
+            server_url="",
+            timeout=900,
+        )
+    assert "privater sehr langer Prompt" not in str(error.value)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate one presentation image through Kie.ai or fal.ai without logging keys."""
+"""Generate one presentation image through Kie.ai without logging keys."""
 
 from __future__ import annotations
 
@@ -14,7 +14,11 @@ from pathlib import Path
 
 KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask"
 KIE_STATUS_URL = "https://api.kie.ai/api/v1/jobs/recordInfo"
-FAL_BASE_URL = "https://fal.run"
+KIE_MODELS = {
+    "gpt-image-2-text-to-image",
+    "nano-banana-2-lite",
+    "flux-2/pro-text-to-image",
+}
 
 
 class PresentationImageError(RuntimeError):
@@ -78,19 +82,28 @@ def _find_http_urls(value):
 def _kie_image_url(
     *, api_key, model, prompt, aspect_ratio, resolution, timeout_seconds
 ):
+    if model not in KIE_MODELS:
+        raise PresentationImageError("Dieses Kie.ai-Modell ist nicht freigegeben.")
+    model_input = {
+        "prompt": prompt,
+        "aspect_ratio": aspect_ratio,
+    }
+    if model == "nano-banana-2-lite":
+        model_input["image_urls"] = []
+    elif model == "flux-2/pro-text-to-image":
+        model_input.update(
+            {
+                "resolution": resolution,
+                "nsfw_checker": False,
+            }
+        )
     created = _request_json(
         KIE_CREATE_URL,
         method="POST",
         headers={"Authorization": f"Bearer {api_key}"},
         payload={
             "model": model,
-            "input": {
-                "prompt": prompt,
-                "aspect_ratio": aspect_ratio,
-                "resolution": resolution,
-                "output_format": "png",
-                "image_input": [],
-            },
+            "input": model_input,
         },
     )
     task_id = str((created.get("data") or {}).get("taskId") or "").strip()
@@ -132,27 +145,6 @@ def _kie_image_url(
     raise PresentationImageError("Kie.ai-Auftrag hat das Zeitlimit überschritten.")
 
 
-def _fal_image_url(*, api_key, model, prompt, aspect_ratio, resolution):
-    result = _request_json(
-        f"{FAL_BASE_URL}/{model.lstrip('/')}",
-        method="POST",
-        headers={"Authorization": f"Key {api_key}"},
-        payload={
-            "prompt": prompt,
-            "num_images": 1,
-            "aspect_ratio": aspect_ratio,
-            "resolution": resolution,
-            "output_format": "png",
-            "sync_mode": False,
-        },
-        timeout=300,
-    )
-    urls = _find_http_urls(result.get("images") or result)
-    if not urls:
-        raise PresentationImageError("fal.ai hat keine Bildadresse geliefert.")
-    return urls[0]
-
-
 def _download(url, output_path):
     request = urllib.request.Request(url, headers={"User-Agent": "Trinity/Presentation"})
     try:
@@ -182,31 +174,19 @@ def generate(args):
         raise PresentationImageError("Der Bildprompt ist ungewöhnlich groß.")
 
     provider = str(args.provider).strip().casefold()
-    if provider == "kie":
-        api_key = os.environ.get("KIE_API_KEY", "").strip()
-        if not api_key:
-            raise PresentationImageError("KIE_API_KEY ist nicht eingerichtet.")
-        image_url = _kie_image_url(
-            api_key=api_key,
-            model=args.model,
-            prompt=prompt,
-            aspect_ratio=args.aspect_ratio,
-            resolution=args.resolution,
-            timeout_seconds=args.timeout,
-        )
-    elif provider == "fal":
-        api_key = os.environ.get("FAL_KEY", "").strip()
-        if not api_key:
-            raise PresentationImageError("FAL_KEY ist nicht eingerichtet.")
-        image_url = _fal_image_url(
-            api_key=api_key,
-            model=args.model,
-            prompt=prompt,
-            aspect_ratio=args.aspect_ratio,
-            resolution=args.resolution,
-        )
-    else:
-        raise PresentationImageError("Provider muss kie oder fal sein.")
+    if provider != "kie":
+        raise PresentationImageError("Provider muss kie sein.")
+    api_key = os.environ.get("KIE_API_KEY", "").strip()
+    if not api_key:
+        raise PresentationImageError("KIE_API_KEY ist nicht eingerichtet.")
+    image_url = _kie_image_url(
+        api_key=api_key,
+        model=args.model,
+        prompt=prompt,
+        aspect_ratio=args.aspect_ratio,
+        resolution=args.resolution,
+        timeout_seconds=args.timeout,
+    )
 
     byte_count = _download(image_url, output_path)
     return {
@@ -222,7 +202,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Sichere Bildbrücke für Trinitys HTML-Präsentationswerkstatt."
     )
-    parser.add_argument("--provider", choices=("kie", "fal"), required=True)
+    parser.add_argument("--provider", choices=("kie",), required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--output", required=True)
