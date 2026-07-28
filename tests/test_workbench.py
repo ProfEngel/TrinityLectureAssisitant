@@ -369,7 +369,7 @@ def test_presentation_plan_accepts_empty_content_and_creates_own_structure(
     )
     assert waiting["status"] == "WAITING_FOR_APPROVAL"
     assert waiting["metadata"]["title"].startswith("Neuer Entwurf")
-    assert waiting["metadata"]["output_path"].startswith("HTML-Präsentationen/")
+    assert Path(waiting["metadata"]["output_path"]).parts[0] == "HTML-Präsentationen"
 
 
 def test_presentation_paths_cannot_escape_configured_project(tmp_path):
