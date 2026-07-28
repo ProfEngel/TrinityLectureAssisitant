@@ -1,4 +1,5 @@
 import base64
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -282,5 +283,5 @@ def test_workbench_provider_secrets_are_persistent_but_never_returned(tmp_path):
     }
     assert "secret" not in str(result)
     assert manager.secret_status(config)["kie_configured"] is True
-    if hasattr(manager.secrets_path.stat(), "st_mode"):
+    if os.name != "nt":
         assert manager.secrets_path.stat().st_mode & 0o077 == 0
