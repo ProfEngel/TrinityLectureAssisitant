@@ -1,0 +1,1 @@
+.format-grid{grid-template-columns:1fr 180px 180px}.timing-hint{font-size:.82rem;color:#47625e;margin:-4px 0 12px}html[data-theme=dark] .timing-hint{color:#bad0ce}@media(prefers-color-scheme:dark){html:not([data-theme]) .timing-hint{color:#bad0ce}}@media(max-width:760px){.format-grid{grid-template-columns:1fr}}

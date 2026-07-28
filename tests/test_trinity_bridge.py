@@ -330,6 +330,20 @@ def test_web_settings_are_local_or_administrator_only(tmp_path):
     account_bridge = TrinityBridge(tmp_path / "accounts", auth_enabled=True)
     assert account_bridge.can_manage_settings(LocalHandler(), {"role": "user"}) is False
     assert account_bridge.can_manage_settings(RemoteHandler(), {"role": "admin"}) is True
+    assert local_bridge.can_manage_workbench_secrets(LocalHandler(), {}) is True
+    assert local_bridge.can_manage_workbench_secrets(RemoteHandler(), {}) is False
+    assert (
+        account_bridge.can_manage_workbench_secrets(
+            LocalHandler(), {"role": "user"}
+        )
+        is False
+    )
+    assert (
+        account_bridge.can_manage_workbench_secrets(
+            RemoteHandler(), {"role": "admin"}
+        )
+        is True
+    )
 
 
 def test_legacy_token_mode_allows_loopback_ui_but_protects_remote_clients(tmp_path):

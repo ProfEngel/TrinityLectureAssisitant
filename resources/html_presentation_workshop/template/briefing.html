@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Präsentationsbriefing · HTML-Werkstatt</title>
+  <link rel="stylesheet" href="assets/briefing.css">
+  <link rel="stylesheet" href="assets/timing.css">
+</head>
+<body>
+  <header class="topbar"><a href="../README.md" class="brand">HTML-Präsentationswerkstatt</a><span>Briefing → Plan → Freigabe → Projektordner → Review</span><button id="themeToggle" class="theme-toggle" type="button" aria-label="Farbschema wechseln">◐ Theme</button></header>
+  <main class="shell">
+    <section class="intro"><p class="eyebrow">01 · PRÄSENTATIONSBRIEFING</p><h1>Erzähl erst, <em>baue später.</em></h1><p>Dieses Formular erzeugt ein belastbares Briefing für eine KI. Alle Eingaben bleiben lokal in deinem Browser, bis du sie explizit kopierst oder exportierst.</p></section>
+
+    <form id="briefing" class="briefing" onsubmit="return false">
+      <section class="panel basics"><div class="section-title"><span>01</span><h2>Rahmen &amp; Kontext</h2></div>
+        <div class="fields two"><label>Titel<input name="title" placeholder="z. B. Energie, die bleibt"></label><label>Untertitel / Anlass<input name="subtitle" placeholder="Vortrag beim …"></label><label>Vortragende Person<input name="presenter" placeholder="Name, Rolle"></label><fieldset class="language-field"><legend>Ausgabesprachen</legend><label><input type="checkbox" name="languages" value="de" checked> Deutsch</label><label><input type="checkbox" name="languages" value="en" checked> English</label><label><input type="checkbox" name="languages" value="fr"> Français</label><label><input type="checkbox" name="languages" value="es"> Español</label><label><input type="checkbox" name="languages" value="it"> Italiano</label><label><input type="checkbox" name="languages" value="pt"> Português</label><label><input type="checkbox" name="languages" value="tr"> Türkçe</label><label>Weitere (BCP-47-Code)<input name="additionalLanguages" placeholder="z. B. nl, pl"></label></fieldset></div>
+        <label>Ziel &amp; Kernbotschaft<textarea name="goal" rows="3" placeholder="Was soll das Publikum nach dem Vortrag verstehen, fühlen oder tun?"></textarea></label>
+      </section>
+
+      <section class="panel format"><div class="section-title"><span>02</span><h2>Format &amp; räumlicher Aufbau</h2></div>
+        <div class="format-grid"><label>Seitenverhältnis<select name="ratio" id="ratio"><option value="16 / 9">16:9 · Bühne / Standard</option><option value="4 / 3">4:3 · klassisch</option><option value="3 / 4">3:4 · Hochformat</option><option value="9 / 16">9:16 · Mobile / Reels</option><option value="1 / 1">1:1 · Quadrat</option></select></label><label>Vortragsdauer (Min., optional)<input type="number" min="1" max="480" name="durationMinutes" placeholder="z. B. 45"></label><label>Folienzahl (optional)<input type="number" min="3" max="100" name="slideCount" placeholder="z. B. 18"></label></div>
+        <p class="timing-hint">Mindestens eine Angabe ist erforderlich. Sind Dauer und Folienzahl gesetzt, hält die KI beide als verbindlichen Rahmen ein; bei nur einer Angabe leitet sie das fehlende Budget nachvollziehbar im Bauplan ab.</p>
+        <div class="layout-tools"><p>Ziehe die Rastergrenzen mit den Reglern. Fülle die neun Felder mit Inhalten oder Platzierungswünschen – leer heißt: frei lassen.</p><div class="sliders"><label>Links <input type="range" class="grid-range" data-axis="x" data-index="0" min="15" max="70" value="33"></label><label>Rechts <input type="range" class="grid-range" data-axis="x" data-index="1" min="15" max="70" value="34"></label><label>Oben <input type="range" class="grid-range" data-axis="y" data-index="0" min="15" max="70" value="33"></label><label>Unten <input type="range" class="grid-range" data-axis="y" data-index="1" min="15" max="70" value="34"></label></div></div>
+        <div class="slide-preview" id="slidePreview" style="--ratio:16 / 9"><span class="safe-label">Beispiel-Folie</span><textarea data-cell="oben links" placeholder="oben links"></textarea><textarea data-cell="oben mitte" placeholder="oben mitte"></textarea><textarea data-cell="oben rechts" placeholder="oben rechts"></textarea><textarea data-cell="mitte links" placeholder="mitte links"></textarea><textarea data-cell="mitte mitte" placeholder="mitte mitte"></textarea><textarea data-cell="mitte rechts" placeholder="mitte rechts"></textarea><textarea data-cell="unten links" placeholder="unten links"></textarea><textarea data-cell="unten mitte" placeholder="unten mitte"></textarea><textarea data-cell="unten rechts" placeholder="unten rechts"></textarea></div>
+      </section>
+
+      <section class="panel"><div class="section-title"><span>03</span><h2>Hintergrund &amp; Designrichtung</h2></div>
+        <div class="fields three"><label>Hintergrund<select name="backgroundType" id="backgroundType"><option value="solid">Unifarbe</option><option value="gradient">Farbverlauf</option><option value="image">Hintergrundbild</option></select></label><label>Basisfarbe<input name="backgroundColor" type="color" value="#f7f7f5"></label><label>Akzentfarbe<input name="accentColor" type="color" value="#145da0"></label></div>
+        <label id="backgroundImageField" class="file-field">Hintergrundbild (optional)<input id="backgroundImage" type="file" accept="image/*"></label>
+        <p class="hint">Wähle eine Richtung – die Miniaturen sind bewusst Designsprachen, keine fertigen Folien.</p>
+        <div class="style-cards" id="styleCards">
+          <button type="button" class="style-card selected" data-style="klar & editorial"><i class="swatch editorial"></i><strong>Klar &amp; editorial</strong><small>Weißraum, präzise Typo</small></button>
+          <button type="button" class="style-card" data-style="Apple Glass"><i class="swatch glass"></i><strong>Apple Glass</strong><small>Transparenz, Tiefe, weich</small></button>
+          <button type="button" class="style-card" data-style="Pastell"><i class="swatch pastel"></i><strong>Pastell</strong><small>Leicht, freundlich, ruhig</small></button>
+          <button type="button" class="style-card" data-style="Comic / Sketch"><i class="swatch sketch"></i><strong>Comic / Sketch</strong><small>Skizze, Humor, Energie</small></button>
+          <button type="button" class="style-card" data-style="Dunkel & datenstark"><i class="swatch dark"></i><strong>Dunkel &amp; datenstark</strong><small>Kontrast, Bühne, Fokus</small></button>
+        </div>
+        <label>Gestaltungsnotizen<textarea name="designNotes" rows="2" placeholder="Markenfarben, Schrift, zu vermeiden, Referenzen …"></textarea></label>
+      </section>
+
+      <section class="panel"><div class="section-title"><span>04</span><h2>Medienablage</h2></div>
+        <div id="dropzone" class="dropzone" tabindex="0"><strong>Medien hier hineinziehen</strong><span>Logo, Bilder, Video, Musik, Daten – oder klicken zum Auswählen.</span><input id="mediaInput" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.csv,.json"></div>
+        <div id="mediaList" class="media-list" aria-live="polite"></div>
+        <p class="hint">Vergib bei jedem Medium eine gewünschte Platzierung/Verwendung. Der Export kopiert die Originaldateien nur mit Chromium-basierter Browser-Unterstützung in den Projektordner.</p>
+      </section>
+
+      <section class="panel"><div class="section-title"><span>05</span><h2>Research &amp; Referenzunterlagen</h2></div>
+        <div class="research-grid"><div><label class="toggle"><input type="checkbox" name="deepResearch" checked><span>Deep Research vor dem Folienbau durchführen</span></label><div class="fields two"><label>Recherchetiefe<select name="researchDepth"><option value="fokussiert">Fokussiert · 8–12 geprüfte Quellen</option><option value="solide" selected>Solide · 15–25 geprüfte Quellen</option><option value="tief">Tief · 25+ Quellen, Gegenprüfung</option></select></label><label>Quellenanzeige<select name="citationStyle"><option value="subtle-links">Dezente IDs unten je Folie</option><option value="footnotes">Kurze Fußnoten je Folie</option><option value="appendix">Quellen nur im Anhang</option></select></label></div><label>Forschungsfokus / Claims, die unbedingt belastbar sein müssen<textarea name="researchNotes" rows="4" placeholder="z. B. aktuelle Zahlen aus Deutschland, Definitionen nach Fachliteratur, Gegenargumente, Zeitraum …"></textarea></label></div>
+          <div class="research-note"><strong>Wissenschaftlicher Vertrag</strong><p>Die KI recherchiert in mindestens zwei Zyklen, sichert eine Evidenzmatrix und erstellt <code>sources/sources.json</code> plus eine offline lesbare Quellenübersicht. Jede zentrale Behauptung erhält eine überprüfbare Quellen-ID.</p><p>Eigene Unterlagen helfen beim Aufbau, gelten aber nicht automatisch als zitierfähiger Beleg.</p></div></div>
+        <div id="referenceDropzone" class="dropzone references" tabindex="0"><strong>Eigene Unterlagen hier hineinziehen</strong><span>PDF, PPTX, Markdown, HTML, Bilder, Daten – oder klicken zum Auswählen.</span><input id="referenceInput" type="file" multiple></div>
+        <div id="referenceList" class="media-list" aria-live="polite"></div>
+        <p class="hint">Notiere pro Datei, was daraus berücksichtigt werden soll. Beim Projektordner-Export landen die Originale unverändert in <code>reference-material/</code>.</p>
+      </section>
+
+      <section class="panel"><div class="section-title"><span>06</span><h2>Folien-Dramaturgie</h2></div>
+        <p class="hint">Wähle eine erprobte Struktur als Ausgangspunkt; ergänze oder streiche sie anschließend frei.</p>
+        <div class="presets" id="presets"><button type="button" data-preset="keynote">Keynote</button><button type="button" data-preset="lehre">Lehre</button><button type="button" data-preset="pitch">Pitch</button><button type="button" data-preset="bericht">Bericht</button></div>
+        <div class="check-grid"><label><input type="checkbox" name="structure" value="Startfolie: Titel, Anlass, starke Eröffnung" checked> Startfolie</label><label><input type="checkbox" name="structure" value="Agenda / Orientierung"> Agenda</label><label><input type="checkbox" name="structure" value="Problem / Frage / Relevanz" checked> Problem / Relevanz</label><label><input type="checkbox" name="structure" value="Kernteil: Argumente, Beispiele, Belege" checked> Kernteil</label><label><input type="checkbox" name="structure" value="Interaktion / Aktivierung"> Aktivierung</label><label><input type="checkbox" name="structure" value="Zusammenfassung / Takeaways" checked> Takeaways</label><label><input type="checkbox" name="structure" value="Call to Action / Diskussion"> Diskussion / CTA</label><label><input type="checkbox" name="timeline"> Zeitachse</label><label><input type="checkbox" name="progress" checked> Fortschrittsleiste</label></div>
+        <label>Gewünschte Abfolge / besondere Folien<textarea name="flowNotes" rows="4" placeholder="z. B. Nach Folie 3 ein kurzes Video; am Ende 5 Minuten Diskussion …"></textarea></label>
+      </section>
+
+      <section class="panel split"><div><div class="section-title"><span>07</span><h2>Zielgruppe</h2></div><div class="audience-cards" id="audienceCards"><button type="button" data-audience="Kinder">Kinder</button><button type="button" data-audience="Schüler:innen">Schüler:innen</button><button type="button" data-audience="Studierende" class="selected">Studierende</button><button type="button" data-audience="Fachpublikum">Fachpublikum</button><button type="button" data-audience="Allgemeines Publikum">Allgemeines Publikum</button><button type="button" data-audience="Entscheider:innen">Entscheider:innen</button></div><label>Wissensstand &amp; Ton<textarea name="audienceNotes" rows="4" placeholder="z. B. wenig Vorwissen; Definition → Bild → Aufgabe im Wechsel. Oder: Expert:innen, präzise Quellen und wenig Einführung."></textarea></label></div>
+        <div><div class="section-title"><span>08</span><h2>Interaktivität</h2></div><label class="toggle"><input type="checkbox" name="interactive" checked><span>Interaktive Momente einplanen</span></label><div class="fields two"><label>Anzahl<input type="number" name="interactiveCount" min="0" value="2"></label><label>Einheit<select name="interactiveUnit"><option>Folien</option><option>Prozent der Folien</option></select></label></div><label>Ideen / Grenzen<textarea name="interactionNotes" rows="4" placeholder="Leer lassen: Die KI schlägt passende Interaktionen vor. Oder: Karte, Slider, Quiz, Chart, keine Abstimmung …"></textarea></label></div>
+      </section>
+
+      <section class="panel"><div class="section-title"><span>09</span><h2>Qualität &amp; Grenzen</h2></div><div class="check-grid"><label><input type="checkbox" name="requirements" value="offline und kopierbar" checked> offline &amp; kopierbar</label><label><input type="checkbox" name="requirements" value="Tastatursteuerung und sichtbarer Fokus" checked> tastaturbedienbar</label><label><input type="checkbox" name="requirements" value="Screenreader-Alternativen / Alt-Texte" checked> barriereärmer</label><label><input type="checkbox" name="requirements" value="Sprecherhinweise"> Sprecherhinweise</label><label><input type="checkbox" name="requirements" value="Quellen-/Lizenzfolie" checked> Quellenfolie</label><label><input type="checkbox" name="requirements" value="keine externen Netzwerkanfragen" checked> keine externen Requests</label><label><input type="checkbox" name="requirements" value="druckbare statische Fassung" checked> druckbare Fassung</label></div><label>Weitere Vorgaben<textarea name="constraints" rows="3" placeholder="Deadline, rechtliche Hinweise, vorhandene Corporate Identity, Dinge die keinesfalls vorkommen sollen …"></textarea></label></section>
+    </form>
+
+    <section class="export panel"><div><p class="eyebrow">FERTIG MIT DEM BRIEFING?</p><h2>Übergib einen präzisen Auftrag.</h2><p>Der Prompt beschreibt nur Anforderungen und vorhandene Assets. Die KI soll daraus den portablen Präsentationsordner bauen.</p></div><div class="actions"><button id="copyPrompt" class="primary">KI-Prompt kopieren</button><button id="downloadSpec">Briefing JSON sichern</button><button id="exportFolder">Projektordner exportieren</button><output id="status" aria-live="polite"></output></div></section>
+  </main>
+  <script src="assets/briefing.js"></script>
+</body>
+</html>
