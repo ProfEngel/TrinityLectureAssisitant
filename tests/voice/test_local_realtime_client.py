@@ -63,3 +63,30 @@ def test_distinct_loud_speech_can_interrupt_playback(tmp_path):
     speech = np.tile(np.array([1_400, -1_100, 800, -500], dtype=np.int16), 128)
 
     assert local._should_forward_microphone(speech.tobytes()) is True
+
+
+def test_distinct_speech_cancels_current_response_before_forwarding(tmp_path):
+    local = client(tmp_path)
+    local._output.extend(b"buffered-audio")
+    local._played_output.append(np.full(512, 2_000, dtype=np.int16))
+    local._last_output_at = time.monotonic()
+    speech = np.tile(np.array([1_400, -1_100, 800, -500], dtype=np.int16), 128)
+
+    local._input_callback(speech.tobytes(), 512, None, None)
+
+    assert local._output == bytearray()
+    assert local._send_queue.get_nowait() == {"type": "response.cancel"}
+    forwarded = local._send_queue.get_nowait()
+    assert forwarded["type"] == "input_audio_buffer.append"
+
+
+def test_output_callback_consumes_audio_without_microphone_coupling(tmp_path):
+    local = client(tmp_path)
+    samples = np.full(512, 1_250, dtype=np.int16)
+    local._output.extend(samples.tobytes())
+    output = bytearray(samples.nbytes)
+
+    local._output_callback(output, 512, None, None)
+
+    assert bytes(output) == samples.tobytes()
+    assert local._output == bytearray()

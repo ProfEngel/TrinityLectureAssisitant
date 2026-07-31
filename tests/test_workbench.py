@@ -430,7 +430,10 @@ def test_presentation_plan_waits_for_edited_approval_then_builds(
         config,
         "PRIVAT",
     )
-    assert approved["job"]["status"] == "RUNNING"
+    # The mocked build can finish before approve_presentation returns on fast
+    # runners; both states are valid and the assertions below still verify the
+    # completed output and artifacts.
+    assert approved["job"]["status"] in {"RUNNING", "SUCCEEDED"}
     finished = _wait_for_status(manager, job_id, {"SUCCEEDED", "FAILED"})
 
     assert finished["status"] == "SUCCEEDED"

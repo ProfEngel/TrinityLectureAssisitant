@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.17.1:** Der lokale Eve-Desktoppfad öffnet Mikrofon und Lautsprecher jetzt als getrennte Audiostreams. Das verhindert insbesondere auf Macs mit unterschiedlichen Ein-/Ausgabe-Sampleraten einen blockierenden CoreAudio-Duplexstart. Erkannte echte Sprache leert Eves Ausgabe sofort und sendet zusätzlich ein lokales `response.cancel`; die serverseitige VAD bleibt als zweite Sicherung aktiv.
 > - **v0.17.0:** Eve Voice ist produktiv auf Mac, Windows und iPhone/iPad angebunden. Lokale Desktop-Gespräche laufen jetzt full-duplex über den Realtime-Pfad: Neue Sprache stoppt die laufende Antwort sofort und leert bereits gepufferte Audioausgabe. Bestehende lokale Eve-Profile werden automatisch migriert; `Legacy` bleibt unverändert als manueller und automatischer Fallback erhalten. Die Companion-App nutzt Apples Voice-Chat-Echounterdrückung und kann Eve ebenfalls per Sprache, Stopptaste oder Wischgeste unterbrechen.
 > - **v0.16.70:** Die Werkstatt trennt nun fachliche Skills von tatsächlich ausführbaren Harness-Agenten. OpenCode wird mit seinem geprüften Arbeitsagenten gestartet und prüft vor jedem Auftrag OpenCode-Dienst sowie Modellserver, sodass ein nicht laufender GPU-Server sofort verständlich gemeldet wird. Die HTML-Präsentationswerkstatt führt ihre Recherche-Rolle verbindlich aus und analysiert hochgeladene Bilder sowie aus PPTX/PDF gewonnene Ansichten über einen echten Vision-Adapter, bevor Bilder einer HTML-Folie zugeordnet werden.
-> - **v0.16.69:** Session, Agentenstatus, Modus, Mikrofon, Lautsprecher, Einstellungen und Zugang erscheinen in der WebUI nun konsequent als klare Symbole. Tooltips, zugängliche Beschriftungen, Zustandsfarben und die sichtbare Zahl aktiver beziehungsweise freizugebender Agentenaufträge erhalten trotzdem alle wichtigen Informationen.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]

@@ -19,7 +19,16 @@ Eve process releases the microphone and Trinity restarts Legacy STT.
 immediately clears queued playback and cancels the active response. AirPods or
 headphones remain the most reliable route because open speakers can acoustically
 re-enter the microphone despite Trinity's echo-correlation gate. The settings
-provide a barge-in switch and sensitivity threshold.
+provide a barge-in switch and sensitivity threshold. Microphone and speaker are
+opened as separate streams so their different native sample rates cannot block
+the complete duplex startup.
+
+When Trinity is launched with a visible Terminal, macOS must allow **Terminal**
+under **System Settings > Privacy & Security > Microphone**. After changing that
+permission, close all Trinity/Terminal voice processes and restart the Mac once
+if CoreAudio still waits indefinitely. `voice doctor` validates models and
+configuration; the final local smoke test additionally validates the physical
+microphone and speaker path.
 
 For a Companion server, choose `eve-mac-server`, set a separate long Voice
 token, bind to `0.0.0.0` only inside a trusted Tailscale/private network, then
