@@ -65,6 +65,13 @@ def _read_workbench_config(config_file):
         return {}
 
 
+def _read_voice_config(config_file):
+    try:
+        return load_config(config_file).get("voice", {})
+    except Exception:
+        return {}
+
+
 def _console_python_executable(executable=None, platform_name=None):
     executable = executable or sys.executable
     host = platform_name or sys.platform
@@ -96,6 +103,36 @@ def _graphical_session_available(platform_name=None, environment=None):
 def _terminate(process):
     if process is not None and process.poll() is None:
         process.terminate()
+
+
+def _spawn_ear_process(
+    *,
+    show_terminal,
+    console_flags,
+    console_script,
+    ear_script,
+    runtime_log,
+    environment,
+):
+    if show_terminal:
+        return subprocess.Popen(
+            [
+                _console_python_executable(),
+                "-u",
+                console_script,
+                "--runtime",
+                ear_script,
+            ],
+            creationflags=console_flags,
+            env=environment,
+        )
+    return subprocess.Popen(
+        [sys.executable, "-u", ear_script],
+        stdout=runtime_log,
+        stderr=subprocess.STDOUT,
+        creationflags=0,
+        env=environment,
+    )
 
 
 def _request_graceful_shutdown(_signum, _frame):
@@ -266,6 +303,7 @@ def launch_trinity():
     companion_config = _read_companion_config(config_file)
     server_config = _read_server_config(config_file)
     workbench_config = _read_workbench_config(config_file)
+    voice_config = _read_voice_config(config_file)
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"
@@ -286,6 +324,7 @@ def launch_trinity():
             console_flags = subprocess.CREATE_NEW_CONSOLE
 
         bridge_process = None
+        voice_process = None
         canvas_process = None
         canvas_manager = CanvasManager(base_dir)
         if canvas_manager.enabled:
@@ -337,26 +376,39 @@ def launch_trinity():
                 browser_host = "127.0.0.1" if bridge_host in {"0.0.0.0", "::"} else bridge_host
                 webbrowser.open(f"http://{browser_host}:{bridge_port}/")
 
-        if show_terminal:
-            ear_process = subprocess.Popen(
-                [
-                    _console_python_executable(),
-                    "-u",
-                    console_script,
-                    "--runtime",
-                    ear_script,
-                ],
-                creationflags=console_flags,
-                env=child_env,
-            )
-        else:
-            ear_process = subprocess.Popen(
-                [sys.executable, "-u", ear_script],
-                stdout=runtime_log,
-                stderr=subprocess.STDOUT,
+        voice_enabled = str(voice_config.get("engine") or "legacy").casefold() == "eve"
+        voice_fallback = bool(voice_config.get("fallback_to_legacy", True))
+        if voice_enabled:
+            voice_profile = str(voice_config.get("profile") or "eve-trinity")
+            voice_command = [
+                sys.executable,
+                "-u",
+                cli_script,
+                "--home",
+                base_dir,
+                "voice",
+                "serve",
+                "--profile",
+                voice_profile,
+            ]
+            voice_process = subprocess.Popen(
+                voice_command,
+                stdout=None if show_terminal else runtime_log,
+                stderr=None if show_terminal else subprocess.STDOUT,
                 creationflags=0,
                 env=child_env,
             )
+            child_env["TRINITY_VOICE_OWNS_MIC"] = "1"
+            _log_message(launcher_log, f"Eve Voice wird mit Profil {voice_profile} gestartet.")
+
+        ear_process = _spawn_ear_process(
+            show_terminal=show_terminal,
+            console_flags=console_flags,
+            console_script=console_script,
+            ear_script=ear_script,
+            runtime_log=runtime_log,
+            environment=child_env,
+        )
 
         ui_processes = {}
         if ui_modes["eyes"]:
@@ -409,6 +461,33 @@ def launch_trinity():
                     bridge_process = None
                     if web_enabled and not ui_processes:
                         break
+                if voice_process is not None and voice_process.poll() is not None:
+                    return_code = voice_process.returncode
+                    _log_message(
+                        launcher_log,
+                        f"Eve Voice wurde mit Code {return_code} beendet.",
+                    )
+                    voice_process = None
+                    if voice_fallback:
+                        _log_message(
+                            launcher_log,
+                            "Wechsle automatisch auf die bisherige STT/TTS-Laufzeit zurück.",
+                        )
+                        _terminate(ear_process)
+                        if ear_process is not None:
+                            try:
+                                ear_process.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                ear_process.kill()
+                        child_env.pop("TRINITY_VOICE_OWNS_MIC", None)
+                        ear_process = _spawn_ear_process(
+                            show_terminal=show_terminal,
+                            console_flags=console_flags,
+                            console_script=console_script,
+                            ear_script=ear_script,
+                            runtime_log=runtime_log,
+                            environment=child_env,
+                        )
                 time.sleep(1)
         except KeyboardInterrupt:
             _log_message(launcher_log, "Trinity wurde manuell beendet.")
@@ -417,6 +496,7 @@ def launch_trinity():
                 _terminate(process)
             _terminate(ear_process)
             _terminate(bridge_process)
+            _terminate(voice_process)
             _terminate(canvas_process)
             reset_request_path = canvas_manager.paths.runtime_root / "reset-request.json"
             if reset_request_path.is_file():

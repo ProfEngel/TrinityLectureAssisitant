@@ -7,6 +7,11 @@ import platform
 import shutil
 from pathlib import Path
 
+try:
+    from .voice.config import default_voice_config
+except ImportError:  # configuration is also imported as a top-level core module
+    from voice.config import default_voice_config
+
 
 def default_config(platform_name=None):
     host = platform_name or platform.system()
@@ -62,6 +67,7 @@ def default_config(platform_name=None):
             "show_volume_meter": False,
         },
         "tts": {"voice": "Samantha"},
+        "voice": default_voice_config(),
         "proactive": {
             "heartbeat_enabled": False,
             "bubbles_enabled": False,

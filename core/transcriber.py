@@ -321,6 +321,10 @@ class TrinityEar:
                 sys.platform != "win32"
                 or self.system_cfg.get("windows_speech_enabled", False)
             ) and os.environ.get("TRINITY_SERVER") != "1" and self.microphone_enabled
+            self.speech_input_enabled = (
+                self.speech_input_enabled
+                and os.environ.get("TRINITY_VOICE_OWNS_MIC") != "1"
+            )
             self._config_mtime = os.path.getmtime(self.config_path)
         except:
             self.model_name = MODEL
@@ -338,7 +342,9 @@ class TrinityEar:
             self.microphone_enabled = True
             self.tts_enabled = True
             self.speech_input_enabled = (
-                sys.platform != "win32" and os.environ.get("TRINITY_SERVER") != "1"
+                sys.platform != "win32"
+                and os.environ.get("TRINITY_SERVER") != "1"
+                and os.environ.get("TRINITY_VOICE_OWNS_MIC") != "1"
             )
             self._config_mtime = None
 

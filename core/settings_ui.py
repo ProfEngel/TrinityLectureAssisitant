@@ -5,7 +5,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QProcess
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWebEngineCore import QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -73,7 +73,7 @@ class SettingsWindow(QMainWindow):
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def save_config(self):
+    def save_config(self, _checked=False, *, show_confirmation=True):
         # LLM Slots
         if "active_slot" not in self.config["llm"]:
              self.config["llm"]["active_slot"] = "local"
@@ -115,6 +115,24 @@ class SettingsWindow(QMainWindow):
         
         # TTS
         self.config["tts"]["voice"] = self.tts_voice_edit.text()
+
+        # Optional Eve Voice Runtime. Legacy remains available at all times.
+        voice = self.config.setdefault("voice", {})
+        voice["engine"] = self.voice_engine_combo.currentData()
+        voice["profile"] = self._selected_voice_profile_id()
+        voice["fallback_to_legacy"] = self.voice_fallback_cb.isChecked()
+        voice["reference_audio"] = self.voice_reference_edit.text().strip()
+        voice["access_token"] = self.voice_token_edit.text().strip()
+        voice["streaming_chunk_size"] = self.voice_chunk_size_spin.value()
+        voice["audio_prebuffer_ms"] = self.voice_prebuffer_spin.value()
+        voice["barge_in_enabled"] = self.voice_barge_in_cb.isChecked()
+        voice["echo_suppression_enabled"] = self.voice_echo_suppression_cb.isChecked()
+        voice["barge_in_min_level"] = self.voice_barge_in_level_spin.value()
+        selected_profile = voice.setdefault("profiles", {}).setdefault(
+            voice["profile"], {}
+        )
+        selected_profile["bind_host"] = self.voice_bind_host_edit.text().strip() or "127.0.0.1"
+        selected_profile["public_port"] = self.voice_public_port_spin.value()
         
         # Proactive
         if "proactive" not in self.config:
@@ -367,15 +385,16 @@ class SettingsWindow(QMainWindow):
         
         if self.embedded and self.on_return:
             self.on_return(True)
-        else:
+        elif show_confirmation:
             QMessageBox.information(
                 self,
                 "Gespeichert",
                 "Einstellungen gespeichert.\n"
                 "Neue Anfragen übernehmen LLM-, Persona-, Telegram-, TTS- und "
-                "Modus-Änderungen automatisch. Nur geänderte Oberflächenstarts "
-                "(Augen-/Classic-/Terminal-Kombination) und die Companion Bridge "
-                "brauchen einen Neustart.",
+                "Modus-Änderungen automatisch. Änderungen an Voice Runtime, "
+                "Eve-Profil, Oberflächenstarts und Companion Bridge werden erst "
+                "nach einem Trinity-Neustart aktiv. Dieses Einstellungsfenster "
+                "selbst hört nicht zu.",
             )
 
     def _return_to_chat(self):
@@ -587,7 +606,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_persona_tab(), "🤖 Persona")
         tabs.addTab(self._create_llm_tab(), "🧠 LLM")
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
-        tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
+        tabs.addTab(self._scrollable_tab(self._create_stt_tts_tab()), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_memory_tab(), "🧠 Memory")
@@ -614,6 +633,10 @@ class SettingsWindow(QMainWindow):
         
         btn_layout.addWidget(cancel_btn)
         btn_layout.addStretch()
+        if not self.embedded:
+            start_btn = QPushButton("Speichern und Trinity starten")
+            start_btn.clicked.connect(self._save_and_start_trinity)
+            btn_layout.addWidget(start_btn)
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
 
@@ -630,12 +653,35 @@ class SettingsWindow(QMainWindow):
         values = self._settings_runtime_values()
         microphone_enabled = values["microphone_enabled"]
         tts_enabled = values["tts_enabled"]
-        self.settings_mic_button.setText(
-            "🎙 Hört zu" if microphone_enabled else "🔇 Hört nicht zu"
-        )
-        self.settings_tts_button.setText(
-            "🔊 Spricht" if tts_enabled else "🔈 Spricht nicht"
-        )
+        if self.embedded:
+            self.settings_mic_button.setText(
+                "🎙 Hört zu" if microphone_enabled else "🔇 Hört nicht zu"
+            )
+            self.settings_tts_button.setText(
+                "🔊 Spricht" if tts_enabled else "🔈 Spricht nicht"
+            )
+        else:
+            self.settings_mic_button.setText(
+                "🎙 Mikro beim Start: an" if microphone_enabled else "🔇 Mikro beim Start: aus"
+            )
+            self.settings_tts_button.setText(
+                "🔊 TTS beim Start: an" if tts_enabled else "🔈 TTS beim Start: aus"
+            )
+
+    def _save_and_start_trinity(self):
+        self.save_config(show_confirmation=False)
+        home = str(Path(CORE_DIR).parent)
+        launcher = str(Path(home) / "trinity_launcher.py")
+        started, _pid = QProcess.startDetached(sys.executable, [launcher], home)
+        if not started:
+            QMessageBox.critical(
+                self,
+                "Trinity konnte nicht gestartet werden",
+                "Die Einstellungen wurden gespeichert, aber der Trinity-Launcher "
+                "konnte nicht gestartet werden.",
+            )
+            return
+        self.close()
 
     def _save_runtime_toggle(self, updates):
         system = self.config.setdefault("system", {})
@@ -2548,9 +2594,233 @@ class SettingsWindow(QMainWindow):
                 f"Konnte den Server nicht erreichen:\n{e}")
 
     # --- TAB: STT/TTS ---
+    VOICE_PROFILE_OPTIONS = (
+        (
+            "Automatisch passend zu diesem Computer (empfohlen)",
+            "eve-trinity",
+            "Trinity wählt die passende lokale Eve-Laufzeit für dieses Betriebssystem. "
+            "Das ist die beste Wahl, wenn Du Eve direkt an diesem Computer verwendest.",
+        ),
+        (
+            "Dieser Mac: Mikrofon und Lautsprecher lokal",
+            "eve-mac-local",
+            "Eve hört über das Mikrofon dieses Macs zu und spricht über dessen Audioausgabe. "
+            "Der Realtime-Pfad erlaubt Unterbrechen durch Sprechen; Kopfhörer oder AirPods "
+            "liefern dabei die zuverlässigste Echo-Trennung.",
+        ),
+        (
+            "Mac als Sprachserver für iPhone und iPad",
+            "eve-mac-server",
+            "Der Mac führt STT, Trinity und TTS aus. iPhone und iPad übertragen Audio "
+            "über den geschützten Realtime-Port, zum Beispiel innerhalb von Tailscale.",
+        ),
+        (
+            "Dieser Windows-PC: Mikrofon und Lautsprecher lokal",
+            "eve-windows-local",
+            "Lokales Realtime-Gespräch auf einer Windows-Workstation mit CUDA. "
+            "Der PC benötigt eine kompatible NVIDIA-GPU sowie ein funktionierendes Mikrofon.",
+        ),
+        (
+            "Windows als Sprachserver für iPhone und iPad",
+            "eve-windows-server",
+            "Wie das Mac-Serverprofil, aber für eine Windows-Workstation mit CUDA. "
+            "Dieses Profil auf einem Mac nicht für den normalen Betrieb auswählen.",
+        ),
+        (
+            "Diagnose: Ornith direkt, ohne Trinity",
+            "eve-direct-ornith",
+            "Technisches Diagnoseprofil. Es verbindet die Sprachpipeline direkt mit Ornith "
+            "und umgeht Trinitys Sessions, Memory, RAG und Agenten.",
+        ),
+    )
+
+    def _selected_voice_profile_id(self):
+        profile_id = self.voice_profile_combo.currentData()
+        return str(profile_id or self.voice_profile_combo.currentText()).strip()
+
+    def _load_voice_profile_form(self, _selection=None):
+        profile_name = self._selected_voice_profile_id()
+        profile = self.config.get("voice", {}).get("profiles", {}).get(profile_name, {})
+        self.voice_bind_host_edit.setText(str(profile.get("bind_host") or "127.0.0.1"))
+        self.voice_public_port_spin.setValue(int(profile.get("public_port") or 8766))
+        description = next(
+            (
+                text
+                for _label, profile_id, text in self.VOICE_PROFILE_OPTIONS
+                if profile_id == profile_name
+            ),
+            "Benutzerdefiniertes Eve-Profil.",
+        )
+        self.voice_profile_description.setText(description)
+        realtime = profile_name in {"eve-mac-server", "eve-windows-server"}
+        for field in (
+            self.voice_bind_host_edit,
+            self.voice_public_port_spin,
+            self.voice_token_edit,
+            self.voice_realtime_hint,
+        ):
+            field.setVisible(realtime)
+            label = self.voice_form.labelForField(field)
+            if label is not None:
+                label.setVisible(realtime)
+
     def _create_stt_tts_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
+
+        voice_group = QGroupBox("Voice Runtime")
+        voice_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        voice_group.setMinimumHeight(760)
+        voice_form = QFormLayout()
+        self.voice_form = voice_form
+        voice_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        voice_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        voice_form.setHorizontalSpacing(18)
+        voice_form.setVerticalSpacing(12)
+        voice_conf = self.config.get("voice", {})
+
+        self.voice_engine_combo = QComboBox()
+        self.voice_engine_combo.setMinimumWidth(440)
+        self.voice_engine_combo.addItem(
+            "Standard – bisherige Whisper-/System-TTS-Laufzeit", "legacy"
+        )
+        self.voice_engine_combo.addItem(
+            "Eve – natürliches Echtzeitgespräch mit lokaler Stimme", "eve"
+        )
+        engine_index = self.voice_engine_combo.findData(voice_conf.get("engine", "legacy"))
+        self.voice_engine_combo.setCurrentIndex(max(0, engine_index))
+        voice_form.addRow("Sprachsystem:", self.voice_engine_combo)
+
+        engine_hint = QLabel(
+            "Standard behält Trinitys bisherigen STT/TTS-Weg bei. Eve kombiniert "
+            "Parakeet-Spracherkennung, den vollständigen Trinity-Kern und Qwen3-TTS "
+            "mit der lokalen Eve-Referenzstimme."
+        )
+        engine_hint.setWordWrap(True)
+        engine_hint.setStyleSheet("color: #8fa3b8; font-size: 12px;")
+        voice_form.addRow("", engine_hint)
+
+        self.voice_profile_combo = QComboBox()
+        self.voice_profile_combo.setMinimumWidth(440)
+        for label, profile_id, _description in self.VOICE_PROFILE_OPTIONS:
+            self.voice_profile_combo.addItem(label, profile_id)
+        configured_profile = str(voice_conf.get("profile") or "eve-trinity")
+        profile_index = self.voice_profile_combo.findData(configured_profile)
+        if profile_index < 0:
+            self.voice_profile_combo.addItem(
+                f"Benutzerdefiniert: {configured_profile}", configured_profile
+            )
+            profile_index = self.voice_profile_combo.count() - 1
+        self.voice_profile_combo.setCurrentIndex(profile_index)
+        voice_form.addRow("Einsatz:", self.voice_profile_combo)
+
+        self.voice_profile_description = QLabel()
+        self.voice_profile_description.setWordWrap(True)
+        self.voice_profile_description.setStyleSheet(
+            "color: #8aadf4; font-size: 12px; font-weight: 500;"
+        )
+        voice_form.addRow("", self.voice_profile_description)
+
+        profile_hint = QLabel(
+            "Warum mehrere Profile? Es ist immer dieselbe Eve-Stimme. Die Auswahl "
+            "bestimmt nur, auf welchem Computer STT und TTS laufen und ob ein "
+            "iPhone oder iPad sein Audio dorthin überträgt."
+        )
+        profile_hint.setWordWrap(True)
+        profile_hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        voice_form.addRow("", profile_hint)
+
+        self.voice_fallback_cb = QCheckBox(
+            "Bei einem Fehler automatisch auf die bisherige STT/TTS-Laufzeit zurückschalten"
+        )
+        self.voice_fallback_cb.setChecked(voice_conf.get("fallback_to_legacy", True))
+        voice_form.addRow("", self.voice_fallback_cb)
+
+        self.voice_reference_edit = QLineEdit(str(voice_conf.get("reference_audio") or ""))
+        self.voice_reference_edit.setPlaceholderText("TrinityRuntime/voices/eve/Eve_Schule.mp3")
+        voice_form.addRow("Eve-Referenzaudio:", self.voice_reference_edit)
+
+        profiles = voice_conf.get("profiles", {})
+        current_profile = profiles.get(self._selected_voice_profile_id(), {})
+        self.voice_bind_host_edit = QLineEdit(str(current_profile.get("bind_host") or "127.0.0.1"))
+        voice_form.addRow("Realtime Bind-Adresse:", self.voice_bind_host_edit)
+
+        self.voice_public_port_spin = QSpinBox()
+        self.voice_public_port_spin.setRange(1024, 65535)
+        self.voice_public_port_spin.setValue(int(current_profile.get("public_port") or 8766))
+        voice_form.addRow("Realtime Port:", self.voice_public_port_spin)
+
+        self.voice_token_edit = QLineEdit(str(voice_conf.get("access_token") or ""))
+        self.voice_token_edit.setEchoMode(QLineEdit.Password)
+        self.voice_token_edit.setPlaceholderText("Erforderlich bei 0.0.0.0 / Tailscale")
+        voice_form.addRow("Realtime Token:", self.voice_token_edit)
+
+        self.voice_realtime_hint = QLabel(
+            "Diese drei Felder werden nur benötigt, wenn iPhone oder iPad Eve über "
+            "den Mac beziehungsweise Windows-PC nutzen. Für Tailscale: 0.0.0.0, "
+            "Port 8766 und auf allen Geräten dasselbe lange Token verwenden."
+        )
+        self.voice_realtime_hint.setWordWrap(True)
+        self.voice_realtime_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        voice_form.addRow("", self.voice_realtime_hint)
+
+        self.voice_chunk_size_spin = QSpinBox()
+        self.voice_chunk_size_spin.setRange(1, 64)
+        self.voice_chunk_size_spin.setValue(int(voice_conf.get("streaming_chunk_size") or 8))
+        voice_form.addRow("TTS Streaming-Chunk:", self.voice_chunk_size_spin)
+
+        self.voice_prebuffer_spin = QSpinBox()
+        self.voice_prebuffer_spin.setRange(0, 2000)
+        self.voice_prebuffer_spin.setSuffix(" ms")
+        self.voice_prebuffer_spin.setValue(int(voice_conf.get("audio_prebuffer_ms") if voice_conf.get("audio_prebuffer_ms") is not None else 180))
+        voice_form.addRow("Client-Prebuffer:", self.voice_prebuffer_spin)
+
+        self.voice_barge_in_cb = QCheckBox(
+            "Eve durch Sprechen unterbrechen (Barge-in)"
+        )
+        self.voice_barge_in_cb.setChecked(voice_conf.get("barge_in_enabled", True))
+        voice_form.addRow("", self.voice_barge_in_cb)
+
+        self.voice_echo_suppression_cb = QCheckBox(
+            "Offensichtliches Lautsprecher-Echo im Desktop-Audiopfad unterdrücken"
+        )
+        self.voice_echo_suppression_cb.setChecked(
+            voice_conf.get("echo_suppression_enabled", True)
+        )
+        voice_form.addRow("", self.voice_echo_suppression_cb)
+
+        self.voice_barge_in_level_spin = QSpinBox()
+        self.voice_barge_in_level_spin.setRange(0, 32767)
+        self.voice_barge_in_level_spin.setSingleStep(50)
+        self.voice_barge_in_level_spin.setValue(
+            int(voice_conf.get("barge_in_min_level") if voice_conf.get("barge_in_min_level") is not None else 420)
+        )
+        voice_form.addRow("Unterbrechungs-Schwelle:", self.voice_barge_in_level_spin)
+
+        barge_in_hint = QLabel(
+            "Auf iPhone und iPad verwendet Eve Apples Voice-Chat-Echounterdrückung. "
+            "Am Desktop filtert Trinity eindeutiges Wiedergabe-Echo; mit offenem "
+            "Lautsprecher bleiben Kopfhörer die robusteste Wahl."
+        )
+        barge_in_hint.setWordWrap(True)
+        barge_in_hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        voice_form.addRow("", barge_in_hint)
+
+        self.voice_profile_combo.currentIndexChanged.connect(self._load_voice_profile_form)
+        self._load_voice_profile_form()
+
+        voice_hint = QLabel(
+            "Legacy bleibt vollständig erhalten. Eve wird erst nach Neustart aktiv. "
+            "Vor dem Umschalten: `trinity voice doctor --profile <Profil>`. "
+            "Das Profil `eve-direct-ornith` umgeht Trinity und ist nur für Diagnosen gedacht. "
+            "Wenn Du die Einstellungen einzeln geöffnet hast, nutze unten "
+            "„Speichern und Trinity starten“; dieses Fenster allein hört nicht zu."
+        )
+        voice_hint.setWordWrap(True)
+        voice_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        voice_form.addRow("", voice_hint)
+        voice_group.setLayout(voice_form)
+        layout.addWidget(voice_group)
         
         stt_group = QGroupBox("Spracherkennung (STT)")
         stt_form = QFormLayout()

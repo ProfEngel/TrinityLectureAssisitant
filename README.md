@@ -15,10 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.17.0:** Eve Voice ist produktiv auf Mac, Windows und iPhone/iPad angebunden. Lokale Desktop-Gespräche laufen jetzt full-duplex über den Realtime-Pfad: Neue Sprache stoppt die laufende Antwort sofort und leert bereits gepufferte Audioausgabe. Bestehende lokale Eve-Profile werden automatisch migriert; `Legacy` bleibt unverändert als manueller und automatischer Fallback erhalten. Die Companion-App nutzt Apples Voice-Chat-Echounterdrückung und kann Eve ebenfalls per Sprache, Stopptaste oder Wischgeste unterbrechen.
 > - **v0.16.70:** Die Werkstatt trennt nun fachliche Skills von tatsächlich ausführbaren Harness-Agenten. OpenCode wird mit seinem geprüften Arbeitsagenten gestartet und prüft vor jedem Auftrag OpenCode-Dienst sowie Modellserver, sodass ein nicht laufender GPU-Server sofort verständlich gemeldet wird. Die HTML-Präsentationswerkstatt führt ihre Recherche-Rolle verbindlich aus und analysiert hochgeladene Bilder sowie aus PPTX/PDF gewonnene Ansichten über einen echten Vision-Adapter, bevor Bilder einer HTML-Folie zugeordnet werden.
 > - **v0.16.69:** Session, Agentenstatus, Modus, Mikrofon, Lautsprecher, Einstellungen und Zugang erscheinen in der WebUI nun konsequent als klare Symbole. Tooltips, zugängliche Beschriftungen, Zustandsfarben und die sichtbare Zahl aktiver beziehungsweise freizugebender Agentenaufträge erhalten trotzdem alle wichtigen Informationen.
-> - **v0.16.68:** Die Weboberfläche zeigt als Hauptansichten nur noch Werkstatt und Chat; Agentenstatus, Session, Modus, Mikrofon, Lautsprecher, Einstellungen und Zugang sind als klare Kopfleisten-Aktionen erreichbar. Laufende Agentenaufträge können sicher abgebrochen und danach aus der Liste gelöscht werden, während bereits erzeugte Projektdateien erhalten bleiben. Eine reduzierte, profilgeprüfte Werkstattansicht ist für die Companion-App vorbereitet.
-> - **v0.16.67:** Die Werkstatt übernimmt vorhandene PPTX- oder PDF-Präsentationen als unveränderte Referenz, analysiert jede Ausgangsfolie und ihre Medien und baut sie erst nach einem editierbaren Modernisierungsplan im aktuellen HTML-Template neu auf. Das Launchpad ist nun in „Präsentationen, Papers und Lehrbücher“, „Begutachtungen und Prüfungen“, „Medienerstellung“ und „Romanerstellung“ gegliedert. Vorhandene Werkzeuge sind ausführbar; die nächsten HTML-Ansichten werden sichtbar, aber ehrlich als Vorbereitung gekennzeichnet.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
@@ -46,6 +45,13 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > beschrieben.
 > Die optionale Smartbrillen-Anbindung ist unter
 > **[Even Realities G2 mit Trinity](docs/EVEN_G2.md)** beschrieben.
+> Die optionale, umschaltbare **Eve Voice Runtime** mit deutschem Parakeet-STT,
+> Trinity Core und Qwen3-TTS ist in der
+> **[Voice-Architektur](docs/VOICE_ARCHITECTURE.md)** dokumentiert. Der bisherige
+> STT/TTS-Pfad bleibt als `Legacy` erhalten; Mac-, Windows- und Companion-Setup
+> stehen in [VOICE_MACOS.md](docs/VOICE_MACOS.md),
+> [VOICE_WINDOWS.md](docs/VOICE_WINDOWS.md) und
+> [VOICE_COMPANION_IOS.md](docs/VOICE_COMPANION_IOS.md).
 > Die technische Einordnung der neuen Agentenkiste steht im
 > **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Dort ist auch beschrieben,
 > wie der neue Agentenkatalog Reifegrad, Rechte, Freigaben und Harness-Zuordnung
@@ -124,9 +130,9 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 
 | Komponente | Technologie |
 |---|---|
-| **STT (Sprache → Text)** | `faster-whisper` · Modell: `small` · int8, CPU |
+| **STT (Sprache → Text)** | Standard: `faster-whisper` (`Legacy`); optional Eve mit deutschem Parakeet-STT via `speech-to-speech` |
 | **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
-| **TTS (Text → Stimme)** | macOS `say` oder Windows SAPI |
+| **TTS (Text → Stimme)** | Standard: macOS `say` oder Windows SAPI (`Legacy`); optional Eve mit lokalem Qwen3-TTS-Voice-Cloning |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
 | **Bildgenerierung** | ComfyUI `Flux.1/2` lokal als Standard; fal.ai `nano-banana-2` nur auf ausdrücklichen externen Wunsch |
@@ -184,6 +190,23 @@ fachliche Cloud-Datenwahrheit oder normale Quellcodeänderung behandelt werden.
 ## 🚀 Onboarding & Installation
 
 Du brauchst ein KI-Sprachmodell via OpenRouter oder lokal via LM Studio/Ollama sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
+
+### Optionale Eve Voice Runtime
+
+Eve ist ein opt-in Sprachmodul; eine Installation oder ein Update schaltet es
+nicht automatisch ein. Es nutzt die Upstream-Projekte
+[Hugging Face speech-to-speech](https://github.com/huggingface/speech-to-speech)
+(`0.2.11`, Apache-2.0) und
+[mlx-audio](https://github.com/Blaizzy/mlx-audio) (`0.4.2`, MIT, Apple Silicon).
+Modelle und die lokal autorisierte Stimmprobe werden nicht in Git gespeichert.
+Mit `trinity voice doctor` wird die Umgebung geprüft; in den Einstellungen kann
+jederzeit auf den bisherigen `Legacy`-Pfad zurückgeschaltet werden.
+Seit v0.17.0 verwenden lokale Mac-/Windows-Eve-Profile einen unterbrechbaren
+Realtime-Audiopfad. Für iPhone/iPad wählt man das passende Serverprofil,
+Port `8766` und einen separaten Voice-Token. Die vollständigen Produktions- und
+Fallback-Schritte stehen in [VOICE_MACOS.md](docs/VOICE_MACOS.md),
+[VOICE_WINDOWS.md](docs/VOICE_WINDOWS.md) und
+[VOICE_COMPANION_IOS.md](docs/VOICE_COMPANION_IOS.md).
 
 ### macOS
 
