@@ -46,6 +46,7 @@ class LocalRealtimeAudioClient:
         self._output_lock = threading.Lock()
         self._played_output: deque[np.ndarray] = deque(maxlen=20)
         self._last_output_at = 0.0
+        self._last_cancel_at = 0.0
 
     def start(self, timeout: float = 20.0) -> None:
         self._thread = threading.Thread(
@@ -135,12 +136,22 @@ class LocalRealtimeAudioClient:
                     daemon=True,
                 )
                 sender.start()
-                with sd.RawStream(
+                # Input and output devices commonly use different native sample
+                # rates on macOS (for example 44.1 kHz and 48 kHz). Separate
+                # PortAudio streams avoid the CoreAudio deadlock caused by a
+                # combined duplex stream while retaining full-duplex barge-in.
+                with sd.RawOutputStream(
                     samplerate=SAMPLE_RATE,
                     dtype="int16",
                     channels=1,
                     blocksize=BLOCK_SAMPLES,
-                    callback=self._audio_callback,
+                    callback=self._output_callback,
+                ), sd.RawInputStream(
+                    samplerate=SAMPLE_RATE,
+                    dtype="int16",
+                    channels=1,
+                    blocksize=BLOCK_SAMPLES,
+                    callback=self._input_callback,
                 ):
                     self._ready.set()
                     print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
@@ -176,9 +187,9 @@ class LocalRealtimeAudioClient:
                 self._stop.set()
                 return
 
-    def _audio_callback(self, indata, outdata, frames, _time_info, status) -> None:
+    def _output_callback(self, outdata, frames, _time_info, status) -> None:
         if status:
-            LOGGER.debug("Desktop-Audiostatus: %s", status)
+            LOGGER.debug("Desktop-Audioausgabe: %s", status)
         wanted = frames * SAMPLE_BYTES
         with self._output_lock:
             take = min(wanted, len(self._output))
@@ -193,12 +204,32 @@ class LocalRealtimeAudioClient:
             self._played_output.append(output_samples)
             self._last_output_at = time.monotonic()
 
+    def _input_callback(self, indata, _frames, _time_info, status) -> None:
+        if status:
+            LOGGER.debug("Desktop-Audioeingabe: %s", status)
         microphone = bytes(indata)
         if self._should_forward_microphone(microphone):
+            self._interrupt_playback_if_needed()
             self._queue_event({
                 "type": "input_audio_buffer.append",
                 "audio": base64.b64encode(microphone).decode("ascii"),
             })
+
+    def _audio_callback(self, indata, outdata, frames, time_info, status) -> None:
+        """Compatibility wrapper used by existing integrations and tests."""
+
+        self._output_callback(outdata, frames, time_info, status)
+        self._input_callback(indata, frames, time_info, status)
+
+    def _interrupt_playback_if_needed(self) -> None:
+        if not self.config.barge_in_enabled:
+            return
+        now = time.monotonic()
+        if now - self._last_output_at >= 0.18 or now - self._last_cancel_at < 0.45:
+            return
+        self._last_cancel_at = now
+        self._clear_output()
+        self._queue_event({"type": "response.cancel"})
 
     def _should_forward_microphone(self, pcm: bytes) -> bool:
         if not pcm or self._stop.is_set():
