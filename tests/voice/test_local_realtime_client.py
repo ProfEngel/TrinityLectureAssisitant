@@ -72,12 +72,63 @@ def test_distinct_speech_cancels_current_response_before_forwarding(tmp_path):
     local._last_output_at = time.monotonic()
     speech = np.tile(np.array([1_400, -1_100, 800, -500], dtype=np.int16), 128)
 
-    local._input_callback(speech.tobytes(), 512, None, None)
+    for _ in range(4):
+        local._input_callback(speech.tobytes(), 512, None, None)
 
     assert local._output == bytearray()
     assert local._send_queue.get_nowait() == {"type": "response.cancel"}
-    forwarded = local._send_queue.get_nowait()
-    assert forwarded["type"] == "input_audio_buffer.append"
+    forwarded = [local._send_queue.get_nowait() for _ in range(4)]
+    assert all(event["type"] == "input_audio_buffer.append" for event in forwarded)
+
+
+def test_single_distinct_block_does_not_false_trigger_barge_in(tmp_path):
+    local = client(tmp_path)
+    local._output.extend(b"buffered-audio")
+    local._played_output.append(np.full(512, 2_000, dtype=np.int16))
+    local._last_output_at = time.monotonic()
+    speech = np.tile(np.array([1_400, -1_100, 800, -500], dtype=np.int16), 128)
+
+    local._input_callback(speech.tobytes(), 512, None, None)
+
+    assert local._output == bytearray(b"buffered-audio")
+    assert local._send_queue.empty()
+
+
+def test_interrupt_keeps_echo_history_for_the_speaker_tail(tmp_path):
+    local = client(tmp_path)
+    playback = np.tile(np.array([1_500, -1_000, 600, -300], dtype=np.int16), 128)
+    local._played_output.append(playback.copy())
+    local._output.extend(playback.tobytes())
+    local._last_output_at = time.monotonic()
+
+    local._clear_output()
+    local._last_output_at = time.monotonic()
+
+    assert len(local._played_output) == 1
+    assert local._should_forward_microphone(playback.tobytes()) is False
+
+
+def test_completed_barge_in_does_not_cancel_the_following_response(tmp_path):
+    local = client(tmp_path)
+    playback = np.tile(np.array([1_500, -1_000, 600, -300], dtype=np.int16), 128)
+    speech = np.tile(np.array([900, 1_600, -1_300, -700], dtype=np.int16), 128)
+    local._played_output.append(playback.copy())
+    local._output.extend(playback.tobytes())
+    local._last_output_at = time.monotonic()
+
+    for _ in range(4):
+        local._input_callback(speech.tobytes(), 512, None, None)
+    while not local._send_queue.empty():
+        local._send_queue.get_nowait()
+
+    local._played_output.append(playback.copy())
+    local._output.extend(playback.tobytes())
+    local._last_output_at = time.monotonic()
+    for _ in range(10):
+        local._input_callback(playback.tobytes(), 512, None, None)
+
+    assert local._send_queue.empty()
+    assert local._output == bytearray(playback.tobytes())
 
 
 def test_output_callback_consumes_audio_without_microphone_coupling(tmp_path):

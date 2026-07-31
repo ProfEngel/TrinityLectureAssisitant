@@ -41,6 +41,7 @@ from platform_adapters import (
     find_opencode_executable,
     find_pi_executable,
 )
+from prompt_files import safe_write_prompt
 from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from trinity_paths import TrinityPaths
@@ -1152,10 +1153,11 @@ class TrinityBridge:
         for name, value in {"Soul.md": payload.get("soul"), "User.md": payload.get("user")}.items():
             if value is None:
                 continue
-            encoded = str(value).encode("utf-8")
-            if len(encoded) > MAX_SETTINGS_TEXT_BYTES:
-                raise ValueError(f"{name} ist zu gross.")
-            (self.core_dir / name).write_text(str(value), encoding="utf-8")
+            safe_write_prompt(
+                self.core_dir / name,
+                value,
+                max_bytes=MAX_SETTINGS_TEXT_BYTES,
+            )
         return self.get_prompts()
 
     def save_web_settings(self, payload):
@@ -1175,10 +1177,11 @@ class TrinityBridge:
         for name, value in {"Soul.md": payload.get("soul"), "User.md": payload.get("user")}.items():
             if value is None:
                 continue
-            encoded = str(value).encode("utf-8")
-            if len(encoded) > MAX_SETTINGS_TEXT_BYTES:
-                raise ValueError(f"{name} ist zu gross.")
-            (self.core_dir / name).write_text(str(value), encoding="utf-8")
+            safe_write_prompt(
+                self.core_dir / name,
+                value,
+                max_bytes=MAX_SETTINGS_TEXT_BYTES,
+            )
 
         save_config(self.config_path, config)
         return self.get_web_settings()

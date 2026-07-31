@@ -193,10 +193,11 @@ function Invoke-Python {
 function Copy-IfPresent {
     param(
         [string]$Source,
-        [string]$Destination
+        [string]$Destination,
+        [switch]$RequireContent
     )
 
-    if (Test-Path $Source) {
+    if ((Test-Path $Source) -and ((-not $RequireContent) -or ((Get-Item $Source).Length -gt 0))) {
         Copy-Item $Source $Destination -Recurse -Force
     }
 }
@@ -285,8 +286,8 @@ if ($isUpdate) {
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
     Copy-IfPresent "$InstallDir\core\config.json" "$backupDir\config.json"
-    Copy-IfPresent "$InstallDir\core\Soul.md" "$backupDir\Soul.md"
-    Copy-IfPresent "$InstallDir\core\User.md" "$backupDir\User.md"
+    Copy-IfPresent "$InstallDir\core\Soul.md" "$backupDir\Soul.md" -RequireContent
+    Copy-IfPresent "$InstallDir\core\User.md" "$backupDir\User.md" -RequireContent
     Copy-DirectoryContents "$InstallDir\memory" "$backupDir\memory"
     Copy-DirectoryContents "$InstallDir\RAG" "$backupDir\RAG"
     Copy-DirectoryContents "$InstallDir\gen_images" "$backupDir\gen_images"
@@ -329,8 +330,8 @@ else {
 if ($isUpdate) {
     Write-Host "Stelle Nutzerdaten wieder her ..."
     Copy-IfPresent "$backupDir\config.json" "$InstallDir\core\config.json"
-    Copy-IfPresent "$backupDir\Soul.md" "$InstallDir\core\Soul.md"
-    Copy-IfPresent "$backupDir\User.md" "$InstallDir\core\User.md"
+    Copy-IfPresent "$backupDir\Soul.md" "$InstallDir\core\Soul.md" -RequireContent
+    Copy-IfPresent "$backupDir\User.md" "$InstallDir\core\User.md" -RequireContent
     Copy-DirectoryContents "$backupDir\memory" "$InstallDir\memory"
     Copy-DirectoryContents "$backupDir\RAG" "$InstallDir\RAG" @("build_index.py")
     Copy-DirectoryContents "$backupDir\gen_images" "$InstallDir\gen_images"
@@ -339,10 +340,10 @@ if ($isUpdate) {
     Remove-Item $backupDir -Recurse -Force
 }
 
-if (-not (Test-Path "$InstallDir\core\Soul.md")) {
+if ((-not (Test-Path "$InstallDir\core\Soul.md")) -or ((Get-Item "$InstallDir\core\Soul.md").Length -eq 0)) {
     Copy-Item "$InstallDir\core\Soul.md.example" "$InstallDir\core\Soul.md"
 }
-if (-not (Test-Path "$InstallDir\core\User.md")) {
+if ((-not (Test-Path "$InstallDir\core\User.md")) -or ((Get-Item "$InstallDir\core\User.md").Length -eq 0)) {
     Copy-Item "$InstallDir\core\User.md.example" "$InstallDir\core\User.md"
 }
 
