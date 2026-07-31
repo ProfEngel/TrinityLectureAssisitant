@@ -1,4 +1,4 @@
-from pathlib import Path
+import sys
 
 from voice.command_builder import build_speech_to_speech_command
 from voice.config import default_voice_config, load_voice_config
@@ -20,7 +20,7 @@ def test_command_uses_parakeet_trinity_and_eve_without_shell(tmp_path):
     config = configured_voice(tmp_path)
     command = build_speech_to_speech_command(config)
 
-    assert command[:3] == [Path(command[0]).as_posix(), "-m", "speech_to_speech.s2s_pipeline"]
+    assert command[:3] == [sys.executable, "-m", "speech_to_speech.s2s_pipeline"]
     assert command[command.index("--stt") + 1] == "parakeet-tdt"
     assert command[command.index("--llm_backend") + 1] == "chat-completions"
     assert command[command.index("--tts") + 1] == "qwen3"
