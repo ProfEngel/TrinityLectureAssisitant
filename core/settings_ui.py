@@ -115,6 +115,21 @@ class SettingsWindow(QMainWindow):
         
         # TTS
         self.config["tts"]["voice"] = self.tts_voice_edit.text()
+
+        # Optional Eve Voice Runtime. Legacy remains available at all times.
+        voice = self.config.setdefault("voice", {})
+        voice["engine"] = self.voice_engine_combo.currentData()
+        voice["profile"] = self.voice_profile_combo.currentText()
+        voice["fallback_to_legacy"] = self.voice_fallback_cb.isChecked()
+        voice["reference_audio"] = self.voice_reference_edit.text().strip()
+        voice["access_token"] = self.voice_token_edit.text().strip()
+        voice["streaming_chunk_size"] = self.voice_chunk_size_spin.value()
+        voice["audio_prebuffer_ms"] = self.voice_prebuffer_spin.value()
+        selected_profile = voice.setdefault("profiles", {}).setdefault(
+            voice["profile"], {}
+        )
+        selected_profile["bind_host"] = self.voice_bind_host_edit.text().strip() or "127.0.0.1"
+        selected_profile["public_port"] = self.voice_public_port_spin.value()
         
         # Proactive
         if "proactive" not in self.config:
@@ -2548,9 +2563,85 @@ class SettingsWindow(QMainWindow):
                 f"Konnte den Server nicht erreichen:\n{e}")
 
     # --- TAB: STT/TTS ---
+    def _load_voice_profile_form(self, profile_name):
+        profile = self.config.get("voice", {}).get("profiles", {}).get(profile_name, {})
+        self.voice_bind_host_edit.setText(str(profile.get("bind_host") or "127.0.0.1"))
+        self.voice_public_port_spin.setValue(int(profile.get("public_port") or 8766))
+
     def _create_stt_tts_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
+
+        voice_group = QGroupBox("Voice Runtime")
+        voice_form = QFormLayout()
+        voice_conf = self.config.get("voice", {})
+
+        self.voice_engine_combo = QComboBox()
+        self.voice_engine_combo.addItem("Bisherige STT/TTS-Laufzeit", "legacy")
+        self.voice_engine_combo.addItem("Eve: Parakeet + Trinity + Qwen3-TTS", "eve")
+        engine_index = self.voice_engine_combo.findData(voice_conf.get("engine", "legacy"))
+        self.voice_engine_combo.setCurrentIndex(max(0, engine_index))
+        voice_form.addRow("Aktive Engine:", self.voice_engine_combo)
+
+        self.voice_profile_combo = QComboBox()
+        self.voice_profile_combo.addItems([
+            "eve-trinity",
+            "eve-mac-local",
+            "eve-mac-server",
+            "eve-windows-server",
+            "eve-direct-ornith",
+        ])
+        self.voice_profile_combo.setCurrentText(voice_conf.get("profile", "eve-trinity"))
+        voice_form.addRow("Eve-Profil:", self.voice_profile_combo)
+
+        self.voice_fallback_cb = QCheckBox(
+            "Bei einem Fehler automatisch auf die bisherige STT/TTS-Laufzeit zurückschalten"
+        )
+        self.voice_fallback_cb.setChecked(voice_conf.get("fallback_to_legacy", True))
+        voice_form.addRow("", self.voice_fallback_cb)
+
+        self.voice_reference_edit = QLineEdit(str(voice_conf.get("reference_audio") or ""))
+        self.voice_reference_edit.setPlaceholderText("TrinityRuntime/voices/eve/Eve_Schule.mp3")
+        voice_form.addRow("Eve-Referenzaudio:", self.voice_reference_edit)
+
+        profiles = voice_conf.get("profiles", {})
+        current_profile = profiles.get(self.voice_profile_combo.currentText(), {})
+        self.voice_bind_host_edit = QLineEdit(str(current_profile.get("bind_host") or "127.0.0.1"))
+        voice_form.addRow("Realtime Bind-Adresse:", self.voice_bind_host_edit)
+
+        self.voice_public_port_spin = QSpinBox()
+        self.voice_public_port_spin.setRange(1024, 65535)
+        self.voice_public_port_spin.setValue(int(current_profile.get("public_port") or 8766))
+        voice_form.addRow("Realtime Port:", self.voice_public_port_spin)
+
+        self.voice_token_edit = QLineEdit(str(voice_conf.get("access_token") or ""))
+        self.voice_token_edit.setEchoMode(QLineEdit.Password)
+        self.voice_token_edit.setPlaceholderText("Erforderlich bei 0.0.0.0 / Tailscale")
+        voice_form.addRow("Realtime Token:", self.voice_token_edit)
+
+        self.voice_chunk_size_spin = QSpinBox()
+        self.voice_chunk_size_spin.setRange(1, 64)
+        self.voice_chunk_size_spin.setValue(int(voice_conf.get("streaming_chunk_size") or 8))
+        voice_form.addRow("TTS Streaming-Chunk:", self.voice_chunk_size_spin)
+
+        self.voice_prebuffer_spin = QSpinBox()
+        self.voice_prebuffer_spin.setRange(0, 2000)
+        self.voice_prebuffer_spin.setSuffix(" ms")
+        self.voice_prebuffer_spin.setValue(int(voice_conf.get("audio_prebuffer_ms") if voice_conf.get("audio_prebuffer_ms") is not None else 180))
+        voice_form.addRow("Client-Prebuffer:", self.voice_prebuffer_spin)
+
+        self.voice_profile_combo.currentTextChanged.connect(self._load_voice_profile_form)
+
+        voice_hint = QLabel(
+            "Legacy bleibt vollständig erhalten. Eve wird erst nach Neustart aktiv. "
+            "Vor dem Umschalten: `trinity voice doctor --profile <Profil>`. "
+            "Das Profil `eve-direct-ornith` umgeht Trinity und ist nur für Diagnosen gedacht."
+        )
+        voice_hint.setWordWrap(True)
+        voice_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        voice_form.addRow("", voice_hint)
+        voice_group.setLayout(voice_form)
+        layout.addWidget(voice_group)
         
         stt_group = QGroupBox("Spracherkennung (STT)")
         stt_form = QFormLayout()

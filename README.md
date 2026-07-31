@@ -46,6 +46,13 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > beschrieben.
 > Die optionale Smartbrillen-Anbindung ist unter
 > **[Even Realities G2 mit Trinity](docs/EVEN_G2.md)** beschrieben.
+> Die optionale, umschaltbare **Eve Voice Runtime** mit deutschem Parakeet-STT,
+> Trinity Core und Qwen3-TTS ist in der
+> **[Voice-Architektur](docs/VOICE_ARCHITECTURE.md)** dokumentiert. Der bisherige
+> STT/TTS-Pfad bleibt als `Legacy` erhalten; Mac-, Windows- und Companion-Setup
+> stehen in [VOICE_MACOS.md](docs/VOICE_MACOS.md),
+> [VOICE_WINDOWS.md](docs/VOICE_WINDOWS.md) und
+> [VOICE_COMPANION_IOS.md](docs/VOICE_COMPANION_IOS.md).
 > Die technische Einordnung der neuen Agentenkiste steht im
 > **[Agenten-Oekosystem](docs/AGENT_ECOSYSTEM.md)**. Dort ist auch beschrieben,
 > wie der neue Agentenkatalog Reifegrad, Rechte, Freigaben und Harness-Zuordnung
@@ -124,9 +131,9 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 
 | Komponente | Technologie |
 |---|---|
-| **STT (Sprache → Text)** | `faster-whisper` · Modell: `small` · int8, CPU |
+| **STT (Sprache → Text)** | Standard: `faster-whisper` (`Legacy`); optional Eve mit deutschem Parakeet-STT via `speech-to-speech` |
 | **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
-| **TTS (Text → Stimme)** | macOS `say` oder Windows SAPI |
+| **TTS (Text → Stimme)** | Standard: macOS `say` oder Windows SAPI (`Legacy`); optional Eve mit lokalem Qwen3-TTS-Voice-Cloning |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
 | **RAG** | sentence-transformers `paraphrase-multilingual-MiniLM-L12-v2` |
 | **Bildgenerierung** | ComfyUI `Flux.1/2` lokal als Standard; fal.ai `nano-banana-2` nur auf ausdrücklichen externen Wunsch |
@@ -184,6 +191,17 @@ fachliche Cloud-Datenwahrheit oder normale Quellcodeänderung behandelt werden.
 ## 🚀 Onboarding & Installation
 
 Du brauchst ein KI-Sprachmodell via OpenRouter oder lokal via LM Studio/Ollama sowie optionale API-Keys für Web-Suche (Tavily) und Bildgenerierung (fal.ai).
+
+### Optionale Eve Voice Runtime
+
+Eve ist ein opt-in Sprachmodul; eine Installation oder ein Update schaltet es
+nicht automatisch ein. Es nutzt die Upstream-Projekte
+[Hugging Face speech-to-speech](https://github.com/huggingface/speech-to-speech)
+(`0.2.11`, Apache-2.0) und
+[mlx-audio](https://github.com/Blaizzy/mlx-audio) (`0.4.2`, MIT, Apple Silicon).
+Modelle und die lokal autorisierte Stimmprobe werden nicht in Git gespeichert.
+Mit `trinity voice doctor` wird die Umgebung geprüft; in den Einstellungen kann
+jederzeit auf den bisherigen `Legacy`-Pfad zurückgeschaltet werden.
 
 ### macOS
 

@@ -34,6 +34,10 @@ windows = [
     "sounddevice>=0.5",
     "pywin32>=306; platform_system == 'Windows'",
 ]
+voice = [
+    "speech-to-speech==0.2.11",
+    "websockets>=14,<18",
+]
 linux = []
 test = [
     "pytest>=8.0",

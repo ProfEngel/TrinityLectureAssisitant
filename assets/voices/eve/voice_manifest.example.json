@@ -1,0 +1,10 @@
+{
+  "file_name": "Eve_Schule.mp3",
+  "sha256": "LOCAL_SHA256_AFTER_INSTALL",
+  "language": "de-DE",
+  "transcript_file": "ref_text.txt",
+  "duration_seconds": null,
+  "sample_rate_hz": null,
+  "purpose": "Trinity Eve voice-clone reference",
+  "usage_note": "Use only with authorization and only for the configured Trinity Eve voice."
+}

@@ -41,6 +41,54 @@
   "tts": {
     "voice": "Samantha"
   },
+  "voice": {
+    "engine": "legacy",
+    "profile": "eve-trinity",
+    "fallback_to_legacy": true,
+    "language_policy": "de_only",
+    "access_token": "",
+    "reference_audio": "",
+    "reference_text": "Herzlich willkommen lieber Schülerinnen und Schüler des Max Planck Gymnasiums. Schön, dass Ihr heute hier seid. Unser Schülervortrag dreht sich um das Thema KI und Wir. Lasst uns gemeinsam entdecken wie künstliche Intelligenz unseren Alltag verändert.",
+    "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
+    "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+    "streaming_chunk_size": 8,
+    "audio_prebuffer_ms": 180,
+    "profiles": {
+      "eve-mac-local": {
+        "mode": "local",
+        "device": "mps",
+        "conversation_backend": "trinity",
+        "bind_host": "127.0.0.1",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        "tts_backend": "ggml"
+      },
+      "eve-mac-server": {
+        "mode": "realtime",
+        "device": "mps",
+        "conversation_backend": "trinity",
+        "bind_host": "127.0.0.1",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        "tts_backend": "ggml"
+      },
+      "eve-windows-server": {
+        "mode": "realtime",
+        "device": "cuda",
+        "conversation_backend": "trinity",
+        "bind_host": "127.0.0.1",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "tts_backend": "torch"
+      }
+    }
+  },
   "system": {
     "profile": "PRIVAT",
     "show_terminal": true,

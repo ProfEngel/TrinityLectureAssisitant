@@ -1039,6 +1039,24 @@ def run_canvas_command(home, args):
     return 0
 
 
+def run_voice_command(home, args):
+    core_path = str(Path(home) / "core")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
+    from voice.benchmark import benchmark  # pylint: disable=import-outside-toplevel
+    from voice.doctor import doctor  # pylint: disable=import-outside-toplevel
+    from voice.runtime import load_runtime_config, serve  # pylint: disable=import-outside-toplevel
+
+    config = load_runtime_config(home, args.profile)
+    if args.voice_action == "doctor":
+        return doctor(config, as_json=args.json)
+    if args.voice_action == "benchmark":
+        return benchmark(config, rounds=args.rounds, prompt=args.prompt)
+    if args.voice_action == "serve":
+        return serve(home, args.profile)
+    raise ValueError("Unbekannte Voice-Aktion.")
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="trinity",
@@ -1212,6 +1230,15 @@ def build_parser():
         help="Trinity Canvas installieren, starten und öffnen – ohne Portangaben",
     )
     canvas.add_argument("canvas_action", choices=("status", "install", "update", "start", "open", "stop"))
+    voice = subparsers.add_parser(
+        "voice",
+        help="Optionale Eve-Sprachlaufzeit prüfen, messen oder starten",
+    )
+    voice.add_argument("voice_action", choices=("doctor", "benchmark", "serve"))
+    voice.add_argument("--profile", default=None, help="Voice-Profil, z.B. eve-mac-local")
+    voice.add_argument("--json", action="store_true", help="Doctor-Ergebnis als JSON")
+    voice.add_argument("--rounds", type=int, default=1, help="Benchmark-Wiederholungen")
+    voice.add_argument("--prompt", default="Antworte nur mit: bereit", help="Benchmark-Prompt")
     return parser
 
 
@@ -1265,6 +1292,8 @@ def main(argv=None):
             return run_memory_command(home, args)
         if args.command == "canvas":
             return run_canvas_command(home, args)
+        if args.command == "voice":
+            return run_voice_command(home, args)
     except (OSError, ValueError) as exc:
         print(f"Fehler: {exc}", file=sys.stderr)
         return 1
