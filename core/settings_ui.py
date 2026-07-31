@@ -119,7 +119,7 @@ class SettingsWindow(QMainWindow):
         # Optional Eve Voice Runtime. Legacy remains available at all times.
         voice = self.config.setdefault("voice", {})
         voice["engine"] = self.voice_engine_combo.currentData()
-        voice["profile"] = self.voice_profile_combo.currentText()
+        voice["profile"] = self._selected_voice_profile_id()
         voice["fallback_to_legacy"] = self.voice_fallback_cb.isChecked()
         voice["reference_audio"] = self.voice_reference_edit.text().strip()
         voice["access_token"] = self.voice_token_edit.text().strip()
@@ -602,7 +602,7 @@ class SettingsWindow(QMainWindow):
         tabs.addTab(self._create_persona_tab(), "🤖 Persona")
         tabs.addTab(self._create_llm_tab(), "🧠 LLM")
         tabs.addTab(self._create_api_tab(), "🔑 APIs & Bild")
-        tabs.addTab(self._create_stt_tts_tab(), "🎙️ Sprache")
+        tabs.addTab(self._scrollable_tab(self._create_stt_tts_tab()), "🎙️ Sprache")
         tabs.addTab(self._create_audio_tab(), "🔊 Audio-Routing")
         tabs.addTab(self._create_proactive_tab(), "🚀 Proaktiv")
         tabs.addTab(self._create_memory_tab(), "🧠 Memory")
@@ -2563,36 +2563,134 @@ class SettingsWindow(QMainWindow):
                 f"Konnte den Server nicht erreichen:\n{e}")
 
     # --- TAB: STT/TTS ---
-    def _load_voice_profile_form(self, profile_name):
+    VOICE_PROFILE_OPTIONS = (
+        (
+            "Automatisch passend zu diesem Computer (empfohlen)",
+            "eve-trinity",
+            "Trinity wählt die passende lokale Eve-Laufzeit für dieses Betriebssystem. "
+            "Das ist die beste Wahl, wenn Du Eve direkt an diesem Computer verwendest.",
+        ),
+        (
+            "Dieser Mac: Mikrofon und Lautsprecher lokal",
+            "eve-mac-local",
+            "Eve hört über das Mikrofon dieses Macs zu und spricht über dessen Audioausgabe. "
+            "Geeignet zum ersten Funktionstest ohne iPhone oder iPad.",
+        ),
+        (
+            "Mac als Sprachserver für iPhone und iPad",
+            "eve-mac-server",
+            "Der Mac führt STT, Trinity und TTS aus. iPhone und iPad übertragen Audio "
+            "über den geschützten Realtime-Port, zum Beispiel innerhalb von Tailscale.",
+        ),
+        (
+            "Windows als Sprachserver für iPhone und iPad",
+            "eve-windows-server",
+            "Wie das Mac-Serverprofil, aber für eine Windows-Workstation mit CUDA. "
+            "Dieses Profil auf einem Mac nicht für den normalen Betrieb auswählen.",
+        ),
+        (
+            "Diagnose: Ornith direkt, ohne Trinity",
+            "eve-direct-ornith",
+            "Technisches Diagnoseprofil. Es verbindet die Sprachpipeline direkt mit Ornith "
+            "und umgeht Trinitys Sessions, Memory, RAG und Agenten.",
+        ),
+    )
+
+    def _selected_voice_profile_id(self):
+        profile_id = self.voice_profile_combo.currentData()
+        return str(profile_id or self.voice_profile_combo.currentText()).strip()
+
+    def _load_voice_profile_form(self, _selection=None):
+        profile_name = self._selected_voice_profile_id()
         profile = self.config.get("voice", {}).get("profiles", {}).get(profile_name, {})
         self.voice_bind_host_edit.setText(str(profile.get("bind_host") or "127.0.0.1"))
         self.voice_public_port_spin.setValue(int(profile.get("public_port") or 8766))
+        description = next(
+            (
+                text
+                for _label, profile_id, text in self.VOICE_PROFILE_OPTIONS
+                if profile_id == profile_name
+            ),
+            "Benutzerdefiniertes Eve-Profil.",
+        )
+        self.voice_profile_description.setText(description)
+        realtime = profile_name in {"eve-mac-server", "eve-windows-server"}
+        for field in (
+            self.voice_bind_host_edit,
+            self.voice_public_port_spin,
+            self.voice_token_edit,
+            self.voice_realtime_hint,
+        ):
+            field.setVisible(realtime)
+            label = self.voice_form.labelForField(field)
+            if label is not None:
+                label.setVisible(realtime)
 
     def _create_stt_tts_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
         voice_group = QGroupBox("Voice Runtime")
+        voice_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        voice_group.setMinimumHeight(570)
         voice_form = QFormLayout()
+        self.voice_form = voice_form
+        voice_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        voice_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        voice_form.setHorizontalSpacing(18)
+        voice_form.setVerticalSpacing(12)
         voice_conf = self.config.get("voice", {})
 
         self.voice_engine_combo = QComboBox()
-        self.voice_engine_combo.addItem("Bisherige STT/TTS-Laufzeit", "legacy")
-        self.voice_engine_combo.addItem("Eve: Parakeet + Trinity + Qwen3-TTS", "eve")
+        self.voice_engine_combo.setMinimumWidth(440)
+        self.voice_engine_combo.addItem(
+            "Standard – bisherige Whisper-/System-TTS-Laufzeit", "legacy"
+        )
+        self.voice_engine_combo.addItem(
+            "Eve – natürliches Echtzeitgespräch mit lokaler Stimme", "eve"
+        )
         engine_index = self.voice_engine_combo.findData(voice_conf.get("engine", "legacy"))
         self.voice_engine_combo.setCurrentIndex(max(0, engine_index))
-        voice_form.addRow("Aktive Engine:", self.voice_engine_combo)
+        voice_form.addRow("Sprachsystem:", self.voice_engine_combo)
+
+        engine_hint = QLabel(
+            "Standard behält Trinitys bisherigen STT/TTS-Weg bei. Eve kombiniert "
+            "Parakeet-Spracherkennung, den vollständigen Trinity-Kern und Qwen3-TTS "
+            "mit der lokalen Eve-Referenzstimme."
+        )
+        engine_hint.setWordWrap(True)
+        engine_hint.setStyleSheet("color: #8fa3b8; font-size: 12px;")
+        voice_form.addRow("", engine_hint)
 
         self.voice_profile_combo = QComboBox()
-        self.voice_profile_combo.addItems([
-            "eve-trinity",
-            "eve-mac-local",
-            "eve-mac-server",
-            "eve-windows-server",
-            "eve-direct-ornith",
-        ])
-        self.voice_profile_combo.setCurrentText(voice_conf.get("profile", "eve-trinity"))
-        voice_form.addRow("Eve-Profil:", self.voice_profile_combo)
+        self.voice_profile_combo.setMinimumWidth(440)
+        for label, profile_id, _description in self.VOICE_PROFILE_OPTIONS:
+            self.voice_profile_combo.addItem(label, profile_id)
+        configured_profile = str(voice_conf.get("profile") or "eve-trinity")
+        profile_index = self.voice_profile_combo.findData(configured_profile)
+        if profile_index < 0:
+            self.voice_profile_combo.addItem(
+                f"Benutzerdefiniert: {configured_profile}", configured_profile
+            )
+            profile_index = self.voice_profile_combo.count() - 1
+        self.voice_profile_combo.setCurrentIndex(profile_index)
+        voice_form.addRow("Einsatz:", self.voice_profile_combo)
+
+        self.voice_profile_description = QLabel()
+        self.voice_profile_description.setWordWrap(True)
+        self.voice_profile_description.setStyleSheet(
+            "color: #8aadf4; font-size: 12px; font-weight: 500;"
+        )
+        voice_form.addRow("", self.voice_profile_description)
+
+        profile_hint = QLabel(
+            "Warum mehrere Profile? Es ist immer dieselbe Eve-Stimme. Die Auswahl "
+            "bestimmt nur, auf welchem Computer STT und TTS laufen und ob ein "
+            "iPhone oder iPad sein Audio dorthin überträgt."
+        )
+        profile_hint.setWordWrap(True)
+        profile_hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        voice_form.addRow("", profile_hint)
 
         self.voice_fallback_cb = QCheckBox(
             "Bei einem Fehler automatisch auf die bisherige STT/TTS-Laufzeit zurückschalten"
@@ -2605,7 +2703,7 @@ class SettingsWindow(QMainWindow):
         voice_form.addRow("Eve-Referenzaudio:", self.voice_reference_edit)
 
         profiles = voice_conf.get("profiles", {})
-        current_profile = profiles.get(self.voice_profile_combo.currentText(), {})
+        current_profile = profiles.get(self._selected_voice_profile_id(), {})
         self.voice_bind_host_edit = QLineEdit(str(current_profile.get("bind_host") or "127.0.0.1"))
         voice_form.addRow("Realtime Bind-Adresse:", self.voice_bind_host_edit)
 
@@ -2619,6 +2717,15 @@ class SettingsWindow(QMainWindow):
         self.voice_token_edit.setPlaceholderText("Erforderlich bei 0.0.0.0 / Tailscale")
         voice_form.addRow("Realtime Token:", self.voice_token_edit)
 
+        self.voice_realtime_hint = QLabel(
+            "Diese drei Felder werden nur benötigt, wenn iPhone oder iPad Eve über "
+            "den Mac beziehungsweise Windows-PC nutzen. Für Tailscale: 0.0.0.0, "
+            "Port 8766 und auf allen Geräten dasselbe lange Token verwenden."
+        )
+        self.voice_realtime_hint.setWordWrap(True)
+        self.voice_realtime_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        voice_form.addRow("", self.voice_realtime_hint)
+
         self.voice_chunk_size_spin = QSpinBox()
         self.voice_chunk_size_spin.setRange(1, 64)
         self.voice_chunk_size_spin.setValue(int(voice_conf.get("streaming_chunk_size") or 8))
@@ -2630,7 +2737,8 @@ class SettingsWindow(QMainWindow):
         self.voice_prebuffer_spin.setValue(int(voice_conf.get("audio_prebuffer_ms") if voice_conf.get("audio_prebuffer_ms") is not None else 180))
         voice_form.addRow("Client-Prebuffer:", self.voice_prebuffer_spin)
 
-        self.voice_profile_combo.currentTextChanged.connect(self._load_voice_profile_form)
+        self.voice_profile_combo.currentIndexChanged.connect(self._load_voice_profile_form)
+        self._load_voice_profile_form()
 
         voice_hint = QLabel(
             "Legacy bleibt vollständig erhalten. Eve wird erst nach Neustart aktiv. "
