@@ -21,6 +21,7 @@ LOGGER = logging.getLogger(__name__)
 SAMPLE_RATE = 16_000
 BLOCK_SAMPLES = 512
 SAMPLE_BYTES = 2
+BARGE_IN_CONFIRM_BLOCKS = 4
 
 
 class LocalRealtimeAudioClient:
@@ -45,6 +46,7 @@ class LocalRealtimeAudioClient:
         self._output = bytearray()
         self._output_lock = threading.Lock()
         self._played_output: deque[np.ndarray] = deque(maxlen=20)
+        self._barge_in_candidate: deque[bytes] = deque(maxlen=BARGE_IN_CONFIRM_BLOCKS)
         self._last_output_at = 0.0
         self._last_cancel_at = 0.0
 
@@ -208,12 +210,35 @@ class LocalRealtimeAudioClient:
         if status:
             LOGGER.debug("Desktop-Audioeingabe: %s", status)
         microphone = bytes(indata)
-        if self._should_forward_microphone(microphone):
-            self._interrupt_playback_if_needed()
-            self._queue_event({
-                "type": "input_audio_buffer.append",
-                "audio": base64.b64encode(microphone).decode("ascii"),
-            })
+        output_active = (time.monotonic() - self._last_output_at) < 0.18
+        if not output_active:
+            self._barge_in_candidate.clear()
+            self._append_microphone(microphone)
+            return
+        if not self._should_forward_microphone(microphone):
+            self._barge_in_candidate.clear()
+            return
+
+        # Acoustic loudspeaker echo can differ from the exact output samples and
+        # occasionally looks like one distinct microphone block. Confirm a very
+        # short run of speech before cancelling, while retaining those blocks as
+        # VAD prefix. Four 32-ms blocks keep barge-in responsive (~128 ms).
+        self._barge_in_candidate.append(microphone)
+        if len(self._barge_in_candidate) < BARGE_IN_CONFIRM_BLOCKS:
+            return
+        candidate = tuple(self._barge_in_candidate)
+        self._barge_in_candidate.clear()
+        self._interrupt_playback_if_needed()
+        for block in candidate:
+            self._append_microphone(block)
+
+    def _append_microphone(self, microphone: bytes) -> None:
+        if not microphone or self._stop.is_set():
+            return
+        self._queue_event({
+            "type": "input_audio_buffer.append",
+            "audio": base64.b64encode(microphone).decode("ascii"),
+        })
 
     def _audio_callback(self, indata, outdata, frames, time_info, status) -> None:
         """Compatibility wrapper used by existing integrations and tests."""
@@ -250,15 +275,30 @@ class LocalRealtimeAudioClient:
         norm = float(np.linalg.norm(samples))
         if norm <= 1.0:
             return False
-        strongest = 0.0
+        strongest_waveform = 0.0
+        strongest_spectrum = 0.0
+        spectrum = np.abs(np.fft.rfft(samples))
+        spectrum_norm = float(np.linalg.norm(spectrum))
         for played in self._played_output:
             if played.size != samples.size:
                 continue
             candidate = played.astype(np.float32)
             denominator = norm * float(np.linalg.norm(candidate))
             if denominator > 1.0:
-                strongest = max(strongest, abs(float(np.dot(samples, candidate) / denominator)))
-        return strongest < 0.62
+                strongest_waveform = max(
+                    strongest_waveform,
+                    abs(float(np.dot(samples, candidate) / denominator)),
+                )
+            # Magnitude spectra remain comparable despite the acoustic delay and
+            # phase shift introduced by loudspeakers, the room and the mic.
+            candidate_spectrum = np.abs(np.fft.rfft(candidate))
+            spectrum_denominator = spectrum_norm * float(np.linalg.norm(candidate_spectrum))
+            if spectrum_denominator > 1.0:
+                strongest_spectrum = max(
+                    strongest_spectrum,
+                    float(np.dot(spectrum, candidate_spectrum) / spectrum_denominator),
+                )
+        return strongest_waveform < 0.62 and strongest_spectrum < 0.90
 
     def _handle_event(self, raw: str | bytes) -> None:
         try:
@@ -284,5 +324,7 @@ class LocalRealtimeAudioClient:
     def _clear_output(self) -> None:
         with self._output_lock:
             self._output.clear()
-        self._played_output.clear()
+        # Keep the recent playback fingerprint. The physical speaker tail still
+        # reaches the microphone after the digital buffer has been cancelled;
+        # clearing this history made every following response interrupt itself.
         self._last_output_at = 0.0

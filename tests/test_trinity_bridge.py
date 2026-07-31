@@ -3,6 +3,8 @@ import base64
 import sys
 import time
 
+import pytest
+
 from trinity_bridge import TrinityBridge, _local_path_value
 from web_ui import render_web_ui
 from chat_protocol import append_chat_event, load_chat_events, pop_next_chat_request
@@ -275,6 +277,19 @@ def test_bridge_prompts_include_persona_wakeword_variants(tmp_path):
     assert prompts["user"] == "Userprompt"
     assert prompts["agent_name"] == "Trinity"
     assert prompts["trigger_variants"] == ["trinity", "triniti"]
+
+
+def test_bridge_rejects_blank_prompt_overwrite(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "core" / "Soul.md").write_text("Systemprompt", encoding="utf-8")
+    (home / "core" / "User.md").write_text("Userprompt", encoding="utf-8")
+    bridge = TrinityBridge(home)
+
+    with pytest.raises(ValueError, match="Soul.md ist leer"):
+        bridge.save_prompts({"soul": "", "user": "Userprompt"})
+
+    assert (home / "core" / "Soul.md").read_text(encoding="utf-8") == "Systemprompt"
 
 
 def test_bridge_exposes_and_mutates_workspace_state(tmp_path):

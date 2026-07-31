@@ -36,6 +36,7 @@ from brainvault_agents import (
 )
 from configuration import DEFAULT_CONFIG, load_config, save_config
 from memory_store import MemoryStore, render_graph_html
+from prompt_files import EmptyPromptError, safe_write_prompt, validate_prompt_text
 from trinity_paths import default_runtime_root, default_vault_root
 from ui_modes import resolve_ui_modes
 
@@ -70,10 +71,16 @@ class SettingsWindow(QMainWindow):
             return ""
 
     def save_text_file(self, path, content):
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
+        safe_write_prompt(path, content)
 
     def save_config(self, _checked=False, *, show_confirmation=True):
+        try:
+            soul_content = validate_prompt_text("Soul.md", self.soul_edit.toPlainText())
+            user_content = validate_prompt_text("User.md", self.user_edit.toPlainText())
+        except EmptyPromptError as exc:
+            QMessageBox.warning(self, "Prompt-Datei bleibt erhalten", str(exc))
+            return False
+
         # LLM Slots
         if "active_slot" not in self.config["llm"]:
              self.config["llm"]["active_slot"] = "local"
@@ -378,10 +385,10 @@ class SettingsWindow(QMainWindow):
         save_config(self.config_path, self.config)
         
         # Soul.md speichern
-        self.save_text_file(self.soul_path, self.soul_edit.toPlainText())
+        self.save_text_file(self.soul_path, soul_content)
         
         # User.md speichern
-        self.save_text_file(self.user_path, self.user_edit.toPlainText())
+        self.save_text_file(self.user_path, user_content)
         
         if self.embedded and self.on_return:
             self.on_return(True)
@@ -396,6 +403,7 @@ class SettingsWindow(QMainWindow):
                 "nach einem Trinity-Neustart aktiv. Dieses Einstellungsfenster "
                 "selbst hört nicht zu.",
             )
+        return True
 
     def _return_to_chat(self):
         if self.embedded and self.on_return:
@@ -669,7 +677,8 @@ class SettingsWindow(QMainWindow):
             )
 
     def _save_and_start_trinity(self):
-        self.save_config(show_confirmation=False)
+        if not self.save_config(show_confirmation=False):
+            return
         home = str(Path(CORE_DIR).parent)
         launcher = str(Path(home) / "trinity_launcher.py")
         started, _pid = QProcess.startDetached(sys.executable, [launcher], home)
