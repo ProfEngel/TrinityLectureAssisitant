@@ -5,7 +5,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QProcess
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWebEngineCore import QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -73,7 +73,7 @@ class SettingsWindow(QMainWindow):
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def save_config(self):
+    def save_config(self, _checked=False, *, show_confirmation=True):
         # LLM Slots
         if "active_slot" not in self.config["llm"]:
              self.config["llm"]["active_slot"] = "local"
@@ -382,15 +382,16 @@ class SettingsWindow(QMainWindow):
         
         if self.embedded and self.on_return:
             self.on_return(True)
-        else:
+        elif show_confirmation:
             QMessageBox.information(
                 self,
                 "Gespeichert",
                 "Einstellungen gespeichert.\n"
                 "Neue Anfragen übernehmen LLM-, Persona-, Telegram-, TTS- und "
-                "Modus-Änderungen automatisch. Nur geänderte Oberflächenstarts "
-                "(Augen-/Classic-/Terminal-Kombination) und die Companion Bridge "
-                "brauchen einen Neustart.",
+                "Modus-Änderungen automatisch. Änderungen an Voice Runtime, "
+                "Eve-Profil, Oberflächenstarts und Companion Bridge werden erst "
+                "nach einem Trinity-Neustart aktiv. Dieses Einstellungsfenster "
+                "selbst hört nicht zu.",
             )
 
     def _return_to_chat(self):
@@ -629,6 +630,10 @@ class SettingsWindow(QMainWindow):
         
         btn_layout.addWidget(cancel_btn)
         btn_layout.addStretch()
+        if not self.embedded:
+            start_btn = QPushButton("Speichern und Trinity starten")
+            start_btn.clicked.connect(self._save_and_start_trinity)
+            btn_layout.addWidget(start_btn)
         btn_layout.addWidget(save_btn)
         main_layout.addLayout(btn_layout)
 
@@ -645,12 +650,35 @@ class SettingsWindow(QMainWindow):
         values = self._settings_runtime_values()
         microphone_enabled = values["microphone_enabled"]
         tts_enabled = values["tts_enabled"]
-        self.settings_mic_button.setText(
-            "🎙 Hört zu" if microphone_enabled else "🔇 Hört nicht zu"
-        )
-        self.settings_tts_button.setText(
-            "🔊 Spricht" if tts_enabled else "🔈 Spricht nicht"
-        )
+        if self.embedded:
+            self.settings_mic_button.setText(
+                "🎙 Hört zu" if microphone_enabled else "🔇 Hört nicht zu"
+            )
+            self.settings_tts_button.setText(
+                "🔊 Spricht" if tts_enabled else "🔈 Spricht nicht"
+            )
+        else:
+            self.settings_mic_button.setText(
+                "🎙 Mikro beim Start: an" if microphone_enabled else "🔇 Mikro beim Start: aus"
+            )
+            self.settings_tts_button.setText(
+                "🔊 TTS beim Start: an" if tts_enabled else "🔈 TTS beim Start: aus"
+            )
+
+    def _save_and_start_trinity(self):
+        self.save_config(show_confirmation=False)
+        home = str(Path(CORE_DIR).parent)
+        launcher = str(Path(home) / "trinity_launcher.py")
+        started, _pid = QProcess.startDetached(sys.executable, [launcher], home)
+        if not started:
+            QMessageBox.critical(
+                self,
+                "Trinity konnte nicht gestartet werden",
+                "Die Einstellungen wurden gespeichert, aber der Trinity-Launcher "
+                "konnte nicht gestartet werden.",
+            )
+            return
+        self.close()
 
     def _save_runtime_toggle(self, updates):
         system = self.config.setdefault("system", {})
@@ -2743,7 +2771,9 @@ class SettingsWindow(QMainWindow):
         voice_hint = QLabel(
             "Legacy bleibt vollständig erhalten. Eve wird erst nach Neustart aktiv. "
             "Vor dem Umschalten: `trinity voice doctor --profile <Profil>`. "
-            "Das Profil `eve-direct-ornith` umgeht Trinity und ist nur für Diagnosen gedacht."
+            "Das Profil `eve-direct-ornith` umgeht Trinity und ist nur für Diagnosen gedacht. "
+            "Wenn Du die Einstellungen einzeln geöffnet hast, nutze unten "
+            "„Speichern und Trinity starten“; dieses Fenster allein hört nicht zu."
         )
         voice_hint.setWordWrap(True)
         voice_hint.setStyleSheet("color: #d29922; font-size: 11px;")
