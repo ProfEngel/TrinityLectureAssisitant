@@ -125,6 +125,9 @@ class SettingsWindow(QMainWindow):
         voice["access_token"] = self.voice_token_edit.text().strip()
         voice["streaming_chunk_size"] = self.voice_chunk_size_spin.value()
         voice["audio_prebuffer_ms"] = self.voice_prebuffer_spin.value()
+        voice["barge_in_enabled"] = self.voice_barge_in_cb.isChecked()
+        voice["echo_suppression_enabled"] = self.voice_echo_suppression_cb.isChecked()
+        voice["barge_in_min_level"] = self.voice_barge_in_level_spin.value()
         selected_profile = voice.setdefault("profiles", {}).setdefault(
             voice["profile"], {}
         )
@@ -2602,13 +2605,20 @@ class SettingsWindow(QMainWindow):
             "Dieser Mac: Mikrofon und Lautsprecher lokal",
             "eve-mac-local",
             "Eve hört über das Mikrofon dieses Macs zu und spricht über dessen Audioausgabe. "
-            "Geeignet zum ersten Funktionstest ohne iPhone oder iPad.",
+            "Der Realtime-Pfad erlaubt Unterbrechen durch Sprechen; Kopfhörer oder AirPods "
+            "liefern dabei die zuverlässigste Echo-Trennung.",
         ),
         (
             "Mac als Sprachserver für iPhone und iPad",
             "eve-mac-server",
             "Der Mac führt STT, Trinity und TTS aus. iPhone und iPad übertragen Audio "
             "über den geschützten Realtime-Port, zum Beispiel innerhalb von Tailscale.",
+        ),
+        (
+            "Dieser Windows-PC: Mikrofon und Lautsprecher lokal",
+            "eve-windows-local",
+            "Lokales Realtime-Gespräch auf einer Windows-Workstation mit CUDA. "
+            "Der PC benötigt eine kompatible NVIDIA-GPU sowie ein funktionierendes Mikrofon.",
         ),
         (
             "Windows als Sprachserver für iPhone und iPad",
@@ -2660,7 +2670,7 @@ class SettingsWindow(QMainWindow):
 
         voice_group = QGroupBox("Voice Runtime")
         voice_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        voice_group.setMinimumHeight(570)
+        voice_group.setMinimumHeight(760)
         voice_form = QFormLayout()
         self.voice_form = voice_form
         voice_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -2764,6 +2774,37 @@ class SettingsWindow(QMainWindow):
         self.voice_prebuffer_spin.setSuffix(" ms")
         self.voice_prebuffer_spin.setValue(int(voice_conf.get("audio_prebuffer_ms") if voice_conf.get("audio_prebuffer_ms") is not None else 180))
         voice_form.addRow("Client-Prebuffer:", self.voice_prebuffer_spin)
+
+        self.voice_barge_in_cb = QCheckBox(
+            "Eve durch Sprechen unterbrechen (Barge-in)"
+        )
+        self.voice_barge_in_cb.setChecked(voice_conf.get("barge_in_enabled", True))
+        voice_form.addRow("", self.voice_barge_in_cb)
+
+        self.voice_echo_suppression_cb = QCheckBox(
+            "Offensichtliches Lautsprecher-Echo im Desktop-Audiopfad unterdrücken"
+        )
+        self.voice_echo_suppression_cb.setChecked(
+            voice_conf.get("echo_suppression_enabled", True)
+        )
+        voice_form.addRow("", self.voice_echo_suppression_cb)
+
+        self.voice_barge_in_level_spin = QSpinBox()
+        self.voice_barge_in_level_spin.setRange(0, 32767)
+        self.voice_barge_in_level_spin.setSingleStep(50)
+        self.voice_barge_in_level_spin.setValue(
+            int(voice_conf.get("barge_in_min_level") if voice_conf.get("barge_in_min_level") is not None else 420)
+        )
+        voice_form.addRow("Unterbrechungs-Schwelle:", self.voice_barge_in_level_spin)
+
+        barge_in_hint = QLabel(
+            "Auf iPhone und iPad verwendet Eve Apples Voice-Chat-Echounterdrückung. "
+            "Am Desktop filtert Trinity eindeutiges Wiedergabe-Echo; mit offenem "
+            "Lautsprecher bleiben Kopfhörer die robusteste Wahl."
+        )
+        barge_in_hint.setWordWrap(True)
+        barge_in_hint.setStyleSheet("color: #8fa3b8; font-size: 11px;")
+        voice_form.addRow("", barge_in_hint)
 
         self.voice_profile_combo.currentIndexChanged.connect(self._load_voice_profile_form)
         self._load_voice_profile_form()

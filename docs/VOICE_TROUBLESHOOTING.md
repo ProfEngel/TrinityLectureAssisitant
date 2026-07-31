@@ -18,6 +18,9 @@ trinity voice doctor --profile eve-mac-local
 | Voice process exits | With fallback enabled Trinity resumes Legacy; inspect the Voice log before retrying. |
 | Eve repeats reference ending | Verify transcript/audio pairing; enable conservative start-segment handling instead of hard trimming. |
 | Trinity hears itself | Use headphones, cancel playback on barge-in and ensure only one engine owns the microphone. |
+| Speaking does not interrupt Eve | Use a local/server Realtime profile, enable barge-in, and test with headphones before lowering the threshold. Old local profiles are migrated automatically in v0.17.0. |
+| iPhone/iPad cannot connect | Use port 8766, the Voice token (not merely the Bridge token), a server profile and a Tailscale-reachable bind/firewall. |
+| Eve on a Windows VM is unusably slow | Verify that `nvidia-smi` works inside the VM; otherwise keep Legacy on Windows or run Eve on a GPU-capable Trinity host. |
 
 Stop the standalone runtime with `Ctrl+C`. In the normal launcher, changing the
 engine requires restarting Trinity because microphone ownership changes.

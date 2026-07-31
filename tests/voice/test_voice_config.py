@@ -38,6 +38,48 @@ def test_profile_overrides_are_merged_without_mutating_defaults(tmp_path):
     assert config.reference_text == EVE_REFERENCE_TEXT
 
 
+def test_local_profiles_use_realtime_barge_in_client(tmp_path):
+    mac = load_voice_config(tmp_path, {}, profile_name="eve-mac-local")
+    windows = load_voice_config(tmp_path, {}, profile_name="eve-windows-local")
+
+    assert mac.profile.mode == "realtime"
+    assert mac.profile.local_audio is True
+    assert windows.profile.mode == "realtime"
+    assert windows.profile.local_audio is True
+
+
+def test_old_half_duplex_local_profile_is_migrated(tmp_path):
+    config = load_voice_config(
+        tmp_path,
+        {
+            "voice": {
+                "profile": "eve-mac-local",
+                "profiles": {
+                    "eve-mac-local": {
+                        "mode": "local",
+                        "device": "mps",
+                        "conversation_backend": "trinity",
+                    }
+                },
+            }
+        },
+    )
+
+    assert config.profile.mode == "realtime"
+    assert config.profile.local_audio is True
+    assert config.profile.device == "mps"
+
+
+def test_mobile_server_profiles_bind_externally_without_desktop_audio(tmp_path):
+    mac = load_voice_config(tmp_path, {}, profile_name="eve-mac-server")
+    windows = load_voice_config(tmp_path, {}, profile_name="eve-windows-server")
+
+    assert mac.profile.bind_host == "0.0.0.0"
+    assert windows.profile.bind_host == "0.0.0.0"
+    assert mac.profile.local_audio is False
+    assert windows.profile.local_audio is False
+
+
 def test_eve_requires_reference_audio(tmp_path):
     config = load_voice_config(tmp_path, {"voice": {"engine": "eve"}})
 

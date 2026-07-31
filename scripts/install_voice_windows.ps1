@@ -46,4 +46,5 @@ if ($OpenFirewall) {
 }
 
 Write-Host "Eve dependencies installed. Trinity still uses the Legacy voice engine."
-Write-Host "Next: trinity voice doctor --profile eve-windows-server"
+Write-Host "Local desktop: trinity voice doctor --profile eve-windows-local"
+Write-Host "iPhone/iPad server: trinity voice doctor --profile eve-windows-server"

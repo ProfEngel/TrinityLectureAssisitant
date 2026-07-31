@@ -21,13 +21,26 @@ proxy adds access-token enforcement before a remote client can reach it.
 
 ## Profiles
 
-| Profile | Purpose | Device | Public by default |
+| Profile | Purpose | Device | Audio client |
 |---|---|---|---|
-| `eve-mac-local` | Mac microphone and speaker | MLX/MPS | No |
-| `eve-mac-server` | iPhone/iPad thin clients | MLX/MPS | No |
-| `eve-windows-server` | Windows/CUDA voice server | CUDA | No |
-| `eve-trinity` | Auto-selected local Trinity path | Auto | No |
-| `eve-direct-ornith` | Isolated LLM diagnostics | MLX/MPS | No |
+| `eve-mac-local` | Mac microphone and speaker with barge-in | MLX/MPS | Local Mac |
+| `eve-mac-server` | iPhone/iPad thin clients over Tailscale | MLX/MPS | Remote Apple device |
+| `eve-windows-local` | Windows microphone and speaker with barge-in | CUDA | Local PC |
+| `eve-windows-server` | iPhone/iPad thin clients over Tailscale | CUDA | Remote Apple device |
+| `eve-trinity` | Auto-selected local Trinity path | Auto | Local desktop |
+| `eve-direct-ornith` | Isolated half-duplex LLM diagnostics | MLX/MPS | Local desktop |
+
+Local production profiles no longer use the upstream half-duplex audio
+streamer. Trinity connects to the loopback Realtime endpoint with its own
+full-duplex PCM client. Server VAD cancels the current LLM/TTS turn when new
+speech begins, while the client immediately discards queued playback. Existing
+v0.16.x `mode: local` settings for local Trinity profiles are migrated at load
+time without changing the selected model or voice sample.
+
+One Eve runtime currently serves one active realtime audio client. Select a
+local profile for desktop microphone/speaker use, or the matching server
+profile for iPhone/iPad use. Text, sessions and generated results continue to
+sync through the normal Trinity Bridge independently of that audio choice.
 
 ## Upstream projects
 

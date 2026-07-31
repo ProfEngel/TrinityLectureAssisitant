@@ -15,6 +15,7 @@ from .command_builder import build_speech_to_speech_command
 from .config import VoiceConfig, load_voice_config
 from .conversation import DirectLLMConversationBackend, TrinityConversationBackend
 from .conversation.trinity_backend import TrinityConversationHTTPServer
+from .local_realtime_client import LocalRealtimeAudioClient
 from .transport import AuthenticatedWebSocketProxy
 
 
@@ -47,6 +48,7 @@ class VoiceRuntime:
         self.config = config
         self.backend_server: TrinityConversationHTTPServer | None = None
         self.proxy: AuthenticatedWebSocketProxy | None = None
+        self.local_audio_client: LocalRealtimeAudioClient | None = None
         self.process: subprocess.Popen | None = None
 
     def start(self) -> None:
@@ -84,13 +86,33 @@ class VoiceRuntime:
                 self.config.access_token,
             )
             self.proxy.start()
+            if profile.local_audio:
+                self.local_audio_client = LocalRealtimeAudioClient(self.config)
+                self.local_audio_client.start()
 
     def wait(self) -> int:
         if not self.process:
             return 0
-        return int(self.process.wait())
+        while self.process is not None and self.process.poll() is None:
+            if self.local_audio_client and (
+                self.local_audio_client.failure is not None
+                or not self.local_audio_client.is_alive
+            ):
+                process = self.process
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=3)
+                return 1
+            time.sleep(0.25)
+        return int(self.process.returncode or 0) if self.process is not None else 0
 
     def stop(self) -> None:
+        if self.local_audio_client:
+            self.local_audio_client.stop()
+            self.local_audio_client = None
         if self.proxy:
             self.proxy.stop()
             self.proxy = None

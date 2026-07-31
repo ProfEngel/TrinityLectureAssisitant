@@ -20,12 +20,13 @@ EVE_REFERENCE_TEXT = (
 
 DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
     "eve-mac-local": {
-        "mode": "local",
+        "mode": "realtime",
         "device": "mps",
         "conversation_backend": "trinity",
         "bind_host": "127.0.0.1",
         "public_port": 8766,
         "internal_port": 18766,
+        "local_audio": True,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -34,9 +35,10 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "mode": "realtime",
         "device": "mps",
         "conversation_backend": "trinity",
-        "bind_host": "127.0.0.1",
+        "bind_host": "0.0.0.0",
         "public_port": 8766,
         "internal_port": 18766,
+        "local_audio": False,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -45,9 +47,22 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "mode": "realtime",
         "device": "cuda",
         "conversation_backend": "trinity",
+        "bind_host": "0.0.0.0",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "local_audio": False,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "tts_backend": "torch",
+    },
+    "eve-windows-local": {
+        "mode": "realtime",
+        "device": "cuda",
+        "conversation_backend": "trinity",
         "bind_host": "127.0.0.1",
         "public_port": 8766,
         "internal_port": 18766,
+        "local_audio": True,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
@@ -59,17 +74,19 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "bind_host": "127.0.0.1",
         "public_port": 8766,
         "internal_port": 18766,
+        "local_audio": False,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
     },
     "eve-trinity": {
-        "mode": "local",
+        "mode": "realtime",
         "device": "auto",
         "conversation_backend": "trinity",
         "bind_host": "127.0.0.1",
         "public_port": 8766,
         "internal_port": 18766,
+        "local_audio": True,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -100,6 +117,7 @@ class VoiceProfile:
     bind_host: str
     public_port: int
     internal_port: int
+    local_audio: bool
     stt_model: str
     tts_model: str
     tts_backend: str
@@ -122,6 +140,9 @@ class VoiceConfig:
     reference_text: str = EVE_REFERENCE_TEXT
     streaming_chunk_size: int = 8
     audio_prebuffer_ms: int = 180
+    barge_in_enabled: bool = True
+    echo_suppression_enabled: bool = True
+    barge_in_min_level: int = 420
     speech_to_speech_executable: str = ""
     direct_llm_base_url: str = "http://127.0.0.1:8080/v1"
     direct_llm_model: str = "mlx-community/Ornith-1.0-35B-4bit"
@@ -152,6 +173,7 @@ class VoiceConfig:
             bind_host=str(raw.get("bind_host") or "127.0.0.1"),
             public_port=int(raw.get("public_port") or 8766),
             internal_port=int(raw.get("internal_port") or 18766),
+            local_audio=bool(raw.get("local_audio", False)),
             stt_model=str(raw.get("stt_model") or self.stt_model),
             tts_model=str(raw.get("tts_model") or self.tts_model),
             tts_backend=str(raw.get("tts_backend") or "ggml"),
@@ -178,6 +200,8 @@ class VoiceConfig:
             errors.append("voice.streaming_chunk_size muss zwischen 1 und 64 liegen.")
         if not 0 <= int(self.audio_prebuffer_ms) <= 2000:
             errors.append("voice.audio_prebuffer_ms muss zwischen 0 und 2000 liegen.")
+        if not 0 <= int(self.barge_in_min_level) <= 32767:
+            errors.append("voice.barge_in_min_level muss zwischen 0 und 32767 liegen.")
         if profile.tts_backend not in {"ggml", "torch"}:
             errors.append("voice.profiles.<name>.tts_backend muss ggml oder torch sein.")
         return errors
@@ -198,6 +222,9 @@ def default_voice_config() -> dict[str, Any]:
         "reference_text": EVE_REFERENCE_TEXT,
         "streaming_chunk_size": 8,
         "audio_prebuffer_ms": 180,
+        "barge_in_enabled": True,
+        "echo_suppression_enabled": True,
+        "barge_in_min_level": 420,
         "speech_to_speech_executable": "",
         "direct_llm_base_url": "http://127.0.0.1:8080/v1",
         "direct_llm_model": "mlx-community/Ornith-1.0-35B-4bit",
@@ -216,7 +243,18 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
             if key == "profiles" and isinstance(value, dict):
                 for name, profile in value.items():
                     if isinstance(profile, dict):
-                        raw["profiles"].setdefault(name, {}).update(profile)
+                        migrated_profile = copy.deepcopy(profile)
+                        if (
+                            name in {"eve-mac-local", "eve-windows-local", "eve-trinity"}
+                            and migrated_profile.get("mode") == "local"
+                            and "local_audio" not in migrated_profile
+                        ):
+                            # v0.16.x used the upstream half-duplex local streamer.
+                            # Preserve every user override while moving that legacy
+                            # profile to Trinity's interruptible realtime client.
+                            migrated_profile["mode"] = "realtime"
+                            migrated_profile["local_audio"] = True
+                        raw["profiles"].setdefault(name, {}).update(migrated_profile)
             else:
                 raw[key] = value
 
@@ -262,6 +300,9 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
         reference_text=reference_text,
         streaming_chunk_size=int(raw.get("streaming_chunk_size") or 8),
         audio_prebuffer_ms=int(raw.get("audio_prebuffer_ms") if raw.get("audio_prebuffer_ms") is not None else 180),
+        barge_in_enabled=bool(raw.get("barge_in_enabled", True)),
+        echo_suppression_enabled=bool(raw.get("echo_suppression_enabled", True)),
+        barge_in_min_level=int(raw.get("barge_in_min_level") if raw.get("barge_in_min_level") is not None else 420),
         speech_to_speech_executable=str(raw.get("speech_to_speech_executable") or ""),
         direct_llm_base_url=str(
             os.environ.get("TRINITY_LLM_BASE_URL")

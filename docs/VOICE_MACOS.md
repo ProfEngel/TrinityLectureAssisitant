@@ -15,8 +15,16 @@ Voice Runtime > Eve** only after `doctor` passes. Select **Legacy** at any time 
 return to the previous STT/TTS path. If automatic fallback is enabled, a failed
 Eve process releases the microphone and Trinity restarts Legacy STT.
 
-For a Companion server, choose `eve-mac-server`, set a long token, bind to
-`0.0.0.0` only inside a trusted Tailscale/private network, then restart Trinity.
+`eve-mac-local` now uses full-duplex realtime audio. Speaking while Eve talks
+immediately clears queued playback and cancels the active response. AirPods or
+headphones remain the most reliable route because open speakers can acoustically
+re-enter the microphone despite Trinity's echo-correlation gate. The settings
+provide a barge-in switch and sensitivity threshold.
+
+For a Companion server, choose `eve-mac-server`, set a separate long Voice
+token, bind to `0.0.0.0` only inside a trusted Tailscale/private network, then
+restart Trinity. The Companion uses `ws://TAILSCALE-IP:8766/v1/realtime` and
+that Voice token. The normal Bridge remains on port `8765` with its own token.
 
 ```bash
 venv/bin/trinity voice benchmark --profile eve-mac-local --rounds 3
