@@ -44,7 +44,9 @@ Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren
 > Fallback ist in **[Companion Offline Sync](docs/COMPANION_OFFLINE_SYNC.md)**
 > beschrieben.
 > Die optionale Smartbrillen-Anbindung ist unter
-> **[Even Realities G2 mit Trinity](docs/EVEN_G2.md)** beschrieben.
+> **[Even Realities G2 mit Trinity](docs/EVEN_G2.md)** beschrieben. Der getrennte
+> Brillen-Client liegt fuer autorisierte Nutzer im privaten Repository
+> **[TrinityEvenG2](https://github.com/ProfEngel/TrinityEvenG2)**.
 > Die optionale, umschaltbare **Eve Voice Runtime** mit deutschem Parakeet-STT,
 > Trinity Core und Qwen3-TTS ist in der
 > **[Voice-Architektur](docs/VOICE_ARCHITECTURE.md)** dokumentiert. Der bisherige

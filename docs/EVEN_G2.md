@@ -57,7 +57,9 @@ Sprachbefehle:
    npm install -g @evenrealities/evenhub-cli @evenrealities/evenhub-simulator
    ```
 
-4. Im getrennten Projekt `TrinityEvenG2` die Datei `.env.local` auf die erlaubten Trinity-Origins setzen. Beispiel:
+4. Das private Repository
+   [TrinityEvenG2](https://github.com/ProfEngel/TrinityEvenG2) klonen und dort
+   die Datei `.env.local` auf die erlaubten Trinity-Origins setzen. Beispiel:
 
    ```text
    VITE_TRINITY_ORIGINS=http://PRIVATE-TAILSCALE-IP:8765,http://BUSINESS-TAILSCALE-IP:8765
