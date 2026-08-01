@@ -17,10 +17,12 @@ Die Brille verbindet sich nicht direkt mit Mac oder Windows. Das Telefon mit der
 
 ## G2-Oberflaeche
 
-- links oben: Bubble-Hinweis und optional bis zu fuenf Vorbereitungspunkte
-- rechts oben: Anzahl neuer Medien sowie aktives Profil und Modus
+- links oben: Bubble-Hinweis und optional bis zu sechs Vorbereitungspunkte
+- rechts oben: Uhrzeit, Modus, Ausgabegeraet, Wetter der naechsten Stunde,
+  optionaler Kurztermin und Trinity-Status
 - links unten: letzte Transkription oder Trinity-Antwort
-- rechts unten: Uhrzeit
+- rechts unten: Anzahl laufender oder fertiger Medien
+- ganz unten: eine neue n-tv-Schlagzeile fuer etwa acht Sekunden
 - Mitte: bewusst frei
 
 Das G2-Display ist monochrom. Die Trinity-Ampel wird daher mit `!`, `!!` und `!!!` dargestellt. Die Brille hat keinen Lautsprecher; Antworten erscheinen als Text.
@@ -30,6 +32,20 @@ Fertige Bilder und Schaubilder koennen ueber einen Ring-Tipp oder den Befehl
 geoeffnet werden. Ein weiterer Tipp wechselt zum naechsten Ergebnis,
 Doppeltippen schliesst die Vorschau. Fuer Audio, Video und HTML zeigt das HUD
 eine kompakte Ergebniskarte.
+
+### Wetter, Termin und Schlagzeile
+
+Trinity Desktop liest die offizielle n-tv-RSS-Schlagzeile und die
+stundengenaue Open-Meteo-Prognose serverseitig ein und stellt beides
+zwischengespeichert unter `GET /ambient` bereit. Der in der G2-Einstellung
+`Wetter-Ersatzort` gesetzte Ort gilt, solange kein Companion-Client einen
+aktuellen Standort meldet; Standard ist `Filderstadt`.
+
+Unter iPhone/iPad **Settings -> G2 HUD-Kontext** koennen Standort und naechster
+Kalendertermin getrennt freigegeben werden. Die Meldung ist optional,
+widerrufbar und bleibt nur im Arbeitsspeicher der privaten Trinity-Bridge. Beim
+Abschalten werden die zuvor gemeldeten Werte dort entfernt. Ohne die
+Freigaben funktionieren Schlagzeile und Ersatzort-Wetter weiterhin.
 
 ## Modi
 

@@ -23,6 +23,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import url2pathname
 
 from agent_catalog import build_agent_catalog, normalize_catalog_overrides
+from ambient_context import AmbientContextService
 from bridge_audio import BridgeAudioTranscriber
 from chat_attachments import attachment_kind
 from chat_protocol import (
@@ -75,6 +76,7 @@ QUIET_GET_LOG_PATHS = {
     "/dashboard",
     "/memory/graph",
     "/speaker",
+    "/ambient",
 }
 
 
@@ -168,6 +170,7 @@ class TrinityBridge:
         self._summary_jobs = set()
         self._audio_transcriber = None
         self._canvas_status_cache = (0.0, {})
+        self.ambient = AmbientContextService()
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
         self.workbench = WorkbenchManager(self.home)
 
@@ -1836,6 +1839,12 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.get_mode())
                 elif parsed.path == "/speaker":
                     _json_response(self, 200, {"ok": True, **bridge.get_speaker()})
+                elif parsed.path == "/ambient":
+                    _json_response(
+                        self,
+                        200,
+                        bridge.ambient.snapshot(query.get("place", ["Filderstadt"])[0]),
+                    )
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/dashboard":
@@ -2073,6 +2082,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/speaker":
                     _json_response(self, 200, bridge.set_speaker(_read_json(self)))
+                elif parsed.path == "/ambient/device":
+                    _json_response(self, 200, bridge.ambient.report_device(_read_json(self)))
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.set_runtime(_read_json(self)))
                 elif parsed.path == "/agent/update":
