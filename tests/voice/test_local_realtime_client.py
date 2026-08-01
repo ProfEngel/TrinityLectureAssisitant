@@ -160,3 +160,28 @@ def test_output_callback_consumes_audio_without_microphone_coupling(tmp_path):
 
     assert bytes(output) == samples.tobytes()
     assert local._output == bytearray()
+
+
+def test_output_callback_stays_silent_when_companion_owns_speaker(tmp_path):
+    local = client(tmp_path)
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "config.json").write_text(
+        json.dumps({
+            "system": {
+                "speech_output": {
+                    "device_id": "companion:ipad",
+                    "label": "iPad",
+                    "kind": "companion",
+                }
+            }
+        }),
+        encoding="utf-8",
+    )
+    samples = np.full(512, 1_250, dtype=np.int16)
+    local._output.extend(samples.tobytes())
+    output = bytearray(samples.nbytes)
+
+    local._output_callback(output, 512, None, None)
+
+    assert bytes(output) == b"\x00" * samples.nbytes
+    assert local._output == bytearray()

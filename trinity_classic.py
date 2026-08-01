@@ -350,16 +350,13 @@ class ClassicWindow(QMainWindow):
         self.audio_source_button.setObjectName("subtle")
         self.audio_source_button.setFixedSize(46, 38)
         self.audio_source_button.clicked.connect(self.toggle_audio_capture_mode)
-        self.tts_button = QPushButton()
-        self.tts_button.setObjectName("subtle")
-        self.tts_button.setFixedSize(46, 38)
-        self.tts_button.clicked.connect(self.toggle_tts)
-        self.speaker_button = QPushButton("Ich spreche hier")
+        self.speaker_button = QPushButton()
         self.speaker_button.setObjectName("subtle")
+        self.speaker_button.setFixedSize(46, 38)
         self.speaker_button.setToolTip(
             "Diesen Desktop als einzige Trinity-Sprachausgabe auswählen"
         )
-        self.speaker_button.clicked.connect(self.claim_desktop_speaker)
+        self.speaker_button.clicked.connect(self.toggle_desktop_speaker)
         self.theme_button = QPushButton()
         self.theme_button.setObjectName("theme")
         self.theme_button.setFixedSize(46, 38)
@@ -392,7 +389,6 @@ class ClassicWindow(QMainWindow):
         right_cluster_layout.addWidget(self.mode_combo)
         right_cluster_layout.addWidget(self.audio_source_button)
         right_cluster_layout.addWidget(self.speaker_button)
-        right_cluster_layout.addWidget(self.tts_button)
         right_cluster_layout.addWidget(self.theme_button)
         right_cluster_layout.addWidget(settings_button)
         header.addWidget(right_cluster)
@@ -1892,17 +1888,29 @@ class ClassicWindow(QMainWindow):
             return
         identity = self._desktop_speaker_identity()
         active = selected.get("device_id") == identity["device_id"]
-        self.speaker_button.setText("🔊 Ich spreche hier" if active else "🔈 Hier sprechen")
+        self.speaker_button.setText("🔊" if active else "🔇")
         if active:
-            self.speaker_button.setToolTip("Dieser Desktop ist Trinitys aktive Sprachausgabe")
+            self.speaker_button.setToolTip(
+                "Dieser Desktop spricht. Klicken, um Trinity überall stummzuschalten."
+            )
         else:
             label = str(selected.get("label") or "ein anderes Gerät")
-            self.speaker_button.setToolTip(f"Aktuell spricht Trinity auf: {label}")
+            self.speaker_button.setToolTip(
+                f"Aktuell spricht Trinity auf: {label}. Klicken, um die Ausgabe hierher zu holen."
+            )
 
-    def claim_desktop_speaker(self):
+    def toggle_desktop_speaker(self):
         identity = self._desktop_speaker_identity()
         try:
-            if self.remote_client:
+            selected = self._speaker_values()
+            active = selected.get("device_id") == identity["device_id"]
+            if active and self.remote_client:
+                result = self.remote_client.release_speaker()
+            elif active:
+                result = TrinityBridge(BASE_DIR).set_speaker(
+                    {"device_id": "none", "label": "Stumm", "kind": "none"}
+                )
+            elif self.remote_client:
                 result = self.remote_client.set_speaker(**identity)
             else:
                 result = TrinityBridge(BASE_DIR).set_speaker(identity)
@@ -1911,7 +1919,10 @@ class ClassicWindow(QMainWindow):
             return
         self._speaker_next_refresh = 0.0
         self._refresh_speaker_control(force=True)
-        self.status.setText(f"Trinity spricht jetzt hier: {result.get('label')}")
+        self.status.setText(
+            "Trinity spricht nicht" if result.get("kind") == "none"
+            else f"Trinity spricht jetzt hier: {result.get('label')}"
+        )
 
     def _set_runtime_values(self, updates):
         if self.remote_client:
@@ -1929,7 +1940,6 @@ class ClassicWindow(QMainWindow):
     def _sync_runtime_controls(self, values=None):
         values = values or self._runtime_values()
         microphone_enabled = bool(values.get("microphone_enabled", True))
-        tts_enabled = bool(values.get("tts_enabled", True))
         audio_capture_mode = str(values.get("audio_capture_mode", "mic_only") or "mic_only")
         self.listen_button.setText("🎙" if microphone_enabled else "🔇")
         self.listen_button.setToolTip("Mikrofon aktiv" if microphone_enabled else "Mikrofon pausiert")
@@ -1940,8 +1950,6 @@ class ClassicWindow(QMainWindow):
             else "Nur eigenes Mikro"
         )
         self.new_session_button.setText("＋")
-        self.tts_button.setText("🔊" if tts_enabled else "🔈")
-        self.tts_button.setToolTip("Desktop-TTS aktiv" if tts_enabled else "Desktop-TTS pausiert")
         mode = values.get("mode", "lecture")
         self.mode_combo.blockSignals(True)
         if mode == "chat":

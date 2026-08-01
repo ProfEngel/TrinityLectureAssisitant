@@ -94,6 +94,14 @@ def test_bridge_speaker_claim_is_persisted_and_exposed_in_instance_state(tmp_pat
     assert bridge.get_speaker()["device_id"] == "companion:ipad-lecture"
     assert bridge.instance_state()["speaker"]["label"] == "iPad Vorlesung"
 
+    released = bridge.set_speaker(
+        {"device_id": "ignored", "label": "ignored", "kind": "none"}
+    )
+
+    assert released["device_id"] == "none"
+    assert released["label"] == "Stumm"
+    assert bridge.get_speaker()["kind"] == "none"
+
 
 def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
     home = tmp_path

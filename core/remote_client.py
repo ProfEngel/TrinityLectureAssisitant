@@ -65,6 +65,9 @@ class RemoteTrinityClient:
             {"device_id": device_id, "label": label, "kind": kind},
         )
 
+    def release_speaker(self):
+        return self.set_speaker("none", "Stumm", kind="none")
+
     def current_session(self):
         return self._request("/session/current", method="GET")
 

@@ -52,6 +52,9 @@ class LocalRealtimeAudioClient:
         self._last_cancel_at = 0.0
         self._speech_queue_path = config.home / "TrinityRuntime" / "voice" / "desktop_speech_queue.jsonl"
         self._ready_path = config.home / "TrinityRuntime" / "voice" / "desktop_eve_audio.ready"
+        self._trinity_config_path = config.home / "core" / "config.json"
+        self._speaker_check_at = 0.0
+        self._desktop_output_enabled = True
         self._speech_queue_offset = 0
 
     def start(self, timeout: float = 20.0) -> None:
@@ -252,6 +255,10 @@ class LocalRealtimeAudioClient:
         if status:
             LOGGER.debug("Desktop-Audioausgabe: %s", status)
         wanted = frames * SAMPLE_BYTES
+        if not self._desktop_speaker_selected():
+            self._clear_output()
+            outdata[:] = b"\x00" * wanted
+            return
         with self._output_lock:
             take = min(wanted, len(self._output))
             outgoing = bytes(self._output[:take])
@@ -264,6 +271,22 @@ class LocalRealtimeAudioClient:
         if np.any(output_samples):
             self._played_output.append(output_samples)
             self._last_output_at = time.monotonic()
+
+    def _desktop_speaker_selected(self) -> bool:
+        now = time.monotonic()
+        if now < self._speaker_check_at:
+            return self._desktop_output_enabled
+        self._speaker_check_at = now + 0.35
+        try:
+            config = json.loads(self._trinity_config_path.read_text(encoding="utf-8"))
+            speaker = config.get("system", {}).get("speech_output", {})
+            self._desktop_output_enabled = not speaker or str(
+                speaker.get("kind") or "desktop"
+            ).strip().lower() == "desktop"
+        except (OSError, ValueError, TypeError):
+            # A transient write/read race must not unexpectedly mute the active desktop.
+            pass
+        return self._desktop_output_enabled
 
     def _input_callback(self, indata, _frames, _time_info, status) -> None:
         if status:
@@ -368,6 +391,9 @@ class LocalRealtimeAudioClient:
         if event_type == "input_audio_buffer.speech_started":
             self._clear_output()
         elif event_type == "response.output_audio.delta":
+            if not self._desktop_speaker_selected():
+                self._clear_output()
+                return
             encoded = str(event.get("delta") or "")
             try:
                 audio = base64.b64decode(encoded, validate=True)

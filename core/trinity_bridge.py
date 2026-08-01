@@ -226,7 +226,7 @@ class TrinityBridge:
             value = self._default_speaker()
         kind = str(value.get("kind") or "").strip().lower()
         device_id = str(value.get("device_id") or "").strip()
-        if kind not in {"desktop", "companion"} or not device_id:
+        if kind not in {"desktop", "companion", "none"} or not device_id:
             value = self._default_speaker()
         return {
             "device_id": str(value.get("device_id") or "")[:160],
@@ -241,8 +241,11 @@ class TrinityBridge:
         kind = str(payload.get("kind") or "").strip().lower()
         device_id = str(payload.get("device_id") or "").strip()[:160]
         label = str(payload.get("label") or "").strip()[:100]
-        if kind not in {"desktop", "companion"}:
-            raise ValueError("Sprechstelle muss desktop oder companion sein.")
+        if kind not in {"desktop", "companion", "none"}:
+            raise ValueError("Sprechstelle muss desktop, companion oder none sein.")
+        if kind == "none":
+            device_id = "none"
+            label = "Stumm"
         if not device_id:
             raise ValueError("Eine Geräte-ID wird benötigt.")
         if not label:
