@@ -54,18 +54,19 @@ def test_bridge_audio_biases_short_g2_commands_without_reusing_previous_text():
 
     transcriber = BridgeAudioTranscriber()
     transcriber._model = FakeModel()
-    encoded = base64.b64encode(b"\x00\x00" * 1600).decode("ascii")
+    encoded = base64.b64encode(np.full(1600, 1200, dtype="<i2").tobytes()).decode("ascii")
 
     result = transcriber.transcribe(encoded)
 
     assert result["text"] == "Trinity, Modus Zuruf"
     assert calls[0]["condition_on_previous_text"] is False
-    assert calls[0]["beam_size"] == 3
-    assert "Zuruf" in calls[0]["hotwords"]
-    assert "Nash-Gleichgewicht" in calls[0]["initial_prompt"]
+    assert calls[0]["beam_size"] == 2
+    assert calls[0]["hotwords"] == "Trinity"
+    assert "Schnellsession" not in calls[0]["initial_prompt"]
+    assert calls[0]["best_of"] == 1
 
     transcriber.transcribe(encoded, quality="precise")
-    assert calls[1]["beam_size"] == 5
+    assert calls[1]["beam_size"] == 4
 
     with pytest.raises(ValueError, match="Erkennungsqualitaet"):
         transcriber.transcribe(encoded, quality="maximum")
@@ -77,6 +78,48 @@ def test_bridge_audio_prompt_does_not_bias_spontaneous_checklist_hallucinations(
     assert "checkliste" not in prompt
     assert "wichtige begriffe" not in prompt
     assert "stichwoerter" not in prompt
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Copyright WDR 2024",
+        "Untertitel im Auftrag des ZDF",
+        "Untertitel der Amara.org Community",
+        "www.schnellsessions.com",
+    ],
+)
+def test_bridge_audio_filters_known_subtitle_and_domain_hallucinations(text):
+    assert BridgeAudioTranscriber.is_known_hallucination(text)
+
+
+def test_bridge_audio_drops_silent_audio_without_loading_the_model():
+    transcriber = BridgeAudioTranscriber()
+    transcriber._ensure_model = lambda: (_ for _ in ()).throw(AssertionError("model must stay unloaded"))
+    encoded = base64.b64encode(b"\x00\x00" * 1600).decode("ascii")
+
+    assert transcriber.transcribe(encoded)["text"] == ""
+
+
+def test_bridge_audio_drops_low_confidence_no_speech_segments():
+    class Segment:
+        text = " Copyright WDR "
+        no_speech_prob = 0.91
+        avg_logprob = -1.2
+
+    class Info:
+        language = "de"
+        language_probability = 0.99
+
+    class FakeModel:
+        def transcribe(self, _audio, **_kwargs):
+            return [Segment()], Info()
+
+    transcriber = BridgeAudioTranscriber()
+    transcriber._model = FakeModel()
+    encoded = base64.b64encode(np.full(1600, 1200, dtype="<i2").tobytes()).decode("ascii")
+
+    assert transcriber.transcribe(encoded)["text"] == ""
 
 
 def test_audio_transcription_http_endpoint_accepts_authenticated_g2_request(tmp_path):

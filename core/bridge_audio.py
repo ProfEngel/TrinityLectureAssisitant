@@ -4,21 +4,22 @@ from __future__ import annotations
 
 import base64
 import binascii
+import re
 import threading
 
 
 G2_SAMPLE_RATE = 16_000
 MAX_AUDIO_SECONDS = 20
 TRINITY_VOCABULARY = (
-    "Trinity. Deutsche Vorlesung und natuerliche Konversation. "
-    "Kommandos: Trinity, Hilfe, Modus Zuruf, Zurufmodus, "
-    "Konversationsmodus, Wakeword, Arbeitsraum, "
-    "Schnellsession, Nash-Gleichgewicht, Gefangenendilemma und Kooperation."
+    "Natuerliche deutsche Sprache. Trinity ist der Name der Assistentin."
 )
-TRINITY_HOTWORDS = (
-    "Trinity Hilfe Zuruf Zurufmodus Konversationsmodus Wakeword "
-    "Arbeitsraum Schnellsession Nash-Gleichgewicht "
-    "Gefangenendilemma Kooperation"
+TRINITY_HOTWORDS = "Trinity"
+
+_KNOWN_SUBTITLE_HALLUCINATIONS = (
+    re.compile(r"\bcopyright\b.*\b(?:ard|zdf|wdr|ndr|swr|br|mdr|rbb)\b", re.IGNORECASE),
+    re.compile(r"\buntertitel\b.*\b(?:auftrag|community|amara)\b", re.IGNORECASE),
+    re.compile(r"\bamara\s*\.\s*org\b", re.IGNORECASE),
+    re.compile(r"\b(?:www\s*\.\s*)?schnellsessions?\s*\.\s*com\b", re.IGNORECASE),
 )
 
 
@@ -61,6 +62,10 @@ class BridgeAudioTranscriber:
 
     def transcribe(self, audio_base64, *, sample_rate=G2_SAMPLE_RATE, language="de", quality="balanced"):
         audio = self.decode_pcm(audio_base64, sample_rate=sample_rate)
+        import numpy as np
+
+        if float(np.sqrt(np.mean(np.square(audio), dtype=np.float64))) < 0.0015:
+            return {"text": "", "language": str(language or ""), "language_probability": 0.0}
         selected_language = str(language or "de").strip().lower()
         if selected_language in {"", "auto"}:
             selected_language = None
@@ -70,7 +75,7 @@ class BridgeAudioTranscriber:
         quality = str(quality or "balanced").strip().lower()
         if quality not in {"fast", "balanced", "precise"}:
             raise ValueError("Erkennungsqualitaet muss fast, balanced oder precise sein.")
-        beam_size = {"fast": 1, "balanced": 3, "precise": 5}[quality]
+        beam_size = {"fast": 1, "balanced": 2, "precise": 4}[quality]
 
         with self._lock:
             segments, info = self._ensure_model().transcribe(
@@ -80,13 +85,37 @@ class BridgeAudioTranscriber:
                 hotwords=TRINITY_HOTWORDS,
                 condition_on_previous_text=False,
                 vad_filter=True,
+                vad_parameters={
+                    "threshold": 0.5,
+                    "min_speech_duration_ms": 180,
+                    "min_silence_duration_ms": 250,
+                    "speech_pad_ms": 120,
+                },
                 beam_size=beam_size,
-                best_of=beam_size,
+                best_of=1,
                 temperature=0.0,
+                no_speech_threshold=0.55,
+                log_prob_threshold=-0.9,
             )
-            text = " ".join(str(segment.text or "").strip() for segment in segments).strip()
+            accepted = []
+            for segment in segments:
+                text = str(segment.text or "").strip()
+                no_speech = float(getattr(segment, "no_speech_prob", 0.0) or 0.0)
+                average_log_probability = float(getattr(segment, "avg_logprob", 0.0) or 0.0)
+                if no_speech > 0.65 and average_log_probability < -0.7:
+                    continue
+                if text and not self.is_known_hallucination(text):
+                    accepted.append(text)
+            text = " ".join(accepted).strip()
+            if self.is_known_hallucination(text):
+                text = ""
         return {
             "text": text,
             "language": str(getattr(info, "language", selected_language or "") or ""),
             "language_probability": float(getattr(info, "language_probability", 0.0) or 0.0),
         }
+
+    @staticmethod
+    def is_known_hallucination(text):
+        normalized = " ".join(str(text or "").split())
+        return bool(normalized) and any(pattern.search(normalized) for pattern in _KNOWN_SUBTITLE_HALLUCINATIONS)
