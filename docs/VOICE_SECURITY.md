@@ -2,7 +2,11 @@
 
 - Voice binds to loopback by default. Remote bind is an explicit setting.
 - Remote Realtime access requires a separate Voice token; use Tailscale or WSS.
-- Do not expose ports 8765/8766 through a public router.
+- Do not expose ports 8765/8766/18767 through a public router.
+- In the Ubuntu/Windows split layout, port `18767` is the authenticated Trinity
+  Core endpoint. Bind it only to a private LAN/Tailscale interface and use a
+  separate Core token. The Ubuntu Voice token and Windows Core token must not
+  be reused as public API credentials.
 - Tokens belong in local configuration/Keychain, never source control or logs.
 - Standard logs contain session/turn IDs and timings, not reference audio,
   complete emails or full private prompts.

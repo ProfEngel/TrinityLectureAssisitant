@@ -58,13 +58,16 @@ class VoiceRuntime:
         profile = self.config.profile
         if profile.conversation_backend == "trinity":
             backend = TrinityConversationBackend(self.config.home)
-        else:
+        elif profile.conversation_backend == "direct":
             backend = DirectLLMConversationBackend(
                 self.config.direct_llm_base_url,
                 self.config.direct_llm_model,
                 self.config.direct_llm_api_key,
             )
+        else:
+            backend = None
         if profile.conversation_backend == "trinity":
+            assert backend is not None
             self.backend_server = TrinityConversationHTTPServer(
                 backend,
                 self.config.backend_host,
@@ -72,6 +75,15 @@ class VoiceRuntime:
                 self.config.backend_token,
             )
             self.backend_server.start()
+
+        if profile.runtime_role == "client":
+            self.local_audio_client = LocalRealtimeAudioClient(
+                self.config,
+                endpoint=self.config.remote_voice_url,
+                access_token=self.config.remote_voice_token or self.config.access_token,
+            )
+            self.local_audio_client.start()
+            return
 
         command = build_speech_to_speech_command(self.config)
         env = os.environ.copy()
@@ -91,6 +103,10 @@ class VoiceRuntime:
                 self.local_audio_client.start()
 
     def wait(self) -> int:
+        if not self.process and self.local_audio_client:
+            while self.local_audio_client.is_alive and self.local_audio_client.failure is None:
+                time.sleep(0.25)
+            return 1 if self.local_audio_client.failure else 0
         if not self.process:
             return 0
         while self.process is not None and self.process.poll() is None:

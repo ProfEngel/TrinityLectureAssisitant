@@ -53,27 +53,34 @@ def _llm_health(base_url: str, api_key: str = "") -> tuple[bool, str]:
 
 def run_checks(config: VoiceConfig) -> list[Check]:
     profile = config.profile
+    inference_required = profile.runtime_role != "client"
     s2s_version = _package_version("speech-to-speech")
     mlx_audio_version = _package_version("mlx-audio")
     checks = [
         Check("Python", sys.version_info >= (3, 10), platform.python_version()),
         Check("Engine", config.engine in {"legacy", "eve"}, config.engine),
         Check("Profil", not config.validate(), profile.name if not config.validate() else "; ".join(config.validate())),
-        Check("speech-to-speech", s2s_version == "0.2.11", s2s_version or "nicht installiert"),
-        Check("mlx-audio", bool(mlx_audio_version), mlx_audio_version or "nicht installiert", required=platform.system() == "Darwin"),
-        Check("Parakeet-Modul", importlib.util.find_spec("speech_to_speech") is not None, config.stt_model),
-        Check("Eve-Referenzaudio", config.reference_audio.is_file(), str(config.reference_audio)),
-        Check("Backend-Port", _port_available(config.backend_host, config.backend_port), f"{config.backend_host}:{config.backend_port}"),
+        Check("speech-to-speech", s2s_version == "0.2.11", s2s_version or "nur auf dem GPU-Host benötigt", required=inference_required),
+        Check("mlx-audio", bool(mlx_audio_version), mlx_audio_version or "nicht installiert", required=inference_required and platform.system() == "Darwin"),
+        Check("Parakeet-Modul", importlib.util.find_spec("speech_to_speech") is not None, config.stt_model, required=inference_required),
+        Check("Eve-Referenzaudio", config.reference_audio.is_file(), str(config.reference_audio), required=inference_required),
     ]
-    if profile.mode == "realtime":
+    if profile.conversation_backend == "trinity":
+        checks.append(Check("Backend-Port", _port_available(config.backend_host, config.backend_port), f"{config.backend_host}:{config.backend_port}"))
+    if profile.mode == "realtime" and profile.runtime_role != "client":
         checks.extend([
             Check("Interner Voice-Port", _port_available("127.0.0.1", profile.internal_port), str(profile.internal_port)),
             Check("Öffentlicher Voice-Port", _port_available(profile.bind_host, profile.public_port), f"{profile.bind_host}:{profile.public_port}"),
             Check("Realtime-Token", bool(config.access_token) or profile.bind_host in {"127.0.0.1", "localhost", "::1"}, "gesetzt" if config.access_token else "nur Loopback"),
         ])
+    if profile.runtime_role == "client":
+        checks.append(Check("Ubuntu Voice URL", bool(config.remote_voice_url), config.remote_voice_url or "nicht gesetzt"))
     if profile.conversation_backend == "direct":
         ok, detail = _llm_health(config.direct_llm_base_url, config.direct_llm_api_key)
         checks.append(Check("Direktes Diagnose-LLM", ok, detail))
+    if profile.conversation_backend == "remote":
+        ok, detail = _llm_health(config.remote_core_base_url, config.remote_core_api_key)
+        checks.append(Check("Windows Trinity Core", ok, detail))
     checks.append(Check("Tailscale", shutil.which("tailscale") is not None, shutil.which("tailscale") or "optional", required=False))
     return checks
 

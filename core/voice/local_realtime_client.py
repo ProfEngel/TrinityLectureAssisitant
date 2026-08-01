@@ -12,6 +12,7 @@ import time
 from collections import deque
 from queue import Empty, Full, Queue
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import numpy as np
 
@@ -34,10 +35,18 @@ class LocalRealtimeAudioClient:
     loudspeaker echo; headphones remain the recommended route for barge-in.
     """
 
-    def __init__(self, config: VoiceConfig, host: str = "127.0.0.1"):
+    def __init__(
+        self,
+        config: VoiceConfig,
+        host: str = "127.0.0.1",
+        endpoint: str = "",
+        access_token: str = "",
+    ):
         self.config = config
         self.host = host
         self.port = config.profile.internal_port
+        self.endpoint = endpoint.strip()
+        self.access_token = access_token.strip()
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: threading.Thread | None = None
@@ -135,7 +144,7 @@ class LocalRealtimeAudioClient:
             import sounddevice as sd
             from websockets.sync.client import connect
 
-            uri = f"ws://{self.host}:{self.port}/v1/realtime"
+            uri = self._connection_uri()
             with connect(uri, open_timeout=12, max_size=None, proxy=None) as connection:
                 self._connection = connection
                 self._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +199,15 @@ class LocalRealtimeAudioClient:
             self._remove_ready_marker()
             if sender:
                 sender.join(timeout=2)
+
+    def _connection_uri(self) -> str:
+        raw = self.endpoint or f"ws://{self.host}:{self.port}/v1/realtime"
+        parts = urlsplit(raw)
+        path = parts.path or "/v1/realtime"
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        if self.access_token:
+            query["access_token"] = self.access_token
+        return urlunsplit((parts.scheme, parts.netloc, path, urlencode(query), parts.fragment))
 
     def _write_ready_marker(self) -> None:
         try:
