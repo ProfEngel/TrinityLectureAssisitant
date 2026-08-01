@@ -26,7 +26,8 @@ cancels the active response and flushes buffered Eve audio.
 Keep the bind host at `127.0.0.1` for local validation. For Tailscale clients,
 select the server profile, configure a separate Voice token, and if needed
 create the private firewall rule with `-OpenFirewall`. In the Companion enter
-`ws://TAILSCALE-IP:8766/v1/realtime` and the same Voice token. Never forward
+`ws://TAILSCALE-IP:8766/v1/realtime` and either that Voice token or the existing
+Companion Bridge token. Never forward
 port 8766 from a public router.
 
 If CUDA, the selected checkpoint or synthesis performance is unsuitable, choose

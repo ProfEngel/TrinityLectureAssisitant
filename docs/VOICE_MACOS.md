@@ -30,10 +30,11 @@ if CoreAudio still waits indefinitely. `voice doctor` validates models and
 configuration; the final local smoke test additionally validates the physical
 microphone and speaker path.
 
-For a Companion server, choose `eve-mac-server`, set a separate long Voice
-token, bind to `0.0.0.0` only inside a trusted Tailscale/private network, then
+For a Companion server, choose `eve-mac-server`, optionally set a separate long
+Voice token, bind to `0.0.0.0` only inside a trusted Tailscale/private network, then
 restart Trinity. The Companion uses `ws://TAILSCALE-IP:8766/v1/realtime` and
-that Voice token. The normal Bridge remains on port `8765` with its own token.
+either that Voice token or the existing Bridge token. The normal Bridge remains
+on port `8765`.
 
 ```bash
 venv/bin/trinity voice benchmark --profile eve-mac-local --rounds 3

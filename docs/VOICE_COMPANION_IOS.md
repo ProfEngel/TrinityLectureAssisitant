@@ -7,14 +7,19 @@ Parakeet, Qwen and the LLM stay on the configured Mac or Windows server.
 1. Start `eve-mac-server` or `eve-windows-server` on the Trinity machine.
 2. Use the machine's Tailscale address and voice port `8766` in the matching
    Companion connection profile.
-3. Enter the same Voice token. Tokens are stored in the device Keychain.
+3. Enter the Companion Bridge token, or a deliberately separate Voice token.
+   Tokens are stored in the device Keychain.
 4. Select **Realtime Eve vom Server** in Voice settings and start listening.
 5. Switch to **Legacy Companion STT/TTS** immediately if realtime is unavailable.
 
-The Bridge token for port `8765` and the Voice token for port `8766` are
-separate settings. They may deliberately have different values. The default
+The protected Voice port accepts the existing Bridge token and, when configured,
+a separate Voice token. This keeps simple setups consistent while still
+allowing strict token separation. The default
 Voice URL is derived from the selected Bridge profile by replacing the port
 with `8766`; it can be overridden per Work/Private/Test connection profile.
+
+Realtime profiles provide two concurrent session slots by default so local
+desktop Eve and one Companion conversation can remain active together.
 
 Input is PCM signed 16-bit mono at 16 kHz unless server negotiation reports a
 different format. Output honors event metadata rather than assuming that input

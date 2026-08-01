@@ -27,6 +27,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": True,
+        "num_pipelines": 2,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -39,6 +40,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": False,
+        "num_pipelines": 2,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -51,6 +53,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": False,
+        "num_pipelines": 2,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
@@ -63,6 +66,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": True,
+        "num_pipelines": 2,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
@@ -87,6 +91,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": True,
+        "num_pipelines": 2,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml",
@@ -118,6 +123,7 @@ class VoiceProfile:
     public_port: int
     internal_port: int
     local_audio: bool
+    num_pipelines: int
     stt_model: str
     tts_model: str
     tts_backend: str
@@ -131,6 +137,7 @@ class VoiceConfig:
     fallback_to_legacy: bool = True
     language_policy: str = "de_only"
     access_token: str = ""
+    companion_access_token: str = ""
     backend_host: str = "127.0.0.1"
     backend_port: int = 18767
     backend_token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
@@ -174,6 +181,7 @@ class VoiceConfig:
             public_port=int(raw.get("public_port") or 8766),
             internal_port=int(raw.get("internal_port") or 18766),
             local_audio=bool(raw.get("local_audio", False)),
+            num_pipelines=max(1, int(raw.get("num_pipelines") or 1)),
             stt_model=str(raw.get("stt_model") or self.stt_model),
             tts_model=str(raw.get("tts_model") or self.tts_model),
             tts_backend=str(raw.get("tts_backend") or "ggml"),
@@ -190,7 +198,11 @@ class VoiceConfig:
             errors.append(f"Unbekannter Voice-Modus: {profile.mode}")
         if profile.conversation_backend not in {"trinity", "direct"}:
             errors.append(f"Unbekanntes Conversation-Backend: {profile.conversation_backend}")
-        if profile.mode == "realtime" and not _loopback(profile.bind_host) and not self.access_token:
+        if (
+            profile.mode == "realtime"
+            and not _loopback(profile.bind_host)
+            and not (self.access_token or self.companion_access_token)
+        ):
             errors.append("Ein extern gebundener Voice-Server braucht voice.access_token.")
         if self.enabled and not self.reference_audio.is_file():
             errors.append(f"Eve-Referenzaudio fehlt: {self.reference_audio or '(nicht konfiguriert)'}")
@@ -291,6 +303,11 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
             or os.environ.get("TRINITY_VOICE_TOKEN")
             or raw.get("access_token")
             or ""
+        ),
+        companion_access_token=str(
+            (config.get("companion") or {}).get("token")
+            if isinstance(config.get("companion"), dict)
+            else ""
         ),
         backend_host=str(raw.get("backend_host") or "127.0.0.1"),
         backend_port=int(raw.get("backend_port") or 18767),

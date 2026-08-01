@@ -63,6 +63,6 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
         command.extend([
             "--ws_host", "127.0.0.1",
             "--ws_port", str(profile.internal_port),
-            "--num_pipelines", "1",
+            "--num_pipelines", str(profile.num_pipelines),
         ])
     return command
