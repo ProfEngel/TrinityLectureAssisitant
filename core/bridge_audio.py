@@ -11,13 +11,13 @@ G2_SAMPLE_RATE = 16_000
 MAX_AUDIO_SECONDS = 20
 TRINITY_VOCABULARY = (
     "Trinity. Deutsche Vorlesung und natuerliche Konversation. "
-    "Wichtige Begriffe: Trinity, Hilfe, Modus Zuruf, Zurufmodus, "
-    "Konversationsmodus, Wakeword, Checkliste, Stichwoerter, Arbeitsraum, "
+    "Kommandos: Trinity, Hilfe, Modus Zuruf, Zurufmodus, "
+    "Konversationsmodus, Wakeword, Arbeitsraum, "
     "Schnellsession, Nash-Gleichgewicht, Gefangenendilemma und Kooperation."
 )
 TRINITY_HOTWORDS = (
-    "Trinity Hilfe Zuruf Zurufmodus Konversationsmodus Wakeword Checkliste "
-    "Stichwoerter Arbeitsraum Schnellsession Nash-Gleichgewicht "
+    "Trinity Hilfe Zuruf Zurufmodus Konversationsmodus Wakeword "
+    "Arbeitsraum Schnellsession Nash-Gleichgewicht "
     "Gefangenendilemma Kooperation"
 )
 
