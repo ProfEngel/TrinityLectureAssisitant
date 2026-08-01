@@ -479,6 +479,23 @@ def test_bridge_transcribes_g2_audio_and_routes_to_wakeword_feed(tmp_path):
     assert events[0]["text"] == "Trinity erklaere Spieltheorie"
 
 
+def test_bridge_preserves_g2_output_target_in_stt_source(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    bridge.send_stt({
+        "text": "Trinity, bitte erklaeren.",
+        "source": "g2-stt-companion",
+        "is_final": True,
+        "speak": False,
+    })
+
+    events = pop_external_stt_events(home / "core" / "ios_stt_feed.jsonl")
+    assert events[0]["source"] == "g2-stt-companion"
+
+
 def test_bridge_transcribes_g2_audio_and_routes_continuous_conversation(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

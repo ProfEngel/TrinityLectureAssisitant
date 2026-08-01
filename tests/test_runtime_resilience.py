@@ -100,6 +100,20 @@ def test_windows_speech_can_be_enabled_explicitly(tmp_path, monkeypatch):
     assert ear.speech_input_enabled is True
 
 
+def test_desktop_response_is_queued_for_running_eve_client(tmp_path, monkeypatch):
+    runtime_voice = tmp_path / "TrinityRuntime" / "voice"
+    runtime_voice.mkdir(parents=True)
+    (runtime_voice / "desktop_eve_audio.ready").write_text("123", encoding="utf-8")
+    monkeypatch.setattr(transcriber, "PROJECT_DIR", str(tmp_path))
+    ear = object.__new__(transcriber.TrinityEar)
+
+    assert ear._queue_eve_desktop_speech("Hallo von Eve") is True
+
+    queue = runtime_voice / "desktop_speech_queue.jsonl"
+    payload = json.loads(queue.read_text(encoding="utf-8").strip())
+    assert payload["text"] == "Hallo von Eve"
+
+
 def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
     config_path.write_text(
@@ -152,7 +166,7 @@ def test_runtime_reload_applies_saved_settings(tmp_path, monkeypatch):
 
     assert ear.reload_config_if_changed() is True
     assert ear.voice == "New Voice"
-    assert ear.mode == "chat"
+    assert ear.mode == "office"
     assert ear.telegram_cfg["enabled"] is True
 
 

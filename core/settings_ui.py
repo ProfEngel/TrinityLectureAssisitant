@@ -2073,11 +2073,12 @@ class SettingsWindow(QMainWindow):
         ui_modes = resolve_ui_modes(system_conf)
         
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["office", "lecture", "chat"])
-        self.mode_combo.setCurrentText(system_conf.get("mode", "office"))
+        self.mode_combo.addItems(["office", "lecture"])
+        saved_mode = system_conf.get("mode", "office")
+        self.mode_combo.setCurrentText("office" if saved_mode == "chat" else saved_mode)
         form.addRow("Trinity Modus:", self.mode_combo)
         
-        mode_hint = QLabel("<b>Office</b>: Standard (STT+TTS an).<br><b>Lecture</b>: Vorlesung optimiert.<br><b>Chat</b>: STT+TTS aus (nur Flüstern/Telegram).")
+        mode_hint = QLabel("<b>Büro</b>: direkte Konversation.<br><b>Vorlesung</b>: Antworten nur nach dem Wakeword.")
         mode_hint.setStyleSheet("color: #888; font-size: 11px;")
         mode_hint.setWordWrap(True)
         form.addRow("", mode_hint)

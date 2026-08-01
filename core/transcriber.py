@@ -2,6 +2,7 @@ import os
 os.environ["OMP_NUM_THREADS"] = "8"
 os.environ["KMP_BLOCKTIME"] = "1"
 import html as html_lib
+import json
 import time
 import queue
 import sys
@@ -315,6 +316,8 @@ class TrinityEar:
             # System Config
             self.system_cfg = config.get("system", {})
             self.mode = self.system_cfg.get("mode", "office")
+            if self.mode == "chat":
+                self.mode = "office"
             self.microphone_enabled = self.system_cfg.get("microphone_enabled", True)
             self.tts_enabled = self.system_cfg.get("tts_enabled", True)
             self.speech_input_enabled = (
@@ -1090,7 +1093,7 @@ class TrinityEar:
             speak = bool(event.get("speak", False))
             source = str(event.get("source") or "ios-stt").strip().lower()
             marker = "final" if is_final else "live"
-            source_label = "G2-STT" if source == "g2-stt" else "iPhone-STT"
+            source_label = "G2-STT" if source.startswith("g2-stt") else "iPhone-STT"
             print(f"📱 {source_label} ({marker}): {text}")
             if not is_final:
                 continue
@@ -1100,7 +1103,7 @@ class TrinityEar:
                 self.recent_chunks.clear()
                 continue
 
-            if getattr(self, "mode", "office") == "chat" and not has_trigger(
+            if getattr(self, "mode", "office") in {"office", "chat"} and not has_trigger(
                 text,
                 self.trigger_variants,
             ):
@@ -1120,7 +1123,7 @@ class TrinityEar:
                 continue
 
             request = None
-            if source in {"ios-stt", "g2-stt"}:
+            if source == "ios-stt" or source.startswith("g2-stt"):
                 request = {
                     "request_id": event.get("event_id"),
                     "source": source,
@@ -1193,6 +1196,11 @@ class TrinityEar:
             set_state("idle")
             return
         set_state("speaking")
+
+        if self._queue_eve_desktop_speech(text):
+            print(f"🔊 Eve spricht auf diesem Desktop: {text[:60]}...")
+            set_state("idle")
+            return
         
         target_device = self.audio_routing.get("private_device", "Standard")
         if "[SPEAKER]" in text:
@@ -1216,6 +1224,30 @@ class TrinityEar:
             
         if self.speak_process and self.speak_process.returncode == 0:
             set_state("idle")
+
+    def _queue_eve_desktop_speech(self, text):
+        """Hand external TTS to the active local Eve realtime audio client."""
+        ready_path = os.path.join(
+            PROJECT_DIR, "TrinityRuntime", "voice", "desktop_eve_audio.ready"
+        )
+        if not os.path.isfile(ready_path):
+            return False
+        queue_path = os.path.join(
+            PROJECT_DIR, "TrinityRuntime", "voice", "desktop_speech_queue.jsonl"
+        )
+        try:
+            os.makedirs(os.path.dirname(queue_path), exist_ok=True)
+            payload = {"text": str(text or "").strip(), "timestamp": time.time()}
+            if not payload["text"]:
+                return False
+            with open(queue_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            return True
+        except OSError as exc:
+            print(f"⚠️ Eve-Ausgabequeue nicht verfügbar: {exc}")
+            return False
 
     def switch_mode(self, new_mode):
         old_mode = getattr(self, 'mode', 'office')

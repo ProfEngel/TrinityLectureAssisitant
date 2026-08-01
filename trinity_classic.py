@@ -340,7 +340,7 @@ class ClassicWindow(QMainWindow):
         self.new_session_button.clicked.connect(self.start_new_session)
         self.mode_combo = QComboBox()
         self.mode_combo.setObjectName("toolbarCombo")
-        self.mode_combo.addItems(["lecture", "office", "chat"])
+        self.mode_combo.addItems(["lecture", "office"])
         self.mode_combo.setFixedWidth(96)
         self.mode_combo.setToolTip("Trinity-Betriebsmodus")
         self.mode_combo.currentTextChanged.connect(self.set_runtime_mode)
@@ -1887,7 +1887,9 @@ class ClassicWindow(QMainWindow):
         self.tts_button.setToolTip("Desktop-TTS aktiv" if tts_enabled else "Desktop-TTS pausiert")
         mode = values.get("mode", "lecture")
         self.mode_combo.blockSignals(True)
-        self.mode_combo.setCurrentText(mode if mode in {"lecture", "office", "chat"} else "lecture")
+        if mode == "chat":
+            mode = "office"
+        self.mode_combo.setCurrentText(mode if mode in {"lecture", "office"} else "lecture")
         self.mode_combo.blockSignals(False)
 
     def toggle_microphone(self):

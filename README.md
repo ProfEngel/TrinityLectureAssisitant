@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.17.4:** Even G2 kann in Vorlesungen als reines Mikrofon dienen. Das G2-Profil waehlt, ob Eve auf dem iPad/iPhone mit aktivem `Hoeren`, auf Trinity Desktop oder gar nicht gesprochen wird. Die Zielkennung bleibt bis zur Antwort erhalten; Desktop-Ausgabe nutzt die laufende Eve-Engine statt der Systemstimme. Trinity kennt nur noch die klaren Betriebsmodi `Vorlesung` mit Wakeword und `Buero` mit direkter Antwort.
 > - **v0.17.3:** Eve stellt standardmaessig zwei parallele Realtime-Pipelines bereit. Dadurch kann die lokale Mac-/Windows-Stimme aktiv bleiben, waehrend ein iPhone oder iPad eine eigene Sprachsession nutzt. Der geschuetzte Voice-Port akzeptiert neben einem bewusst getrennten Voice-Token auch den vorhandenen Companion-Bridge-Token; bestehende Konfigurationen bleiben gueltig.
 > - **v0.17.2:** `Soul.md` und `User.md` sind gegen leere Einstellungen abgesichert. Native UI, WebUI und Companion-Bridge lehnen leere Prompttexte ab, schreiben Änderungen atomar und legen vor echten Änderungen eine private Recovery-Kopie an. Mac- und Windows-Updates übernehmen nur nichtleere Promptdateien. Eve bestätigt eine Unterbrechung nun kurz und behält den akustischen Wiedergabe-Fingerabdruck, damit sie nach einer Unterbrechung spätere Antworten wieder vollständig spricht.
-> - **v0.17.1:** Der lokale Eve-Desktoppfad öffnet Mikrofon und Lautsprecher jetzt als getrennte Audiostreams. Das verhindert insbesondere auf Macs mit unterschiedlichen Ein-/Ausgabe-Sampleraten einen blockierenden CoreAudio-Duplexstart. Erkannte echte Sprache leert Eves Ausgabe sofort und sendet zusätzlich ein lokales `response.cancel`; die serverseitige VAD bleibt als zweite Sicherung aktiv.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]

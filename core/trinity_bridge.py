@@ -311,7 +311,7 @@ class TrinityBridge:
             raise ValueError("STT-Text darf nicht leer sein.")
         is_final = bool(payload.get("is_final", False))
         source = str(payload.get("source") or "ios-stt").strip().lower()
-        if source not in {"ios-stt", "g2-stt"}:
+        if source != "ios-stt" and not source.startswith("g2-stt"):
             source = "ios-stt"
         canonical = self.sessions.canonicalize(payload, source=source)
         event = append_external_stt_event(
@@ -696,14 +696,18 @@ class TrinityBridge:
     def get_mode(self):
         config = self._read_config()
         mode = str(config.get("system", {}).get("mode", "office") or "office")
-        if mode not in {"office", "lecture", "chat"}:
+        if mode == "chat":
+            mode = "office"
+        if mode not in {"office", "lecture"}:
             mode = "office"
         return {"ok": True, "mode": mode}
 
     def set_mode(self, payload):
         mode = str(payload.get("mode", "")).strip().lower()
-        if mode not in {"office", "lecture", "chat"}:
-            raise ValueError("Modus muss office, lecture oder chat sein.")
+        if mode == "chat":
+            mode = "office"
+        if mode not in {"office", "lecture"}:
+            raise ValueError("Modus muss office oder lecture sein.")
         with self._lock:
             config = self._read_config()
             config.setdefault("system", {})["mode"] = mode
@@ -717,9 +721,14 @@ class TrinityBridge:
     def get_runtime(self):
         config = load_config(self.config_path)
         system = config.get("system", {})
+        runtime_mode = str(system.get("mode", "lecture") or "lecture").strip().lower()
+        if runtime_mode == "chat":
+            runtime_mode = "office"
+        if runtime_mode not in {"office", "lecture"}:
+            runtime_mode = "lecture"
         return {
             "ok": True,
-            "mode": str(system.get("mode", "lecture") or "lecture"),
+            "mode": runtime_mode,
             "microphone_enabled": bool(system.get("microphone_enabled", True)),
             "audio_capture_mode": str(system.get("audio_capture_mode", "mic_only") or "mic_only"),
             "tts_enabled": bool(system.get("tts_enabled", True)),
@@ -1089,8 +1098,10 @@ class TrinityBridge:
             system = config.setdefault("system", {})
             if "mode" in payload:
                 mode = str(payload["mode"] or "").strip().lower()
-                if mode not in {"office", "lecture", "chat"}:
-                    raise ValueError("Modus muss office, lecture oder chat sein.")
+                if mode == "chat":
+                    mode = "office"
+                if mode not in {"office", "lecture"}:
+                    raise ValueError("Modus muss office oder lecture sein.")
                 system["mode"] = mode
             for key in ("microphone_enabled", "tts_enabled"):
                 if key in payload:

@@ -6,6 +6,7 @@ import base64
 import json
 import logging
 import math
+import os
 import threading
 import time
 from collections import deque
@@ -49,6 +50,9 @@ class LocalRealtimeAudioClient:
         self._barge_in_candidate: deque[bytes] = deque(maxlen=BARGE_IN_CONFIRM_BLOCKS)
         self._last_output_at = 0.0
         self._last_cancel_at = 0.0
+        self._speech_queue_path = config.home / "TrinityRuntime" / "voice" / "desktop_speech_queue.jsonl"
+        self._ready_path = config.home / "TrinityRuntime" / "voice" / "desktop_eve_audio.ready"
+        self._speech_queue_offset = 0
 
     def start(self, timeout: float = 20.0) -> None:
         self._thread = threading.Thread(
@@ -64,6 +68,7 @@ class LocalRealtimeAudioClient:
 
     def stop(self) -> None:
         self._stop.set()
+        self._remove_ready_marker()
         connection = self._connection
         if connection is not None:
             try:
@@ -130,6 +135,9 @@ class LocalRealtimeAudioClient:
             uri = f"ws://{self.host}:{self.port}/v1/realtime"
             with connect(uri, open_timeout=12, max_size=None, proxy=None) as connection:
                 self._connection = connection
+                self._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
+                self._speech_queue_path.touch(exist_ok=True)
+                self._speech_queue_offset = self._speech_queue_path.stat().st_size
                 connection.send(json.dumps(self._session_update(), ensure_ascii=False))
                 sender = threading.Thread(
                     target=self._send_loop,
@@ -156,8 +164,10 @@ class LocalRealtimeAudioClient:
                     callback=self._input_callback,
                 ):
                     self._ready.set()
+                    self._write_ready_marker()
                     print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
                     while not self._stop.is_set():
+                        self._consume_speech_queue()
                         try:
                             raw = connection.recv(timeout=0.1)
                         except TimeoutError:
@@ -174,8 +184,57 @@ class LocalRealtimeAudioClient:
                 LOGGER.exception("Lokaler Eve-Audioclient beendet")
         finally:
             self._stop.set()
+            self._remove_ready_marker()
             if sender:
                 sender.join(timeout=2)
+
+    def _write_ready_marker(self) -> None:
+        try:
+            self._ready_path.parent.mkdir(parents=True, exist_ok=True)
+            self._ready_path.write_text(str(os.getpid()), encoding="utf-8")
+        except OSError:
+            LOGGER.debug("Eve-Bereitschaftsmarker konnte nicht geschrieben werden", exc_info=True)
+
+    def _remove_ready_marker(self) -> None:
+        try:
+            self._ready_path.unlink(missing_ok=True)
+        except OSError:
+            LOGGER.debug("Eve-Bereitschaftsmarker konnte nicht entfernt werden", exc_info=True)
+
+    def _consume_speech_queue(self) -> None:
+        try:
+            with self._speech_queue_path.open("r", encoding="utf-8") as handle:
+                handle.seek(self._speech_queue_offset)
+                lines = handle.readlines()
+                self._speech_queue_offset = handle.tell()
+        except OSError:
+            return
+        for line in lines:
+            try:
+                payload = json.loads(line)
+            except (TypeError, ValueError):
+                continue
+            text = str(payload.get("text") or "").strip()
+            if not text:
+                continue
+            self._queue_event({
+                "type": "response.create",
+                "response": {
+                    "conversation": "none",
+                    "input": [{
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": text}],
+                    }],
+                    "instructions": (
+                        "Lies den bereitgestellten deutschen Text wortgetreu vor. "
+                        "Gib ausschliesslich diesen Text aus."
+                    ),
+                    "output_modalities": ["audio"],
+                    "max_output_tokens": 4096,
+                    "metadata": {"trinity_action": "desktop_read_aloud"},
+                },
+            })
 
     def _send_loop(self, connection) -> None:
         while not self._stop.is_set():

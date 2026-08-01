@@ -28,6 +28,25 @@ def test_session_enables_server_side_interruption(tmp_path):
     assert turn_detection["create_response"] is True
 
 
+def test_desktop_speech_queue_creates_audio_only_eve_response(tmp_path):
+    local = client(tmp_path)
+    local._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
+    local._speech_queue_path.write_text(
+        json.dumps({"text": "Das ist eine G2-Antwort."}) + "\n",
+        encoding="utf-8",
+    )
+
+    local._consume_speech_queue()
+
+    event = local._send_queue.get_nowait()
+    assert event["type"] == "response.create"
+    assert event["response"]["output_modalities"] == ["audio"]
+    assert event["response"]["input"][0]["content"][0]["text"] == (
+        "Das ist eine G2-Antwort."
+    )
+    assert event["response"]["metadata"]["trinity_action"] == "desktop_read_aloud"
+
+
 def test_speech_started_flushes_buffered_audio(tmp_path):
     local = client(tmp_path)
     local._output.extend(b"audio")
