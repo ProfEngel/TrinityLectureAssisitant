@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.17.9"
+VERSION = "0.17.10"
 
 
 def find_trinity_home(explicit=None):
