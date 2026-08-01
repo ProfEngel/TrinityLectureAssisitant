@@ -79,6 +79,22 @@ def test_bridge_runtime_updates_saved_config(tmp_path):
     assert bridge.get_runtime()["mode"] == "lecture"
 
 
+def test_bridge_speaker_claim_is_persisted_and_exposed_in_instance_state(tmp_path):
+    bridge = TrinityBridge(tmp_path)
+
+    claimed = bridge.set_speaker(
+        {
+            "device_id": "companion:ipad-lecture",
+            "label": "iPad Vorlesung",
+            "kind": "companion",
+        }
+    )
+
+    assert claimed["ok"] is True
+    assert bridge.get_speaker()["device_id"] == "companion:ipad-lecture"
+    assert bridge.instance_state()["speaker"]["label"] == "iPad Vorlesung"
+
+
 def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
     home = tmp_path
     (home / "core").mkdir()

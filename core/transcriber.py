@@ -320,6 +320,7 @@ class TrinityEar:
                 self.mode = "office"
             self.microphone_enabled = self.system_cfg.get("microphone_enabled", True)
             self.tts_enabled = self.system_cfg.get("tts_enabled", True)
+            self.speech_output = self.system_cfg.get("speech_output", {})
             self.speech_input_enabled = (
                 sys.platform != "win32"
                 or self.system_cfg.get("windows_speech_enabled", False)
@@ -344,6 +345,7 @@ class TrinityEar:
             self.mode = "office"
             self.microphone_enabled = True
             self.tts_enabled = True
+            self.speech_output = {}
             self.speech_input_enabled = (
                 sys.platform != "win32"
                 and os.environ.get("TRINITY_SERVER") != "1"
@@ -1195,6 +1197,15 @@ class TrinityEar:
         if not getattr(self, "tts_enabled", True):
             set_state("idle")
             return
+        speech_output = getattr(self, "speech_output", {})
+        if isinstance(speech_output, dict) and speech_output.get("device_id"):
+            if str(speech_output.get("kind") or "desktop") != "desktop":
+                print(
+                    "🔇 Desktop-TTS bleibt stumm; aktive Sprechstelle: "
+                    f"{speech_output.get('label') or speech_output.get('device_id')}"
+                )
+                set_state("idle")
+                return
         set_state("speaking")
 
         if self._queue_eve_desktop_speech(text):

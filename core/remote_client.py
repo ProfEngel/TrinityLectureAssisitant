@@ -56,6 +56,15 @@ class RemoteTrinityClient:
     def get_runtime(self):
         return self._request("/runtime", method="GET")
 
+    def get_speaker(self):
+        return self._request("/speaker", method="GET")
+
+    def set_speaker(self, device_id, label, kind="desktop"):
+        return self._request(
+            "/speaker",
+            {"device_id": device_id, "label": label, "kind": kind},
+        )
+
     def current_session(self):
         return self._request("/session/current", method="GET")
 

@@ -8,6 +8,7 @@ import importlib.util
 import json
 import mimetypes
 import os
+import platform
 import re
 import shutil
 import sqlite3
@@ -73,6 +74,7 @@ QUIET_GET_LOG_PATHS = {
     "/workspaces",
     "/dashboard",
     "/memory/graph",
+    "/speaker",
 }
 
 
@@ -193,6 +195,7 @@ class TrinityBridge:
         return {
             "profile": paths.profile,
             "session": self.current_session(),
+            "speaker": self.get_speaker(),
             "knowledge": {
                 "vault_root": str(paths.vault_root),
                 "vault_available": paths.vault_root.is_dir(),
@@ -202,6 +205,56 @@ class TrinityBridge:
                 "graphify_index_scope": "NOT_BUILT",
             },
         }
+
+    def _default_speaker(self):
+        hostname = platform.node().strip() or "Desktop"
+        return {
+            "device_id": f"desktop:{self.profile.lower()}:{hostname}",
+            "label": f"Trinity Desktop · {hostname}",
+            "kind": "desktop",
+            "updated_at": 0.0,
+        }
+
+    def get_speaker(self):
+        """Return the one device currently allowed to render Trinity speech."""
+        config = load_config(self.config_path)
+        value = config.get("system", {}).get("speech_output")
+        if not isinstance(value, dict):
+            value = self._default_speaker()
+        kind = str(value.get("kind") or "").strip().lower()
+        device_id = str(value.get("device_id") or "").strip()
+        if kind not in {"desktop", "companion"} or not device_id:
+            value = self._default_speaker()
+        return {
+            "device_id": str(value.get("device_id") or "")[:160],
+            "label": str(value.get("label") or "Trinity-Ausgabe")[:100],
+            "kind": str(value.get("kind") or "desktop"),
+            "updated_at": float(value.get("updated_at") or 0.0),
+        }
+
+    def set_speaker(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Sprechstelle muss ein Objekt sein.")
+        kind = str(payload.get("kind") or "").strip().lower()
+        device_id = str(payload.get("device_id") or "").strip()[:160]
+        label = str(payload.get("label") or "").strip()[:100]
+        if kind not in {"desktop", "companion"}:
+            raise ValueError("Sprechstelle muss desktop oder companion sein.")
+        if not device_id:
+            raise ValueError("Eine Geräte-ID wird benötigt.")
+        if not label:
+            label = "Trinity Desktop" if kind == "desktop" else "Trinity Companion"
+        speaker = {
+            "device_id": device_id,
+            "label": label,
+            "kind": kind,
+            "updated_at": time.time(),
+        }
+        with self._lock:
+            config = load_config(self.config_path)
+            config.setdefault("system", {})["speech_output"] = speaker
+            save_config(self.config_path, config)
+        return {"ok": True, **speaker}
 
     def validate_client_profile(self, value):
         expected = str(value or "").strip().upper()
@@ -1781,6 +1834,8 @@ def make_handler(bridge):
                     _json_response(self, 200, {"ok": True, **bridge.latest_bubble()})
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.get_mode())
+                elif parsed.path == "/speaker":
+                    _json_response(self, 200, {"ok": True, **bridge.get_speaker()})
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/dashboard":
@@ -2016,6 +2071,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.import_offline_events(_read_json(self), user=user))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
+                elif parsed.path == "/speaker":
+                    _json_response(self, 200, bridge.set_speaker(_read_json(self)))
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.set_runtime(_read_json(self)))
                 elif parsed.path == "/agent/update":
