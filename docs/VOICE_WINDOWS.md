@@ -1,10 +1,49 @@
 # Eve Voice on Windows 11
 
-Windows supports both a local desktop conversation and a headless Voice Gateway
-for iPhone/iPad. Both require a compatible NVIDIA GPU visible inside Windows and
-a CUDA/PyTorch Qwen3-TTS Base checkpoint. A VM therefore needs working GPU
-passthrough; CPU-only synthesis is not a productive Eve configuration. The
-checkpoint is configurable because the Apple MLX identifier is not portable.
+Windows supports two production layouts:
+
+1. **Recommended for a VM:** Windows runs Trinity's UI, sessions, memory,
+   agents and policy layer. A private Ubuntu host with an NVIDIA GPU runs
+   Parakeet STT and Qwen3-TTS/Eve. No PCI passthrough is required.
+2. **Native Windows GPU:** Windows runs Trinity and the CUDA voice models on a
+   GPU that is directly visible inside Windows.
+
+## Windows VM with an Ubuntu GPU host
+
+Run in an elevated PowerShell:
+
+```powershell
+cd $env:LOCALAPPDATA\Trinity
+.\scripts\install_voice_windows.ps1 -RemoteGPUClient -OpenFirewall
+```
+
+In **Settings -> Voice**, select
+`Windows VM with Eve on an Ubuntu GPU host` and configure:
+
+- Ubuntu Voice URL: `ws://UBUNTU_TAILSCALE_IP:8766/v1/realtime`
+- Voice token: a long, random token shared only with Ubuntu
+- Windows Core bind: `0.0.0.0`
+- Windows Core port: `18767`
+- Windows Core token: a second long, random token shared only with Ubuntu
+
+The normal Trinity LLM provider can point to an OpenAI-compatible endpoint on
+Ubuntu, for example `http://UBUNTU_TAILSCALE_IP:1234/v1`. Restart Trinity and
+run:
+
+```powershell
+trinity voice doctor --profile eve-windows-remote
+```
+
+Ubuntu setup is documented in
+[VOICE_UBUNTU_HOST.md](VOICE_UBUNTU_HOST.md). Restrict ports `8766`, `18767`
+and the LLM port to the private LAN/Tailnet. Do not expose them on a public
+router.
+
+## Native Windows GPU
+
+Native Windows voice requires a compatible NVIDIA GPU visible inside Windows
+and a CUDA/PyTorch Qwen3-TTS Base checkpoint. The checkpoint is configurable
+because the Apple MLX identifier is not portable.
 
 ```powershell
 cd $env:LOCALAPPDATA\Trinity

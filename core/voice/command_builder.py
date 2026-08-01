@@ -21,6 +21,15 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
 
     profile = config.profile
     command = _entrypoint(config)
+    if profile.conversation_backend == "trinity":
+        conversation_base_url = f"http://{config.backend_host}:{config.backend_port}/v1"
+        conversation_api_key = config.backend_token
+    elif profile.conversation_backend == "remote":
+        conversation_base_url = config.remote_core_base_url.rstrip("/")
+        conversation_api_key = config.remote_core_api_key
+    else:
+        conversation_base_url = config.direct_llm_base_url.rstrip("/")
+        conversation_api_key = config.direct_llm_api_key or "local"
     command.extend([
         "--mode", profile.mode,
         "--device", profile.device,
@@ -35,15 +44,9 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
         "--min_silence_ms", "96",
         "--speech_pad_ms", "320",
         "--llm_backend", "chat-completions",
-        "--model_name", "trinity-core" if profile.conversation_backend == "trinity" else config.direct_llm_model,
-        "--responses_api_base_url",
-        (
-            f"http://{config.backend_host}:{config.backend_port}/v1"
-            if profile.conversation_backend == "trinity"
-            else config.direct_llm_base_url.rstrip("/")
-        ),
-        "--responses_api_api_key",
-        config.backend_token if profile.conversation_backend == "trinity" else (config.direct_llm_api_key or "local"),
+        "--model_name", "trinity-core" if profile.conversation_backend in {"trinity", "remote"} else config.direct_llm_model,
+        "--responses_api_base_url", conversation_base_url,
+        "--responses_api_api_key", conversation_api_key,
         "--responses_api_stream", "true",
         "--responses_api_disable_thinking", "true",
         "--init_chat_prompt",

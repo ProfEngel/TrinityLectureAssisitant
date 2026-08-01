@@ -8,6 +8,7 @@ import importlib.util
 import json
 import mimetypes
 import os
+import platform
 import re
 import shutil
 import sqlite3
@@ -22,6 +23,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import url2pathname
 
 from agent_catalog import build_agent_catalog, normalize_catalog_overrides
+from ambient_context import AmbientContextService
 from bridge_audio import BridgeAudioTranscriber
 from chat_attachments import attachment_kind
 from chat_protocol import (
@@ -73,6 +75,8 @@ QUIET_GET_LOG_PATHS = {
     "/workspaces",
     "/dashboard",
     "/memory/graph",
+    "/speaker",
+    "/ambient",
 }
 
 
@@ -166,6 +170,7 @@ class TrinityBridge:
         self._summary_jobs = set()
         self._audio_transcriber = None
         self._canvas_status_cache = (0.0, {})
+        self.ambient = AmbientContextService()
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
         self.workbench = WorkbenchManager(self.home)
 
@@ -193,6 +198,7 @@ class TrinityBridge:
         return {
             "profile": paths.profile,
             "session": self.current_session(),
+            "speaker": self.get_speaker(),
             "knowledge": {
                 "vault_root": str(paths.vault_root),
                 "vault_available": paths.vault_root.is_dir(),
@@ -202,6 +208,59 @@ class TrinityBridge:
                 "graphify_index_scope": "NOT_BUILT",
             },
         }
+
+    def _default_speaker(self):
+        hostname = platform.node().strip() or "Desktop"
+        return {
+            "device_id": f"desktop:{self.profile.lower()}:{hostname}",
+            "label": f"Trinity Desktop · {hostname}",
+            "kind": "desktop",
+            "updated_at": 0.0,
+        }
+
+    def get_speaker(self):
+        """Return the one device currently allowed to render Trinity speech."""
+        config = load_config(self.config_path)
+        value = config.get("system", {}).get("speech_output")
+        if not isinstance(value, dict):
+            value = self._default_speaker()
+        kind = str(value.get("kind") or "").strip().lower()
+        device_id = str(value.get("device_id") or "").strip()
+        if kind not in {"desktop", "companion", "none"} or not device_id:
+            value = self._default_speaker()
+        return {
+            "device_id": str(value.get("device_id") or "")[:160],
+            "label": str(value.get("label") or "Trinity-Ausgabe")[:100],
+            "kind": str(value.get("kind") or "desktop"),
+            "updated_at": float(value.get("updated_at") or 0.0),
+        }
+
+    def set_speaker(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Sprechstelle muss ein Objekt sein.")
+        kind = str(payload.get("kind") or "").strip().lower()
+        device_id = str(payload.get("device_id") or "").strip()[:160]
+        label = str(payload.get("label") or "").strip()[:100]
+        if kind not in {"desktop", "companion", "none"}:
+            raise ValueError("Sprechstelle muss desktop, companion oder none sein.")
+        if kind == "none":
+            device_id = "none"
+            label = "Stumm"
+        if not device_id:
+            raise ValueError("Eine Geräte-ID wird benötigt.")
+        if not label:
+            label = "Trinity Desktop" if kind == "desktop" else "Trinity Companion"
+        speaker = {
+            "device_id": device_id,
+            "label": label,
+            "kind": kind,
+            "updated_at": time.time(),
+        }
+        with self._lock:
+            config = load_config(self.config_path)
+            config.setdefault("system", {})["speech_output"] = speaker
+            save_config(self.config_path, config)
+        return {"ok": True, **speaker}
 
     def validate_client_profile(self, value):
         expected = str(value or "").strip().upper()
@@ -311,7 +370,7 @@ class TrinityBridge:
             raise ValueError("STT-Text darf nicht leer sein.")
         is_final = bool(payload.get("is_final", False))
         source = str(payload.get("source") or "ios-stt").strip().lower()
-        if source not in {"ios-stt", "g2-stt"}:
+        if source != "ios-stt" and not source.startswith("g2-stt"):
             source = "ios-stt"
         canonical = self.sessions.canonicalize(payload, source=source)
         event = append_external_stt_event(
@@ -696,14 +755,18 @@ class TrinityBridge:
     def get_mode(self):
         config = self._read_config()
         mode = str(config.get("system", {}).get("mode", "office") or "office")
-        if mode not in {"office", "lecture", "chat"}:
+        if mode == "chat":
+            mode = "office"
+        if mode not in {"office", "lecture"}:
             mode = "office"
         return {"ok": True, "mode": mode}
 
     def set_mode(self, payload):
         mode = str(payload.get("mode", "")).strip().lower()
-        if mode not in {"office", "lecture", "chat"}:
-            raise ValueError("Modus muss office, lecture oder chat sein.")
+        if mode == "chat":
+            mode = "office"
+        if mode not in {"office", "lecture"}:
+            raise ValueError("Modus muss office oder lecture sein.")
         with self._lock:
             config = self._read_config()
             config.setdefault("system", {})["mode"] = mode
@@ -717,9 +780,14 @@ class TrinityBridge:
     def get_runtime(self):
         config = load_config(self.config_path)
         system = config.get("system", {})
+        runtime_mode = str(system.get("mode", "lecture") or "lecture").strip().lower()
+        if runtime_mode == "chat":
+            runtime_mode = "office"
+        if runtime_mode not in {"office", "lecture"}:
+            runtime_mode = "lecture"
         return {
             "ok": True,
-            "mode": str(system.get("mode", "lecture") or "lecture"),
+            "mode": runtime_mode,
             "microphone_enabled": bool(system.get("microphone_enabled", True)),
             "audio_capture_mode": str(system.get("audio_capture_mode", "mic_only") or "mic_only"),
             "tts_enabled": bool(system.get("tts_enabled", True)),
@@ -1089,8 +1157,10 @@ class TrinityBridge:
             system = config.setdefault("system", {})
             if "mode" in payload:
                 mode = str(payload["mode"] or "").strip().lower()
-                if mode not in {"office", "lecture", "chat"}:
-                    raise ValueError("Modus muss office, lecture oder chat sein.")
+                if mode == "chat":
+                    mode = "office"
+                if mode not in {"office", "lecture"}:
+                    raise ValueError("Modus muss office oder lecture sein.")
                 system["mode"] = mode
             for key in ("microphone_enabled", "tts_enabled"):
                 if key in payload:
@@ -1770,6 +1840,14 @@ def make_handler(bridge):
                     _json_response(self, 200, {"ok": True, **bridge.latest_bubble()})
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.get_mode())
+                elif parsed.path == "/speaker":
+                    _json_response(self, 200, {"ok": True, **bridge.get_speaker()})
+                elif parsed.path == "/ambient":
+                    _json_response(
+                        self,
+                        200,
+                        bridge.ambient.snapshot(query.get("place", ["Filderstadt"])[0]),
+                    )
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.get_runtime())
                 elif parsed.path == "/dashboard":
@@ -2005,6 +2083,10 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.import_offline_events(_read_json(self), user=user))
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
+                elif parsed.path == "/speaker":
+                    _json_response(self, 200, bridge.set_speaker(_read_json(self)))
+                elif parsed.path == "/ambient/device":
+                    _json_response(self, 200, bridge.ambient.report_device(_read_json(self)))
                 elif parsed.path == "/runtime":
                     _json_response(self, 200, bridge.set_runtime(_read_json(self)))
                 elif parsed.path == "/agent/update":

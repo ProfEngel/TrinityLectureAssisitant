@@ -7,7 +7,12 @@ from urllib.request import Request, urlopen
 import numpy as np
 import pytest
 
-from bridge_audio import BridgeAudioTranscriber, G2_SAMPLE_RATE
+from bridge_audio import (
+    BridgeAudioTranscriber,
+    G2_SAMPLE_RATE,
+    TRINITY_HOTWORDS,
+    TRINITY_VOCABULARY,
+)
 from trinity_bridge import TrinityBridge, make_handler
 
 
@@ -64,6 +69,14 @@ def test_bridge_audio_biases_short_g2_commands_without_reusing_previous_text():
 
     with pytest.raises(ValueError, match="Erkennungsqualitaet"):
         transcriber.transcribe(encoded, quality="maximum")
+
+
+def test_bridge_audio_prompt_does_not_bias_spontaneous_checklist_hallucinations():
+    prompt = f"{TRINITY_VOCABULARY} {TRINITY_HOTWORDS}".lower()
+
+    assert "checkliste" not in prompt
+    assert "wichtige begriffe" not in prompt
+    assert "stichwoerter" not in prompt
 
 
 def test_audio_transcription_http_endpoint_accepts_authenticated_g2_request(tmp_path):

@@ -6,6 +6,7 @@ import json
 import re
 import threading
 import time
+import unicodedata
 import uuid
 from collections.abc import Iterable
 from http import HTTPStatus
@@ -15,6 +16,78 @@ from typing import Any
 
 from ..interfaces import ConversationBackend
 from ..language_policy import enforce_input_language, segment_for_speech
+
+
+DEFAULT_WAKEWORD_VARIANTS = (
+    "trinity",
+    "triniti",
+    "trindy",
+    "trinnity",
+    "trinitiy",
+    "trinitys",
+    "trinitie",
+    "drinity",
+    "trinidi",
+    "trenty",
+    "trendy",
+)
+
+
+def _normalize_wakeword_text(value: Any) -> str:
+    decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
+    asciiish = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9]+", " ", asciiish.replace("ß", "ss")).strip()
+
+
+def _bounded_levenshtein(left: str, right: str, max_distance: int) -> int:
+    if left == right:
+        return 0
+    if abs(len(left) - len(right)) > max_distance:
+        return max_distance + 1
+    previous = list(range(len(right) + 1))
+    for row, left_char in enumerate(left, start=1):
+        current = [row]
+        row_min = row
+        for column, right_char in enumerate(right, start=1):
+            current.append(min(
+                current[column - 1] + 1,
+                previous[column] + 1,
+                previous[column - 1] + (left_char != right_char),
+            ))
+            row_min = min(row_min, current[-1])
+        if row_min > max_distance:
+            return max_distance + 1
+        previous = current
+    return previous[-1]
+
+
+def _has_wakeword(text: str, variants: Iterable[str]) -> bool:
+    normalized = _normalize_wakeword_text(text)
+    if not normalized:
+        return False
+    compact = normalized.replace(" ", "")
+    tokens = normalized.split()
+    for raw_candidate in variants:
+        candidate = _normalize_wakeword_text(raw_candidate).replace(" ", "")
+        if len(candidate) < 5:
+            continue
+        forms = {candidate}
+        if candidate.endswith("y"):
+            forms.update({f"{candidate[:-1]}i", f"{candidate[:-1]}ie"})
+        if candidate.endswith("i"):
+            forms.add(f"{candidate}e")
+        if any(form in compact for form in forms):
+            return True
+        if not (candidate.startswith("trini") or candidate.startswith("drini")):
+            continue
+        for token in tokens:
+            if len(token) < 5:
+                continue
+            for form in forms:
+                distance = 1 if len(form) < 8 else 2
+                if _bounded_levenshtein(token, form, distance) <= distance:
+                    return True
+    return False
 
 
 def _message_text(content: Any) -> str:
@@ -35,12 +108,27 @@ class TrinityConversationBackend(ConversationBackend):
     def __init__(self, home: str | Path):
         self.home = Path(home).expanduser().resolve()
         self.core_dir = self.home / "core"
+        self.config_path = self.core_dir / "config.json"
         self.transcript_path = self.home / "TrinityRuntime" / "voice" / "voice_session.md"
         self.transcript_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.transcript_path.exists():
             self.transcript_path.write_text("# Trinity Voice Session\n\n", encoding="utf-8")
         self._brain = None
         self._brain_lock = threading.RLock()
+
+    def _runtime_voice_policy(self) -> tuple[str, tuple[str, ...]]:
+        try:
+            config = json.loads(self.config_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            config = {}
+        mode = str(config.get("system", {}).get("mode", "office") or "office").strip().lower()
+        if mode == "chat":
+            mode = "office"
+        if mode not in {"lecture", "office"}:
+            mode = "office"
+        configured = config.get("persona", {}).get("trigger_variants") or DEFAULT_WAKEWORD_VARIANTS
+        variants = tuple(str(item) for item in configured if str(item).strip())
+        return mode, variants or DEFAULT_WAKEWORD_VARIANTS
 
     def _ensure_brain(self):
         if self._brain is None:
@@ -98,12 +186,16 @@ class TrinityConversationBackend(ConversationBackend):
         )
 
     def respond(self, text: str, *, session_id: str = "", turn_id: str = "") -> Iterable[str]:
-        rejection = enforce_input_language(text)
-        if rejection:
-            return [rejection]
         query = str(text or "").strip()
         if not query:
             return []
+        mode, wakeword_variants = self._runtime_voice_policy()
+        if mode == "lecture" and not _has_wakeword(query, wakeword_variants):
+            self._append_transcript("Lecture (ohne Wakeword)", query)
+            return []
+        rejection = enforce_input_language(query)
+        if rejection:
+            return [rejection]
         request_id = turn_id or uuid.uuid4().hex
         with self._brain_lock:
             self._append_transcript("User", query)

@@ -79,6 +79,30 @@ def test_bridge_runtime_updates_saved_config(tmp_path):
     assert bridge.get_runtime()["mode"] == "lecture"
 
 
+def test_bridge_speaker_claim_is_persisted_and_exposed_in_instance_state(tmp_path):
+    bridge = TrinityBridge(tmp_path)
+
+    claimed = bridge.set_speaker(
+        {
+            "device_id": "companion:ipad-lecture",
+            "label": "iPad Vorlesung",
+            "kind": "companion",
+        }
+    )
+
+    assert claimed["ok"] is True
+    assert bridge.get_speaker()["device_id"] == "companion:ipad-lecture"
+    assert bridge.instance_state()["speaker"]["label"] == "iPad Vorlesung"
+
+    released = bridge.set_speaker(
+        {"device_id": "ignored", "label": "ignored", "kind": "none"}
+    )
+
+    assert released["device_id"] == "none"
+    assert released["label"] == "Stumm"
+    assert bridge.get_speaker()["kind"] == "none"
+
+
 def test_bridge_web_settings_round_trip_and_keeps_unknown_values(tmp_path):
     home = tmp_path
     (home / "core").mkdir()
@@ -477,6 +501,23 @@ def test_bridge_transcribes_g2_audio_and_routes_to_wakeword_feed(tmp_path):
     events = pop_external_stt_events(home / "core" / "ios_stt_feed.jsonl")
     assert events[0]["source"] == "g2-stt"
     assert events[0]["text"] == "Trinity erklaere Spieltheorie"
+
+
+def test_bridge_preserves_g2_output_target_in_stt_source(tmp_path):
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "memory").mkdir()
+    bridge = TrinityBridge(home)
+
+    bridge.send_stt({
+        "text": "Trinity, bitte erklaeren.",
+        "source": "g2-stt-companion",
+        "is_final": True,
+        "speak": False,
+    })
+
+    events = pop_external_stt_events(home / "core" / "ios_stt_feed.jsonl")
+    assert events[0]["source"] == "g2-stt-companion"
 
 
 def test_bridge_transcribes_g2_audio_and_routes_continuous_conversation(tmp_path):

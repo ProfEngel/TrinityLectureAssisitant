@@ -27,6 +27,8 @@ proxy adds access-token enforcement before a remote client can reach it.
 | `eve-mac-server` | iPhone/iPad thin clients over Tailscale | MLX/MPS | Remote Apple device |
 | `eve-windows-local` | Windows microphone and speaker with barge-in | CUDA | Local PC |
 | `eve-windows-server` | iPhone/iPad thin clients over Tailscale | CUDA | Remote Apple device |
+| `eve-windows-remote` | Windows control plane using an Ubuntu GPU host | Remote CUDA | Windows or Companion |
+| `eve-linux-gpu-server` | Parakeet and Eve inference for a remote Windows core | CUDA | Remote desktop or Companion |
 | `eve-trinity` | Auto-selected local Trinity path | Auto | Local desktop |
 | `eve-direct-ornith` | Isolated half-duplex LLM diagnostics | MLX/MPS | Local desktop |
 
@@ -54,3 +56,5 @@ sync through the normal Trinity Bridge independently of that audio choice.
 
 Configuration details are in `core/config.json.example`; security boundaries are
 documented in [VOICE_SECURITY.md](VOICE_SECURITY.md).
+The split Ubuntu/Windows deployment is documented in
+[VOICE_UBUNTU_HOST.md](VOICE_UBUNTU_HOST.md).

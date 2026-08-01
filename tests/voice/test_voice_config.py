@@ -102,6 +102,49 @@ def test_mobile_server_profiles_bind_externally_without_desktop_audio(tmp_path):
     assert windows.profile.local_audio is False
 
 
+def test_ubuntu_gpu_server_routes_back_to_windows_core(tmp_path):
+    audio = tmp_path / "Eve.mp3"
+    audio.write_bytes(b"voice")
+    config = load_voice_config(
+        tmp_path,
+        {
+            "voice": {
+                "engine": "eve",
+                "profile": "eve-linux-gpu-server",
+                "access_token": "voice-secret",
+                "reference_audio": str(audio),
+                "remote_core_base_url": "http://100.64.0.20:18767/v1",
+                "remote_core_api_key": "core-secret",
+            }
+        },
+    )
+
+    assert config.profile.runtime_role == "server"
+    assert config.profile.conversation_backend == "remote"
+    assert config.profile.device == "cuda"
+    assert config.validate() == []
+
+
+def test_windows_remote_profile_needs_no_local_voice_models(tmp_path):
+    config = load_voice_config(
+        tmp_path,
+        {
+            "voice": {
+                "engine": "eve",
+                "profile": "eve-windows-remote",
+                "access_token": "voice-secret",
+                "remote_voice_url": "ws://100.64.0.10:8766/v1/realtime",
+                "backend_host": "0.0.0.0",
+                "backend_token": "core-secret",
+            }
+        },
+    )
+
+    assert config.profile.runtime_role == "client"
+    assert config.profile.local_audio is True
+    assert config.validate() == []
+
+
 def test_eve_requires_reference_audio(tmp_path):
     config = load_voice_config(tmp_path, {"voice": {"engine": "eve"}})
 

@@ -71,6 +71,34 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
     },
+    "eve-linux-gpu-server": {
+        "mode": "realtime",
+        "device": "cuda",
+        "runtime_role": "server",
+        "conversation_backend": "remote",
+        "bind_host": "0.0.0.0",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "local_audio": False,
+        "num_pipelines": 2,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "tts_backend": "torch",
+    },
+    "eve-windows-remote": {
+        "mode": "realtime",
+        "device": "cpu",
+        "runtime_role": "client",
+        "conversation_backend": "trinity",
+        "bind_host": "127.0.0.1",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "local_audio": True,
+        "num_pipelines": 1,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "tts_backend": "torch",
+    },
     "eve-direct-ornith": {
         "mode": "local",
         "device": "mps",
@@ -118,6 +146,7 @@ class VoiceProfile:
     name: str
     mode: str
     device: str
+    runtime_role: str
     conversation_backend: str
     bind_host: str
     public_port: int
@@ -141,6 +170,10 @@ class VoiceConfig:
     backend_host: str = "127.0.0.1"
     backend_port: int = 18767
     backend_token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
+    remote_core_base_url: str = ""
+    remote_core_api_key: str = ""
+    remote_voice_url: str = ""
+    remote_voice_token: str = ""
     stt_model: str = "mlx-community/parakeet-tdt-0.6b-v3"
     tts_model: str = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit"
     reference_audio: Path = field(default_factory=Path)
@@ -176,6 +209,7 @@ class VoiceConfig:
             name=self.profile_name,
             mode=str(raw.get("mode") or "local"),
             device=device,
+            runtime_role=str(raw.get("runtime_role") or "integrated"),
             conversation_backend=str(raw.get("conversation_backend") or "trinity"),
             bind_host=str(raw.get("bind_host") or "127.0.0.1"),
             public_port=int(raw.get("public_port") or 8766),
@@ -196,15 +230,32 @@ class VoiceConfig:
             errors.append("Aktuell wird nur voice.language_policy=de_only unterstützt.")
         if profile.mode not in {"local", "realtime"}:
             errors.append(f"Unbekannter Voice-Modus: {profile.mode}")
-        if profile.conversation_backend not in {"trinity", "direct"}:
+        if profile.runtime_role not in {"integrated", "server", "client"}:
+            errors.append(f"Unbekannte Voice-Rolle: {profile.runtime_role}")
+        if profile.conversation_backend not in {"trinity", "direct", "remote"}:
             errors.append(f"Unbekanntes Conversation-Backend: {profile.conversation_backend}")
         if (
-            profile.mode == "realtime"
+            profile.runtime_role != "client"
+            and profile.mode == "realtime"
             and not _loopback(profile.bind_host)
             and not (self.access_token or self.companion_access_token)
         ):
             errors.append("Ein extern gebundener Voice-Server braucht voice.access_token.")
-        if self.enabled and not self.reference_audio.is_file():
+        if profile.runtime_role == "client" and not self.remote_voice_url.strip():
+            errors.append("Das Windows-Remoteprofil braucht voice.remote_voice_url.")
+        if profile.runtime_role == "client" and not (self.remote_voice_token or self.access_token):
+            errors.append("Das Windows-Remoteprofil braucht einen Voice-Token.")
+        if profile.conversation_backend == "remote" and not self.remote_core_base_url.strip():
+            errors.append("Der Ubuntu-Voice-Server braucht voice.remote_core_base_url.")
+        if profile.conversation_backend == "remote" and not self.remote_core_api_key.strip():
+            errors.append("Der Ubuntu-Voice-Server braucht voice.remote_core_api_key.")
+        if (
+            profile.conversation_backend == "trinity"
+            and not _loopback(self.backend_host)
+            and not self.backend_token
+        ):
+            errors.append("Ein extern gebundener Trinity-Core-Backend braucht voice.backend_token.")
+        if self.enabled and profile.runtime_role != "client" and not self.reference_audio.is_file():
             errors.append(f"Eve-Referenzaudio fehlt: {self.reference_audio or '(nicht konfiguriert)'}")
         if self.enabled and not self.reference_text.strip():
             errors.append("Eve-Referenztranskript fehlt.")
@@ -228,6 +279,11 @@ def default_voice_config() -> dict[str, Any]:
         "access_token": "",
         "backend_host": "127.0.0.1",
         "backend_port": 18767,
+        "backend_token": "",
+        "remote_core_base_url": "",
+        "remote_core_api_key": "",
+        "remote_voice_url": "",
+        "remote_voice_token": "",
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "reference_audio": "",
@@ -311,6 +367,31 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
         ),
         backend_host=str(raw.get("backend_host") or "127.0.0.1"),
         backend_port=int(raw.get("backend_port") or 18767),
+        backend_token=str(
+            os.environ.get("TRINITY_VOICE_BACKEND_TOKEN")
+            or raw.get("backend_token")
+            or ""
+        ),
+        remote_core_base_url=str(
+            os.environ.get("TRINITY_REMOTE_CORE_BASE_URL")
+            or raw.get("remote_core_base_url")
+            or ""
+        ),
+        remote_core_api_key=str(
+            os.environ.get("TRINITY_REMOTE_CORE_API_KEY")
+            or raw.get("remote_core_api_key")
+            or ""
+        ),
+        remote_voice_url=str(
+            os.environ.get("TRINITY_REMOTE_VOICE_URL")
+            or raw.get("remote_voice_url")
+            or ""
+        ),
+        remote_voice_token=str(
+            os.environ.get("TRINITY_REMOTE_VOICE_TOKEN")
+            or raw.get("remote_voice_token")
+            or ""
+        ),
         stt_model=str(raw.get("stt_model") or "mlx-community/parakeet-tdt-0.6b-v3"),
         tts_model=str(raw.get("tts_model") or "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit"),
         reference_audio=_expand_path(configured_audio, root),

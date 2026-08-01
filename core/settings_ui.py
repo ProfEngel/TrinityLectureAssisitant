@@ -130,6 +130,13 @@ class SettingsWindow(QMainWindow):
         voice["fallback_to_legacy"] = self.voice_fallback_cb.isChecked()
         voice["reference_audio"] = self.voice_reference_edit.text().strip()
         voice["access_token"] = self.voice_token_edit.text().strip()
+        voice["remote_voice_url"] = self.voice_remote_url_edit.text().strip()
+        voice["remote_voice_token"] = self.voice_token_edit.text().strip()
+        voice["backend_host"] = self.voice_backend_host_edit.text().strip() or "127.0.0.1"
+        voice["backend_port"] = self.voice_backend_port_spin.value()
+        voice["backend_token"] = self.voice_backend_token_edit.text().strip()
+        voice["remote_core_base_url"] = self.voice_remote_core_url_edit.text().strip()
+        voice["remote_core_api_key"] = self.voice_remote_core_token_edit.text().strip()
         voice["streaming_chunk_size"] = self.voice_chunk_size_spin.value()
         voice["audio_prebuffer_ms"] = self.voice_prebuffer_spin.value()
         voice["barge_in_enabled"] = self.voice_barge_in_cb.isChecked()
@@ -2073,11 +2080,12 @@ class SettingsWindow(QMainWindow):
         ui_modes = resolve_ui_modes(system_conf)
         
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["office", "lecture", "chat"])
-        self.mode_combo.setCurrentText(system_conf.get("mode", "office"))
+        self.mode_combo.addItems(["office", "lecture"])
+        saved_mode = system_conf.get("mode", "office")
+        self.mode_combo.setCurrentText("office" if saved_mode == "chat" else saved_mode)
         form.addRow("Trinity Modus:", self.mode_combo)
         
-        mode_hint = QLabel("<b>Office</b>: Standard (STT+TTS an).<br><b>Lecture</b>: Vorlesung optimiert.<br><b>Chat</b>: STT+TTS aus (nur Flüstern/Telegram).")
+        mode_hint = QLabel("<b>Büro</b>: direkte Konversation.<br><b>Vorlesung</b>: Antworten nur nach dem Wakeword.")
         mode_hint.setStyleSheet("color: #888; font-size: 11px;")
         mode_hint.setWordWrap(True)
         form.addRow("", mode_hint)
@@ -2636,6 +2644,19 @@ class SettingsWindow(QMainWindow):
             "Dieses Profil auf einem Mac nicht für den normalen Betrieb auswählen.",
         ),
         (
+            "Windows-VM mit Eve auf einem Ubuntu-GPU-Host",
+            "eve-windows-remote",
+            "Windows bleibt Trinity-Kern und Desktop-Oberfläche. Mikrofon und Lautsprecher "
+            "verbinden sich mit Eve auf dem Ubuntu-Host; Antworten laufen zur Wahrung von "
+            "Sessions, Memory, RAG und Agenten zurück durch diese Windows-Instanz.",
+        ),
+        (
+            "Ubuntu mit NVIDIA als Eve-Sprachserver",
+            "eve-linux-gpu-server",
+            "Ubuntu führt Parakeet-STT und Qwen3-TTS auf CUDA aus. Der erkannte Text wird "
+            "an den geschützten Trinity-Core-Endpunkt der Windows-VM weitergereicht.",
+        ),
+        (
             "Diagnose: Ornith direkt, ohne Trinity",
             "eve-direct-ornith",
             "Technisches Diagnoseprofil. Es verbindet die Sprachpipeline direkt mit Ornith "
@@ -2661,17 +2682,32 @@ class SettingsWindow(QMainWindow):
             "Benutzerdefiniertes Eve-Profil.",
         )
         self.voice_profile_description.setText(description)
-        realtime = profile_name in {"eve-mac-server", "eve-windows-server"}
+        realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server"}
+        remote_client = profile_name == "eve-windows-remote"
+        remote_server = profile_name == "eve-linux-gpu-server"
         for field in (
             self.voice_bind_host_edit,
             self.voice_public_port_spin,
-            self.voice_token_edit,
             self.voice_realtime_hint,
         ):
             field.setVisible(realtime)
             label = self.voice_form.labelForField(field)
             if label is not None:
                 label.setVisible(realtime)
+        for field, visible in (
+            (self.voice_token_edit, realtime or remote_client),
+            (self.voice_remote_url_edit, remote_client),
+            (self.voice_backend_host_edit, remote_client),
+            (self.voice_backend_port_spin, remote_client),
+            (self.voice_backend_token_edit, remote_client),
+            (self.voice_remote_core_url_edit, remote_server),
+            (self.voice_remote_core_token_edit, remote_server),
+            (self.voice_remote_hint, remote_client or remote_server),
+        ):
+            field.setVisible(visible)
+            label = self.voice_form.labelForField(field)
+            if label is not None:
+                label.setVisible(visible)
 
     def _create_stt_tts_tab(self):
         widget = QWidget()
@@ -2763,6 +2799,42 @@ class SettingsWindow(QMainWindow):
         self.voice_token_edit.setEchoMode(QLineEdit.Password)
         self.voice_token_edit.setPlaceholderText("Erforderlich bei 0.0.0.0 / Tailscale")
         voice_form.addRow("Realtime Token:", self.voice_token_edit)
+
+        self.voice_remote_url_edit = QLineEdit(str(voice_conf.get("remote_voice_url") or ""))
+        self.voice_remote_url_edit.setPlaceholderText("ws://UBUNTU-TAILSCALE-IP:8766/v1/realtime")
+        voice_form.addRow("Ubuntu Voice URL:", self.voice_remote_url_edit)
+
+        self.voice_backend_host_edit = QLineEdit(str(voice_conf.get("backend_host") or "127.0.0.1"))
+        self.voice_backend_host_edit.setPlaceholderText("0.0.0.0")
+        voice_form.addRow("Windows Core Bind-Adresse:", self.voice_backend_host_edit)
+
+        self.voice_backend_port_spin = QSpinBox()
+        self.voice_backend_port_spin.setRange(1024, 65535)
+        self.voice_backend_port_spin.setValue(int(voice_conf.get("backend_port") or 18767))
+        voice_form.addRow("Windows Core Port:", self.voice_backend_port_spin)
+
+        self.voice_backend_token_edit = QLineEdit(str(voice_conf.get("backend_token") or ""))
+        self.voice_backend_token_edit.setEchoMode(QLineEdit.Password)
+        self.voice_backend_token_edit.setPlaceholderText("Separater langer Rückkanal-Token")
+        voice_form.addRow("Windows Core Token:", self.voice_backend_token_edit)
+
+        self.voice_remote_core_url_edit = QLineEdit(str(voice_conf.get("remote_core_base_url") or ""))
+        self.voice_remote_core_url_edit.setPlaceholderText("http://WINDOWS-TAILSCALE-IP:18767/v1")
+        voice_form.addRow("Windows Trinity Core URL:", self.voice_remote_core_url_edit)
+
+        self.voice_remote_core_token_edit = QLineEdit(str(voice_conf.get("remote_core_api_key") or ""))
+        self.voice_remote_core_token_edit.setEchoMode(QLineEdit.Password)
+        self.voice_remote_core_token_edit.setPlaceholderText("Gleich wie Windows Core Token")
+        voice_form.addRow("Windows Trinity Core Token:", self.voice_remote_core_token_edit)
+
+        self.voice_remote_hint = QLabel(
+            "Ubuntu behält die NVIDIA-GPU. Windows bleibt die kanonische Trinity mit "
+            "Sessions, Memory und Agenten. Beide Rechner dürfen diese Ports nur im "
+            "privaten LAN oder Tailnet freigeben, niemals am öffentlichen Router."
+        )
+        self.voice_remote_hint.setWordWrap(True)
+        self.voice_remote_hint.setStyleSheet("color: #d29922; font-size: 11px;")
+        voice_form.addRow("", self.voice_remote_hint)
 
         self.voice_realtime_hint = QLabel(
             "Diese drei Felder werden nur benötigt, wenn iPhone oder iPad Eve über "
