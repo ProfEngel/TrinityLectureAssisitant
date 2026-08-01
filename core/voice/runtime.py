@@ -83,7 +83,7 @@ class VoiceRuntime:
                 profile.bind_host,
                 profile.public_port,
                 profile.internal_port,
-                self.config.access_token,
+                [self.config.access_token, self.config.companion_access_token],
             )
             self.proxy.start()
             if profile.local_audio:

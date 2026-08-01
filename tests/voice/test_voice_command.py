@@ -35,6 +35,7 @@ def test_realtime_upstream_is_forced_to_loopback(tmp_path):
 
     assert command[command.index("--ws_host") + 1] == "127.0.0.1"
     assert command[command.index("--ws_port") + 1] == str(config.profile.internal_port)
+    assert command[command.index("--num_pipelines") + 1] == str(config.profile.num_pipelines)
 
 
 def test_windows_profile_uses_cuda_compatible_models(tmp_path):

@@ -25,6 +25,28 @@ def test_external_realtime_bind_requires_token(tmp_path):
     assert any("access_token" in error for error in config.validate())
 
 
+def test_companion_token_also_secures_external_realtime_bind(tmp_path):
+    voice = default_voice_config()
+    voice["engine"] = "eve"
+    voice["profile"] = "eve-mac-server"
+    voice["reference_audio"] = str(tmp_path / "Eve.mp3")
+    Path(voice["reference_audio"]).write_bytes(b"voice")
+
+    config = load_voice_config(
+        tmp_path,
+        {"voice": voice, "companion": {"token": "shared-companion-token"}},
+    )
+
+    assert config.companion_access_token == "shared-companion-token"
+    assert not any("access_token" in error for error in config.validate())
+
+
+def test_local_profile_keeps_a_slot_for_a_companion(tmp_path):
+    config = load_voice_config(tmp_path, {}, profile_name="eve-mac-local")
+
+    assert config.profile.num_pipelines == 2
+
+
 def test_profile_overrides_are_merged_without_mutating_defaults(tmp_path):
     original = deepcopy(default_voice_config())
     config = load_voice_config(

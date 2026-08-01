@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import threading
+from collections.abc import Iterable
 from urllib.parse import parse_qs, urlsplit
 
 
@@ -21,11 +23,12 @@ def _token_from_request(path: str, headers) -> str:
 class AuthenticatedWebSocketProxy:
     """Expose a public socket while keeping speech-to-speech loopback-only."""
 
-    def __init__(self, host: str, port: int, upstream_port: int, token: str):
+    def __init__(self, host: str, port: int, upstream_port: int, tokens: str | Iterable[str]):
         self.host = host
         self.port = int(port)
         self.upstream_port = int(upstream_port)
-        self.token = token
+        raw_tokens = [tokens] if isinstance(tokens, str) else list(tokens)
+        self.tokens = tuple(dict.fromkeys(token for token in raw_tokens if token))
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._server = None
@@ -36,7 +39,8 @@ class AuthenticatedWebSocketProxy:
         request = getattr(client, "request", None)
         path = getattr(request, "path", "/")
         headers = getattr(request, "headers", {})
-        if self.token and _token_from_request(path, headers) != self.token:
+        supplied_token = _token_from_request(path, headers)
+        if self.tokens and not any(hmac.compare_digest(supplied_token, token) for token in self.tokens):
             await client.close(code=4401, reason="Unauthorized")
             return
 
