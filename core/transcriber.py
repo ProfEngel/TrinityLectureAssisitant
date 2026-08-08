@@ -291,6 +291,59 @@ class TrinityEar:
         except Exception as exc:
             print(f"⚠️ Audioeingang konnte nicht sauber gestoppt werden: {exc}")
 
+    def _dynamic_voice_microphone(self):
+        return (
+            sys.platform == "win32"
+            and os.environ.get("TRINITY_VOICE_DYNAMIC_MIC") == "1"
+        )
+
+    def _voice_microphone_claimed(self):
+        claim_path = os.path.join(
+            PROJECT_DIR, "TrinityRuntime", "voice", "desktop_eve_audio.claim"
+        )
+        return self._dynamic_voice_microphone() and os.path.isfile(claim_path)
+
+    def _sync_voice_microphone_ownership(self):
+        """Hand the Windows microphone between Legacy and remote Eve at runtime."""
+
+        if not self._dynamic_voice_microphone() or getattr(self, "uses_native_speech", False):
+            return
+        runtime_dir = os.path.join(PROJECT_DIR, "TrinityRuntime", "voice")
+        released_path = os.path.join(runtime_dir, "desktop_legacy_audio.released")
+        if self._voice_microphone_claimed():
+            if getattr(self, "_voice_microphone_released", False):
+                return
+            self._stop_audio_input()
+            try:
+                os.makedirs(runtime_dir, exist_ok=True)
+                with open(released_path, "w", encoding="utf-8") as handle:
+                    handle.write(str(os.getpid()))
+                self._voice_microphone_released = True
+            except OSError as exc:
+                print(f"⚠️ Mikrofonübergabe an Eve konnte nicht bestätigt werden: {exc}")
+            return
+
+        was_released = getattr(self, "_voice_microphone_released", False)
+        try:
+            os.unlink(released_path)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            print(f"⚠️ Veralteter Audio-Übergabemarker blieb bestehen: {exc}")
+        if not was_released:
+            return
+        if (
+            getattr(self, "mode", "office") != "chat"
+            and getattr(self, "speech_input_enabled", False)
+            and (self.audio_stream is None or not self.audio_stream.active)
+        ):
+            try:
+                self._start_audio_input()
+            except Exception as exc:
+                print(f"⚠️ Legacy-Audio konnte das Mikrofon nicht zurücknehmen: {exc}")
+                return
+        self._voice_microphone_released = False
+
     def load_config(self):
         """Lädt STT-spezifische Settings aus der config.json."""
         try:
@@ -327,7 +380,10 @@ class TrinityEar:
             ) and os.environ.get("TRINITY_SERVER") != "1" and self.microphone_enabled
             self.speech_input_enabled = (
                 self.speech_input_enabled
-                and os.environ.get("TRINITY_VOICE_OWNS_MIC") != "1"
+                and (
+                    os.environ.get("TRINITY_VOICE_OWNS_MIC") != "1"
+                    or self._dynamic_voice_microphone()
+                )
             )
             self._config_mtime = os.path.getmtime(self.config_path)
         except:
@@ -895,7 +951,7 @@ class TrinityEar:
         
         blocks_per_chunk = int(self.chunk_duration / 0.5)
 
-        if self.mode != "chat" and self.speech_input_enabled:
+        if self.mode != "chat" and self.speech_input_enabled and not self._voice_microphone_claimed():
             try:
                 self._start_audio_input()
                 print(f"Trinity hört jetzt zu... (Model: {self.model_name}, Thresh: {self.silence_threshold})")
@@ -917,6 +973,7 @@ class TrinityEar:
         try:
             while self.is_running:
                 self.reload_config_if_changed()
+                self._sync_voice_microphone_ownership()
                 self._process_external_stt_feed()
 
                 # 1. Prüfe auf stille Text-Eingaben

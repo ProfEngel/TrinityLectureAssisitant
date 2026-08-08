@@ -105,6 +105,45 @@ def _terminate(process):
         process.terminate()
 
 
+def _terminate_process_tree(process):
+    """Stop a spawned runtime including the Windows venv launcher child."""
+
+    if process is None or process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if result.returncode == 0:
+                return
+        except OSError:
+            pass
+    process.terminate()
+
+
+def _clear_dynamic_voice_markers(base_dir):
+    """Release a stale Eve microphone claim after the voice child exits."""
+
+    runtime_dir = os.path.join(base_dir, "TrinityRuntime", "voice")
+    for name in (
+        "desktop_eve_audio.ready",
+        "desktop_eve_audio.claim",
+        "desktop_legacy_audio.released",
+    ):
+        try:
+            os.unlink(os.path.join(runtime_dir, name))
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Startup also clears these markers. A transient antivirus/file-lock
+            # race must not prevent the launcher from activating Legacy audio.
+            pass
+
+
 def _spawn_ear_process(
     *,
     show_terminal,
@@ -380,6 +419,10 @@ def launch_trinity():
         voice_fallback = bool(voice_config.get("fallback_to_legacy", True))
         if voice_enabled:
             voice_profile = str(voice_config.get("profile") or "eve-trinity")
+            dynamic_remote_voice = voice_profile == "eve-windows-remote"
+            if dynamic_remote_voice:
+                child_env["TRINITY_VOICE_DYNAMIC_MIC"] = "1"
+                child_env.pop("TRINITY_VOICE_OWNS_MIC", None)
             voice_command = [
                 sys.executable,
                 "-u",
@@ -398,7 +441,8 @@ def launch_trinity():
                 creationflags=0,
                 env=child_env,
             )
-            child_env["TRINITY_VOICE_OWNS_MIC"] = "1"
+            if not dynamic_remote_voice:
+                child_env["TRINITY_VOICE_OWNS_MIC"] = "1"
             _log_message(launcher_log, f"Eve Voice wird mit Profil {voice_profile} gestartet.")
 
         ear_process = _spawn_ear_process(
@@ -468,12 +512,14 @@ def launch_trinity():
                         f"Eve Voice wurde mit Code {return_code} beendet.",
                     )
                     voice_process = None
+                    if dynamic_remote_voice:
+                        _clear_dynamic_voice_markers(base_dir)
                     if voice_fallback:
                         _log_message(
                             launcher_log,
                             "Wechsle automatisch auf die bisherige STT/TTS-Laufzeit zurück.",
                         )
-                        _terminate(ear_process)
+                        _terminate_process_tree(ear_process)
                         if ear_process is not None:
                             try:
                                 ear_process.wait(timeout=5)

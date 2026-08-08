@@ -47,7 +47,9 @@ class LocalRealtimeAudioClient:
         self.port = config.profile.internal_port
         self.endpoint = endpoint.strip()
         self.access_token = access_token.strip()
+        self._remote_retry = config.profile.runtime_role == "client"
         self._stop = threading.Event()
+        self._started = threading.Event()
         self._ready = threading.Event()
         self._thread: threading.Thread | None = None
         self._connection = None
@@ -61,19 +63,27 @@ class LocalRealtimeAudioClient:
         self._last_cancel_at = 0.0
         self._speech_queue_path = config.home / "TrinityRuntime" / "voice" / "desktop_speech_queue.jsonl"
         self._ready_path = config.home / "TrinityRuntime" / "voice" / "desktop_eve_audio.ready"
+        self._mic_claim_path = config.home / "TrinityRuntime" / "voice" / "desktop_eve_audio.claim"
+        self._legacy_released_path = config.home / "TrinityRuntime" / "voice" / "desktop_legacy_audio.released"
         self._trinity_config_path = config.home / "core" / "config.json"
         self._speaker_check_at = 0.0
         self._desktop_output_enabled = True
         self._speech_queue_offset = 0
 
     def start(self, timeout: float = 20.0) -> None:
+        if self._remote_retry:
+            # A forced Windows shutdown can leave marker files behind. They must
+            # never block the Legacy microphone while Ubuntu is still booting.
+            self._remove_ready_marker()
+            self._release_microphone_claim()
         self._thread = threading.Thread(
             target=self._run,
             name="trinity-local-eve-client",
             daemon=True,
         )
         self._thread.start()
-        if not self._ready.wait(timeout):
+        wait_event = self._started if self._remote_retry else self._ready
+        if not wait_event.wait(timeout):
             raise TimeoutError("Lokaler Eve-Audioclient wurde nicht rechtzeitig bereit.")
         if self._error:
             raise RuntimeError(f"Lokaler Eve-Audioclient konnte nicht starten: {self._error}")
@@ -81,6 +91,7 @@ class LocalRealtimeAudioClient:
     def stop(self) -> None:
         self._stop.set()
         self._remove_ready_marker()
+        self._release_microphone_claim()
         connection = self._connection
         if connection is not None:
             try:
@@ -139,7 +150,51 @@ class LocalRealtimeAudioClient:
         }
 
     def _run(self) -> None:
+        self._started.set()
+        if not self._remote_retry:
+            self._run_connection()
+            return
+
+        retry_delay = 1.0
+        while not self._stop.is_set():
+            if not self._desktop_speaker_selected():
+                # The Bridge persists one globally selected speaker. A remote
+                # Companion must be able to claim the single GPU pipeline, so
+                # Windows must not keep an idle WebSocket reservation while a
+                # different device (or no device) owns speech output.
+                self._ready.clear()
+                self._remove_ready_marker()
+                self._release_microphone_claim()
+                self._connection = None
+                retry_delay = 1.0
+                self._stop.wait(0.35)
+                continue
+            try:
+                self._run_connection()
+                if self._stop.is_set():
+                    break
+                if not self._desktop_speaker_selected():
+                    retry_delay = 1.0
+                    continue
+                raise RuntimeError("Realtime-Verbindung wurde unerwartet geschlossen.")
+            except BaseException as exc:
+                self._ready.clear()
+                self._remove_ready_marker()
+                self._release_microphone_claim()
+                self._connection = None
+                if self._stop.is_set():
+                    break
+                LOGGER.warning(
+                    "Ubuntu Eve ist noch nicht verfügbar (%s). Neuer Versuch in %.0f Sekunden.",
+                    type(exc).__name__,
+                    retry_delay,
+                )
+                self._stop.wait(retry_delay)
+                retry_delay = min(retry_delay * 2.0, 15.0)
+
+    def _run_connection(self) -> None:
         sender: threading.Thread | None = None
+        connection_done = threading.Event()
         try:
             import sounddevice as sd
             from websockets.sync.client import connect
@@ -150,14 +205,19 @@ class LocalRealtimeAudioClient:
                 self._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
                 self._speech_queue_path.touch(exist_ok=True)
                 self._speech_queue_offset = self._speech_queue_path.stat().st_size
+                self._discard_pending_input()
+                self._clear_output()
                 connection.send(json.dumps(self._session_update(), ensure_ascii=False))
                 sender = threading.Thread(
                     target=self._send_loop,
-                    args=(connection,),
+                    args=(connection, connection_done),
                     name="trinity-local-eve-sender",
                     daemon=True,
                 )
                 sender.start()
+                if self._remote_retry:
+                    self._claim_microphone()
+                    self._wait_for_legacy_microphone_release()
                 # Input and output devices commonly use different native sample
                 # rates on macOS (for example 44.1 kHz and 48 kHz). Separate
                 # PortAudio streams avoid the CoreAudio deadlock caused by a
@@ -179,6 +239,11 @@ class LocalRealtimeAudioClient:
                     self._write_ready_marker()
                     print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
                     while not self._stop.is_set():
+                        if self._remote_retry and not self._desktop_speaker_selected():
+                            LOGGER.info(
+                                "Eve-Desktop gibt die Realtime-Pipeline an den aktiven Companion frei."
+                            )
+                            break
                         self._consume_speech_queue()
                         try:
                             raw = connection.recv(timeout=0.1)
@@ -187,18 +252,24 @@ class LocalRealtimeAudioClient:
                         if raw is None:
                             break
                         self._handle_event(raw)
-                    if not self._stop.is_set():
+                    if not self._stop.is_set() and self._desktop_speaker_selected():
                         raise RuntimeError("Realtime-Verbindung wurde unerwartet geschlossen.")
         except BaseException as exc:
+            if self._remote_retry:
+                raise
             self._error = exc
             self._ready.set()
             if not self._stop.is_set():
                 LOGGER.exception("Lokaler Eve-Audioclient beendet")
         finally:
-            self._stop.set()
+            connection_done.set()
+            self._ready.clear()
             self._remove_ready_marker()
+            self._release_microphone_claim()
             if sender:
                 sender.join(timeout=2)
+            if not self._remote_retry:
+                self._stop.set()
 
     def _connection_uri(self) -> str:
         raw = self.endpoint or f"ws://{self.host}:{self.port}/v1/realtime"
@@ -221,6 +292,41 @@ class LocalRealtimeAudioClient:
             self._ready_path.unlink(missing_ok=True)
         except OSError:
             LOGGER.debug("Eve-Bereitschaftsmarker konnte nicht entfernt werden", exc_info=True)
+
+    def _claim_microphone(self) -> None:
+        try:
+            self._mic_claim_path.parent.mkdir(parents=True, exist_ok=True)
+            self._legacy_released_path.unlink(missing_ok=True)
+            self._mic_claim_path.write_text(str(os.getpid()), encoding="utf-8")
+        except OSError as exc:
+            raise RuntimeError("Eve konnte den Desktop-Audioeingang nicht anfordern.") from exc
+
+    def _wait_for_legacy_microphone_release(self, timeout: float = 15.0) -> None:
+        if os.environ.get("TRINITY_VOICE_DYNAMIC_MIC") != "1":
+            return
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline and not self._stop.is_set():
+            if self._legacy_released_path.is_file():
+                return
+            time.sleep(0.1)
+        if not self._stop.is_set():
+            raise TimeoutError("Legacy-Audio hat das Mikrofon nicht rechtzeitig freigegeben.")
+
+    def _release_microphone_claim(self) -> None:
+        for path in (self._mic_claim_path, self._legacy_released_path):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.debug("Audio-Übergabemarker konnte nicht entfernt werden", exc_info=True)
+
+    def _discard_pending_input(self) -> None:
+        """Never replay microphone packets collected for an older connection."""
+
+        while True:
+            try:
+                self._send_queue.get_nowait()
+            except Empty:
+                return
 
     def _consume_speech_queue(self) -> None:
         try:
@@ -257,8 +363,8 @@ class LocalRealtimeAudioClient:
                 },
             })
 
-    def _send_loop(self, connection) -> None:
-        while not self._stop.is_set():
+    def _send_loop(self, connection, connection_done: threading.Event) -> None:
+        while not self._stop.is_set() and not connection_done.is_set():
             try:
                 event = self._send_queue.get(timeout=0.1)
             except Empty:
@@ -266,7 +372,8 @@ class LocalRealtimeAudioClient:
             try:
                 connection.send(json.dumps(event, ensure_ascii=False))
             except Exception:
-                self._stop.set()
+                if not self._remote_retry:
+                    self._stop.set()
                 return
 
     def _output_callback(self, outdata, frames, _time_info, status) -> None:
