@@ -63,6 +63,10 @@ def test_ubuntu_server_uses_remote_windows_trinity_core(tmp_path):
 
     command = build_speech_to_speech_command(config)
 
+    assert command[:2] == [
+        sys.executable,
+        str(tmp_path / "core" / "voice" / "resilient_s2s.py"),
+    ]
     assert command[command.index("--responses_api_base_url") + 1] == "http://100.64.0.20:18767/v1"
     assert command[command.index("--responses_api_api_key") + 1] == "core-secret"
     assert command[command.index("--model_name") + 1] == "trinity-core"
