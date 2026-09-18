@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QMenu,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -29,6 +30,8 @@ from chat_protocol import (  # noqa: E402
     load_chat_events,
 )
 from workspace_context import clear_workspace_attachment, save_workspace_attachment  # noqa: E402
+from desktop_speaker_control import DesktopSpeakerControl  # noqa: E402
+from avatar_tray import AvatarTray  # noqa: E402
 
 class ContentResizeFilter(QObject):
     """EventFilter der auf dem WebEngine-FocusProxy lauscht und Resize an den Rändern ermöglicht."""
@@ -395,8 +398,17 @@ class WebEngineDragFilter(QObject):
         self.window = window
         self.dragging = False
         self.drag_pos = None
+        self.click_timer = QTimer(self)
+        self.click_timer.setSingleShot(True)
+        self.click_timer.timeout.connect(window.open_chat_or_bubble)
 
     def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonDblClick and event.button() == Qt.LeftButton:
+            self.click_timer.stop()
+            self.dragging = False
+            self.drag_pos = None
+            self.window.tray.minimize()
+            return True
         if event.type() == QEvent.Type.DragEnter and event.mimeData().hasUrls():
             event.acceptProposedAction()
             return True
@@ -416,7 +428,8 @@ class WebEngineDragFilter(QObject):
                 self.click_start = event.globalPosition().toPoint()
                 return True
             if event.button() == Qt.RightButton:
-                self.window.open_settings()
+                self.click_timer.stop()
+                self.window.open_avatar_menu(event.globalPosition().toPoint())
                 return True
         elif event.type() == QEvent.Type.MouseMove:
             if self.dragging and self.drag_pos is not None:
@@ -427,11 +440,8 @@ class WebEngineDragFilter(QObject):
                 self.dragging = False
                 diff = event.globalPosition().toPoint() - getattr(self, 'click_start', event.globalPosition().toPoint())
                 if diff.manhattanLength() < 5:
-                    # Es war ein Klick, kein Drag!
-                    if getattr(self.window, 'bubble_active', False):
-                        self.window.show_bubble_content()
-                    else:
-                        self.window.chat_window.show_chat(self.window.pos())
+                    # Wait for a possible second click before opening the chat.
+                    self.click_timer.start(QApplication.doubleClickInterval())
                     self.drag_pos = None
                     return True
             self.drag_pos = None
@@ -591,6 +601,9 @@ class TrinityWindow(QMainWindow):
         
         # Web-Ansicht für das HTML-Widget
         self.browser = QWebEngineView(self)
+        self.speaker_control = DesktopSpeakerControl(os.path.dirname(os.path.abspath(__file__)), self)
+        self.speaker_control.hide()
+        self.speaker_control.timer.stop()
         self.setCentralWidget(self.browser)
         
         # Pfad zum UI-Ordner
@@ -599,7 +612,7 @@ class TrinityWindow(QMainWindow):
         self.browser.page().setBackgroundColor(Qt.transparent)
 
         # Initiale Größe und Position (unten rechts, passend für den Avatar)
-        self.resize(150, 150) 
+        self.resize(150, 150)
         screen = QApplication.primaryScreen().geometry()
         self.move(screen.width() - 200, screen.height() - 200)
 
@@ -609,6 +622,7 @@ class TrinityWindow(QMainWindow):
         
         # Chat-Eingabe Fenster (ohne parent)
         self.chat_window = ChatWindow(None)
+        self.tray = AvatarTray(self, self.speaker_control)
 
         # Drag Filter installieren, um die HTML-Ebene zu überlisten
         self.drag_filter = WebEngineDragFilter(self)
@@ -644,6 +658,36 @@ class TrinityWindow(QMainWindow):
         )
         subprocess.Popen([sys.executable, settings_script])
 
+    def open_chat(self):
+        self.chat_window.show_chat(self.pos())
+
+    def open_chat_or_bubble(self):
+        if getattr(self, "bubble_active", False):
+            self.show_bubble_content()
+        else:
+            self.open_chat()
+
+    def open_avatar_menu(self, position):
+        menu = QMenu(self)
+        menu.addAction("In die Menüleiste", self.tray.minimize)
+        menu.addSeparator()
+        menu.addAction("Hier auf diesem Computer antworten", self.speaker_control.claim)
+        menu.addAction("Sprachausgabe stumm", self.speaker_control.mute)
+        menu.addSeparator()
+        menu.addAction("Einstellungen …", self.open_settings)
+        menu.exec(position)
+        menu.deleteLater()
+
+    def show_latest_content(self):
+        if getattr(self, "bubble_active", False):
+            self.show_bubble_content()
+            return
+        payload = os.path.join(CORE_MODULE_DIR, "payload.html")
+        if os.path.isfile(payload):
+            with open(payload, encoding="utf-8") as handle:
+                self.content_window.show_content(handle.read(), self.pos())
+            self.tray.set_notification(False)
+
     def check_state(self):
         try:
             if os.path.exists(self.state_file):
@@ -653,15 +697,21 @@ class TrinityWindow(QMainWindow):
                     if current_state.startswith("bubble_"):
                         color = current_state.split("_")[1]
                         self.bubble_active = True
+                        self.tray.set_notification(True)
                         self.browser.page().runJavaScript(f"window.setBubbleColor('{color}');")
                         # State in Datei wieder auf idle setzen, damit der Bubble-State verarbeitet ist
                         with open(self.state_file, "w") as f:
                             f.write("idle")
                         self.last_state = "idle"
                     else:
+                        self.tray.set_state(current_state)
                         self.browser.page().runJavaScript(f"window.setTrinityState('{current_state}');")
                         
                         if current_state == "reporting":
+                            if self.tray.compact:
+                                self.tray.set_notification(True)
+                                self.last_state = current_state
+                                return
                             payload_file = os.path.join(os.path.dirname(__file__), "core", "payload.html")
                             if os.path.exists(payload_file):
                                 with open(payload_file, "r", encoding="utf-8") as f:
@@ -690,6 +740,7 @@ class TrinityWindow(QMainWindow):
             os.remove(payload_file)
         # Bubble verstecken
         self.bubble_active = False
+        self.tray.set_notification(False)
         self.browser.page().runJavaScript("window.setBubbleColor('none');")
 
     def dragEnterEvent(self, event):
@@ -752,6 +803,7 @@ def _set_macos_dock_icon(icon_path: str) -> None:
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
 
     # Icon-Pfade: erst core/icon.png, dann assets/icon.PNG als Fallback
     _base = os.path.dirname(__file__)
@@ -773,6 +825,6 @@ if __name__ == "__main__":
 
     # Trinity starten
     window = TrinityWindow()
-    window.show()
+    window.tray.apply_startup_mode()
 
     sys.exit(app.exec())

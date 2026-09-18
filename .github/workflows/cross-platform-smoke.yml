@@ -17,6 +17,8 @@ jobs:
           - windows-latest
 
     runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +36,7 @@ jobs:
           cache-dependency-path: components/TrinityCanvas/package-lock.json
 
       - name: Install test tools
-        run: python -m pip install pytest requests numpy
+        run: python -m pip install pytest requests numpy PySide6
 
       - name: Compile Python sources
         run: >-

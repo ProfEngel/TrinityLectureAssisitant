@@ -15,9 +15,9 @@
 ![Trinity Assistant Banner](assets/banner.png)
 > [!NOTE]
 > **Aktuelle Highlights:**
+> - **v0.17.11:** Aktuelle iPad-Folien als Bild und Text im Chat-/Sprachkontext, aussagekräftige Modellfehler und kompakte MiniTrinity mit Audio-Farbstatus. Bestehende Eve-/STT-Verbindungen bleiben unverändert. Für BIZ-Updates: [sichere Windows-Übergabe](docs/WINDOWS_UPDATE_v0.17.11.md).
 > - **v0.17.10:** Die G2-Spracherkennung reagiert schneller und robuster: Digitale Stille, unsichere No-Speech-Segmente und bekannte Whisper-Untertitelartefakte wie `Copyright WDR`, `Amara.org` oder erfundene Schnellsession-Domains werden verworfen. Der bisher zu starke Fachwort-Bias ist auf das eigentliche Wakeword `Trinity` reduziert.
 > - **v0.17.9:** Eine Trinity-Instanz in einer Windows-VM kann Eve-STT und Eve-TTS jetzt von einem privaten Ubuntu-NVIDIA-Host beziehen. Windows bleibt Control Plane mit Sessions, Memory, Agenten und UI; Ubuntu uebernimmt nur GPU-Inferenz. Dafuer gibt es die Profile `eve-windows-remote` und `eve-linux-gpu-server`, getrennte Tokens, Diagnosepruefungen und Installationsskripte.
-> - **v0.17.8:** ClassicUI, iPhone und iPad zeigen nur noch einen zentralen Lautsprecherknopf. Aktiviert ein Client seine Ausgabe, wird er Bridge-weit zum einzigen Sprecher und alle anderen verbundenen Clients zeigen den durchgestrichenen Lautsprecher. Ein erneuter Klick auf dem aktiven Geraet schaltet Trinity ueberall stumm; auch Eves direkter Desktop- und Companion-Audiopfad folgt dieser Auswahl.
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]

@@ -97,10 +97,7 @@ trinity.addEventListener('click', () => {
     }
 });
 
-// Doppel-Klick öffnet das Dashboard mit den Infos
-trinity.addEventListener('dblclick', () => {
-    window.setTrinityState('reporting');
-});
+// Desktop double-clicks are handled by Qt and move the avatar into the menu bar.
 
 closeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
