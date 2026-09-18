@@ -17,6 +17,7 @@ jobs:
           - windows-latest
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: offscreen
 
@@ -45,7 +46,8 @@ jobs:
           trinity_console.py trinity_chat.py trinity_cli.py
 
       - name: Run unit tests
-        run: python -m pytest
+        timeout-minutes: 5
+        run: python -m pytest -v -o faulthandler_timeout=60
 
       - name: Build and smoke-test Trinity Canvas
         working-directory: components/TrinityCanvas
