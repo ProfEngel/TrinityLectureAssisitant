@@ -18,7 +18,7 @@ for name, selection in groups.items():
         "faulthandler.dump_traceback_later(60); "
         "raise SystemExit(pytest.main())"
     )
-    command = [sys.executable, "-u", "-c", bootstrap, "-vv", "-s",
+    command = [sys.executable, "-u", "-c", bootstrap, "-vv",
                "--timeout=45", "--timeout-method=thread",
                f"--junitxml=test-{name}.xml", *selection]
     try:
@@ -30,5 +30,5 @@ for name, selection in groups.items():
         failed = True
         print(f"{name}: exceeded 120 seconds", flush=True)
     finally:
-        print(log.read_text(encoding="utf-8", errors="replace"), flush=True)
+        print(log.read_text(encoding="utf-8", errors="replace")[-16000:], flush=True)
 raise SystemExit(1 if failed else 0)
