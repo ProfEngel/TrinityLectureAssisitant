@@ -57,7 +57,10 @@ def test_other_client_cannot_clear_current_presenter(tmp_path):
     assert store.current(profile="TEST", session_id="one")
 
 
-@pytest.mark.parametrize("image", ["bad-base64", base64.b64encode(b"not a JPEG").decode(), "x" * 3000000])
+@pytest.mark.parametrize(
+    "image", ["bad-base64", base64.b64encode(b"not a JPEG").decode(), "x" * 3000000],
+    ids=["invalid-base64", "not-jpeg", "oversized-image"],
+)
 def test_invalid_images_are_rejected(tmp_path, image):
     with pytest.raises(ValueError):
         LectureContextStore(tmp_path).update(payload(image_base64=image), profile="TEST", session_id="one")
