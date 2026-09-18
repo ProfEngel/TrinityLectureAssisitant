@@ -48,6 +48,7 @@ from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from trinity_paths import TrinityPaths
 from unified_session import UnifiedSessionStore
+from lecture_context import LectureContextStore
 from web_ui import render_web_ui
 from workbench import WorkbenchManager
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
@@ -1963,6 +1964,12 @@ def make_handler(bridge):
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
+                elif parsed.path == "/lecture/context":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError("Folienkontext benötigt Zugriff auf die lokale Trinity-Instanz.")
+                    _json_response(self, 200, LectureContextStore(bridge.home).update(
+                        _read_json(self), profile=bridge.profile, session_id=bridge.sessions.current().id
+                    ))
                 elif parsed.path == "/workbench/run":
                     config = load_config(bridge.config_path)
                     if not config.get("workbench", {}).get("enabled", True):

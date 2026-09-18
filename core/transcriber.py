@@ -28,6 +28,7 @@ from tenant_context import tenant_history_path, tenant_memory_db_path
 from platform_adapters import create_tts_backend
 from workspace_context import load_workspace_attachment
 from unified_session import UnifiedSessionStore
+from desktop_audio_activity import mark_audio_active, clear_audio_active
 
 # Konfiguration
 MODEL = "small"  # Schnell auf CPU: <1s Latenz. Für beste Qualität: 'large-v3-turbo'
@@ -266,6 +267,7 @@ class TrinityEar:
         if self.audio_stream is not None:
             if not self.audio_stream.active:
                 self.audio_stream.start()
+            mark_audio_active(PROJECT_DIR, "microphone")
             return
 
         import numpy as np
@@ -281,13 +283,16 @@ class TrinityEar:
             blocksize=block_size,
         )
         self.audio_stream.start()
+        mark_audio_active(PROJECT_DIR, "microphone")
 
     def _stop_audio_input(self):
         if self.audio_stream is None:
+            clear_audio_active(PROJECT_DIR, "microphone")
             return
         try:
             if self.audio_stream.active:
                 self.audio_stream.stop()
+            clear_audio_active(PROJECT_DIR, "microphone")
         except Exception as exc:
             print(f"⚠️ Audioeingang konnte nicht sauber gestoppt werden: {exc}")
 
@@ -383,11 +388,14 @@ class TrinityEar:
     def _speak_quick(self, text, output_device="Standard"):
         """Start a short platform-native TTS message without blocking."""
         try:
-            return self.tts_backend.speak(
+            process = self.tts_backend.speak(
                 text,
                 voice=self.voice,
                 output_device=output_device,
             )
+            if getattr(process, "pid", None):
+                mark_audio_active(PROJECT_DIR, "speech", process.pid)
+            return process
         except Exception as exc:
             print(f"⚠️ Fehler bei Sprachausgabe: {exc}")
             return None
@@ -1229,6 +1237,8 @@ class TrinityEar:
                 voice=self.voice,
                 output_device=target_device,
             )
+            if getattr(self.speak_process, "pid", None):
+                mark_audio_active(PROJECT_DIR, "speech", self.speak_process.pid)
             self.speak_process.wait()
         except Exception as e:
             print(f"⚠️ Fehler bei Sprachausgabe: {e}")

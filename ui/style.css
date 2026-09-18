@@ -99,6 +99,7 @@ body {
 
 /* Status-Text */
 #status-text {
+    display: none;
     font-family: var(--font-family);
     color: rgba(255, 255, 255, 0.5);
     font-size: 10px;
