@@ -1,10 +1,11 @@
 """Small, gently blinking Trinity eyes for the desktop menu bar."""
 
 import random
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRectF, QSettings, Qt, QTimer
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 from desktop_audio_activity import desktop_audio_active
 
@@ -74,7 +75,12 @@ class AvatarTray(QObject):
         self.menu.addSeparator()
         self.menu.addAction("Einstellungen …", window.open_settings)
         self.menu.addAction("Trinity beenden", QApplication.instance().quit)
-        self.icon.setContextMenu(self.menu)
+        if sys.platform == "darwin":
+            # Avoid native NSMenu tracking: Qt's Cocoa bridge can ask a
+            # SysDefined NSEvent for clickCount and abort the whole UI.
+            self.icon.activated.connect(self._show_menu)
+        else:
+            self.icon.setContextMenu(self.menu)
         self.blink_timer = QTimer(self)
         self.blink_timer.setSingleShot(True)
         self.blink_timer.timeout.connect(self._blink)
@@ -93,6 +99,12 @@ class AvatarTray(QObject):
             if self.minimize():
                 return
         self.window.show()
+
+    def _show_menu(self, reason):
+        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.Context):
+            # Leave the native status-item callback before opening a Qt popup.
+            position = QCursor.pos()
+            QTimer.singleShot(0, lambda: self.menu.popup(position))
 
     def minimize(self):
         # Never hide the only way back on desktops without a system tray.

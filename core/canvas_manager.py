@@ -65,7 +65,7 @@ class CanvasManager:
 
     @property
     def enabled(self) -> bool:
-        return bool(self.settings.get("enabled", True))
+        return bool(self.settings.get("enabled", False))
 
     @property
     def url(self) -> str:

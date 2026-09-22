@@ -11,6 +11,30 @@ from core.avatar_tray import AvatarTray, eyes_icon
 from trinity_app import WebEngineDragFilter
 
 
+def test_macos_menu_is_deferred_without_native_context_menu(tmp_path, monkeypatch):
+    from core import avatar_tray
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(avatar_tray.sys, "platform", "darwin")
+    window = QWidget()
+    window.open_chat = Mock()
+    window.show_latest_content = Mock()
+    window.open_settings = Mock()
+    tray = AvatarTray(window, Mock(), QSettings(str(tmp_path / "avatar.ini"), QSettings.IniFormat), home=tmp_path)
+    assert tray.icon.contextMenu() is None
+    pending = []
+    monkeypatch.setattr(avatar_tray.QTimer, "singleShot", lambda delay, callback: pending.append((delay, callback)))
+    monkeypatch.setattr(tray.menu, "popup", Mock())
+    tray.icon.activated.emit(QSystemTrayIcon.Trigger)
+    tray.menu.popup.assert_not_called()
+    assert len(pending) == 1 and pending[0][0] == 0
+    pending[0][1]()
+    tray.menu.popup.assert_called_once()
+    tray.icon.activated.emit(QSystemTrayIcon.MiddleClick)
+    assert len(pending) == 1
+    tray.audio_timer.stop()
+    window.close()
+
+
 def test_tray_round_trip_persists_preference_and_stops_blinking(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = QWidget()

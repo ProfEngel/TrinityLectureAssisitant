@@ -1,4 +1,9 @@
 # Trinity — Academic Personal Concierge 🧞‍♀️
+
+> **22.09.2026: Creative Canvas ist auf Eis.** Kein automatischer Start,
+> kein Desktop-Reiter und keine Installation/CI-Builds mehr. Bestehende Canvas-Daten
+> und der historische Quellcode bleiben erhalten. Für die Agentenoberfläche wird
+> [TrinityHUB](https://github.com/ProfEngel/trinity-hub) separat betrieben.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20286707.svg)](https://doi.org/10.5281/zenodo.20286707)
 
 

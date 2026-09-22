@@ -131,7 +131,7 @@ def default_config(platform_name=None):
             "default_workflow": "Flux2_Klein_T2I_API.json",
         },
         "canvas": {
-            "enabled": True,
+            "enabled": False,
             "install_dir": "",
             "port": 8787,
             "host": "127.0.0.1",

@@ -188,7 +188,7 @@ def test_bridge_dashboard_exposes_agent_metadata(tmp_path):
     assert "allowed_tools" in trinity
     assert "rights" in trinity
     assert result["canvas"]["url"] == "http://127.0.0.1:8787"
-    assert result["canvas"]["state"] == "not_installed"
+    assert result["canvas"]["state"] == "disabled"
     assert "message" in result["canvas"]
 
 
