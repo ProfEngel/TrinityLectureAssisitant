@@ -28,10 +28,10 @@ def test_windows_installer_targets_main_and_creates_both_launch_modes():
     assert 'Join-Path $InstallDir "components\\TrinityCanvas"' in script
     assert "ProfEngel/TrinityCreativeCanvas.git" in script
     assert '$CanvasRevision = "21099e2d17181be2d3e0ad62210abfe1fda87cf8"' in script
-    assert "archive/$CanvasRevision.zip" in script
+    assert "archive/$CanvasRevision.zip" not in script
     assert "archive/refs/heads/main.zip" not in script
-    assert "--recurse-submodules" in script
-    assert "$npm.Source run build" in script
+    assert "--recurse-submodules" not in script
+    assert "$npm.Source run build" not in script
 
 
 def test_windows_installer_stops_running_trinity_before_replacing_update():

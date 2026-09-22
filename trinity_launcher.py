@@ -327,15 +327,8 @@ def launch_trinity():
         voice_process = None
         canvas_process = None
         canvas_manager = CanvasManager(base_dir)
-        if canvas_manager.enabled:
-            try:
-                canvas_process = canvas_manager.start(log_handle=canvas_log)
-                _log_message(
-                    launcher_log,
-                    "Canvas ist bereit und wird von Trinity verwaltet.",
-                )
-            except (OSError, ValueError, subprocess.SubprocessError) as exc:
-                _log_message(launcher_log, f"Canvas konnte nicht gestartet werden: {exc}")
+        # Creative Canvas is on hold. Retain its data, but never autostart it,
+        # including installations whose old configuration still enables it.
         web_enabled = ui_modes["web"]
         companion_enabled = companion_config.get("enabled", False)
         workbench_enabled = workbench_config.get("enabled", True)

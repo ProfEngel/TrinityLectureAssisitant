@@ -52,15 +52,15 @@ def test_macos_app_is_kept_outside_icloud_managed_desktop():
     assert "codesign --verify" in script
 
 
-def test_macos_installer_manages_canvas_outside_the_vault():
+def test_macos_installer_preserves_canvas_reference_without_installing_it():
     script = INSTALLER.read_text(encoding="utf-8")
     submodules = (ROOT_DIR / ".gitmodules").read_text(encoding="utf-8")
 
     assert 'CANVAS_DIR="$INSTALL_DIR/components/TrinityCanvas"' in script
     assert "ProfEngel/TrinityCreativeCanvas.git" in submodules
-    assert "--recurse-submodules" in script
-    assert 'npm ci && npm run build' in script
-    assert "trinity canvas install" in script
+    assert "--recurse-submodules" not in script
+    assert 'npm ci && npm run build' not in script
+    assert "Creative Canvas pausiert" in script
 
 
 def test_macos_installer_enables_login_start_for_trinity_workbench():
