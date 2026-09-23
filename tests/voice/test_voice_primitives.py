@@ -34,6 +34,11 @@ def test_german_policy_allows_short_technical_terms_but_rejects_english_paragrap
     assert segment_for_speech("Erster Satz. Zweiter Satz.", max_chars=14) == ["Erster Satz.", "Zweiter Satz."]
 
 
+def test_speaker_routing_marker_is_not_spoken():
+    assert segment_for_speech("[SPEAKER] Wir beginnen mit der Tabelle.") == ["Wir beginnen mit der Tabelle."]
+    assert segment_for_speech("Der Speaker ist hier ein Fachbegriff.") == ["Der Speaker ist hier ein Fachbegriff."]
+
+
 def test_events_and_metrics_contain_no_prompt_content(tmp_path):
     event = VoiceEvent("transcript.final", "s", "t", {"length": 12})
     assert event.as_dict()["type"] == "transcript.final"

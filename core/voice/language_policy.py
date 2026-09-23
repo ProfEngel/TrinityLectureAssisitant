@@ -38,6 +38,7 @@ def enforce_input_language(text: str) -> str | None:
 
 def clean_speakable_text(text: str) -> str:
     value = re.sub(r"```.*?```", "", str(text or ""), flags=re.DOTALL)
+    value = re.sub(r"^\s*\[SPEAKER\]\s*", "", value, flags=re.IGNORECASE)
     value = re.sub(r"[`*_#>|]", "", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value
