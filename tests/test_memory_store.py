@@ -101,3 +101,57 @@ def test_memory_store_deletes_individual_memory_and_whole_session(tmp_path):
     }
     assert store.stats()["sessions"] == 1
     assert [item["session_id"] for item in store.list_memories()] == [second_session]
+
+
+def test_search_finds_older_memory_across_sessions_and_cites_source(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    old_session = store.create_session("Vorlesung Data Science")
+    identifier = store.remember(
+        "In der Data Science Vorlesung erklärten wir die Konfusionsmatrix anhand einer Tabelle.",
+        source="lecture-notes", session_id=old_session,
+        metadata={"source_path": "DataScience/Folie-12.pdf"},
+    )
+    for index in range(230):
+        store.remember(f"Unverbundener Testeintrag Nummer {index}", weight=0.95)
+
+    matches = store.search("Welche Tabelle zur Konfusionsmatrix gab es in Data Science?")
+    assert matches[0]["id"] == identifier
+    context = store.context_for_prompt("Konfusionsmatrix Data Science")
+    assert "[M1]" in context
+    assert "DataScience/Folie-12.pdf" in context
+    assert "Session " + old_session in context
+
+
+def test_memory_search_filters_time_and_updates_index_after_delete(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    old_id = store.remember("Vorlesung zur Regression im April", source="lecture")
+    current_id = store.remember("Vorlesung zur Regression im September", source="lecture")
+    with store.connect() as db:
+        db.execute("UPDATE memories SET created_at = 1000000 WHERE id = ?", (old_id,))
+        db.execute("UPDATE memories SET created_at = 2000000 WHERE id = ?", (current_id,))
+
+    assert [item["id"] for item in store.search("Regression", since=1500000)] == [current_id]
+    assert [item["id"] for item in store.search("Regression", until=1500000)] == [old_id]
+    assert store.delete_memory(current_id)
+    assert store.search("September") == []
+
+
+def test_baked_original_remains_searchable(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    identifier = store.remember("Die Vorlesung behandelte die ROC-Kurve im Detail.")
+    store.bake_unbaked()
+    assert identifier in {item["id"] for item in store.search("ROC-Kurve")}
+
+
+def test_relative_week_query_filters_by_date(tmp_path):
+    import time
+
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    older = store.remember("Vorlesung zur Konfusionsmatrix im April")
+    newer = store.remember("Vorlesung zur Konfusionsmatrix im Mai")
+    with store.connect() as db:
+        db.execute("UPDATE memories SET created_at = ? WHERE id = ?", (time.time() - 28 * 86400, older))
+        db.execute("UPDATE memories SET created_at = ? WHERE id = ?", (time.time() - 3 * 86400, newer))
+    context = store.context_for_prompt("Was war zur Konfusionsmatrix vor vier Wochen?")
+    assert "im April" in context
+    assert "im Mai" not in context
