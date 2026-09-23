@@ -2657,6 +2657,12 @@ class SettingsWindow(QMainWindow):
             "an den geschützten Trinity-Core-Endpunkt der Windows-VM weitergereicht.",
         ),
         (
+            "Linux als vollständiger Trinity-Server",
+            "trinity-linux-server",
+            "Linux führt STT, Trinity-Core mit Memory und Agenten sowie TTS selbst aus. "
+            "Desktop und Companion verbinden sich als Clients über das private Netzwerk.",
+        ),
+        (
             "Diagnose: Ornith direkt, ohne Trinity",
             "eve-direct-ornith",
             "Technisches Diagnoseprofil. Es verbindet die Sprachpipeline direkt mit Ornith "
@@ -2682,7 +2688,7 @@ class SettingsWindow(QMainWindow):
             "Benutzerdefiniertes Eve-Profil.",
         )
         self.voice_profile_description.setText(description)
-        realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server"}
+        realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server", "trinity-linux-server"}
         remote_client = profile_name == "eve-windows-remote"
         remote_server = profile_name == "eve-linux-gpu-server"
         for field in (

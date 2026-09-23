@@ -66,3 +66,14 @@ def test_ubuntu_server_uses_remote_windows_trinity_core(tmp_path):
     assert command[command.index("--responses_api_base_url") + 1] == "http://100.64.0.20:18767/v1"
     assert command[command.index("--responses_api_api_key") + 1] == "core-secret"
     assert command[command.index("--model_name") + 1] == "trinity-core"
+
+
+def test_linux_trinity_server_routes_voice_to_its_local_core(tmp_path):
+    config = configured_voice(tmp_path, profile="trinity-linux-server")
+    command = build_speech_to_speech_command(config)
+
+    assert command[command.index("--responses_api_base_url") + 1] == (
+        f"http://{config.backend_host}:{config.backend_port}/v1"
+    )
+    assert command[command.index("--device") + 1] == "cuda"
+    assert "remote_core_base_url" not in command

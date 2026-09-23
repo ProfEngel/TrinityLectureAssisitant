@@ -334,3 +334,24 @@ def test_server_uses_saved_server_settings(tmp_path, monkeypatch):
 
     assert result == 0
     assert captured == {"home": home, "host": "0.0.0.0", "port": 8888, "token": "secret"}
+
+
+def test_server_passes_optional_linux_voice_profile(tmp_path, monkeypatch):
+    import trinity_server
+
+    home = tmp_path
+    (home / "core").mkdir()
+    (home / "trinity_launcher.py").touch()
+    save_config(home / "core" / "config.json", {
+        "server": {"voice_profile": "trinity-linux-server"}
+    })
+    captured = {}
+    monkeypatch.setattr(trinity_server, "run_server", lambda home_arg, **kwargs:
+                        captured.update(kwargs) or 0)
+
+    result = trinity_cli.run_server_command(
+        home, SimpleNamespace(host=None, port=None, token=None, voice_profile=None)
+    )
+
+    assert result == 0
+    assert captured["voice_profile"] == "trinity-linux-server"
