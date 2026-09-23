@@ -44,7 +44,13 @@ def execute(query: str, context: dict = None) -> dict:
         search_context = "--- AGENTIC ACTION ---\nDie Suchanfrage war unklar. Bitte den Nutzer, das Thema genauer zu benennen.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": search_context}
 
-    results = _search_tavily(search_query, brain.tavily_key)
+    results, search_error = _search_tavily(search_query, brain.tavily_key)
+    if search_error:
+        return {
+            "has_payload": False,
+            "html_payload": "",
+            "direct_answer": search_error,
+        }
     if results:
         print(f"✅ Tavily: {len(results)} Ergebnisse gefunden")
         search_results_text = "\n".join([f"- {r['title']}: {r['content']}" for r in results])
@@ -75,7 +81,7 @@ def _search_tavily(query, api_key):
     import requests
     if not api_key:
         print("⚠️ Warnung: Tavily API-Key fehlt in config.json")
-        return []
+        return [], "Der Websuche-Schlüssel fehlt. Bitte trage ihn in den Trinity-Einstellungen ein."
     
     url = "https://api.tavily.com/search"
     payload = {
@@ -92,7 +98,13 @@ def _search_tavily(query, api_key):
         response = requests.post(url, json=payload, timeout=15)
         response.raise_for_status()
         data = response.json()
-        return data.get("results", [])
+        return data.get("results", []), ""
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 0
+        if status in (401, 403):
+            return [], "Die Websuche ist eingerichtet, aber der Tavily-Schlüssel wurde abgelehnt. Bitte prüfe den Schlüssel in den Trinity-Einstellungen."
+        print(f"⚠️ Fehler bei Tavily Suche: HTTP {status}")
+        return [], "Die Websuche ist derzeit nicht erreichbar. Bitte versuche es später erneut."
     except Exception as e:
         print(f"⚠️ Fehler bei Tavily Suche: {e}")
-        return []
+        return [], "Die Websuche ist derzeit nicht erreichbar. Bitte versuche es später erneut."

@@ -48,6 +48,9 @@ from server_auth import ServerAuth
 from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_upload_dir
 from trinity_paths import TrinityPaths
 from unified_session import UnifiedSessionStore
+from lecture_context import LectureContextStore
+from voice.config import load_voice_config
+from voice.capabilities import transcription_stream_capability
 from web_ui import render_web_ui
 from workbench import WorkbenchManager
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
@@ -174,6 +177,45 @@ class TrinityBridge:
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
         self.workbench = WorkbenchManager(self.home)
 
+    def _make_audio_transcriber(self, config):
+        stt_config = config.get("stt", {})
+        backend = str(stt_config.get("companion_backend") or "auto").strip().lower()
+        voice_config = load_voice_config(self.home, config)
+        if (
+            backend == "auto"
+            and voice_config.enabled
+            and voice_config.profile.runtime_role == "client"
+            and voice_config.remote_voice_url.strip()
+        ):
+            backend = "eve-remote"
+        return BridgeAudioTranscriber(
+            model_name=str(stt_config.get("model") or "small"),
+            backend=backend,
+            parakeet_model_name=stt_config.get(
+                "companion_model",
+                "mlx-community/parakeet-tdt-0.6b-v3",
+            ),
+            remote_voice_url=voice_config.remote_voice_url,
+            remote_stt_url=voice_config.remote_stt_url,
+            remote_voice_token=(
+                voice_config.remote_voice_token or voice_config.access_token
+            ),
+            remote_timeout_seconds=stt_config.get("companion_remote_timeout_seconds", 12),
+        )
+
+    def prepare_audio_transcriber(self):
+        """Warm the slot-free companion STT backend in the background."""
+        with self._lock:
+            if self._audio_transcriber is None:
+                config = load_config(self.config_path)
+                self._audio_transcriber = self._make_audio_transcriber(config)
+            transcriber = self._audio_transcriber
+        try:
+            transcriber.warm_up()
+            print(f"G2/Companion-STT bereit: {transcriber.backend}")
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"G2/Companion-STT wird bei Bedarf geladen: {exc}")
+
     @property
     def profile(self):
         return self.sessions.profile
@@ -235,7 +277,7 @@ class TrinityBridge:
             "updated_at": float(value.get("updated_at") or 0.0),
         }
 
-    def set_speaker(self, payload):
+    def set_speaker(self, payload, client_ip=""):
         if not isinstance(payload, dict):
             raise ValueError("Sprechstelle muss ein Objekt sein.")
         kind = str(payload.get("kind") or "").strip().lower()
@@ -256,6 +298,8 @@ class TrinityBridge:
             "kind": kind,
             "updated_at": time.time(),
         }
+        if kind != "none" and client_ip:
+            speaker["client_ip"] = str(client_ip).strip()[:64]
         with self._lock:
             config = load_config(self.config_path)
             config.setdefault("system", {})["speech_output"] = speaker
@@ -417,8 +461,7 @@ class TrinityBridge:
         with self._lock:
             if self._audio_transcriber is None:
                 config = load_config(self.config_path)
-                model_name = str(config.get("stt", {}).get("model") or "small")
-                self._audio_transcriber = BridgeAudioTranscriber(model_name=model_name)
+                self._audio_transcriber = self._make_audio_transcriber(config)
 
         result = self._audio_transcriber.transcribe(
             payload.get("audio_base64"),
@@ -1775,6 +1818,9 @@ def make_handler(bridge):
                         {
                             "ok": True,
                             "name": "Trinity Bridge",
+                            "transcription_stream": transcription_stream_capability(
+                                bridge.home, load_config(bridge.config_path)
+                            ),
                             "time": time.time(),
                             "history": bridge.history_path_for(user).exists(),
                             "user": user or None,
@@ -1963,6 +2009,12 @@ def make_handler(bridge):
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
+                elif parsed.path == "/lecture/context":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError("Folienkontext benötigt Zugriff auf die lokale Trinity-Instanz.")
+                    _json_response(self, 200, LectureContextStore(bridge.home).update(
+                        _read_json(self), profile=bridge.profile, session_id=bridge.sessions.current().id
+                    ))
                 elif parsed.path == "/workbench/run":
                     config = load_config(bridge.config_path)
                     if not config.get("workbench", {}).get("enabled", True):
@@ -2084,7 +2136,11 @@ def make_handler(bridge):
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/speaker":
-                    _json_response(self, 200, bridge.set_speaker(_read_json(self)))
+                    _json_response(
+                        self,
+                        200,
+                        bridge.set_speaker(_read_json(self), self.client_address[0]),
+                    )
                 elif parsed.path == "/ambient/device":
                     _json_response(self, 200, bridge.ambient.report_device(_read_json(self)))
                 elif parsed.path == "/runtime":
@@ -2136,6 +2192,7 @@ def make_handler(bridge):
 
 def run_bridge(home, host=DEFAULT_HOST, port=DEFAULT_PORT, token="", auth_enabled=False):
     bridge = TrinityBridge(home, token=token, auth_enabled=auth_enabled)
+    threading.Thread(target=bridge.prepare_audio_transcriber, daemon=True).start()
     server = ThreadingHTTPServer((host, int(port)), make_handler(bridge))
     print(f"Trinity Bridge läuft auf http://{host}:{port}")
     if host in {"0.0.0.0", "::"}:

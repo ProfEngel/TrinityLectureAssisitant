@@ -16,6 +16,7 @@ from .config import VoiceConfig, load_voice_config
 from .conversation import DirectLLMConversationBackend, TrinityConversationBackend
 from .conversation.trinity_backend import TrinityConversationHTTPServer
 from .local_realtime_client import LocalRealtimeAudioClient
+from .stt_http_server import CudaParakeetTranscriber, ParakeetSTTHTTPServer
 from .transport import AuthenticatedWebSocketProxy
 
 
@@ -49,6 +50,7 @@ class VoiceRuntime:
         self.backend_server: TrinityConversationHTTPServer | None = None
         self.proxy: AuthenticatedWebSocketProxy | None = None
         self.local_audio_client: LocalRealtimeAudioClient | None = None
+        self.stt_server: ParakeetSTTHTTPServer | None = None
         self.process: subprocess.Popen | None = None
 
     def start(self) -> None:
@@ -56,6 +58,16 @@ class VoiceRuntime:
         if errors:
             raise ValueError("\n".join(errors))
         profile = self.config.profile
+        if profile.runtime_role == "client":
+            # A desktop client must never initialize a second local Brain or
+            # conversation backend. The Linux server owns all conversation state.
+            self.local_audio_client = LocalRealtimeAudioClient(
+                self.config,
+                endpoint=self.config.remote_voice_url,
+                access_token=self.config.remote_voice_token or self.config.access_token,
+            )
+            self.local_audio_client.start()
+            return
         if profile.conversation_backend == "trinity":
             backend = TrinityConversationBackend(self.config.home)
         elif profile.conversation_backend == "direct":
@@ -76,15 +88,6 @@ class VoiceRuntime:
             )
             self.backend_server.start()
 
-        if profile.runtime_role == "client":
-            self.local_audio_client = LocalRealtimeAudioClient(
-                self.config,
-                endpoint=self.config.remote_voice_url,
-                access_token=self.config.remote_voice_token or self.config.access_token,
-            )
-            self.local_audio_client.start()
-            return
-
         command = build_speech_to_speech_command(self.config)
         env = os.environ.copy()
         env["TOKENIZERS_PARALLELISM"] = "false"
@@ -96,17 +99,27 @@ class VoiceRuntime:
                 profile.public_port,
                 profile.internal_port,
                 [self.config.access_token, self.config.companion_access_token],
+                self.config.home / "core" / "config.json",
             )
             self.proxy.start()
+            if profile.stt_service_enabled:
+                self.stt_server = ParakeetSTTHTTPServer(
+                    profile.stt_bind_host,
+                    profile.stt_public_port,
+                    self.config.access_token or self.config.companion_access_token,
+                    CudaParakeetTranscriber(profile.stt_model, profile.device),
+                )
+                self.stt_server.start()
             if profile.local_audio:
                 self.local_audio_client = LocalRealtimeAudioClient(self.config)
                 self.local_audio_client.start()
 
     def wait(self) -> int:
-        if not self.process and self.local_audio_client:
-            while self.local_audio_client.is_alive and self.local_audio_client.failure is None:
+        client = self.local_audio_client
+        if not self.process and client:
+            while client.is_alive and client.failure is None:
                 time.sleep(0.25)
-            return 1 if self.local_audio_client.failure else 0
+            return 1 if client.failure else 0
         if not self.process:
             return 0
         while self.process is not None and self.process.poll() is None:
@@ -129,6 +142,9 @@ class VoiceRuntime:
         if self.local_audio_client:
             self.local_audio_client.stop()
             self.local_audio_client = None
+        if self.stt_server:
+            self.stt_server.stop()
+            self.stt_server = None
         if self.proxy:
             self.proxy.stop()
             self.proxy = None
@@ -161,9 +177,17 @@ def serve(home: str | Path, profile_name: str | None = None) -> int:
     try:
         runtime.start()
         print(f"Trinity Eve Voice läuft mit Profil {config.profile.name}.")
-        if config.profile.mode == "realtime":
+        if config.profile.runtime_role == "client":
+            print(f"Realtime-Client verbunden: {config.remote_voice_url.split('?', 1)[0]}")
+        elif config.profile.mode == "realtime":
             print(
                 f"Realtime: ws://{config.profile.bind_host}:{config.profile.public_port}/v1/realtime"
+            )
+        if config.profile.stt_service_enabled:
+            print(
+                "Parakeet STT: "
+                f"http://{config.profile.stt_bind_host}:"
+                f"{config.profile.stt_public_port}/v1/audio/transcriptions"
             )
         return 0 if stop_requested else runtime.wait()
     finally:

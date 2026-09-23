@@ -1,6 +1,19 @@
 import json
+import pytest
 
-from voice.conversation.trinity_backend import TrinityConversationBackend
+from voice.conversation.trinity_backend import TrinityConversationBackend, _has_wakeword
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("Mensch Eve, erklär das mal kurz für die Studis.", True),
+    ("EVE! Was steht hier?", True),
+    ("Hallo Yves, erkläre die Tabelle.", True),
+    ("Das Event ist relevant.", False),
+    ("eventuell später", False),
+    ("Trinity, erkläre das.", False),
+])
+def test_short_personal_wakewords_match_whole_words(text, expected):
+    assert _has_wakeword(text, ["eve", "yves"]) is expected
 
 
 class FakeBrain:

@@ -131,7 +131,8 @@ class SettingsWindow(QMainWindow):
         voice["reference_audio"] = self.voice_reference_edit.text().strip()
         voice["access_token"] = self.voice_token_edit.text().strip()
         voice["remote_voice_url"] = self.voice_remote_url_edit.text().strip()
-        voice["remote_voice_token"] = self.voice_token_edit.text().strip()
+        voice["remote_stt_url"] = self.voice_remote_stt_url_edit.text().strip()
+        voice["remote_voice_token"] = self.voice_remote_token_edit.text().strip()
         voice["backend_host"] = self.voice_backend_host_edit.text().strip() or "127.0.0.1"
         voice["backend_port"] = self.voice_backend_port_spin.value()
         voice["backend_token"] = self.voice_backend_token_edit.text().strip()
@@ -2651,6 +2652,12 @@ class SettingsWindow(QMainWindow):
             "Sessions, Memory, RAG und Agenten zurück durch diese Windows-Instanz.",
         ),
         (
+            "Dieser Mac als Client des Linux-Servers",
+            "trinity-mac-client",
+            "Mikrofon und Lautsprecher bleiben auf diesem Mac. STT, Trinity, Memory, "
+            "Agenten und TTS laufen ausschließlich auf dem verbundenen Linux-Server.",
+        ),
+        (
             "Ubuntu mit NVIDIA als Eve-Sprachserver",
             "eve-linux-gpu-server",
             "Ubuntu führt Parakeet-STT und Qwen3-TTS auf CUDA aus. Der erkannte Text wird "
@@ -2683,7 +2690,10 @@ class SettingsWindow(QMainWindow):
         )
         self.voice_profile_description.setText(description)
         realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server"}
-        remote_client = profile_name == "eve-windows-remote"
+        remote_client = (
+            profile_name in {"eve-windows-remote", "trinity-mac-client"}
+            or self.config.get("client", {}).get("enabled", False)
+        )
         remote_server = profile_name == "eve-linux-gpu-server"
         for field in (
             self.voice_bind_host_edit,
@@ -2695,8 +2705,10 @@ class SettingsWindow(QMainWindow):
             if label is not None:
                 label.setVisible(realtime)
         for field, visible in (
-            (self.voice_token_edit, realtime or remote_client),
+            (self.voice_token_edit, realtime),
+            (self.voice_remote_token_edit, remote_client),
             (self.voice_remote_url_edit, remote_client),
+            (self.voice_remote_stt_url_edit, remote_client),
             (self.voice_backend_host_edit, remote_client),
             (self.voice_backend_port_spin, remote_client),
             (self.voice_backend_token_edit, remote_client),
@@ -2800,9 +2812,20 @@ class SettingsWindow(QMainWindow):
         self.voice_token_edit.setPlaceholderText("Erforderlich bei 0.0.0.0 / Tailscale")
         voice_form.addRow("Realtime Token:", self.voice_token_edit)
 
+        self.voice_remote_token_edit = QLineEdit(str(voice_conf.get("remote_voice_token") or ""))
+        self.voice_remote_token_edit.setEchoMode(QLineEdit.Password)
+        self.voice_remote_token_edit.setPlaceholderText("Token des Linux-Sprachservers")
+        voice_form.addRow("Linux Voice Token:", self.voice_remote_token_edit)
+
         self.voice_remote_url_edit = QLineEdit(str(voice_conf.get("remote_voice_url") or ""))
         self.voice_remote_url_edit.setPlaceholderText("ws://UBUNTU-TAILSCALE-IP:8766/v1/realtime")
         voice_form.addRow("Ubuntu Voice URL:", self.voice_remote_url_edit)
+
+        self.voice_remote_stt_url_edit = QLineEdit(str(voice_conf.get("remote_stt_url") or ""))
+        self.voice_remote_stt_url_edit.setPlaceholderText(
+            "Optional: http://UBUNTU-TAILSCALE-IP:8767/v1/audio/transcriptions"
+        )
+        voice_form.addRow("Ubuntu STT URL:", self.voice_remote_stt_url_edit)
 
         self.voice_backend_host_edit = QLineEdit(str(voice_conf.get("backend_host") or "127.0.0.1"))
         self.voice_backend_host_edit.setPlaceholderText("0.0.0.0")
@@ -2830,7 +2853,10 @@ class SettingsWindow(QMainWindow):
         self.voice_remote_hint = QLabel(
             "Ubuntu behält die NVIDIA-GPU. Windows bleibt die kanonische Trinity mit "
             "Sessions, Memory und Agenten. Beide Rechner dürfen diese Ports nur im "
-            "privaten LAN oder Tailnet freigeben, niemals am öffentlichen Router."
+            "privaten LAN oder Tailnet freigeben, niemals am öffentlichen Router. "
+            "Port 8766 ist Eve-TTS/Realtime; Port 8767 ist ausschließlich Parakeet-STT "
+            "für G2 und Companion. Bleibt die STT-URL leer, wird sie automatisch aus "
+            "der Voice-URL abgeleitet."
         )
         self.voice_remote_hint.setWordWrap(True)
         self.voice_remote_hint.setStyleSheet("color: #d29922; font-size: 11px;")

@@ -18,8 +18,15 @@ APPROVAL_ACTIONS = {
     "activate_skill",
     "share_skill",
     "network_access",
+    "desktop_open_application",
+    "desktop_close_application",
+    "desktop_type_text",
+    "desktop_save_document",
+    "desktop_format_document",
+    "desktop_replace_selection",
+    "desktop_click",
 }
-DENY_ACTIONS = {"install_package", "system_command"}
+DENY_ACTIONS = {"install_package", "system_command", "desktop_enter_secret"}
 
 
 @dataclass(frozen=True)

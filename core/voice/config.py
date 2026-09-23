@@ -28,8 +28,11 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "internal_port": 18766,
         "local_audio": True,
         "num_pipelines": 2,
-        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
-        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        # 4-bit models to reduce RAM (~78% → ~50%). Rollback: revert to:
+        #   stt_model: mlx-community/parakeet-tdt-0.6b-v3
+        #   tts_model: mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit
+        "stt_model": "animaslabs/parakeet-tdt-0.6b-v3-mlx-4bit",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
         "tts_backend": "ggml",
     },
     "eve-mac-server": {
@@ -41,8 +44,9 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "internal_port": 18766,
         "local_audio": False,
         "num_pipelines": 2,
-        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
-        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        # 4-bit models to reduce RAM. Rollback: revert to mlx-community/parakeet-tdt-0.6b-v3 & ...-6bit
+        "stt_model": "animaslabs/parakeet-tdt-0.6b-v3-mlx-4bit",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
         "tts_backend": "ggml",
     },
     "eve-windows-server": {
@@ -80,10 +84,13 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": False,
-        "num_pipelines": 2,
+        "num_pipelines": 1,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
+        "stt_service_enabled": True,
+        "stt_bind_host": "0.0.0.0",
+        "stt_public_port": 8767,
     },
     "eve-windows-remote": {
         "mode": "realtime",
@@ -99,6 +106,20 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch",
     },
+    "trinity-mac-client": {
+        "mode": "realtime",
+        "device": "cpu",
+        "runtime_role": "client",
+        "conversation_backend": "remote",
+        "bind_host": "127.0.0.1",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "local_audio": True,
+        "num_pipelines": 1,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "tts_backend": "ggml",
+    },
     "eve-direct-ornith": {
         "mode": "local",
         "device": "mps",
@@ -107,8 +128,9 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": False,
-        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
-        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        # 4-bit models to reduce RAM. Rollback: revert to mlx-community/parakeet-tdt-0.6b-v3 & ...-6bit
+        "stt_model": "animaslabs/parakeet-tdt-0.6b-v3-mlx-4bit",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
         "tts_backend": "ggml",
     },
     "eve-trinity": {
@@ -120,8 +142,9 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "internal_port": 18766,
         "local_audio": True,
         "num_pipelines": 2,
-        "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
-        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
+        # 4-bit models to reduce RAM. Rollback: revert to mlx-community/parakeet-tdt-0.6b-v3 & ...-6bit
+        "stt_model": "animaslabs/parakeet-tdt-0.6b-v3-mlx-4bit",
+        "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
         "tts_backend": "ggml",
     },
 }
@@ -156,6 +179,9 @@ class VoiceProfile:
     stt_model: str
     tts_model: str
     tts_backend: str
+    stt_service_enabled: bool
+    stt_bind_host: str
+    stt_public_port: int
 
 
 @dataclass
@@ -174,6 +200,7 @@ class VoiceConfig:
     remote_core_api_key: str = ""
     remote_voice_url: str = ""
     remote_voice_token: str = ""
+    remote_stt_url: str = ""
     stt_model: str = "mlx-community/parakeet-tdt-0.6b-v3"
     tts_model: str = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit"
     reference_audio: Path = field(default_factory=Path)
@@ -219,6 +246,9 @@ class VoiceConfig:
             stt_model=str(raw.get("stt_model") or self.stt_model),
             tts_model=str(raw.get("tts_model") or self.tts_model),
             tts_backend=str(raw.get("tts_backend") or "ggml"),
+            stt_service_enabled=bool(raw.get("stt_service_enabled", False)),
+            stt_bind_host=str(raw.get("stt_bind_host") or "127.0.0.1"),
+            stt_public_port=int(raw.get("stt_public_port") or 8767),
         )
 
     def validate(self) -> list[str]:
@@ -245,9 +275,11 @@ class VoiceConfig:
             errors.append("Das Windows-Remoteprofil braucht voice.remote_voice_url.")
         if profile.runtime_role == "client" and not (self.remote_voice_token or self.access_token):
             errors.append("Das Windows-Remoteprofil braucht einen Voice-Token.")
-        if profile.conversation_backend == "remote" and not self.remote_core_base_url.strip():
+        if profile.stt_service_enabled and not (self.access_token or self.companion_access_token):
+            errors.append("Der externe Parakeet-STT-Dienst braucht einen Voice-Token.")
+        if profile.runtime_role != "client" and profile.conversation_backend == "remote" and not self.remote_core_base_url.strip():
             errors.append("Der Ubuntu-Voice-Server braucht voice.remote_core_base_url.")
-        if profile.conversation_backend == "remote" and not self.remote_core_api_key.strip():
+        if profile.runtime_role != "client" and profile.conversation_backend == "remote" and not self.remote_core_api_key.strip():
             errors.append("Der Ubuntu-Voice-Server braucht voice.remote_core_api_key.")
         if (
             profile.conversation_backend == "trinity"
@@ -284,6 +316,7 @@ def default_voice_config() -> dict[str, Any]:
         "remote_core_api_key": "",
         "remote_voice_url": "",
         "remote_voice_token": "",
+        "remote_stt_url": "",
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "reference_audio": "",
@@ -390,6 +423,11 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
         remote_voice_token=str(
             os.environ.get("TRINITY_REMOTE_VOICE_TOKEN")
             or raw.get("remote_voice_token")
+            or ""
+        ),
+        remote_stt_url=str(
+            os.environ.get("TRINITY_REMOTE_STT_URL")
+            or raw.get("remote_stt_url")
             or ""
         ),
         stt_model=str(raw.get("stt_model") or "mlx-community/parakeet-tdt-0.6b-v3"),

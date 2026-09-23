@@ -28,7 +28,9 @@ if ($RemoteGPUClient) {
     }
     Write-Host "Windows remote-GPU mode prepared; no CUDA voice packages were installed in the VM."
     Write-Host "Select 'Windows-VM mit Eve auf einem Ubuntu-GPU-Host' in Trinity Settings."
-    Write-Host "Use ws://UBUNTU-TAILSCALE-IP:8766/v1/realtime and a separate Core token."
+    Write-Host "Use ws://UBUNTU-TAILSCALE-IP:8766/v1/realtime for Eve audio."
+    Write-Host "G2 STT uses http://UBUNTU-TAILSCALE-IP:8767/v1/audio/transcriptions."
+    Write-Host "Use the same Voice token for both Ubuntu endpoints and a separate Core token."
     exit 0
 }
 

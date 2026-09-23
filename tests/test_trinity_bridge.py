@@ -87,11 +87,13 @@ def test_bridge_speaker_claim_is_persisted_and_exposed_in_instance_state(tmp_pat
             "device_id": "companion:ipad-lecture",
             "label": "iPad Vorlesung",
             "kind": "companion",
-        }
+        },
+        client_ip="100.90.5.25",
     )
 
     assert claimed["ok"] is True
     assert bridge.get_speaker()["device_id"] == "companion:ipad-lecture"
+    assert claimed["client_ip"] == "100.90.5.25"
     assert bridge.instance_state()["speaker"]["label"] == "iPad Vorlesung"
 
     released = bridge.set_speaker(
@@ -188,7 +190,7 @@ def test_bridge_dashboard_exposes_agent_metadata(tmp_path):
     assert "allowed_tools" in trinity
     assert "rights" in trinity
     assert result["canvas"]["url"] == "http://127.0.0.1:8787"
-    assert result["canvas"]["state"] == "not_installed"
+    assert result["canvas"]["state"] == "disabled"
     assert "message" in result["canvas"]
 
 

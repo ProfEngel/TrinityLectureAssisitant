@@ -92,6 +92,23 @@ def default_config(platform_name=None):
             "private_device": "Standard",
             "public_device": "Standard",
         },
+        "desktop_control": {
+            "enabled": False,
+            "dry_run": True,
+            "require_confirmation": True,
+            "pause_on_user_input": True,
+            "allow_visible_ui_fallback": False,
+            "allowed_applications": [
+                "Microsoft Word",
+                "Microsoft Excel",
+                "OpenCode",
+                "ChatGPT",
+                "Mail",
+                "Finder",
+                "Google Chrome",
+            ],
+            "allowed_paths": [],
+        },
         "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
         "codex": {
             "enabled": False,
@@ -131,7 +148,7 @@ def default_config(platform_name=None):
             "default_workflow": "Flux2_Klein_T2I_API.json",
         },
         "canvas": {
-            "enabled": True,
+            "enabled": False,
             "install_dir": "",
             "port": 8787,
             "host": "127.0.0.1",

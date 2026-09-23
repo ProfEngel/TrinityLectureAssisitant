@@ -70,6 +70,8 @@ def _has_wakeword(text: str, variants: Iterable[str]) -> bool:
     for raw_candidate in variants:
         candidate = _normalize_wakeword_text(raw_candidate).replace(" ", "")
         if len(candidate) < 5:
+            if len(candidate) >= 2 and candidate in tokens:
+                return True
             continue
         forms = {candidate}
         if candidate.endswith("y"):

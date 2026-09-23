@@ -13,6 +13,7 @@ from brainvault_agents import brainvault_root_from_config
 from memory_store import MemoryStore
 from skill_registry import SkillRegistry
 from task_orchestrator import TaskOrchestrator
+from lecture_context import add_current_slide
 
 
 class TrinityBrain:
@@ -268,6 +269,7 @@ class TrinityBrain:
         }
         if getattr(self, "enable_thinking", None) is not None:
             data["enable_thinking"] = bool(self.enable_thinking)
+            data["chat_template_kwargs"] = {"enable_thinking": bool(self.enable_thinking)}
         try:
             resp = requests.post(
                 self.url,
@@ -435,6 +437,9 @@ class TrinityBrain:
         soul_prompt = self.get_soul()
         user_prompt = self.get_user()
         attachment_content = prepare_attachment_content(user_query, attachments or [])
+        slide_image = False
+        if getattr(self, "config_path", None):
+            slide_image = add_current_slide(attachment_content, os.path.dirname(os.path.dirname(self.config_path)))
         primary_image_path = attachment_content["primary_image_path"]
         if primary_image_path:
             self.last_media_path = primary_image_path
@@ -535,7 +540,7 @@ class TrinityBrain:
                     "attachments": attachments or [],
                     "task_decision": task_decision,
                 }
-                if primary_image_path and not self._skill_allowed_for_image_upload(skill, router_text):
+                if (primary_image_path or slide_image) and not self._skill_allowed_for_image_upload(skill, router_text):
                     print(
                         f"🖼️ Überspringe {getattr(skill, '__name__', 'Skill')} "
                         "für normale Bildanalyse."
@@ -577,6 +582,7 @@ class TrinityBrain:
             f"{soul_prompt}\n\n"
             f"--- INFORMATIONEN ZUM NUTZER UND ZIELPUBLIKUM ---\n"
             f"{user_prompt}\n\n"
+            f"--- TATSÄCHLICHER FOLIENZUGRIFF ---\n{attachment_content.get('lecture_status', 'Kein automatisch übertragener Folienkontext.')}\n\n"
             f"{search_context}"
             f"{memory_context}\n\n"
             f"--- AKTUELLES VORLESUNGS-TRANSKRIPT ---\n"
@@ -602,6 +608,8 @@ class TrinityBrain:
         }
         if getattr(self, "enable_thinking", None) is not None:
             data["enable_thinking"] = bool(self.enable_thinking)
+            # LMStudio / Qwen3: benötigt zusätzlich chat_template_kwargs
+            data["chat_template_kwargs"] = {"enable_thinking": bool(self.enable_thinking)}
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
@@ -611,12 +619,13 @@ class TrinityBrain:
                 json=data,
                 timeout=getattr(self, "request_timeout_seconds", 90),
             )
-            if response.status_code >= 400 and primary_image_path:
+            if response.status_code >= 400 and (primary_image_path or slide_image):
                 print(
                     "⚠️ Das aktive Modell hat die Bildeingabe abgelehnt. "
                     "Wiederhole die Anfrage mit Dateikontext ohne Bilddaten."
                 )
                 data["messages"][-1]["content"] = attachment_content["fallback_text"]
+                data["messages"][0]["content"] += "\nACHTUNG: Der Bildrequest wurde abgelehnt. In dieser Wiederholung ist KEIN Bild verfügbar. Nutze nur Text und benenne diese Einschränkung."
                 response = requests.post(
                     self.url,
                     headers=headers,
@@ -662,7 +671,11 @@ class TrinityBrain:
                     str(e),
                     succeeded=False,
                 )
-            return "Entschuldigung, ich habe gerade den Faden verloren. Bitte wiederhole das.", False
+            if isinstance(e, requests.exceptions.Timeout):
+                return "Das eingestellte Modell hat nicht rechtzeitig geantwortet. Ich konnte die Anfrage nicht auswerten.", False
+            if isinstance(e, requests.exceptions.ConnectionError):
+                return "Ich erreiche das eingestellte Modell gerade nicht. Bitte prüfe die Modellverbindung.", False
+            return "Die Modellanfrage ist fehlgeschlagen. Ich konnte den Inhalt nicht zuverlässig auswerten.", False
 
 if __name__ == "__main__":
     # Kalttest-Skript

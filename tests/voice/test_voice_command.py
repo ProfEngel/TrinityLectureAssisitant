@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from voice.command_builder import build_speech_to_speech_command
 from voice.config import default_voice_config, load_voice_config
@@ -20,13 +21,17 @@ def test_command_uses_parakeet_trinity_and_eve_without_shell(tmp_path):
     config = configured_voice(tmp_path)
     command = build_speech_to_speech_command(config)
 
-    assert command[:3] == [sys.executable, "-m", "speech_to_speech.s2s_pipeline"]
+    assert command[:2] == [
+        sys.executable,
+        str(Path(__file__).resolve().parents[2] / "core" / "voice" / "upstream_entrypoint.py"),
+    ]
     assert command[command.index("--stt") + 1] == "parakeet-tdt"
     assert command[command.index("--llm_backend") + 1] == "chat-completions"
     assert command[command.index("--tts") + 1] == "qwen3"
     assert command[command.index("--parakeet_tdt_language") + 1] == "de"
     assert command[command.index("--qwen3_tts_language") + 1] == "German"
     assert str(config.reference_audio) in command
+    assert command[command.index("--qwen3_tts_mlx_quantization") + 1] == "4bit"
 
 
 def test_realtime_upstream_is_forced_to_loopback(tmp_path):
@@ -45,6 +50,7 @@ def test_windows_profile_uses_cuda_compatible_models(tmp_path):
     assert command[command.index("--parakeet_tdt_model_name") + 1] == "nvidia/parakeet-tdt-0.6b-v3"
     assert command[command.index("--qwen3_tts_model_name") + 1] == "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
     assert command[command.index("--qwen3_tts_backend") + 1] == "torch"
+    assert "--qwen3_tts_mlx_quantization" not in command
 
 
 def test_ubuntu_server_uses_remote_windows_trinity_core(tmp_path):

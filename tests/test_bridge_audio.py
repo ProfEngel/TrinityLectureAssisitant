@@ -122,6 +122,134 @@ def test_bridge_audio_drops_low_confidence_no_speech_segments():
     assert transcriber.transcribe(encoded)["text"] == ""
 
 
+def test_bridge_audio_uses_parakeet_without_allocating_a_conversation_pipeline():
+    class Result:
+        text = " Trinity, bist du da? "
+
+    class FakeParakeet:
+        def generate(self, audio):
+            assert len(audio) == 1600
+            return Result()
+
+    transcriber = BridgeAudioTranscriber(backend="parakeet")
+    transcriber._model = FakeParakeet()
+    transcriber._transcribe_parakeet = lambda audio: transcriber._model.generate(audio)
+    encoded = base64.b64encode(np.full(1600, 1200, dtype="<i2").tobytes()).decode("ascii")
+
+    result = transcriber.transcribe(encoded)
+
+    assert result["text"] == "Trinity, bist du da?"
+    assert result["engine"] == "parakeet"
+    assert result["language"] == "de"
+
+
+def test_bridge_audio_uses_remote_eve_transcription_with_voice_token():
+    received = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, *_args):
+            return json.dumps({
+                "ok": True,
+                "text": "Trinity, bist du da?",
+                "language": "de",
+            }).encode("utf-8")
+
+    def requester(request, timeout=None):
+        received.append((request, timeout))
+        return FakeResponse()
+
+    transcriber = BridgeAudioTranscriber(
+        backend="eve-remote",
+        remote_voice_url="ws://ubuntu.tailnet:8766/v1/realtime",
+        remote_voice_token="secret token",
+        remote_requester=requester,
+    )
+    encoded = base64.b64encode(np.full(3200, 1200, dtype="<i2").tobytes()).decode("ascii")
+
+    result = transcriber.transcribe(encoded)
+
+    assert result["text"] == "Trinity, bist du da?"
+    assert result["engine"] == "eve-remote"
+    request, timeout = received[0]
+    assert request.full_url == "http://ubuntu.tailnet:8767/v1/audio/transcriptions"
+    assert request.headers["Authorization"] == "Bearer secret token"
+    assert json.loads(request.data)["sample_rate"] == 16_000
+    assert timeout == 12
+
+
+def test_bridge_audio_explicit_remote_stt_url_overrides_derived_url():
+    transcriber = BridgeAudioTranscriber(
+        backend="eve-remote",
+        remote_voice_url="wss://voice.example.test:8766/v1/realtime",
+        remote_stt_url="https://stt.example.test/custom",
+    )
+
+    assert transcriber.remote_stt_url == "https://stt.example.test/custom"
+    assert BridgeAudioTranscriber.derive_remote_stt_url(
+        transcriber.remote_voice_url
+    ) == "https://voice.example.test:8767/v1/audio/transcriptions"
+
+
+def test_bridge_audio_remote_failure_falls_back_to_local_whisper():
+    class Segment:
+        text = " Lokales Fallback "
+        no_speech_prob = 0.0
+        avg_logprob = 0.0
+
+    class Info:
+        language = "de"
+        language_probability = 0.95
+
+    class FakeWhisper:
+        def transcribe(self, _audio, **_kwargs):
+            return [Segment()], Info()
+
+    transcriber = BridgeAudioTranscriber(
+        backend="eve-remote",
+        remote_voice_url="ws://ubuntu.tailnet:8766/v1/realtime",
+    )
+    transcriber._transcribe_eve_remote = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        ConnectionError("Ubuntu nicht erreichbar")
+    )
+    transcriber._fallback_model = FakeWhisper()
+    encoded = base64.b64encode(np.full(1600, 1200, dtype="<i2").tobytes()).decode("ascii")
+
+    result = transcriber.transcribe(encoded)
+
+    assert result["text"] == "Lokales Fallback"
+    assert result["engine"] == "whisper-fallback"
+    assert result["remote_error"] == "Ubuntu nicht erreichbar"
+
+
+def test_windows_remote_voice_profile_selects_remote_companion_stt(tmp_path):
+    (tmp_path / "core").mkdir()
+    (tmp_path / "memory").mkdir()
+    bridge = TrinityBridge(tmp_path)
+    config = {
+        "stt": {"companion_backend": "auto"},
+        "voice": {
+            "engine": "eve",
+            "profile": "eve-windows-remote",
+            "remote_voice_url": "ws://ubuntu.tailnet:8766/v1/realtime",
+            "remote_stt_url": "http://ubuntu.tailnet:8767/v1/audio/transcriptions",
+            "remote_voice_token": "secret",
+        },
+    }
+
+    transcriber = bridge._make_audio_transcriber(config)
+
+    assert transcriber.backend == "eve-remote"
+    assert transcriber.remote_voice_url == "ws://ubuntu.tailnet:8766/v1/realtime"
+    assert transcriber.remote_stt_url == "http://ubuntu.tailnet:8767/v1/audio/transcriptions"
+    assert transcriber.remote_voice_token == "secret"
+
+
 def test_audio_transcription_http_endpoint_accepts_authenticated_g2_request(tmp_path):
     (tmp_path / "core").mkdir()
     (tmp_path / "memory").mkdir()

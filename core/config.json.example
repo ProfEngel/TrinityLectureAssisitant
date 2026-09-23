@@ -35,6 +35,9 @@
   },
   "stt": {
     "model": "small",
+    "companion_backend": "auto",
+    "companion_model": "mlx-community/parakeet-tdt-0.6b-v3",
+    "companion_remote_timeout_seconds": 12,
     "silence_threshold": 0.015,
     "chunk_duration": 2
   },
@@ -51,6 +54,7 @@
     "backend_port": 18767,
     "backend_token": "",
     "remote_voice_url": "",
+    "remote_stt_url": "",
     "remote_voice_token": "",
     "remote_core_base_url": "",
     "remote_core_api_key": "",
@@ -72,6 +76,7 @@
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": true,
+        "num_pipelines": 2,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml"
@@ -84,6 +89,7 @@
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": false,
+        "num_pipelines": 2,
         "stt_model": "mlx-community/parakeet-tdt-0.6b-v3",
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "tts_backend": "ggml"
@@ -96,6 +102,7 @@
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": false,
+        "num_pipelines": 2,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch"
@@ -108,6 +115,7 @@
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": true,
+        "num_pipelines": 2,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "tts_backend": "torch"
@@ -121,10 +129,13 @@
         "public_port": 8766,
         "internal_port": 18766,
         "local_audio": false,
-        "num_pipelines": 2,
+        "num_pipelines": 1,
         "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
         "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-        "tts_backend": "torch"
+        "tts_backend": "torch",
+        "stt_service_enabled": true,
+        "stt_bind_host": "0.0.0.0",
+        "stt_public_port": 8767
       },
       "eve-windows-remote": {
         "mode": "realtime",
@@ -150,6 +161,23 @@
     "terminal_cli_enabled": true,
     "mode": "chat",
     "windows_speech_enabled": false
+  },
+  "desktop_control": {
+    "enabled": false,
+    "dry_run": true,
+    "require_confirmation": true,
+    "pause_on_user_input": true,
+    "allow_visible_ui_fallback": false,
+    "allowed_applications": [
+      "Microsoft Word",
+      "Microsoft Excel",
+      "OpenCode",
+      "ChatGPT",
+      "Mail",
+      "Finder",
+      "Google Chrome"
+    ],
+    "allowed_paths": []
   },
   "comfyui": {
     "enabled": false,

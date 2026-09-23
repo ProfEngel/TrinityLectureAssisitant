@@ -65,7 +65,7 @@ def run_checks(config: VoiceConfig) -> list[Check]:
         Check("Parakeet-Modul", importlib.util.find_spec("speech_to_speech") is not None, config.stt_model, required=inference_required),
         Check("Eve-Referenzaudio", config.reference_audio.is_file(), str(config.reference_audio), required=inference_required),
     ]
-    if profile.conversation_backend == "trinity":
+    if profile.runtime_role != "client" and profile.conversation_backend == "trinity":
         checks.append(Check("Backend-Port", _port_available(config.backend_host, config.backend_port), f"{config.backend_host}:{config.backend_port}"))
     if profile.mode == "realtime" and profile.runtime_role != "client":
         checks.extend([
@@ -73,12 +73,27 @@ def run_checks(config: VoiceConfig) -> list[Check]:
             Check("Öffentlicher Voice-Port", _port_available(profile.bind_host, profile.public_port), f"{profile.bind_host}:{profile.public_port}"),
             Check("Realtime-Token", bool(config.access_token) or profile.bind_host in {"127.0.0.1", "localhost", "::1"}, "gesetzt" if config.access_token else "nur Loopback"),
         ])
+    if profile.stt_service_enabled:
+        checks.append(
+            Check(
+                "Parakeet-STT-Port",
+                _port_available(profile.stt_bind_host, profile.stt_public_port),
+                f"{profile.stt_bind_host}:{profile.stt_public_port}",
+            )
+        )
     if profile.runtime_role == "client":
         checks.append(Check("Ubuntu Voice URL", bool(config.remote_voice_url), config.remote_voice_url or "nicht gesetzt"))
+        checks.append(
+            Check(
+                "Ubuntu STT URL",
+                bool(config.remote_stt_url or config.remote_voice_url),
+                config.remote_stt_url or "wird automatisch aus der Voice URL abgeleitet",
+            )
+        )
     if profile.conversation_backend == "direct":
         ok, detail = _llm_health(config.direct_llm_base_url, config.direct_llm_api_key)
         checks.append(Check("Direktes Diagnose-LLM", ok, detail))
-    if profile.conversation_backend == "remote":
+    if profile.runtime_role != "client" and profile.conversation_backend == "remote":
         ok, detail = _llm_health(config.remote_core_base_url, config.remote_core_api_key)
         checks.append(Check("Windows Trinity Core", ok, detail))
     checks.append(Check("Tailscale", shutil.which("tailscale") is not None, shutil.which("tailscale") or "optional", required=False))

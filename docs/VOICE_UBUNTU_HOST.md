@@ -6,8 +6,11 @@ for sessions, memory, agents, tools, approvals and the user interface.
 
 ```mermaid
 flowchart LR
-  C["Windows, iPhone, iPad or G2 audio client"] <-->|"PCM and realtime events :8766"| U["Ubuntu Eve Voice"]
-  U -->|"transcribed text :18767"| W["Windows Trinity Core"]
+  G["Even G2"] -->|"Bridge PCM :8765"| W["Windows Trinity Core"]
+  W -->|"STT-only PCM :8767"| S["Ubuntu Parakeet STT"]
+  C["Windows, iPhone or iPad audio client"] <-->|"Eve realtime audio :8766"| U["Ubuntu Eve Voice"]
+  U -->|"transcribed text :18767"| W
+  S -->|"transcribed text"| W
   W -->|"OpenAI-compatible API"| L["Ubuntu LLM :1234"]
   W -->|"answer text"| U
   U -->|"Eve audio"| C
@@ -56,8 +59,9 @@ Validate and start it:
 ./venv/bin/trinity voice serve --profile eve-linux-gpu-server
 ```
 
-The Voice Gateway listens on port `8766`. Allow access only from the private
-LAN or Tailscale interface.
+The Eve Voice Gateway listens on port `8766`. The separate authenticated
+Parakeet endpoint for G2/bridge transcription listens on port `8767`. Allow
+both only from the private LAN or Tailscale interface.
 
 ## 3. Configure Windows
 
@@ -69,10 +73,12 @@ must match `VOICE_TOKEN`.
 
 1. `trinity voice doctor --profile eve-linux-gpu-server` succeeds on Ubuntu.
 2. `trinity voice doctor --profile eve-windows-remote` succeeds on Windows.
-3. A typed Windows chat request returns normally through Trinity Core.
-4. A Windows/iPhone/iPad microphone request reaches Ubuntu STT, appears in the
+3. From Windows, `http://UBUNTU_TAILSCALE_IP:8767/health` returns HTTP 200 when
+   called with `Authorization: Bearer VOICE_TOKEN`.
+4. A typed Windows chat request returns normally through Trinity Core.
+5. A Windows/iPhone/iPad microphone request reaches Ubuntu STT, appears in the
    same Trinity session, and returns as Eve audio on the selected speaker.
-5. Disabling Ubuntu leaves the Windows UI usable; selecting Legacy restores the
+6. Disabling Ubuntu leaves the Windows UI usable; selecting Legacy restores the
    previous Windows STT/TTS path.
 
 GPU passthrough is intentionally not used. It would usually remove the GPU from

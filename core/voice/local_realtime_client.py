@@ -7,12 +7,14 @@ import json
 import logging
 import math
 import os
+import platform
 import threading
 import time
 from collections import deque
 from queue import Empty, Full, Queue
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.request import Request, urlopen
 
 import numpy as np
 
@@ -64,9 +66,31 @@ class LocalRealtimeAudioClient:
         self._trinity_config_path = config.home / "core" / "config.json"
         self._speaker_check_at = 0.0
         self._desktop_output_enabled = True
+        self._remote_speaker_url = ""
+        self._remote_speaker_token = ""
+        self._remote_speaker_id = ""
+        self._remote_speaker_thread: threading.Thread | None = None
+        try:
+            app_config = json.loads(self._trinity_config_path.read_text(encoding="utf-8"))
+            client = app_config.get("client", {})
+            if client.get("enabled") and client.get("server_url"):
+                self._remote_speaker_url = str(client["server_url"]).rstrip("/") + "/speaker"
+                self._remote_speaker_token = str(client.get("token") or "")
+                profile = str(app_config.get("system", {}).get("profile") or "PRIVAT").lower()
+                self._remote_speaker_id = f"desktop:{profile}:{platform.node().strip() or 'Desktop'}"
+                self._desktop_output_enabled = False
+        except (OSError, ValueError, TypeError):
+            pass
         self._speech_queue_offset = 0
 
     def start(self, timeout: float = 20.0) -> None:
+        if self._remote_speaker_url:
+            self._remote_speaker_thread = threading.Thread(
+                target=self._poll_remote_speaker,
+                name="trinity-remote-speaker",
+                daemon=True,
+            )
+            self._remote_speaker_thread.start()
         self._thread = threading.Thread(
             target=self._run,
             name="trinity-local-eve-client",
@@ -89,6 +113,9 @@ class LocalRealtimeAudioClient:
                 pass
         if self._thread:
             self._thread.join(timeout=5)
+        if self._remote_speaker_thread:
+            self._remote_speaker_thread.join(timeout=3)
+        self._remote_speaker_thread = None
         self._thread = None
         self._connection = None
 
@@ -139,64 +166,89 @@ class LocalRealtimeAudioClient:
         }
 
     def _run(self) -> None:
-        sender: threading.Thread | None = None
         try:
             import sounddevice as sd
             from websockets.sync.client import connect
-
-            uri = self._connection_uri()
-            with connect(uri, open_timeout=12, max_size=None, proxy=None) as connection:
-                self._connection = connection
-                self._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
-                self._speech_queue_path.touch(exist_ok=True)
-                self._speech_queue_offset = self._speech_queue_path.stat().st_size
-                connection.send(json.dumps(self._session_update(), ensure_ascii=False))
-                sender = threading.Thread(
-                    target=self._send_loop,
-                    args=(connection,),
-                    name="trinity-local-eve-sender",
-                    daemon=True,
-                )
-                sender.start()
-                # Input and output devices commonly use different native sample
-                # rates on macOS (for example 44.1 kHz and 48 kHz). Separate
-                # PortAudio streams avoid the CoreAudio deadlock caused by a
-                # combined duplex stream while retaining full-duplex barge-in.
-                with sd.RawOutputStream(
-                    samplerate=SAMPLE_RATE,
-                    dtype="int16",
-                    channels=1,
-                    blocksize=BLOCK_SAMPLES,
-                    callback=self._output_callback,
-                ), sd.RawInputStream(
-                    samplerate=SAMPLE_RATE,
-                    dtype="int16",
-                    channels=1,
-                    blocksize=BLOCK_SAMPLES,
-                    callback=self._input_callback,
-                ):
-                    self._ready.set()
-                    self._write_ready_marker()
-                    print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
-                    while not self._stop.is_set():
-                        self._consume_speech_queue()
-                        try:
-                            raw = connection.recv(timeout=0.1)
-                        except TimeoutError:
-                            continue
-                        if raw is None:
-                            break
-                        self._handle_event(raw)
-                    if not self._stop.is_set():
-                        raise RuntimeError("Realtime-Verbindung wurde unerwartet geschlossen.")
         except BaseException as exc:
             self._error = exc
             self._ready.set()
-            if not self._stop.is_set():
-                LOGGER.exception("Lokaler Eve-Audioclient beendet")
-        finally:
-            self._stop.set()
-            self._remove_ready_marker()
+            LOGGER.exception("Lokaler Eve-Audioclient konnte nicht starten")
+            return
+
+        while not self._stop.is_set():
+            if self._remote_speaker_url and not self._desktop_speaker_selected():
+                # Another device owns the single GPU voice slot. Stay alive so
+                # the desktop can reclaim it without restarting Trinity.
+                self._ready.set()
+                self._stop.wait(0.25)
+                continue
+            sender: threading.Thread | None = None
+            session_stop = threading.Event()
+            try:
+                with connect(self._connection_uri(), open_timeout=12, max_size=None, proxy=None) as connection:
+                    self._connection = connection
+                    self._speech_queue_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._speech_queue_path.touch(exist_ok=True)
+                    self._speech_queue_offset = self._speech_queue_path.stat().st_size
+                    connection.send(json.dumps(self._session_update(), ensure_ascii=False))
+                    sender = threading.Thread(
+                        target=self._send_loop,
+                        args=(connection, session_stop),
+                        name="trinity-local-eve-sender",
+                        daemon=True,
+                    )
+                    sender.start()
+                    # Separate streams avoid a CoreAudio deadlock when input
+                    # and output devices have different native sample rates.
+                    with sd.RawOutputStream(
+                        samplerate=SAMPLE_RATE,
+                        dtype="int16",
+                        channels=1,
+                        blocksize=BLOCK_SAMPLES,
+                        callback=self._output_callback,
+                    ), sd.RawInputStream(
+                        samplerate=SAMPLE_RATE,
+                        dtype="int16",
+                        channels=1,
+                        blocksize=BLOCK_SAMPLES,
+                        callback=self._input_callback,
+                    ):
+                        self._ready.set()
+                        self._write_ready_marker()
+                        print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
+                        while not self._stop.is_set() and (
+                            not self._remote_speaker_url or self._desktop_speaker_selected()
+                        ):
+                            self._consume_speech_queue()
+                            try:
+                                raw = connection.recv(timeout=0.1)
+                            except TimeoutError:
+                                continue
+                            if raw is None:
+                                break
+                            self._handle_event(raw)
+                        if not self._stop.is_set() and (
+                            not self._remote_speaker_url or self._desktop_speaker_selected()
+                        ):
+                            raise RuntimeError("Realtime-Verbindung wurde unerwartet geschlossen.")
+            except BaseException as exc:
+                if not self._ready.is_set():
+                    self._error = exc
+                    self._ready.set()
+                    LOGGER.exception("Lokaler Eve-Audioclient beendet")
+                    return
+                if not self._remote_speaker_url:
+                    self._error = exc
+                    LOGGER.exception("Lokaler Eve-Audioclient beendet")
+                    return
+                LOGGER.warning("Eve-Voice-Verbindung wird erneut versucht: %s", exc)
+            finally:
+                session_stop.set()
+                self._connection = None
+                self._remove_ready_marker()
+                if sender:
+                    sender.join(timeout=2)
+            self._stop.wait(0.5)
             if sender:
                 sender.join(timeout=2)
 
@@ -207,6 +259,8 @@ class LocalRealtimeAudioClient:
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         if self.access_token:
             query["access_token"] = self.access_token
+        if self._remote_speaker_id:
+            query["device_id"] = self._remote_speaker_id
         return urlunsplit((parts.scheme, parts.netloc, path, urlencode(query), parts.fragment))
 
     def _write_ready_marker(self) -> None:
@@ -257,8 +311,8 @@ class LocalRealtimeAudioClient:
                 },
             })
 
-    def _send_loop(self, connection) -> None:
-        while not self._stop.is_set():
+    def _send_loop(self, connection, session_stop=None) -> None:
+        while not self._stop.is_set() and not (session_stop and session_stop.is_set()):
             try:
                 event = self._send_queue.get(timeout=0.1)
             except Empty:
@@ -291,6 +345,8 @@ class LocalRealtimeAudioClient:
             self._last_output_at = time.monotonic()
 
     def _desktop_speaker_selected(self) -> bool:
+        if self._remote_speaker_url:
+            return self._desktop_output_enabled
         now = time.monotonic()
         if now < self._speaker_check_at:
             return self._desktop_output_enabled
@@ -305,6 +361,23 @@ class LocalRealtimeAudioClient:
             # A transient write/read race must not unexpectedly mute the active desktop.
             pass
         return self._desktop_output_enabled
+
+    def _poll_remote_speaker(self) -> None:
+        headers = {"Accept": "application/json"}
+        if self._remote_speaker_token:
+            headers["Authorization"] = f"Bearer {self._remote_speaker_token}"
+        while not self._stop.is_set():
+            try:
+                request = Request(self._remote_speaker_url, headers=headers)
+                with urlopen(request, timeout=2) as response:
+                    speaker = json.load(response)
+                self._desktop_output_enabled = (
+                    bool(speaker.get("ok"))
+                    and str(speaker.get("device_id") or "") == self._remote_speaker_id
+                )
+            except Exception:
+                self._desktop_output_enabled = False
+            self._stop.wait(1.5)
 
     def _input_callback(self, indata, _frames, _time_info, status) -> None:
         if status:

@@ -122,6 +122,8 @@ def test_ubuntu_gpu_server_routes_back_to_windows_core(tmp_path):
     assert config.profile.runtime_role == "server"
     assert config.profile.conversation_backend == "remote"
     assert config.profile.device == "cuda"
+    assert config.profile.stt_service_enabled is True
+    assert config.profile.stt_public_port == 8767
     assert config.validate() == []
 
 
@@ -134,6 +136,7 @@ def test_windows_remote_profile_needs_no_local_voice_models(tmp_path):
                 "profile": "eve-windows-remote",
                 "access_token": "voice-secret",
                 "remote_voice_url": "ws://100.64.0.10:8766/v1/realtime",
+                "remote_stt_url": "http://100.64.0.10:8767/v1/audio/transcriptions",
                 "backend_host": "0.0.0.0",
                 "backend_token": "core-secret",
             }
@@ -142,6 +145,7 @@ def test_windows_remote_profile_needs_no_local_voice_models(tmp_path):
 
     assert config.profile.runtime_role == "client"
     assert config.profile.local_audio is True
+    assert config.remote_stt_url.endswith("/v1/audio/transcriptions")
     assert config.validate() == []
 
 

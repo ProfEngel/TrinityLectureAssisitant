@@ -13,7 +13,7 @@ def _entrypoint(config: VoiceConfig) -> list[str]:
     configured = config.speech_to_speech_executable.strip()
     if configured:
         return shlex.split(configured)
-    return [sys.executable, "-m", "speech_to_speech.s2s_pipeline"]
+    return [sys.executable, str(Path(__file__).resolve().with_name("upstream_entrypoint.py"))]
 
 
 def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
@@ -50,7 +50,7 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
         "--responses_api_stream", "true",
         "--responses_api_disable_thinking", "true",
         "--init_chat_prompt",
-        "Du bist die Sprachoberfläche von Trinity. Antworte ausschließlich auf Deutsch, knapp und natürlich.",
+        "Du bist Eve, die Sprachassistentin von Prof. Dr. Mathias Engel. Antworte ausschließlich auf Deutsch, knapp und natürlich.",
         "--stream_batch_sentences", "1",
         "--tts", "qwen3",
         "--qwen3_tts_model_name", profile.tts_model,
@@ -62,6 +62,11 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
         "--qwen3_tts_streaming_chunk_size", str(config.streaming_chunk_size),
         "--log_level", "info",
     ])
+    # Upstream defaults to 6bit even when an explicit 4bit model is selected.
+    if profile.device == "mps" and profile.tts_model.startswith("mlx-community/"):
+        quantization = profile.tts_model.rsplit("-", 1)[-1]
+        if quantization in {"bf16", "4bit", "6bit", "8bit"}:
+            command.extend(["--qwen3_tts_mlx_quantization", quantization])
     if profile.mode == "realtime":
         command.extend([
             "--ws_host", "127.0.0.1",
