@@ -125,6 +125,23 @@ def test_ubuntu_gpu_server_routes_back_to_windows_core(tmp_path):
     assert config.validate() == []
 
 
+def test_linux_trinity_server_uses_local_core_without_windows_vm(tmp_path):
+    audio = tmp_path / "Trinity.mp3"
+    audio.write_bytes(b"voice")
+    config = load_voice_config(
+        tmp_path,
+        {"voice": {"engine": "eve", "profile": "trinity-linux-server",
+                   "access_token": "voice-secret", "reference_audio": str(audio),
+                   "backend_token": "local-core-secret"}},
+    )
+
+    assert config.profile.runtime_role == "server"
+    assert config.profile.conversation_backend == "trinity"
+    assert config.profile.device == "cuda"
+    assert config.profile.local_audio is False
+    assert config.validate() == []
+
+
 def test_windows_remote_profile_needs_no_local_voice_models(tmp_path):
     config = load_voice_config(
         tmp_path,

@@ -639,9 +639,11 @@ def run_server_command(home, args):
     port = args.port or server.get("port") or 8765
     token = args.token if args.token is not None else server.get("token", "")
     auth_enabled = bool(getattr(args, "auth", False) or server.get("auth_enabled", False))
+    voice_profile = getattr(args, "voice_profile", None) or server.get("voice_profile")
+    extra = {"voice_profile": voice_profile} if voice_profile else {}
     if auth_enabled:
-        return run_server(home, host=host, port=port, token=token, auth_enabled=True)
-    return run_server(home, host=host, port=port, token=token)
+        return run_server(home, host=host, port=port, token=token, auth_enabled=True, **extra)
+    return run_server(home, host=host, port=port, token=token, **extra)
 
 
 def run_client_command(home, args):
@@ -1126,6 +1128,8 @@ def build_parser():
     server.add_argument("--port", type=int, default=None, help="HTTP-Port")
     server.add_argument("--token", default=None, help="Bearer-Token für die WebUI")
     server.add_argument("--auth", action="store_true", help="Passwort-Accounts und getrennte Nutzerbereiche aktivieren")
+    server.add_argument("--voice-profile", default=None,
+                        help="Sprachpipeline mitstarten, z.B. trinity-linux-server")
     client = subparsers.add_parser("client", help="Diese Desktop-Installation mit einem Trinity-Server verbinden")
     client.add_argument("client_action", choices=("login", "status", "logout", "add-user"))
     client.add_argument("--url", help="URL des Trinity-Servers, z.B. http://100.x.y.z:8765")
