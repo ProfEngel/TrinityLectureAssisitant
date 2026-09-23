@@ -7,6 +7,7 @@ import os
 import gc
 import shutil
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +28,63 @@ except ImportError:  # Direct execution with core/ on sys.path.
 
 
 PROTECTED_CONTENT = ("core/config.json", "core/Soul.md", "core/User.md", "RAG", "Vault")
+
+
+def reset_conversation_memory(home: str | Path) -> dict:
+    """Archive conversation data and start fresh without touching jobs or approvals.
+
+    Run while Trinity is stopped. The backup is deliberately mandatory and
+    stays outside the installation. It can be removed separately after review.
+    """
+
+    home = Path(home).expanduser().resolve()
+    config = load_config(home / "core" / "config.json")
+    runtime = TrinityPaths.from_config(home, config).runtime_root
+    memory = home / "memory"
+    recovery = _recovery_root() / (
+        f"conversation-{datetime.now().strftime('%Y-%m-%d_%H%M%S')}-{uuid.uuid4().hex[:8]}"
+    )
+    targets = [
+        memory / "trinity_memory.sqlite3",
+        memory / "trinity_memory.sqlite3-wal",
+        memory / "trinity_memory.sqlite3-shm",
+        memory / "classic_chat_history.jsonl",
+        memory / "session_transcripts",
+        memory / "summaries",
+        runtime / "workspaces",
+        runtime / "sessions",
+        runtime / "archive",
+    ]
+    targets.extend(sorted(memory.glob("raw_session_*.md")))
+    existing = [path for path in targets if path.exists()]
+    recovery.mkdir(parents=True, mode=0o700)
+    archived = []
+    for path in existing:
+        relative = (
+            Path("memory") / path.relative_to(memory)
+            if path.is_relative_to(memory)
+            else Path("runtime") / path.relative_to(runtime)
+        )
+        target = recovery / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if path.is_dir():
+            shutil.copytree(path, target)
+        else:
+            shutil.copy2(path, target)
+        archived.append(str(relative))
+    (recovery / "RESET_MANIFEST.json").write_text(
+        json.dumps({"home": str(home), "runtime_root": str(runtime),
+                    "archived": archived, "protected": list(PROTECTED_CONTENT)},
+                   ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    for path in existing:
+        _remove_target(path)
+    memory.mkdir(parents=True, exist_ok=True)
+    MemoryStore(memory / "trinity_memory.sqlite3")
+    TrinityWorkspaceManager(home, config).ensure_layout()
+    session = UnifiedSessionStore(home, config).current(create=True)
+    return {"backup": str(recovery), "archived": archived,
+            "active_session": session.id if session else ""}
 
 
 def _recovery_root() -> Path:

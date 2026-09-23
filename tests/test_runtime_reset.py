@@ -2,7 +2,7 @@ import json
 
 from configuration import save_config
 from memory_store import MemoryStore
-from runtime_reset import delete_session_summary, reset_operational_memory
+from runtime_reset import delete_session_summary, reset_conversation_memory, reset_operational_memory
 from workspace_manager import TrinityWorkspaceManager
 
 
@@ -94,3 +94,32 @@ def test_session_summary_can_be_deleted_without_deleting_session(tmp_path):
     assert manager.get_session(session.id).summary_status == "none"
     remaining = memory.list_memories()
     assert [item["kind"] for item in remaining] == ["episodic"]
+
+
+def test_conversation_reset_preserves_approvals_jobs_and_configuration(tmp_path, monkeypatch):
+    home, runtime, vault, _canvas, config = _installation(tmp_path)
+    monkeypatch.setenv("TRINITY_RECOVERY_ROOT", str(tmp_path / "Recovery"))
+    memory = home / "memory"
+    memory.mkdir()
+    for name in ("approvals.sqlite3", "jobs.sqlite3", ".approval_secret"):
+        (memory / name).write_text("keep", encoding="utf-8")
+    (memory / "raw_session_test.md").write_text("old transcript", encoding="utf-8")
+    (memory / "classic_chat_history.jsonl").write_text("old chat", encoding="utf-8")
+    store = MemoryStore(memory / "trinity_memory.sqlite3")
+    store.remember("old memory")
+    manager = TrinityWorkspaceManager(home, config)
+    manager.create_session("Old conversation")
+
+    result = reset_conversation_memory(home)
+
+    assert (memory / "raw_session_test.md").exists() is False
+    assert (memory / "classic_chat_history.jsonl").exists() is False
+    assert MemoryStore(memory / "trinity_memory.sqlite3").stats()["memories"] == 0
+    assert result["active_session"]
+    assert (tmp_path / "Recovery" / next((tmp_path / "Recovery").iterdir()).name /
+            "memory" / "raw_session_test.md").read_text() == "old transcript"
+    assert (tmp_path / "Recovery" / next((tmp_path / "Recovery").iterdir()).name /
+            "memory" / "trinity_memory.sqlite3").exists()
+    for name in ("approvals.sqlite3", "jobs.sqlite3", ".approval_secret"):
+        assert (memory / name).read_text(encoding="utf-8") == "keep"
+    assert (vault / "projekt.md").exists()
