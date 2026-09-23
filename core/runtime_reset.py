@@ -51,9 +51,8 @@ def reset_conversation_memory(home: str | Path) -> dict:
         memory / "classic_chat_history.jsonl",
         memory / "session_transcripts",
         memory / "summaries",
-        runtime / "workspaces",
+        runtime / "workspaces" / "_inbox" / "sessions",
         runtime / "sessions",
-        runtime / "archive",
     ]
     targets.extend(sorted(memory.glob("raw_session_*.md")))
     existing = [path for path in targets if path.exists()]

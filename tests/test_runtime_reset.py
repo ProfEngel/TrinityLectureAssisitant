@@ -109,6 +109,9 @@ def test_conversation_reset_preserves_approvals_jobs_and_configuration(tmp_path,
     store.remember("old memory")
     manager = TrinityWorkspaceManager(home, config)
     manager.create_session("Old conversation")
+    unrelated_workspace = runtime / "workspaces" / "_inbox" / "notes" / "keep.md"
+    unrelated_workspace.parent.mkdir(parents=True, exist_ok=True)
+    unrelated_workspace.write_text("keep", encoding="utf-8")
 
     result = reset_conversation_memory(home)
 
@@ -122,4 +125,5 @@ def test_conversation_reset_preserves_approvals_jobs_and_configuration(tmp_path,
             "memory" / "trinity_memory.sqlite3").exists()
     for name in ("approvals.sqlite3", "jobs.sqlite3", ".approval_secret"):
         assert (memory / name).read_text(encoding="utf-8") == "keep"
+    assert unrelated_workspace.read_text(encoding="utf-8") == "keep"
     assert (vault / "projekt.md").exists()
