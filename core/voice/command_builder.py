@@ -13,6 +13,8 @@ def _entrypoint(config: VoiceConfig) -> list[str]:
     configured = config.speech_to_speech_executable.strip()
     if configured:
         return shlex.split(configured)
+    if config.profile.conversation_backend == "remote":
+        return [sys.executable, str(config.home / "core" / "voice" / "resilient_s2s.py")]
     return [sys.executable, "-m", "speech_to_speech.s2s_pipeline"]
 
 

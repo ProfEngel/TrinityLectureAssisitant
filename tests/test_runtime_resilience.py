@@ -100,6 +100,81 @@ def test_windows_speech_can_be_enabled_explicitly(tmp_path, monkeypatch):
     assert ear.speech_input_enabled is True
 
 
+def test_windows_microphone_moves_between_legacy_and_remote_eve(tmp_path, monkeypatch):
+    runtime_voice = tmp_path / "TrinityRuntime" / "voice"
+    runtime_voice.mkdir(parents=True)
+    claim_path = runtime_voice / "desktop_eve_audio.claim"
+    released_path = runtime_voice / "desktop_legacy_audio.released"
+    claim_path.write_text("voice", encoding="utf-8")
+    monkeypatch.setattr(transcriber, "PROJECT_DIR", str(tmp_path))
+    monkeypatch.setattr(transcriber.sys, "platform", "win32")
+    monkeypatch.setenv("TRINITY_VOICE_DYNAMIC_MIC", "1")
+
+    stream = type("Stream", (), {"active": True})()
+    ear = object.__new__(transcriber.TrinityEar)
+    ear.audio_stream = stream
+    ear.mode = "office"
+    ear.speech_input_enabled = True
+    ear.uses_native_speech = False
+    transitions = []
+
+    def stop_audio():
+        transitions.append("legacy-stopped")
+        stream.active = False
+
+    def start_audio():
+        transitions.append("legacy-started")
+        stream.active = True
+
+    ear._stop_audio_input = stop_audio
+    ear._start_audio_input = start_audio
+
+    ear._sync_voice_microphone_ownership()
+    ear._sync_voice_microphone_ownership()
+
+    assert transitions == ["legacy-stopped"]
+    assert released_path.is_file()
+
+    claim_path.unlink()
+    ear._sync_voice_microphone_ownership()
+
+    assert transitions == ["legacy-stopped", "legacy-started"]
+    assert stream.active is True
+    assert not released_path.exists()
+
+
+def test_launcher_clears_stale_dynamic_voice_markers(tmp_path):
+    runtime_voice = tmp_path / "TrinityRuntime" / "voice"
+    runtime_voice.mkdir(parents=True)
+    marker_names = (
+        "desktop_eve_audio.ready",
+        "desktop_eve_audio.claim",
+        "desktop_legacy_audio.released",
+    )
+    for name in marker_names:
+        (runtime_voice / name).write_text("123", encoding="utf-8")
+
+    trinity_launcher._clear_dynamic_voice_markers(tmp_path)
+
+    assert all(not (runtime_voice / name).exists() for name in marker_names)
+
+
+def test_launcher_terminates_windows_venv_process_tree(monkeypatch):
+    process = type("Process", (), {"pid": 1234, "poll": lambda self: None})()
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return type("Result", (), {"returncode": 0})()
+
+    monkeypatch.setattr(trinity_launcher.sys, "platform", "win32")
+    monkeypatch.setattr(trinity_launcher.subprocess, "run", fake_run)
+
+    trinity_launcher._terminate_process_tree(process)
+
+    assert calls[0][0] == ["taskkill", "/PID", "1234", "/T", "/F"]
+
+
 def test_desktop_response_is_queued_for_running_eve_client(tmp_path, monkeypatch):
     runtime_voice = tmp_path / "TrinityRuntime" / "voice"
     runtime_voice.mkdir(parents=True)

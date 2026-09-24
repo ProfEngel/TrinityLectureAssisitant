@@ -8,7 +8,7 @@ for sessions, memory, agents, tools, approvals and the user interface.
 flowchart LR
   C["Windows, iPhone, iPad or G2 audio client"] <-->|"PCM and realtime events :8766"| U["Ubuntu Eve Voice"]
   U -->|"transcribed text :18767"| W["Windows Trinity Core"]
-  W -->|"OpenAI-compatible API"| L["Ubuntu LLM :1234"]
+  W -->|"OpenAI-compatible API"| L["Ubuntu LLM on a private port"]
   W -->|"answer text"| U
   U -->|"Eve audio"| C
 ```
@@ -59,6 +59,10 @@ Validate and start it:
 The Voice Gateway listens on port `8766`. Allow access only from the private
 LAN or Tailscale interface.
 
+On a shared GPU, an administrator may select an installed Qwen3-TTS GGUF with
+`TRINITY_QWENTTS_QUANT`. The value is deployment-specific and is not forced by
+Trinity. Keep it in the host's protected environment file, not in Git.
+
 ## 3. Configure Windows
 
 Follow [VOICE_WINDOWS.md](VOICE_WINDOWS.md) and use profile
@@ -74,6 +78,11 @@ must match `VOICE_TOKEN`.
    same Trinity session, and returns as Eve audio on the selected speaker.
 5. Disabling Ubuntu leaves the Windows UI usable; selecting Legacy restores the
    previous Windows STT/TTS path.
+
+Ubuntu Eve and Windows Trinity must not require one another during startup.
+Ubuntu opens its listener without warming up the Windows Core, while the
+Windows remote client retries until Ubuntu becomes available and keeps Legacy
+audio as the runtime fallback.
 
 GPU passthrough is intentionally not used. It would usually remove the GPU from
 the Ubuntu host and adds VM/driver fragility without improving this networked

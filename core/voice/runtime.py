@@ -88,9 +88,17 @@ class VoiceRuntime:
         command = build_speech_to_speech_command(self.config)
         env = os.environ.copy()
         env["TOKENIZERS_PARALLELISM"] = "false"
+        if profile.device == "cuda":
+            env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
         self.process = subprocess.Popen(command, env=env)
         if profile.mode == "realtime":
-            _wait_for_port("127.0.0.1", profile.internal_port, self.process)
+            startup_timeout = 600.0 if profile.conversation_backend == "remote" else 120.0
+            _wait_for_port(
+                "127.0.0.1",
+                profile.internal_port,
+                self.process,
+                timeout=startup_timeout,
+            )
             self.proxy = AuthenticatedWebSocketProxy(
                 profile.bind_host,
                 profile.public_port,
