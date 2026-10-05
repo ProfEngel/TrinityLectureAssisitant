@@ -22,5 +22,4 @@ def qt_app():
     """
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
-    yield app
-    app.processEvents()
+    return app
