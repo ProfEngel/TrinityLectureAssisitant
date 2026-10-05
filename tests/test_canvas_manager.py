@@ -84,12 +84,12 @@ def test_canvas_start_uses_one_local_production_service(tmp_path, monkeypatch):
 
 def test_canvas_can_bind_to_one_explicit_tailnet_address(tmp_path):
     manager, _, _ = _manager(tmp_path)
-    manager.settings["host"] = "100.64.0.42"
+    manager.settings["host"] = "100.x.y.z"
 
     configured = CanvasManager(manager.home, manager.config)
 
-    assert configured.host == "100.64.0.42"
-    assert configured.url == "http://100.64.0.42:8787"
+    assert configured.host == "100.x.y.z"
+    assert configured.url == "http://100.x.y.z:8787"
 
 
 def test_canvas_status_explains_broken_root_route(tmp_path, monkeypatch):

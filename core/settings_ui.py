@@ -2561,7 +2561,7 @@ class SettingsWindow(QMainWindow):
         comfy_form.addRow(self.comfyui_cb)
 
         self.comfyui_url_edit = QLineEdit(comfyui_conf.get("server_url", ""))
-        self.comfyui_url_edit.setPlaceholderText("z.B. http://100.122.13.123:8188")
+        self.comfyui_url_edit.setPlaceholderText("z.B. http://100.x.y.z:8188")
         self.comfyui_url_edit.setMinimumWidth(380)
 
         test_btn = QPushButton("🔗 Test")
@@ -2664,6 +2664,11 @@ class SettingsWindow(QMainWindow):
             "an den geschützten Trinity-Core-Endpunkt der Windows-VM weitergereicht.",
         ),
         (
+            "Linux als vollständiger Trinity-Server",
+            "trinity-linux-server",
+            "Linux führt STT, Trinity-Core mit Memory und Agenten sowie TTS selbst aus. Desktop und Companion verbinden sich als Clients.",
+        ),
+        (
             "Diagnose: Ornith direkt, ohne Trinity",
             "eve-direct-ornith",
             "Technisches Diagnoseprofil. Es verbindet die Sprachpipeline direkt mit Ornith "
@@ -2689,7 +2694,7 @@ class SettingsWindow(QMainWindow):
             "Benutzerdefiniertes Eve-Profil.",
         )
         self.voice_profile_description.setText(description)
-        realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server"}
+        realtime = profile_name in {"eve-mac-server", "eve-windows-server", "eve-linux-gpu-server", "trinity-linux-server"}
         remote_client = (
             profile_name in {"eve-windows-remote", "trinity-mac-client"}
             or self.config.get("client", {}).get("enabled", False)

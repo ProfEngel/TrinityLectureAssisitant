@@ -1,10 +1,21 @@
 # Trinity Releases
 
+## v0.19.0-rc.1 — 2026-10-05
+
+Standalone oder gemeinsamer Linux-Server mit Desktop-/Companion-Clients,
+exklusive getrennte Mikrofon-/Lautsprecherauswahl, gemeinsame Memory-Ablage,
+Vision, MiniTrinity-Schreibhilfe, kie.ai/ComfyUI-Medien und Satz-Streaming.
+Konzeptfragen starten keine Sandbox mehr; alte/abgebrochene Modellanfragen
+werden beendet. Der Release Candidate wartet auf den echten Langzeit- und
+Hörsaaltest. [Details](docs/release_notes/v0.19.0-rc.1.md).
+
 Diese Datei sammelt die laengere Release-Historie. In der README stehen nur die
 letzten drei Highlights, damit der Einstieg kurz und lesbar bleibt. Detaillierte
 Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).
 
 ## Aktuelle Highlights
+
+- **v0.17.11:** Foliensehen: authentifizierte Übergabe der aktuellen Companion-Folie an Chat und Sprache, begrenzt auf Profil/Session und 90 Sekunden ohne Erneuerung. MiniTrinity mit Orange/Weiß-Audiostatus, optionalem Punkt und Desktop-Sprechstellenmenü. Keine Änderungen an Eve-/STT-Engine, Modellverbindungen, Installer oder Konfigurationsdefaults. Siehe [Release-Details](docs/release_notes/v0.17.11.md) und [Windows-Update](docs/WINDOWS_UPDATE_v0.17.11.md).
 
 - **v0.17.10:** Die G2-Audiobridge nutzt einen neutralen deutschen Erkennungskontext mit `Trinity` als einzigem Hotword. Digitale Stille, unsichere No-Speech-Segmente und typische Whisper-Untertitelhalluzinationen wie `Copyright WDR`, `Amara.org` oder erfundene Schnellsession-Domains werden vor dem Routing verworfen. Kleinere Beam-Suchen senken die G2-Latenz, ohne Desktop-, Companion- oder Eve-Sprachpfade zu veraendern.
 - **v0.17.9:** Windows kann als Trinity-Control-Plane in einer VM laufen, waehrend ein privater Ubuntu-Host mit NVIDIA-GPU Parakeet-STT, Qwen3-TTS/Eve und das konfigurierte OpenAI-kompatible LLM bereitstellt. Die neuen Profile `eve-windows-remote` und `eve-linux-gpu-server`, getrennte Voice-/Core-Tokens, Remote-Diagnosen und Installationsskripte vermeiden unnoetiges GPU-Passthrough. Native Mac- und Windows-Eve-Profile sowie Legacy STT/TTS bleiben unveraendert waehlbar.

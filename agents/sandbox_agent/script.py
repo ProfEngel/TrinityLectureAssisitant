@@ -34,11 +34,23 @@ NEGATIVE_KEYWORDS = [
 
 
 def can_handle(text: str) -> bool:
-    """Gibt True zurück, wenn mindestens ein Trigger matcht und kein Negativ-Keyword."""
-    t = text.lower()
+    """Require an execution intent, not merely a mathematical topic.
+
+    Conceptual explanations belong to the conversational model. In particular,
+    correlation, regression and 'zeig mir' alone must not launch code generation.
+    Raster diagrams are routed separately by the central media policy.
+    """
+    t = text.casefold()
     if any(neg in t for neg in NEGATIVE_KEYWORDS):
         return False
-    return any(kw in t for kw in TRIGGER_KEYWORDS)
+    explicit_code = re.search(r"\b(?:sandbox|pyodide|python(?:[ -]code)?|code)\b", t)
+    action = re.search(r"\b(?:berechn\w*|rechn\w*|trainier\w*|analysier\w*|"
+                       r"plotte|visualisier\w*|führe\s+aus)\b", t)
+    data = re.search(r"\b(?:datensatz|dataset|csv|dataframe|daten|werte|tabelle)\b|\d", t)
+    code_action = re.search(r"\b(?:schreib\w*|erstell\w*|generier\w*|zeig\w*|"
+                            r"ausführ\w*|nutze|verwende|führe)\b", t)
+    return bool((explicit_code and code_action) or
+                (action and data and any(kw in t for kw in TRIGGER_KEYWORDS)))
 
 
 def execute(query: str, context: dict) -> dict:
@@ -163,9 +175,10 @@ window.addEventListener('load', function() {{
     return {
         "has_payload": True,
         "html_payload": full_html,
+        "direct_answer": "Der Python-Code ist vorbereitet. Die Sandbox zeigt die Ergebnisse nach der Ausführung im geöffneten Player.",
         "search_context": (
             f"--- SANDBOX-AGENT ---\n"
-            f"Ich habe Python-Code für die Pyodide-Sandbox generiert und ausgeführt.\n"
+            f"Ich habe Python-Code für die Pyodide-Sandbox vorbereitet; die Ausführung erfolgt im Player.\n"
             f"Anfrage: {query}\n\n"
             f"Generierter Code:\n```python\n{python_code}\n```\n"
         ),

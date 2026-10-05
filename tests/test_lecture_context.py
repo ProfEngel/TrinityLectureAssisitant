@@ -7,8 +7,15 @@ from core.lecture_context import LectureContextStore, add_current_slide
 from unified_session import UnifiedSessionStore
 
 
+@pytest.fixture(autouse=True)
+def selected_output(tmp_path):
+    (tmp_path / 'core').mkdir(exist_ok=True)
+    (tmp_path / 'core/config.json').write_text(json.dumps({'system': {'speech_output': {
+        'kind': 'companion', 'device_id': 'ipad', 'updated_at': 0}}}))
+
+
 def payload(sequence=1, **changes):
-    return {"client_id": "test-ipad", "sequence": sequence, "active": True,
+    return {"client_id": "test-ipad", "device_id": "ipad", "sequence": sequence, "active": True,
             "title": "Testvortrag", "page": 4, "text": "Umsatz: 120 Euro",
             "image_base64": base64.b64encode(b"\xff\xd8\xfftest").decode(), **changes}
 
@@ -34,6 +41,20 @@ def test_late_upload_cannot_restore_old_slide_or_undo_clear(tmp_path):
     assert store.current(profile="TEST", session_id="one") is None
     assert not store._read()["image_base64"]
     assert not store._read()["text"]
+
+
+def test_configured_runtime_is_preserved_without_rewriting_config(tmp_path):
+    runtime = tmp_path / "existing-runtime"
+    config = tmp_path / "core/config.json"
+    original = json.dumps({"system": {"profile": "BIZ", "speech_output": {
+        "kind": "companion", "device_id": "ipad", "updated_at": 0}},
+        "control_plane": {"runtime_root": str(runtime)}})
+    config.write_text(original)
+    store = LectureContextStore(tmp_path)
+    store.update(payload(), profile="BIZ", session_id="one")
+    assert store.path == runtime / "lecture/current-slide.json"
+    assert store.current(profile="BIZ", session_id="one")["page"] == 4
+    assert config.read_text() == original
 
 
 def test_other_client_cannot_clear_current_presenter(tmp_path):

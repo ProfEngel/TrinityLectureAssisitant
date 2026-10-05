@@ -31,11 +31,10 @@ Die Schaltfläche startet keine neue Konversation und spielt keine alte Antwort
 erneut ab. Sie bestimmt das Ziel der folgenden Antworten. Mikrofon und Modell
 müssen weiterhin betriebsbereit sein.
 
-Die tatsächlich per LaunchAgent gestartete Mac-Instanz liegt unter
-`/Users/matmax/Projects/trinity-voice-runtime-desktop`. Sie ist ein Git-Worktree
-des TrinityLectureAssisitant-Repositories. `/Users/matmax/Trinity_Assistant`
-ist ein anderer, älterer lokaler Stand; die Änderung wurde gezielt in der
-tatsächlich laufenden Instanz umgesetzt.
+Änderungen müssen in der tatsächlich gestarteten Desktop-Installation ankommen.
+Vor Updates den Startpfad prüfen: Entwicklungs-Checkout und installierte Laufzeit
+können verschiedene Verzeichnisse sein. Auf Windows erscheint das kompakte Symbol
+in der Taskleisten-Infobereichsanzeige, nicht in einer macOS-Menüleiste.
 
 Prüfung: `tests/test_desktop_speaker_control.py` testet den authentifizierten
 Wechsel vom iPad zum Desktop, Stummschalten und erneute Übernahme durch das iPhone

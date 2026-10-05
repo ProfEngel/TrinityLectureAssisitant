@@ -4,6 +4,15 @@ import time
 from memory_store import MemoryStore, render_graph_html
 
 
+def test_internal_compaction_artifacts_are_not_user_memories(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    store.remember("User: Summarize the following conversation.  Return only the JSON object.\n--- CONVERSATION START ---\nMail", source="voice-runtime")
+    store.remember("Wir sprachen über eine Mail an die Studierenden.", source="voice-runtime")
+    results = store.search("Mail")
+    assert len(results) == 1
+    assert "Studierenden" in results[0]["text"]
+
+
 def test_memory_store_remembers_searches_bakes_and_graphs(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     session_id = store.create_session("Test Session")

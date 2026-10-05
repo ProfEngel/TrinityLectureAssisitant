@@ -5,6 +5,8 @@ import json
 import threading
 import time
 from pathlib import Path
+from configuration import load_config
+from trinity_paths import TrinityPaths
 
 _LOCK = threading.RLock()
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
@@ -13,7 +15,8 @@ MAX_IMAGE_BYTES = 2 * 1024 * 1024
 class LectureContextStore:
     def __init__(self, home):
         self.home = Path(home)
-        self.path = self.home / "TrinityRuntime" / "lecture" / "current-slide.json"
+        paths = TrinityPaths.from_config(self.home, load_config(self.home / "core" / "config.json"))
+        self.path = paths.runtime_root / "lecture" / "current-slide.json"
 
     def _read(self):
         try:
@@ -28,6 +31,10 @@ class LectureContextStore:
         client = str(payload.get("client_id") or "")[:160]
         if not client:
             raise ValueError("Client-ID fehlt.")
+        device_id = str(payload.get("device_id") or "")[:160]
+        from visual_source import owns_visual_context
+        if not owns_visual_context(self.home, device_id, "companion"):
+            return {"ok": True, "ignored": True, "reason": "not_visual_output"}
         sequence = int(payload.get("sequence", 0))
         with _LOCK:
             previous = self._read()
@@ -47,7 +54,7 @@ class LectureContextStore:
                 if len(raw) > MAX_IMAGE_BYTES or not raw.startswith(b"\xff\xd8\xff"):
                     raise ValueError("Folienbild muss JPEG sein.")
             value = {
-                "client_id": client, "sequence": sequence, "active": active,
+                "client_id": client, "device_id": device_id, "sequence": sequence, "active": active,
                 "profile": profile, "session_id": session_id, "updated_at": time.time(),
                 "title": str(payload.get("title") or "Folie")[:300] if active else "",
                 "page": max(1, int(payload.get("page", 1))),
@@ -62,6 +69,9 @@ class LectureContextStore:
 
     def current(self, *, profile, session_id):
         value = self._read()
+        from visual_source import owns_visual_context
+        if not owns_visual_context(self.home, value.get("device_id"), "companion", value.get("updated_at", 0)):
+            return None
         if (not value.get("active") or value.get("profile") != profile
                 or value.get("session_id") != session_id
                 or time.time() - value.get("updated_at", 0) > 90):

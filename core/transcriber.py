@@ -1361,8 +1361,7 @@ class TrinityEar:
                 )
                 replacement = result["session"]
                 message = (
-                    "Die Session ist geschlossen. Die Summary wird erstellt; "
-                    f"auf allen Geräten ist jetzt „{replacement['title']}“ aktiv."
+                    "Das gemeinsame Memory bleibt aktiv. Es wird keine automatische Session-Zusammenfassung erstellt."
                 )
                 append_chat_event(
                     chat_history_path_for_request(chat_request),

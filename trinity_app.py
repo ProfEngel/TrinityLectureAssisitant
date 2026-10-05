@@ -671,7 +671,7 @@ class TrinityWindow(QMainWindow):
         menu = QMenu(self)
         menu.addAction("In die Menüleiste", self.tray.minimize)
         menu.addSeparator()
-        menu.addAction("Hier auf dem Mac antworten", self.speaker_control.claim)
+        menu.addAction("Hier auf diesem Computer antworten", self.speaker_control.claim)
         menu.addAction("Sprachausgabe stumm", self.speaker_control.mute)
         menu.addSeparator()
         menu.addAction("Einstellungen …", self.open_settings)

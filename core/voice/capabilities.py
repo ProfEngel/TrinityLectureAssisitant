@@ -1,10 +1,14 @@
 """Public, secret-free compatibility information for microphone-only clients."""
+import os
 from .config import load_voice_config
 
 
 def transcription_stream_capability(home, config):
     voice = load_voice_config(home, config)
     profile = voice.profile
+    if os.environ.get("TRINITY_VOICE_MULTIPLEX") == "1":
+        return {"protocol": "trinity-stt-v1", "port": profile.public_port,
+                "sample_rate": 16000, "transcription_only": True}
     # The bundled entrypoint installs the transcription-only guard. A custom
     # executable or remote upstream has not made that guarantee.
     if (not voice.enabled or profile.mode != "realtime"

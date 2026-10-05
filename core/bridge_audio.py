@@ -42,6 +42,7 @@ class BridgeAudioTranscriber:
         remote_voice_token="",
         remote_timeout_seconds=12,
         remote_requester=None,
+        fallback_on_remote_error=True,
     ):
         self.model_name = str(model_name or "small")
         self.backend = self.resolve_backend(backend)
@@ -53,6 +54,7 @@ class BridgeAudioTranscriber:
         self.remote_voice_token = str(remote_voice_token or "").strip()
         self.remote_timeout_seconds = max(2.0, float(remote_timeout_seconds or 12))
         self._remote_requester = remote_requester
+        self.fallback_on_remote_error = bool(fallback_on_remote_error)
         self._model = None
         self._fallback_model = None
         self._lock = threading.Lock()
@@ -157,9 +159,13 @@ class BridgeAudioTranscriber:
                         "language_probability": float(
                             remote.get("language_probability", 1.0 if text else 0.0)
                         ),
-                        "engine": "eve-remote",
+                        "engine": str(remote.get("engine") or "eve-remote"),
                     }
                 except Exception as exc:  # pylint: disable=broad-except
+                    if not self.fallback_on_remote_error:
+                        raise RuntimeError(
+                            f"Gemeinsames Parakeet-STT nicht erreichbar: {self._short_error(exc)}"
+                        ) from exc
                     # Keep the Windows control plane usable while the GPU host
                     # is rebooting or Tailscale briefly reconnects.
                     fallback = self._transcribe_whisper(

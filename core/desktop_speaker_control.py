@@ -18,7 +18,7 @@ class DesktopSpeakerControl(QWidget):
         self.network = QNetworkAccessManager(self)
         self.pending = False
         self.claim_button = QPushButton("Hier antworten · übernehmen", self)
-        self.claim_button.setToolTip("Holt die Sprachausgabe vom iPhone oder iPad auf diesen Mac.")
+        self.claim_button.setToolTip("Holt die Sprachausgabe vom iPhone oder iPad auf diesen Computer.")
         self.claim_button.clicked.connect(self.claim)
         self.mute_button = QPushButton("Stumm", self)
         self.mute_button.clicked.connect(self.mute)

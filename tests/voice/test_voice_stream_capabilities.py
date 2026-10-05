@@ -18,3 +18,12 @@ def test_bundled_local_realtime_advertises_only_public_nonsecret_fields(tmp_path
 def test_unknown_remote_runtime_keeps_compatible_http_fallback(tmp_path):
     config = {"voice": {"engine": "eve", "profile": "eve-windows-remote"}}
     assert transcription_stream_capability(tmp_path, config) is None
+
+
+def test_multiplexed_server_advertises_shared_transcription_stream(tmp_path, monkeypatch):
+    monkeypatch.setenv("TRINITY_VOICE_MULTIPLEX", "1")
+    config = {"voice": {"engine": "eve", "profile": "eve-windows-remote"}}
+    assert transcription_stream_capability(tmp_path, config) == {
+        "protocol": "trinity-stt-v1", "port": 8766,
+        "sample_rate": 16000, "transcription_only": True,
+    }

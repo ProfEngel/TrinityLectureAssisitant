@@ -442,6 +442,9 @@ def save_config(config_path, config):
         json.dumps(config, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    # This file contains API keys and bridge tokens. Atomic replacement must
+    # not silently restore world-readable permissions through the process umask.
+    temporary.chmod(0o600)
     temporary.replace(path)
 
 

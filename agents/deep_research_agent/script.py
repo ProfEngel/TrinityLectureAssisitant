@@ -183,7 +183,7 @@ def execute(query: str, context: dict = None) -> dict:
         f"Ein majestätischer, mehrseitiger wissenschaftlicher Report wurde BEREITS im Nebenfenster eingeblendet.\n"
         f"DEINE AUFGABE JETZT: Sag dem Nutzer in 1-2 kurzen, begeisterten und professionellen Sätzen auf Deutsch, "
         f"dass deine Tiefenrecherche abgeschlossen ist und der detaillierte Report im Dashboard bereitsteht.\n"
-        f"Beispiel: 'Ich habe eine umfassende Tiefenrecherche für dich durchgeführt, Mathias. Der mehrseitige akademische Report mit allen Quellen steht jetzt in deinem Dashboard bereit.'\n"
+        f"Beispiel: 'Die Recherche ist fertig. Der Report mit den Quellen steht im Dashboard bereit.'\n"
         f"VERBOTEN: Markdown, Listen, Tabellen, technische Erklärungen, Zusammenfassungen, Quelllinks.\n\n"
     )
     

@@ -138,7 +138,7 @@ fi
 echo ""
 echo "📥 Lade aktuelle Trinity-Version herunter..."
 if command -v git &> /dev/null; then
-    if ! git clone --branch main --single-branch --recurse-submodules --shallow-submodules "$REPOSITORY" "$INSTALL_DIR"; then
+    if ! git clone --branch main --single-branch "$REPOSITORY" "$INSTALL_DIR"; then
         [ "$IS_UPDATE" = true ] && mv "$ROLLBACK_DIR" "$INSTALL_DIR"
         echo "❌ Download fehlgeschlagen; die vorherige Installation wurde wiederhergestellt."
         exit 1
@@ -195,17 +195,7 @@ if ! install_dependencies; then
     exit 1
 fi
 
-# 6.4 Trinity Canvas als verwaltete Desktop-Komponente installieren.
-echo "🎨 Installiere Trinity Canvas..."
-if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-    echo "   ⚠️  Node.js/npm fehlt. Trinity läuft, Canvas kann später mit 'trinity canvas install' ergänzt werden."
-elif [ -f "$CANVAS_DIR/package.json" ]; then
-    (cd "$CANVAS_DIR" && npm ci && npm run build)
-    echo "   ✅ Die zu dieser Trinity-Version gehörende Canvas-Komponente ist produktionsbereit."
-else
-    echo "   ❌ Die eingebundene Canvas-Komponente fehlt. Prüfe die Git-Submodule."
-    exit 1
-fi
+# Creative Canvas is on hold; do not fetch or build its dependencies.
 
 # 6.5 Benutzerweiten CLI-Befehl installieren
 CLI_BIN="$HOME/.local/bin"
@@ -274,7 +264,7 @@ echo "👉 Auf deinem Schreibtisch liegt ein Verweis namens 'Trinity.app'."
 echo "👉 Doppelklicke einfach darauf, um Trinity zu starten."
 echo "👉 Du kannst sie auch in deine Dock-Leiste ziehen."
 echo "👉 In einem neuen Terminal steht außerdem der Befehl 'trinity' bereit."
-echo "👉 Canvas startet mit Trinity und erscheint ohne Portangabe im Desktop-Reiter 'Canvas'."
+echo "👉 Creative Canvas pausiert; TrinityHUB wird separat betrieben."
 echo "👉 Die Trinity-Werkstatt startet künftig automatisch bei deiner macOS-Anmeldung."
 WORKBENCH_URL="$(./venv/bin/python3 scripts/workbench_url.py 2>/dev/null || echo http://127.0.0.1:8765)"
 echo "👉 Im Browser erreichst du sie unter $WORKBENCH_URL/#werkstatt."

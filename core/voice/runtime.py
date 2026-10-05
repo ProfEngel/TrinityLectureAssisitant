@@ -18,6 +18,7 @@ from .conversation.trinity_backend import TrinityConversationHTTPServer
 from .local_realtime_client import LocalRealtimeAudioClient
 from .stt_http_server import CudaParakeetTranscriber, ParakeetSTTHTTPServer
 from .transport import AuthenticatedWebSocketProxy
+from .transport.multiplex_proxy import MultiplexingVoiceRouter
 
 
 def load_runtime_config(home: str | Path, profile_name: str | None = None) -> VoiceConfig:
@@ -90,17 +91,27 @@ class VoiceRuntime:
 
         command = build_speech_to_speech_command(self.config)
         env = os.environ.copy()
+        env["TRINITY_VOICE_HOME"] = str(self.config.home)
         env["TOKENIZERS_PARALLELISM"] = "false"
         self.process = subprocess.Popen(command, env=env)
         if profile.mode == "realtime":
             _wait_for_port("127.0.0.1", profile.internal_port, self.process)
-            self.proxy = AuthenticatedWebSocketProxy(
-                profile.bind_host,
-                profile.public_port,
-                profile.internal_port,
-                [self.config.access_token, self.config.companion_access_token],
-                self.config.home / "core" / "config.json",
-            )
+            if os.environ.get("TRINITY_VOICE_MULTIPLEX") == "1":
+                self.proxy = MultiplexingVoiceRouter(
+                    profile.bind_host,
+                    profile.public_port,
+                    profile.internal_port,
+                    [self.config.access_token, self.config.companion_access_token],
+                    self.config.home / "core" / "config.json",
+                )
+            else:
+                self.proxy = AuthenticatedWebSocketProxy(
+                    profile.bind_host,
+                    profile.public_port,
+                    profile.internal_port,
+                    [self.config.access_token, self.config.companion_access_token],
+                    self.config.home / "core" / "config.json",
+                )
             self.proxy.start()
             if profile.stt_service_enabled:
                 self.stt_server = ParakeetSTTHTTPServer(

@@ -39,8 +39,8 @@ Die Installation ist die **ausführbare Trinity-App** auf dem jeweiligen
 Rechner. Dazu gehören der installierte Programmcode, Python-Umgebung,
 Abhängigkeiten und Startprogramme.
 
-- Mac: derzeit `/Users/matmax/Trinity_Assistant`
-- eigentliche Mac-App: `/Users/matmax/Applications/Trinity.app`
+- Mac: derzeit `/Users/your-user/Trinity_Assistant`
+- eigentliche Mac-App: `/Users/your-user/Applications/Trinity.app`
 - auf dem Schreibtisch: nur der Verweis `Trinity.app`
 - Windows-Ziel: `%LOCALAPPDATA%\Trinity`
 - Quelle für Installation und Updates: Trinity-Repository und versionierte
@@ -96,7 +96,7 @@ Von dort werden Agenten bewusst und profilbezogen lokal installiert. Die
 Cloud-Vaults sind weder Softwareverteilung noch Quelle der Wahrheit für
 ausführbaren Agentencode.
 
-Aktive lokale Agentenablage auf dem Mac: `/Users/matmax/.agents`
+Aktive lokale Agentenablage auf dem Mac: `/Users/your-user/.agents`
 
 ## 3. Trinity-Runtime – lokal, nicht im Cloud-Ordner
 
@@ -110,7 +110,7 @@ Trinity-Instanz:
 - lokale Such-, RAG- und Graphify-Indizes
 
 Mac-Pfad derzeit:
-`/Users/matmax/Trinity_Assistant/TrinityRuntime`
+`/Users/your-user/Trinity_Assistant/TrinityRuntime`
 
 Windows-Ziel:
 `%LOCALAPPDATA%\Trinity\TrinityRuntime`
@@ -226,7 +226,7 @@ Am 21. Juli 2026 wurden die iCloud-Ordner umbenannt:
 
 Das ist eine nachvollziehbare Ausgangslage für Phase 2, aber noch keine
 Inhaltsmigration. Die aktive Trinity-Installation liegt inzwischen lokal unter
-`/Users/matmax/Trinity_Assistant`, die aktive App unter `~/Applications` und
+`/Users/your-user/Trinity_Assistant`, die aktive App unter `~/Applications` und
 der lokale Agentenbestand unter `~/.agents`. Im Legacy-Ordner liegen weiterhin
 eine alte Projektkopie, historische Agentenbestände, Graphify-Daten und viele
 noch nicht zugeordnete Inhalte. Daraus wird nichts automatisch gelöscht.

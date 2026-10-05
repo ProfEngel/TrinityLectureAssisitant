@@ -31,8 +31,9 @@ def looks_clearly_non_german(text: str, minimum_words: int = 8) -> bool:
 
 
 def enforce_input_language(text: str) -> str | None:
-    if looks_clearly_non_german(text):
-        return "Bitte sprich Deutsch mit mir. Namen und technische Begriffe dürfen natürlich englisch bleiben."
+    # A word-count heuristic cannot distinguish English technical vocabulary
+    # or multilingual STT errors from an intentionally English utterance.
+    # Accept all input; the system prompt still prefers German answers.
     return None
 
 
@@ -48,12 +49,26 @@ def segment_for_speech(text: str, max_chars: int = 280) -> list[str]:
     cleaned = clean_speakable_text(text)
     if not cleaned:
         return []
-    sentences = re.split(r"(?<=[.!?])\s+", cleaned)
+    sentences = []
+    for sentence in re.split(r"(?<=[.!?])\s+", cleaned):
+        # Dictated prose and model output sometimes contain no punctuation.
+        # Bound those chunks too, without cutting a word in half.
+        piece_limit = min(max_chars, 120) if not sentences else max_chars
+        while len(sentence) > piece_limit:
+            split_at = sentence.rfind(" ", 0, piece_limit + 1)
+            if split_at <= 0:
+                split_at = piece_limit
+            sentences.append(sentence[:split_at])
+            sentence = sentence[split_at:].strip()
+            piece_limit = max_chars
+        if sentence:
+            sentences.append(sentence)
     chunks: list[str] = []
     current = ""
     for sentence in sentences:
         candidate = f"{current} {sentence}".strip()
-        if current and len(candidate) > max_chars:
+        chunk_limit = min(max_chars, 120) if not chunks else max_chars
+        if current and len(candidate) > chunk_limit:
             chunks.append(current)
             current = sentence
         else:

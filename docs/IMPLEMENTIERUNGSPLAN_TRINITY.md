@@ -14,7 +14,7 @@ voneinander installiert, gestartet, aktualisiert und entfernt werden.
 ## 1. Verbindlicher Ausgangspunkt
 
 - Core-Repository: `ProfEngel/TrinityLectureAssisitant`
-- Aktive Mac-Arbeitskopie: `/Users/matmax/Trinity_Assistant`
+- Aktive Mac-Arbeitskopie: `/Users/your-user/Trinity_Assistant`
 - Stand bei Erstellung dieses Plans: `0.16.58`
 - Windows ist die Trinity-Autorität für **Arbeit/BIZ**.
 - Mac ist die Trinity-Autorität für **Privat/PRIVAT**.
@@ -350,7 +350,7 @@ Trinity funktioniert im Alltag ohne regelmäßige Reparatureingriffe.
 ## 4. Startauftrag für einen neuen Codex-Chat
 
 > Wir setzen Trinity anhand von
-> `/Users/matmax/Trinity_Assistant/docs/IMPLEMENTIERUNGSPLAN_TRINITY.md`
+> `/Users/your-user/Trinity_Assistant/docs/IMPLEMENTIERUNGSPLAN_TRINITY.md`
 > fort. Lies zuerst den Plan sowie die Phase-1- und Phase-2-Dokumente. Prüfe
 > danach den tatsächlichen lokalen Git-, Installations- und Release-Stand, ohne
 > Nutzerdaten zu ändern. Beginne ausschließlich mit **T0**. Berichte

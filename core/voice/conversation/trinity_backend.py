@@ -8,6 +8,7 @@ import threading
 import time
 import unicodedata
 import uuid
+import queue
 from collections.abc import Iterable
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +17,12 @@ from typing import Any
 
 from ..interfaces import ConversationBackend
 from ..language_policy import enforce_input_language, segment_for_speech
+from ..textedit_commands import SPOKEN_HELP, command_for, unclear_dictation_request
+from ..recent_context import RecentVoiceContext
+from ..textedit_lease import TextEditVoiceLease
+from ..input_selection import AudioInputSelection
+from ..diagnostics import diagnostic
+from ..desktop_commands import app_to_open, mail_navigation
 
 
 DEFAULT_WAKEWORD_VARIANTS = (
@@ -30,7 +37,16 @@ DEFAULT_WAKEWORD_VARIANTS = (
     "trinidi",
     "trenty",
     "trendy",
+    "trinetti",
+    "trinetty",
 )
+
+READ_ALOUD_PREFIX = "[[TRINITY_READ_ALOUD_V1]]\n"
+
+
+def is_transport_compaction(text):
+    return (str(text).startswith("Summarize the following conversation.  Return only the JSON object.")
+            and "--- CONVERSATION START ---" in str(text))
 
 
 def _normalize_wakeword_text(value: Any) -> str:
@@ -117,6 +133,33 @@ class TrinityConversationBackend(ConversationBackend):
             self.transcript_path.write_text("# Trinity Voice Session\n\n", encoding="utf-8")
         self._brain = None
         self._brain_lock = threading.RLock()
+        self._recent_context = RecentVoiceContext()
+        self._context_path = self.transcript_path.with_name("voice_context.md")
+        self._request_lock = threading.Lock()
+        self._request_generation = 0
+        self._textedit_dictation = False
+        self._textedit_input_epoch = None
+
+    def _desktop_microphone_selected(self) -> bool:
+        """Never consume writing commands spoken through a Companion or G2."""
+        try:
+            config = json.loads(self.config_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return False
+        system = config.get("system", {})
+        selection = AudioInputSelection(
+            self.config_path, self.home / "TrinityRuntime" / "voice" / "input_lease.json"
+        ).current()
+        epoch = selection.get("updated_at")
+        if self._textedit_input_epoch is not None and epoch != self._textedit_input_epoch:
+            self._textedit_dictation = False
+        self._textedit_input_epoch = epoch
+        allowed_device = str(system.get("textedit_voice_device_id") or "").strip()
+        self._textedit_dictation = TextEditVoiceLease(
+            self.home / "TrinityRuntime" / "voice" / "textedit_lease.json"
+        ).active(selection)
+        return bool(allowed_device and selection.get("kind") == "desktop"
+                    and selection.get("device_id") == allowed_device)
 
     def _runtime_voice_policy(self) -> tuple[str, tuple[str, ...]]:
         try:
@@ -130,6 +173,8 @@ class TrinityConversationBackend(ConversationBackend):
             mode = "office"
         configured = config.get("persona", {}).get("trigger_variants") or DEFAULT_WAKEWORD_VARIANTS
         variants = tuple(str(item) for item in configured if str(item).strip())
+        if "trinity" in variants:
+            variants = tuple(dict.fromkeys((*variants, "trinetti", "trinetty")))
         return mode, variants or DEFAULT_WAKEWORD_VARIANTS
 
     def _ensure_brain(self):
@@ -145,6 +190,7 @@ class TrinityConversationBackend(ConversationBackend):
         return self._brain
 
     def _append_transcript(self, role: str, text: str) -> None:
+        self._recent_context.append(role, text)
         stamp = time.strftime("%H:%M:%S")
         with self.transcript_path.open("a", encoding="utf-8") as handle:
             handle.write(f"[{stamp}] [{role}]: {text.strip()}\n")
@@ -187,27 +233,186 @@ class TrinityConversationBackend(ConversationBackend):
             metadata={"request_id": request_id},
         )
 
-    def respond(self, text: str, *, session_id: str = "", turn_id: str = "") -> Iterable[str]:
+    def respond_stream(self, text, *, turn_id=""):
+        try:
+            enabled = json.loads(self.config_path.read_text()).get("system", {}).get("voice_sentence_streaming", False)
+        except (OSError, ValueError, AttributeError):
+            enabled = False
+        if not enabled:
+            yield from self.respond(text, turn_id=turn_id)
+            return
+        from ..sentence_stream import StreamCancelled
+        cancelled = threading.Event()
+        output = queue.Queue(maxsize=8)
+        done = object()
+        def put(item):
+            while not cancelled.is_set():
+                try:
+                    output.put(item, timeout=0.1)
+                    return
+                except queue.Full:
+                    pass
+            raise StreamCancelled()
+        def run():
+            emitted = False
+            def emit(sentence):
+                nonlocal emitted
+                put(sentence)
+                emitted = True
+            try:
+                result = self.respond(text, turn_id=turn_id, sentence_callback=emit,
+                                      cancelled=cancelled.is_set)
+                if not emitted:
+                    for sentence in result:
+                        put(sentence)
+            except StreamCancelled as exc:
+                from core.voice.request_scope import RequestExpired
+                if isinstance(exc, RequestExpired) and not cancelled.is_set():
+                    diagnostic(self.home, "LLM", "Zeitbudget überschritten; Modellanfrage beendet, keine Antwort gespeichert.")
+                    if not emitted:
+                        put("Das Modell antwortet gerade nicht rechtzeitig. Bitte versuche es noch einmal.")
+                pass
+            except Exception as exc:
+                if not cancelled.is_set():
+                    put(exc)
+            finally:
+                if not cancelled.is_set():
+                    put(done)
+        worker = threading.Thread(target=run, name="trinity-sentence-stream", daemon=True)
+        worker.start()
+        try:
+            while True:
+                try:
+                    item = output.get(timeout=0.5)
+                except queue.Empty:
+                    # HTTP comments keep the transport alive and detect a
+                    # disconnected listener even before the first sentence.
+                    yield None
+                    continue
+                if item is done:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item
+        finally:
+            cancelled.set()
+
+    def respond(self, text: str, *, session_id: str = "", turn_id: str = "",
+                sentence_callback=None, cancelled=lambda: False) -> Iterable[str]:
         query = str(text or "").strip()
         if not query:
             return []
+        if is_transport_compaction(query):
+            diagnostic(self.home, "Verlauf", "Interne Transport-Zusammenfassung abgefangen; keine Gesprächsfrage.")
+            return []
+        # Start/stop controls and wakeword-free listening turns also supersede
+        # pending older answers; they must not leak into the next activity.
+        with self._request_lock:
+            self._request_generation += 1
+            generation = self._request_generation
+        if self._desktop_microphone_selected():
+            if app_to_open(query) or mail_navigation(query):
+                self._textedit_dictation = False
+                TextEditVoiceLease(self.home / "TrinityRuntime" / "voice" / "textedit_lease.json").update("", False, None)
+                return []
+            command = command_for(query, dictating=self._textedit_dictation)
+            if command in {"window_capture_on", "window_capture_off", "dictation_invalid"}:
+                return []
+            if command is None and not self._textedit_dictation and unclear_dictation_request(query):
+                diagnostic(self.home, "Diktat", "Startbefehl unklar; kein Schreibmodus gestartet.")
+                return ["Startbefehl nicht sicher erkannt. Sag bitte nur: Diktat starten."]
+            if command == "dictation_start":
+                # Recognition alone is not confirmation: TextEdit/focus or
+                # Accessibility may fail on the Mac. Wait for its live lease.
+                return []
+            if command == "dictation_stop":
+                self._textedit_dictation = False
+                TextEditVoiceLease(self.home / "TrinityRuntime" / "voice" / "textedit_lease.json").update(
+                    "", False, None)
+                return []
+            if command in {"summarize", "revise", "write_notes"}:
+                self._textedit_dictation = False
+                TextEditVoiceLease(self.home / "TrinityRuntime" / "voice" / "textedit_lease.json").update("", False, None)
+                return []
+            if self._textedit_dictation:
+                # The Mac writes completed STT chunks directly into TextEdit.
+                # Do not send dictated prose to the LLM or persistent memory.
+                return []
+            if command == "help":
+                return segment_for_speech(SPOKEN_HELP)
+            if command == "show_help":
+                return []
+            if command == "help_insert":
+                return []
+            if command == "insert_last":
+                return []
+            if command == "delete_thoughts":
+                return []
+            if command in {"summarize", "revise", "accept_revision", "confirm_delete_thoughts", "close_draft"}:
+                # The Mac handles these against a verified TextEdit document.
+                return []
+        else:
+            self._textedit_dictation = False
         mode, wakeword_variants = self._runtime_voice_policy()
         if mode == "lecture" and not _has_wakeword(query, wakeword_variants):
+            diagnostic(self.home, "Wakeword", "Vortrag-Modus: kein Wakeword erkannt. Für direkten Dialog Büro/Konversation wählen.")
             self._append_transcript("Lecture (ohne Wakeword)", query)
             return []
         rejection = enforce_input_language(query)
         if rejection:
             return [rejection]
         request_id = turn_id or uuid.uuid4().hex
+        # New questions supersede queued requests, not the permanent memory.
         with self._brain_lock:
+            if cancelled() or generation != self._request_generation:
+                return []
             self._append_transcript("User", query)
-            answer, _has_payload = self._ensure_brain().ask(
-                query,
-                str(self.transcript_path),
-                text_mode=False,
-                action_text=query,
-                attachments=[],
-            )
+            self._context_path.write_text(self._recent_context.render(), encoding="utf-8")
+            self._context_path.chmod(0o600)
+            desktop_image_available = None
+            from visual_source import visual_output
+            visual_selection = visual_output(self.home)
+            if visual_selection.get("kind") == "desktop":
+                from desktop_context import wait_for_requested_desktop
+                from ..window_request import wants_window
+                if wants_window(query):
+                    diagnostic(self.home, "Fenster", "Warte kurz auf die angeforderte Aufnahme vom Mac.")
+                    available = wait_for_requested_desktop(self.home, query, visual_selection.get("device_id", ""))
+                    desktop_image_available = available
+                    diagnostic(self.home, "Fenster", "Bild angekommen." if available else "Kein aktuelles Bild angekommen; Gespräch bleibt möglich.")
+            started = time.monotonic()
+            def stale():
+                return cancelled() or generation != self._request_generation
+            def emit(sentence):
+                from ..sentence_stream import StreamCancelled
+                if stale():
+                    raise StreamCancelled()
+                sentence_callback(sentence)
+            diagnostic(self.home, "LLM", "Antwort wird berechnet.")
+            from core.voice.request_scope import request_scope
+            from ..sentence_stream import StreamCancelled
+            try:
+                with request_scope(stale) as scope:
+                    answer, _has_payload = self._ensure_brain().ask(
+                        query,
+                        str(self._context_path),
+                        text_mode=False,
+                        action_text=query,
+                        attachments=[],
+                        voice_budget=True,
+                        desktop_image_available=desktop_image_available,
+                        **({"sentence_callback": emit, "cancelled": scope.stale} if sentence_callback else {}),
+                    )
+                    scope.check()
+            except StreamCancelled:
+                if stale():
+                    diagnostic(self.home, "LLM", "Alte oder getrennte Antwort beendet; kein Memory-Schreibzugriff.")
+                    return []
+                raise
+            if stale():
+                diagnostic(self.home, "LLM", "Antwort durch neuere Frage ersetzt.")
+                return []
+            diagnostic(self.home, "LLM", f"Antwort fertig nach {time.monotonic() - started:.1f} s; {len(answer)} Zeichen. Jetzt TTS.")
             self._append_transcript("Trinity", answer)
             self._append_chat_events(query, answer, request_id)
         return segment_for_speech(answer)
@@ -273,23 +478,43 @@ class TrinityConversationHTTPServer:
                     )
                     prompt = _message_text(user_message.get("content"))
                     turn_id = str(body.get("user") or uuid.uuid4().hex)
-                    answer = " ".join(owner.backend.respond(prompt, turn_id=turn_id)).strip()
+                    # Playback of an existing answer bypasses the LLM, wakeword gate and memory.
+                    if prompt.startswith(READ_ALOUD_PREFIX):
+                        answer = prompt[len(READ_ALOUD_PREFIX):].strip()[:12000]
+                    elif not body.get("stream"):
+                        answer = " ".join(owner.backend.respond(prompt, turn_id=turn_id)).strip()
                     if body.get("stream"):
+                        streaming_started = True
                         self.send_response(HTTPStatus.OK)
-                        self.send_header("Content-Type", "text/event-stream")
+                        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
                         self.send_header("Cache-Control", "no-cache")
                         self.end_headers()
                         completion_id = f"chatcmpl-{uuid.uuid4().hex}"
-                        for segment in segment_for_speech(answer):
-                            payload = {
-                                "id": completion_id,
-                                "object": "chat.completion.chunk",
-                                "created": int(time.time()),
-                                "model": "trinity-core",
-                                "choices": [{"index": 0, "delta": {"content": segment + " "}, "finish_reason": None}],
-                            }
-                            self.wfile.write(f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode("utf-8"))
-                            self.wfile.flush()
+                        segments = (segment_for_speech(answer) if prompt.startswith(READ_ALOUD_PREFIX)
+                                    else getattr(owner.backend, "respond_stream", owner.backend.respond)(prompt, turn_id=turn_id))
+                        try:
+                            for segment in segments:
+                                import select
+                                import socket
+                                if select.select([self.connection], [], [], 0)[0]:
+                                    if not self.connection.recv(1, socket.MSG_PEEK):
+                                        raise BrokenPipeError("Voice listener disconnected")
+                                if segment is None:
+                                    self.wfile.write(b": trinity-pending\n\n")
+                                    self.wfile.flush()
+                                    continue
+                                payload = {
+                                    "id": completion_id,
+                                    "object": "chat.completion.chunk",
+                                    "created": int(time.time()),
+                                    "model": "trinity-core",
+                                    "choices": [{"index": 0, "delta": {"content": segment + " "}, "finish_reason": None}],
+                                }
+                                self.wfile.write(f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode("utf-8"))
+                                self.wfile.flush()
+                        finally:
+                            if hasattr(segments, "close"):
+                                segments.close()
                         self.wfile.write(b'data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n')
                         self.wfile.write(b"data: [DONE]\n\n")
                         self.wfile.flush()
@@ -304,6 +529,11 @@ class TrinityConversationHTTPServer:
                     })
                 except Exception as exc:  # return a protocol error without leaking secrets
                     safe = re.sub(r"(?i)(token|key|authorization)\s*[:=]\s*\S+", r"\1=<redacted>", str(exc))
+                    if getattr(owner.backend, "home", None):
+                        diagnostic(owner.backend.home, "Fehler", f"Antwort abgebrochen: {type(exc).__name__}")
+                    if locals().get("streaming_started"):
+                        self.close_connection = True
+                        return  # never append a second HTTP response to an SSE stream
                     self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": {"message": safe, "type": "trinity_backend_error"}})
 
         self._server = ThreadingHTTPServer((self.host, self.port), Handler)

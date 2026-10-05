@@ -12,10 +12,8 @@ from typing import Any
 
 
 EVE_REFERENCE_TEXT = (
-    "Herzlich willkommen lieber Schülerinnen und Schüler des Max Planck Gymnasiums. "
-    "Schön, dass Ihr heute hier seid. Unser Schülervortrag dreht sich um das Thema "
-    "KI und Wir. Lasst uns gemeinsam entdecken wie künstliche Intelligenz unseren "
-    "Alltag verändert."
+    "Hallo, ich bin Trinity. Ich unterstütze dich bei Fragen, Ideen "
+    "und alltäglichen Aufgaben."
 )
 
 DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
@@ -91,6 +89,20 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "stt_service_enabled": True,
         "stt_bind_host": "0.0.0.0",
         "stt_public_port": 8767,
+    },
+    "trinity-linux-server": {
+        "mode": "realtime",
+        "device": "cuda",
+        "runtime_role": "server",
+        "conversation_backend": "trinity",
+        "bind_host": "0.0.0.0",
+        "public_port": 8766,
+        "internal_port": 18766,
+        "local_audio": False,
+        "num_pipelines": 2,
+        "stt_model": "nvidia/parakeet-tdt-0.6b-v3",
+        "tts_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "tts_backend": "torch",
     },
     "eve-windows-remote": {
         "mode": "realtime",

@@ -13,7 +13,7 @@ Adapter und keine Voraussetzung für den Standalone-Betrieb.
 
 - Empfohlenes Repository: `ProfEngel/TrinityVoice`
 - Sichtbarer Produktname: **Trinity Voice Studio**
-- Empfohlene Arbeitskopie: `/Users/matmax/TrinityVoice`
+- Empfohlene Arbeitskopie: `/Users/your-user/TrinityVoice`
 - Eigenständige Anwendung mit eigenem Installer, Doctor, Update und Rollback.
 - Keine Quellcodekopie im Trinity-Core-Repository.
 
@@ -146,7 +146,7 @@ kopieren.
 ### Arbeiten
 
 - privates Repository `ProfEngel/TrinityVoice` anlegen.
-- lokale Arbeitskopie `/Users/matmax/TrinityVoice` erstellen.
+- lokale Arbeitskopie `/Users/your-user/TrinityVoice` erstellen.
 - verständliche Struktur einrichten:
   - `app/` für Standalone-Oberfläche und Orchestrierung,
   - `voice/` für den Voicebox-Adapter,
@@ -365,7 +365,7 @@ Voice Studio lässt sich eigenständig installieren, aktualisieren und entfernen
 ## 5. Startauftrag für einen neuen Codex-Chat
 
 > Wir beginnen das neue private Projekt **Trinity Voice Studio** anhand von
-> `/Users/matmax/Trinity_Assistant/docs/IMPLEMENTIERUNGSPLAN_TRINITY_VOICE_STUDIO.md`.
+> `/Users/your-user/Trinity_Assistant/docs/IMPLEMENTIERUNGSPLAN_TRINITY_VOICE_STUDIO.md`.
 > Lies den Plan vollständig und prüfe die dort verlinkten offiziellen Quellen
 > von Voicebox, Kling LivePortrait und Qwen3-TTS auf ihren aktuellen Stand.
 > Beginne ausschließlich mit **V0**. Lege noch kein Repository an, installiere

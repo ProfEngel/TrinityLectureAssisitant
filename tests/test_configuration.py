@@ -1,4 +1,6 @@
 import json
+import os
+import stat
 
 from configuration import (
     is_harness_active,
@@ -44,6 +46,8 @@ def test_config_round_trip_and_dotted_setting(tmp_path):
 
     assert saved["system"]["classic_ui_enabled"] is True
     assert saved["persona"]["agent_name"] == "Trinität"
+    if os.name == "posix":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
 def test_setting_values_are_parsed_for_cli_use():

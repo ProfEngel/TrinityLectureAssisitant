@@ -88,12 +88,12 @@ def test_bridge_speaker_claim_is_persisted_and_exposed_in_instance_state(tmp_pat
             "label": "iPad Vorlesung",
             "kind": "companion",
         },
-        client_ip="100.90.5.25",
+        client_ip="100.x.y.z",
     )
 
     assert claimed["ok"] is True
     assert bridge.get_speaker()["device_id"] == "companion:ipad-lecture"
-    assert claimed["client_ip"] == "100.90.5.25"
+    assert claimed["client_ip"] == "100.x.y.z"
     assert bridge.instance_state()["speaker"]["label"] == "iPad Vorlesung"
 
     released = bridge.set_speaker(
@@ -365,7 +365,7 @@ def test_web_settings_are_local_or_administrator_only(tmp_path):
         client_address = ("127.0.0.1", 12345)
 
     class RemoteHandler:
-        client_address = ("100.90.5.25", 12345)
+        client_address = ("100.x.y.z", 12345)
 
     local_bridge = TrinityBridge(tmp_path)
     assert local_bridge.can_manage_settings(LocalHandler(), {}) is True
@@ -400,11 +400,11 @@ def test_legacy_token_mode_allows_loopback_ui_but_protects_remote_clients(tmp_pa
         headers = Headers()
 
     class RemoteHandler:
-        client_address = ("100.90.5.25", 12345)
+        client_address = ("100.x.y.z", 12345)
         headers = Headers()
 
     class AuthorizedRemoteHandler:
-        client_address = ("100.90.5.25", 12345)
+        client_address = ("100.x.y.z", 12345)
         headers = Headers({"Authorization": "Bearer secret"})
 
     bridge = TrinityBridge(tmp_path, token="secret")
@@ -419,7 +419,7 @@ def test_workspace_sessions_are_available_to_authenticated_users(tmp_path):
         client_address = ("127.0.0.1", 12345)
 
     class RemoteHandler:
-        client_address = ("100.90.5.25", 12345)
+        client_address = ("100.x.y.z", 12345)
 
     local_bridge = TrinityBridge(tmp_path)
     assert local_bridge.can_manage_workspaces(LocalHandler(), {}) is True
@@ -643,7 +643,7 @@ def test_bridge_end_session_creates_summary_asset_and_memory(tmp_path):
 
     bridge._run_session_summary_agent = fake_summary_agent
 
-    result = bridge.end_session({"session_id": "session-1", "session_name": "Testsession", "wait": True})
+    result = bridge.end_session({"explicit_summary": True, "session_id": "session-1", "session_name": "Testsession", "wait": True})
 
     assert result["ok"] is True
     assert result["created"] is True
@@ -693,7 +693,7 @@ def test_bridge_end_session_returns_before_background_summary_finishes(tmp_path)
 
     bridge._run_session_summary_agent = slow_summary_agent
     started = time.monotonic()
-    result = bridge.end_session({"session_id": "session-bg", "session_name": "Background"})
+    result = bridge.end_session({"explicit_summary": True, "session_id": "session-bg", "session_name": "Background"})
 
     assert result["ok"] is True
     assert result["accepted"] is True
@@ -756,6 +756,7 @@ def test_bridge_end_session_can_summarize_unscoped_desktop_window(tmp_path):
     result = bridge.end_session(
         {
             "session_id": "classic-unscoped-test",
+            "explicit_summary": True,
             "session_name": "Classic Desktop",
             "include_unscoped": True,
             "started_at": started_at,
@@ -779,6 +780,7 @@ def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
             "role": "user",
             "source": "classic",
             "text": "Bitte erklaere Spieltheorie.",
+            "explicit_summary": True,
             "session_id": "old-session",
             "session_name": "Alte Session",
         },
@@ -798,6 +800,7 @@ def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
     result = bridge.end_session(
         {
             "session_id": "old-session",
+            "explicit_summary": True,
             "session_name": "Alte Session",
             "display_session_id": "new-session",
             "display_session_name": "Neue Session",
@@ -813,7 +816,7 @@ def test_bridge_end_session_can_display_summary_in_new_session(tmp_path):
     assert "Spieltheorie" in event["text"]
 
 
-def test_bridge_close_session_summarizes_and_activates_replacement(tmp_path):
+def test_bridge_close_session_keeps_shared_conversation_without_summary(tmp_path):
     home = tmp_path
     (home / "core").mkdir()
     (home / "memory").mkdir()
@@ -837,6 +840,7 @@ def test_bridge_close_session_summarizes_and_activates_replacement(tmp_path):
     source_summary.parent.mkdir(parents=True)
     source_summary.write_text("# Summary", encoding="utf-8")
     bridge = TrinityBridge(home)
+    bridge.sessions.activate(session)
     bridge._run_session_summary_agent = lambda **_kwargs: {
         "summary": "## Hauptthemen\n- Nash-Gleichgewicht",
         "summary_path": str(source_summary),
@@ -853,18 +857,26 @@ def test_bridge_close_session_summarizes_and_activates_replacement(tmp_path):
 
     closed = manager.get_session(session.id)
     replacement = manager.get_session(result["session"]["id"])
-    assert closed.status == "closed"
-    assert closed.summary_status == "complete"
-    assert (closed.path / "summary.md").is_file()
+    assert closed.status == "active"
+    assert not (closed.path / "summary.md").exists()
+    assert result["summary"]["disabled"]
     assert medium.is_file()
     assert replacement.workspace_id == lecture.id
-    assert replacement.title == "Vorlesung 2"
+    assert replacement.id == session.id
+    assert replacement.title == "Vorlesung 1"
     assert result["active_session"]["id"] == replacement.id
 
     target = manager.create_workspace("Modularchiv", kind="lecture")
     moved = manager.move_session(closed.id, target.id)
-    assert (moved.path / "summary.md").is_file()
+    assert not (moved.path / "summary.md").exists()
     assert (moved.path / "media" / "nash-diagramm.png").is_file()
+
+
+def test_legacy_automatic_session_end_does_not_call_summary_agent(tmp_path):
+    bridge = TrinityBridge(tmp_path)
+    bridge._run_session_summary_agent = lambda **_: (_ for _ in ()).throw(AssertionError("automatic summary"))
+    result = bridge.end_session({"session_id": "old-client-session"})
+    assert result["disabled"] and not result["created"]
 
 
 def test_bridge_accepts_image_and_pdf_attachments(tmp_path):
@@ -1089,9 +1101,9 @@ def test_bridge_media_urls_include_token_when_configured(tmp_path):
 
 
 def test_bridge_normalizes_windows_drive_paths_from_media_query():
-    raw = "%2FC%3A%2FUsers%2FMatMax%2FAppData%2FLocal%2FTrinity%2Fgen_images%2Fgen.png"
+    raw = "%2FC%3A%2FUsers%2Fdemo%2FAppData%2FLocal%2FTrinity%2Fgen_images%2Fgen.png"
 
-    assert _local_path_value(raw) == "C:/Users/MatMax/AppData/Local/Trinity/gen_images/gen.png"
+    assert _local_path_value(raw) == "C:/Users/demo/AppData/Local/Trinity/gen_images/gen.png"
 
 
 def test_bridge_rejects_media_outside_allowed_roots(tmp_path):
