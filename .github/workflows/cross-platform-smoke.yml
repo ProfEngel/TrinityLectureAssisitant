@@ -34,6 +34,10 @@ jobs:
       - name: Install test tools
         run: python -m pip install pytest pytest-timeout requests numpy PySide6 websockets beautifulsoup4 markdown Pillow PyMuPDF
 
+      - name: Install Linux Qt runtime libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
+
       - name: Compile Python sources
         run: >-
           python -m compileall -q core agents RAG trinity_launcher.py

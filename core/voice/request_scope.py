@@ -50,6 +50,16 @@ def current_scope():
     return _current.get()
 
 
+@contextmanager
+def independent_request():
+    """Accepted background jobs retain tenant context, not voice cancellation."""
+    token = _current.set(None)
+    try:
+        yield
+    finally:
+        _current.reset(token)
+
+
 def check_cancelled():
     scope = current_scope()
     if scope:

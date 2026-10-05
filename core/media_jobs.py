@@ -51,7 +51,9 @@ def start_media_job(home, query, execute, context):
         result = {}
         try:
             with _MEDIA_WORKER:
-                result = brain._run_media_skill(execute, query, context)
+                from core.voice.request_scope import independent_request
+                with independent_request():
+                    result = brain._run_media_skill(execute, query, context)
             text = result.get('direct_answer') or result.get('search_context') or (
                 'Das Medium ist fertig und im Medien-Player verfügbar.' if result.get('has_payload') else 'Das Medium konnte nicht erstellt werden.')
             append_chat_event(history, {'request_id': job_id, 'source': 'media-job',

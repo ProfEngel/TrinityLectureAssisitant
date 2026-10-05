@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import threading
 import time
 
@@ -54,7 +55,8 @@ def test_diagnostic_is_small_private_and_contains_no_image(tmp_path):
     event = json.loads(path.read_text())
     assert event["type"] == "trinity.debug"
     assert "image_base64" not in event
-    assert path.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert path.stat().st_mode & 0o777 == 0o600
 
 
 def test_diagnostics_relay_only_to_selected_clients(tmp_path):

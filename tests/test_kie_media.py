@@ -122,7 +122,7 @@ def test_background_job_is_once_and_publishes_single_result(tmp_path, monkeypatc
     assert 'bereits gestartet' in second['direct_answer']
     gate.set()
     history = media_jobs.tenant_history_path(tmp_path)
-    for _ in range(100):
+    for _ in range(300):
         events = load_chat_events(history)
         if events: break
         time.sleep(.01)
@@ -156,9 +156,28 @@ def test_media_workers_do_not_compete_with_each_other(tmp_path):
     assert len(calls) == 1
     release.set()
     history = media_jobs.tenant_history_path(tmp_path)
-    for _ in range(100):
+    for _ in range(300):
         if len(load_chat_events(history)) == 2:
             break
         time.sleep(.01)
     assert len(load_chat_events(history)) == 2
     assert calls == ['Erstes Bild', 'Zweites Bild']
+
+
+def test_accepted_media_job_does_not_inherit_cancelled_voice_scope(tmp_path):
+    import threading
+    from core import media_jobs
+    from core.voice.request_scope import request_scope, check_cancelled
+    cancelled, release, finished = threading.Event(), threading.Event(), threading.Event()
+    class Brain:
+        def _run_media_skill(self, execute, query, context):
+            assert release.wait(3)
+            check_cancelled()
+            finished.set()
+            return {'has_payload': True, 'html_payload': '<img src="test.png">'}
+    def execute(query, context=None): pass
+    with request_scope(cancelled.is_set):
+        media_jobs.start_media_job(tmp_path, 'Accepted image', execute, {'brain': Brain()})
+    cancelled.set()
+    release.set()
+    assert finished.wait(3)

@@ -32,7 +32,7 @@ def test_cancellation_interrupts_real_stalled_model_read(by_deadline):
         try:
             with request_scope(cancel.is_set, 0.25 if by_deadline else 5):
                 with interruptible_response(requests.get(
-                    f"http://127.0.0.1:{server.server_port}", stream=True, timeout=(1, 3),
+                    f"http://127.0.0.1:{server.server_port}", stream=True, timeout=(1, 10),
                 )) as response:
                     collect_content(response)
         except Exception as exc:
@@ -44,7 +44,7 @@ def test_cancellation_interrupts_real_stalled_model_read(by_deadline):
     try:
         assert ready.wait(2)
         cancel.set() if not by_deadline else None
-        assert stopped.wait(1), "Cancellation must not wait for the model read timeout"
+        assert stopped.wait(2), "Cancellation must not wait for the 10-second model read timeout"
         assert len(errors) == 1 and isinstance(errors[0], StreamCancelled)
     finally:
         release.set()

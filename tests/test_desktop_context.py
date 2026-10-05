@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import threading
 import urllib.error
 import urllib.request
@@ -40,7 +41,8 @@ def test_window_context_is_short_lived_scoped_and_cleared(tmp_path, monkeypatch)
     assert store.current(profile="BIZ", session_id="one", device_id=DEVICE) is None
     assert store.current(profile="PRIVAT", session_id="two", device_id=DEVICE) is None
     assert store.current(profile="PRIVAT", session_id="one", device_id="desktop:other") is None
-    assert store.path.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":  # Windows privacy uses profile ACLs, not POSIX mode bits.
+        assert store.path.stat().st_mode & 0o777 == 0o600
     assert store.update(payload(0), profile="PRIVAT", session_id="one")["ignored"]
     store.update(payload(2, active=False), profile="PRIVAT", session_id="one")
     assert store.current(profile="PRIVAT", session_id="one", device_id=DEVICE) is None
@@ -52,7 +54,8 @@ def test_window_context_is_short_lived_scoped_and_cleared(tmp_path, monkeypatch)
     assert not store.path.exists()
 
 
-@pytest.mark.parametrize("image", ["not-base64", base64.b64encode(b"not jpeg").decode(), "x" * 3000000])
+@pytest.mark.parametrize("image", ["not-base64", base64.b64encode(b"not jpeg").decode(), "x" * 3000000],
+                         ids=["invalid-base64", "not-jpeg", "oversized-image"])
 def test_invalid_window_images_are_rejected(tmp_path, image):
     with pytest.raises(ValueError):
         DesktopContextStore(tmp_path).update(payload(image_base64=image), profile="PRIVAT", session_id="one")

@@ -20,6 +20,8 @@ def test_start_stop_uses_verified_textedit_and_same_voice_path(monkeypatch):
     window = fake_window()
     monkeypatch.setattr(module, "accessibility_available", lambda: True)
     monkeypatch.setattr(module, "ax_trusted", lambda: True)
+    monkeypatch.setattr(module, "foreground_pid", lambda: 42)
+    monkeypatch.setattr(module, "focus_diagnostics", lambda: {})
     monkeypatch.setattr(module, "inspect_textedit", lambda: {"text": "", "selection_start": 0, "selection_length": 0})
     module.ClientWindow._handle_textedit_transcript(window, "Trinity, ich diktiere jetzt")
     assert window._textedit_dictating
