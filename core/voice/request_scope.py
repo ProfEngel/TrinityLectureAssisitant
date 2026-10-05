@@ -8,6 +8,7 @@ providers without an accessible socket retain their bounded read timeout.
 from contextlib import contextmanager
 from contextvars import ContextVar
 import socket
+import sys
 import threading
 import time
 
@@ -85,6 +86,17 @@ def interruptible_response(response):
                             sock.shutdown(socket.SHUT_RDWR)
                         except OSError:
                             pass
+                        if sys.platform == "win32":
+                            # Winsock may retain an outstanding recv through
+                            # makefile's SocketIO reference after shutdown.
+                            # Transfer ownership before closing the native
+                            # handle, avoiding a later double close/reused fd.
+                            try:
+                                descriptor = sock.detach()
+                                if descriptor >= 0:
+                                    socket.close(descriptor)
+                            except OSError:
+                                pass
                     return
 
         watcher = threading.Thread(target=watch, name="trinity-model-cancel", daemon=True)

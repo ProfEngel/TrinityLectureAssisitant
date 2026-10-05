@@ -12,7 +12,7 @@ from core.voice.cancellation import StreamCancelled
 
 @pytest.mark.parametrize("by_deadline", [False, True])
 def test_cancellation_interrupts_real_stalled_model_read(by_deadline):
-    ready, release, cancel, stopped = [threading.Event() for _ in range(4)]
+    ready, release, cancel, stopped, reading = [threading.Event() for _ in range(5)]
     errors = []
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -30,10 +30,16 @@ def test_cancellation_interrupts_real_stalled_model_read(by_deadline):
     serving.start()
     def work():
         try:
-            with request_scope(cancel.is_set, 0.25 if by_deadline else 5):
+            with request_scope(cancel.is_set, 0.5 if by_deadline else 5):
                 with interruptible_response(requests.get(
                     f"http://127.0.0.1:{server.server_port}", stream=True, timeout=(1, 10),
                 )) as response:
+                    original_lines = response.iter_lines
+                    def lines(**kwargs):
+                        for line in original_lines(**kwargs):
+                            reading.set()
+                            yield line
+                    response.iter_lines = lines
                     collect_content(response)
         except Exception as exc:
             errors.append(exc)
@@ -43,6 +49,7 @@ def test_cancellation_interrupts_real_stalled_model_read(by_deadline):
     worker.start()
     try:
         assert ready.wait(2)
+        assert reading.wait(2), "Exercise a body read, not just cancellation before reading"
         cancel.set() if not by_deadline else None
         assert stopped.wait(2), "Cancellation must not wait for the 10-second model read timeout"
         assert len(errors) == 1 and isinstance(errors[0], StreamCancelled)
