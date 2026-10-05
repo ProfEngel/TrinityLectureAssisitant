@@ -1,5 +1,14 @@
 # Trinity Releases
 
+## v0.19.0-rc.1 — 2026-10-05
+
+Standalone oder gemeinsamer Linux-Server mit Desktop-/Companion-Clients,
+exklusive getrennte Mikrofon-/Lautsprecherauswahl, gemeinsame Memory-Ablage,
+Vision, MiniTrinity-Schreibhilfe, kie.ai/ComfyUI-Medien und Satz-Streaming.
+Konzeptfragen starten keine Sandbox mehr; alte/abgebrochene Modellanfragen
+werden beendet. Der Release Candidate wartet auf den echten Langzeit- und
+Hörsaaltest. [Details](docs/release_notes/v0.19.0-rc.1.md).
+
 Diese Datei sammelt die laengere Release-Historie. In der README stehen nur die
 letzten drei Highlights, damit der Einstieg kurz und lesbar bleibt. Detaillierte
 Einzelnotizen liegen unter [docs/release_notes](docs/release_notes/).

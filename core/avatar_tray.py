@@ -5,13 +5,16 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRectF, QSettings, Qt, QTimer
-from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap, QPen
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
-from desktop_audio_activity import desktop_audio_active
+try:
+    from .desktop_audio_activity import desktop_audio_active
+except ImportError:  # legacy trinity_app imports this module from core/ directly
+    from desktop_audio_activity import desktop_audio_active
 
 
 def eyes_icon(state="idle", closed=False, audio_active=False, light=True,
-              audio_color=True, show_dot=False):
+              audio_color=True, show_dot=False, dictating=False):
     # Use a taller face aspect ratio: macOS fits the entire icon into its status
     # item, so a wide, shallow canvas makes the face look unexpectedly tiny.
     # Render at 2x for Retina; reserve space outside the visor for audio activity.
@@ -29,6 +32,11 @@ def eyes_icon(state="idle", closed=False, audio_active=False, light=True,
     painter.setBrush(QColor("#23b477"))
     for x in (10, 28):
         painter.drawRoundedRect(QRectF(x, 19 - height / 2, 9, height), 2.25, 2.25)
+    if dictating:
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(QColor("#ff3b30"), 2.5))
+        painter.drawRoundedRect(QRectF(2, 2, 43, 34), 14, 14)
+        painter.setPen(Qt.NoPen)
     if audio_active and show_dot:
         painter.setBrush(QColor("#f0a044"))
         painter.drawEllipse(QRectF(51, 15, 8, 8))
@@ -70,7 +78,7 @@ class AvatarTray(QObject):
         self.dot_action.toggled.connect(self.set_show_dot)
         self.light_action.setEnabled(not self.audio_color)
         self.menu.addSeparator()
-        self.menu.addAction("Hier auf diesem Computer antworten", speaker_control.claim)
+        self.menu.addAction("Hier auf dem Mac antworten", speaker_control.claim)
         self.menu.addAction("Sprachausgabe stumm", speaker_control.mute)
         self.menu.addSeparator()
         self.menu.addAction("Einstellungen …", window.open_settings)

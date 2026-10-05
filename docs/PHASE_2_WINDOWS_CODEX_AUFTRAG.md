@@ -50,7 +50,7 @@ und suche darunter genau einen Ordner `BizVault`. Dokumentiere den auf Windows
 tatsächlich aufgelösten absoluten Pfad. Erwartet wird die Windows-Entsprechung
 dieses auf dem Mac bestätigten Ordners:
 
-`/Users/matmax/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
+`/Users/your-user/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
 
 Prüfe anschließend nur:
 

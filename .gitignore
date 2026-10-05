@@ -1,5 +1,9 @@
 # Sensitive Personal Files
 core/config.json
+core/config.json.*.bak
+.venv/
+test-*.log
+test-*.xml
 core/Soul.md
 core/User.md
 .env

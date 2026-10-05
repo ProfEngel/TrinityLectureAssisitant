@@ -31,6 +31,10 @@ class LectureContextStore:
         client = str(payload.get("client_id") or "")[:160]
         if not client:
             raise ValueError("Client-ID fehlt.")
+        device_id = str(payload.get("device_id") or "")[:160]
+        from visual_source import owns_visual_context
+        if not owns_visual_context(self.home, device_id, "companion"):
+            return {"ok": True, "ignored": True, "reason": "not_visual_output"}
         sequence = int(payload.get("sequence", 0))
         with _LOCK:
             previous = self._read()
@@ -50,7 +54,7 @@ class LectureContextStore:
                 if len(raw) > MAX_IMAGE_BYTES or not raw.startswith(b"\xff\xd8\xff"):
                     raise ValueError("Folienbild muss JPEG sein.")
             value = {
-                "client_id": client, "sequence": sequence, "active": active,
+                "client_id": client, "device_id": device_id, "sequence": sequence, "active": active,
                 "profile": profile, "session_id": session_id, "updated_at": time.time(),
                 "title": str(payload.get("title") or "Folie")[:300] if active else "",
                 "page": max(1, int(payload.get("page", 1))),
@@ -65,6 +69,9 @@ class LectureContextStore:
 
     def current(self, *, profile, session_id):
         value = self._read()
+        from visual_source import owns_visual_context
+        if not owns_visual_context(self.home, value.get("device_id"), "companion", value.get("updated_at", 0)):
+            return None
         if (not value.get("active") or value.get("profile") != profile
                 or value.get("session_id") != session_id
                 or time.time() - value.get("updated_at", 0) > 90):

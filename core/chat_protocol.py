@@ -5,10 +5,12 @@ import os
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 
 _QUEUE_CLOCK_LOCK = threading.Lock()
+_HISTORY_WRITE_LOCK = threading.RLock()
 _last_queue_timestamp = 0
 
 
@@ -116,15 +118,48 @@ def append_chat_event(history_path, event):
         **event,
     }
     line = json.dumps(record, ensure_ascii=False) + "\n"
-    descriptor = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
-    try:
-        remaining = memoryview(line.encode("utf-8"))
-        while remaining:
-            written = os.write(descriptor, remaining)
-            remaining = remaining[written:]
-    finally:
-        os.close(descriptor)
+    # Windows O_APPEND is a seek/write pair, not a cross-process atomic append.
+    # Lock whole records, including partial writes, so concurrent voice/media
+    # writers cannot overwrite or interleave one another's events.
+    with _history_file_lock(path):
+        descriptor = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY | getattr(os, "O_BINARY", 0), 0o600)
+        try:
+            remaining = memoryview(line.encode("utf-8"))
+            while remaining:
+                written = os.write(descriptor, remaining)
+                if not written:
+                    raise OSError("Chat history write made no progress")
+                remaining = remaining[written:]
+        finally:
+            os.close(descriptor)
     return record
+
+
+@contextmanager
+def _history_file_lock(path):
+    with _HISTORY_WRITE_LOCK:
+        descriptor = os.open(str(path) + ".lock", os.O_CREAT | os.O_RDWR | getattr(os, "O_BINARY", 0), 0o600)
+        locked = False
+        try:
+            if os.name == "nt":
+                import msvcrt
+                if os.fstat(descriptor).st_size == 0:
+                    os.write(descriptor, b"\0")
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(descriptor, fcntl.LOCK_EX)
+            locked = True
+            yield
+        finally:
+            if locked:
+                if os.name == "nt":
+                    os.lseek(descriptor, 0, os.SEEK_SET)
+                    msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+                else:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
 
 
 def load_chat_events(history_path, limit=200):

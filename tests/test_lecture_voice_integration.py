@@ -40,9 +40,10 @@ def test_authenticated_slide_upload_reaches_voice_model_and_clear_removes_it(tmp
     backend._brain = brain
     backend._append_chat_events = lambda *_args: None
     backend._runtime_voice_policy = lambda: ("office", ())
+    bridge.set_speaker({"kind": "companion", "device_id": "ipad-test", "label": "Test iPad"})
 
     def upload(sequence, active, token="test-secret"):
-        payload = {"client_id": "ipad-test", "sequence": sequence, "active": active,
+        payload = {"client_id": "ipad-test", "device_id": "ipad-test", "sequence": sequence, "active": active,
             "title": "Vorlesung", "page": 7, "text": "Tabelle Q4",
             "image_base64": base64.b64encode(b"\xff\xd8\xfftest").decode()}
         request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}/lecture/context",

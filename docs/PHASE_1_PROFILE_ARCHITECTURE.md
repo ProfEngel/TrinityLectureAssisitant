@@ -360,18 +360,18 @@ ausgeführt.
 
 ## 13. Die konkreten Pfade im jetzigen Übergang
 
-- Aktiver privater Inhalts-Vault auf dem Mac: `/Users/matmax/Library/Mobile Documents/com~apple~CloudDocs/BrainVault`
-- Alter gemischter Bestand: `/Users/matmax/Library/Mobile Documents/com~apple~CloudDocs/BrainVault_LEGACY`
-- Beruflicher Inhalts-Vault, auf dem Mac durch OneDrive sichtbar: `/Users/matmax/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
-- Aktive lokale Trinity-Installation auf dem Mac: `/Users/matmax/Trinity_Assistant`
-- Aktive lokale Mac-App: `/Users/matmax/Applications/Trinity.app`
-- Lokaler Agenten-Werkzeugkasten auf dem Mac: `/Users/matmax/.agents`
+- Aktiver privater Inhalts-Vault auf dem Mac: `/Users/your-user/Library/Mobile Documents/com~apple~CloudDocs/BrainVault`
+- Alter gemischter Bestand: `/Users/your-user/Library/Mobile Documents/com~apple~CloudDocs/BrainVault_LEGACY`
+- Beruflicher Inhalts-Vault, auf dem Mac durch OneDrive sichtbar: `/Users/your-user/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
+- Aktive lokale Trinity-Installation auf dem Mac: `/Users/your-user/Trinity_Assistant`
+- Aktive lokale Mac-App: `/Users/your-user/Applications/Trinity.app`
+- Lokaler Agenten-Werkzeugkasten auf dem Mac: `/Users/your-user/.agents`
 - Aktive lokale Windows-Installation:
-  `C:\Users\matmax\AppData\Local\Trinity`
+  `C:\Users\your-user\AppData\Local\Trinity`
 - Lokale Windows-Runtime:
-  `C:\Users\matmax\AppData\Local\Trinity\TrinityRuntime`
+  `C:\Users\your-user\AppData\Local\Trinity\TrinityRuntime`
 - Beruflicher Inhalts-Vault auf Windows:
-  `C:\Users\matmax\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
+  `C:\Users\your-user\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
 
 Die Windows-Pfade wurden in Phase 2 bestätigt. Der per OneDrive synchronisierte
 BizVault bleibt unabhängig vom jeweiligen lokalen Synchronisationspfad dieselbe
@@ -430,11 +430,11 @@ Architekturentscheidung.
 Die wesentlichen Mac-Pfade sind korrekt getrennt: Runtime lokal, BrainVault in
 iCloud und Agenten lokal. Die Konfiguration trägt inzwischen ausdrücklich das
 Profil `PRIVAT`. Creative Canvas wurde am 22. Juli 2026 nach
-`/Users/matmax/TrinityCreativeCanvas` verlegt. Der LaunchAgent
+`/Users/your-user/TrinityCreativeCanvas` verlegt. Der LaunchAgent
 `de.trinity.creativecanvas.plist` und seine technischen Logs verwenden nun
 ausschließlich lokale Pfade. Der vorherige Cloud-Rest sowie ein geprüftes
 Git-Bundle der vier lokalen Commits liegen wiederherstellbar unter
-`/Users/matmax/Trinity-Recovery/2026-07-22-creative-canvas-localization`.
+`/Users/your-user/Trinity-Recovery/2026-07-22-creative-canvas-localization`.
 
 ### Beschlossene Reihenfolge für Agenten
 

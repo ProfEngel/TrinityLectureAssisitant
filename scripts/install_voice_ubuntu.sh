@@ -47,5 +47,7 @@ Then run:
   venv/bin/trinity voice doctor --profile eve-linux-gpu-server
   venv/bin/trinity voice serve --profile eve-linux-gpu-server
 
-Do not expose ports 8766 or 18767 through a public router.
+The Ubuntu profile also starts authenticated Parakeet STT on TCP 8767.
+Allow 8766 and 8767 only inside your LAN/Tailnet.
+Do not expose ports 8766, 8767, or 18767 through a public router.
 EOF

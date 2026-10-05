@@ -9,11 +9,11 @@ Die technische Windows-Inventur und der rückholbare BIZ-Testreset sind
 abgeschlossen:
 
 - Profil: `BIZ`, sichtbar als **Arbeit**
-- Installation: `C:\Users\matmax\AppData\Local\Trinity`
-- Runtime: `C:\Users\matmax\AppData\Local\Trinity\TrinityRuntime`
+- Installation: `C:\Users\your-user\AppData\Local\Trinity`
+- Runtime: `C:\Users\your-user\AppData\Local\Trinity\TrinityRuntime`
 - vorgesehener Inhalts-Vault:
-  `C:\Users\matmax\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
-- Recovery: `C:\Users\matmax\Trinity-Recovery\reset-biz-2026-07-22_124730`
+  `C:\Users\your-user\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
+- Recovery: `C:\Users\your-user\Trinity-Recovery\reset-biz-2026-07-22_124730`
 - Memory nach Reset: 0 Sessions, 0 Nachrichten, 0 Memories, 0 Tags und
   0 Beziehungen
 - genau eine neue, leere gemeinsame Session
@@ -52,7 +52,7 @@ historischen Ordner `BrainVault`. Die T0-Nachprüfung bestätigt, dass diese
 Abweichung inzwischen behoben ist:
 
 - Root:
-  `C:\Users\matmax\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
+  `C:\Users\your-user\OneDrive - Hochschule für Wirtschaft und Umwelt\BizVault`
 - Profil: `BIZ`
 - zehn vorhandene Hauptordner plus `README.md`
 - keine fehlenden oder unklassifizierten Einträge

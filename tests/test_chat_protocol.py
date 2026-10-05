@@ -79,3 +79,12 @@ def test_chat_history_can_remove_single_event(tmp_path):
     events = load_chat_events(path)
     assert [event["event_id"] for event in events] == [first["event_id"]]
     assert remove_chat_event(path, "missing") is False
+def test_concurrent_records_preserve_every_event(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from core.chat_protocol import append_chat_event, load_chat_events
+    path = tmp_path / 'parallel.jsonl'
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda i: append_chat_event(path, {'text': str(i) + 'x' * 4000}), range(40)))
+    events = load_chat_events(path)
+    assert len(events) == 40
+    assert len({event['event_id'] for event in events}) == 40

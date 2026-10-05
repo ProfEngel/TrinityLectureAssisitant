@@ -105,7 +105,7 @@ def _trigger_candidates(variants=None):
     candidates = []
     for item in variants or TRIGGER_VARIANTS:
         normalized = _normalize_trigger_text(item).replace(" ", "")
-        if len(normalized) >= 5 and normalized not in candidates:
+        if len(normalized) >= 2 and normalized not in candidates:
             candidates.append(normalized)
     return candidates
 
@@ -136,6 +136,10 @@ def has_trigger(text, variants=None):
     check_list = _trigger_candidates(variants)
 
     for candidate in check_list:
+        if len(candidate) < 5:
+            if candidate in tokens:
+                return True
+            continue
         forms = _expanded_wakeword_forms(candidate)
         if any(form in compact for form in forms):
             return True
@@ -1357,8 +1361,7 @@ class TrinityEar:
                 )
                 replacement = result["session"]
                 message = (
-                    "Die Session ist geschlossen. Die Summary wird erstellt; "
-                    f"auf allen Geräten ist jetzt „{replacement['title']}“ aktiv."
+                    "Das gemeinsame Memory bleibt aktiv. Es wird keine automatische Session-Zusammenfassung erstellt."
                 )
                 append_chat_event(
                     chat_history_path_for_request(chat_request),

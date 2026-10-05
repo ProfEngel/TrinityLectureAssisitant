@@ -19,7 +19,7 @@ EXTERNAL_IMAGE_MARKERS = [
 
 def is_explicit_external_request(query: str) -> bool:
     router_text = str(query or "").lower()
-    media_words = ["bild", "grafik", "schaubild", "infografik", "zeichnung", "illustration"]
+    media_words = ["bild", "grafik", "schaubild", "infografik", "zeichnung", "illustration", "diagramm", "chart"]
     return (
         any(marker in router_text for marker in EXTERNAL_IMAGE_MARKERS)
         or ("extern" in router_text and any(word in router_text for word in media_words))
@@ -52,6 +52,10 @@ def can_handle(query: str) -> bool:
          (any(word in router_text for word in ["bild", "zeichnung"]) and any(cmd in router_text for cmd in ["erstell", "mach", "generier", "zeig"]))
 
 def execute(query: str, context: dict = None) -> dict:
+    # Enforce the cost/privacy boundary even if another dispatcher calls execute
+    # directly rather than going through can_handle.
+    if not is_explicit_external_request(query):
+        return {"has_payload": False, "html_payload": "", "search_context": "Externe Bilderzeugung ist ohne ausdrücklichen Wunsch nicht freigegeben. Nutze ComfyUI; kein Cloud-Fallback."}
     if not context or "brain" not in context:
         return {"has_payload": False, "html_payload": "", "search_context": ""}
         

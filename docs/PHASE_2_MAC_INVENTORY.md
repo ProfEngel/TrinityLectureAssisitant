@@ -7,15 +7,15 @@ Status: Mac-Inventur und externe Sicherung abgeschlossen; keine fachlichen Inhal
 
 | Merkmal | Festgestellter Stand |
 |---|---|
-| Installation | `/Users/matmax/Trinity_Assistant` |
-| App | `/Users/matmax/Applications/Trinity.app` |
+| Installation | `/Users/your-user/Trinity_Assistant` |
+| App | `/Users/your-user/Applications/Trinity.app` |
 | GitHub | `ProfEngel/TrinityLectureAssisitant` |
 | Version | `0.16.58`; Git-Commit `48dfbae0b96164c923fc1eb0f55832afae787fae`; `origin/main` und Release-Tag stimmen überein |
 | Python | Homebrew Python `3.13.13` in lokaler virtueller Umgebung |
 | Profil | ausdrücklich `PRIVAT` |
-| Runtime | `/Users/matmax/Trinity_Assistant/TrinityRuntime` |
+| Runtime | `/Users/your-user/Trinity_Assistant/TrinityRuntime` |
 | Inhalts-Vault | iCloud-`BrainVault` |
-| lokale Agentenbasis | `/Users/matmax/.agents` über `external_agents_root=/Users/matmax` |
+| lokale Agentenbasis | `/Users/your-user/.agents` über `external_agents_root=/Users/your-user` |
 | Companion | aktiviert, Port `8766`; Apple-Companion `0.16.56` gebaut |
 | Telegram Privat | aktiviert; Token und Chat-ID gesetzt, Secret-Werte nicht ausgegeben |
 
@@ -29,9 +29,9 @@ Es bestehen drei geprüfte lokale Rückfallstände auf dem Mac:
 
 | Wiederherstellung | Umfang | Besonderheiten |
 |---|---:|---|
-| `/Users/matmax/Trinity-Recovery/2026-07-21-before-repair` | ca. 2,1 GB | Bestand vor der ersten Reparatur, Git-Bundle, Patch, Konfiguration und Datenbanken |
-| `/Users/matmax/Trinity-Recovery/installer-20260721_194044` | ca. 2,5 GB | vollständige Installation vor Update auf 0.16.47, Nutzerdaten und Git-Bundle |
-| `/Users/matmax/Trinity-Recovery/2026-07-22-creative-canvas-localization` | ca. 3,6 MB | vollständiges Git-Bundle von Creative Canvas und der frühere Cloud-Rest |
+| `/Users/your-user/Trinity-Recovery/2026-07-21-before-repair` | ca. 2,1 GB | Bestand vor der ersten Reparatur, Git-Bundle, Patch, Konfiguration und Datenbanken |
+| `/Users/your-user/Trinity-Recovery/installer-20260721_194044` | ca. 2,5 GB | vollständige Installation vor Update auf 0.16.47, Nutzerdaten und Git-Bundle |
+| `/Users/your-user/Trinity-Recovery/2026-07-22-creative-canvas-localization` | ca. 3,6 MB | vollständiges Git-Bundle von Creative Canvas und der frühere Cloud-Rest |
 
 Das zweite Bundle enthält den Sicherungs-Branch
 `codex/local-trinity-backup-20260721` mit neun früheren lokalen Änderungen.
@@ -88,7 +88,7 @@ Die CampusHub-Struktur bestätigt die beschlossene BizVault-Zuordnung:
 Der OneDrive-BizVault wurde am 22. Juli 2026 zusätzlich über den auf dem Mac
 synchronisierten Pfad bestätigt:
 
-`/Users/matmax/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
+`/Users/your-user/Library/CloudStorage/OneDrive-HochschulefürWirtschaftundUmwelt/BizVault`
 
 Er enthält weiterhin nur die vorbereitete Struktur: 2 Dateien, 11 Ordner und
 rund 8 KB. Damit kann der fachliche OneDrive-Bestand vom Mac aus inventarisiert
@@ -123,7 +123,7 @@ Alle vier SQLite-Datenbanken bestanden am 22. Juli 2026 erneut
 Am 22. Juli 2026 wurde der private Testbestand vollständig und rückholbar
 zurückgesetzt. Die Sicherung liegt unter:
 
-`/Users/matmax/Trinity-Recovery/reset-privat-2026-07-22_120749`
+`/Users/your-user/Trinity-Recovery/reset-privat-2026-07-22_120749`
 
 Nach dem Reset bestehen genau ein leerer Eingang und eine neue gemeinsame
 Session. Die Memory-Datenbank enthält 0 Sessions, 0 Nachrichten, 0 Memories,
@@ -145,10 +145,10 @@ verändert noch entfernt.
 
 Die kontrollierte Pfadprüfung ergab außerdem:
 
-- Runtime: `/Users/matmax/Trinity_Assistant/TrinityRuntime`
+- Runtime: `/Users/your-user/Trinity_Assistant/TrinityRuntime`
 - Inhalts-Vault: iCloud-`BrainVault`
-- Agentenbasis: `/Users/matmax/.agents`
-- `control_plane.brainvault_root=/Users/matmax` bleibt ein historisch
+- Agentenbasis: `/Users/your-user/.agents`
+- `control_plane.brainvault_root=/Users/your-user` bleibt ein historisch
   benanntes Kompatibilitätsfeld; maßgeblich für Inhalte ist ausschließlich
   `control_plane.vault_root`.
 
@@ -189,7 +189,7 @@ erfolgt später nur für fachliche Dokumentordner, nicht für Software-Caches.
 ## 7. Creative Canvas – Standalone und Trinity-Komponente
 
 Creative Canvas bleibt als eigenständiges Repository und Standalone-Anwendung
-unter `/Users/matmax/TrinityCreativeCanvas` verfügbar. Trinity bindet denselben
+unter `/Users/your-user/TrinityCreativeCanvas` verfügbar. Trinity bindet denselben
 Repository-Stand zusätzlich als fest versionierte Komponente unter
 `components/TrinityCanvas` ein. Damit gibt es einen gepflegten Quellcode, aber
 zwei zulässige Installationsformen. Typecheck und Produktions-Build waren für

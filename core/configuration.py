@@ -92,6 +92,23 @@ def default_config(platform_name=None):
             "private_device": "Standard",
             "public_device": "Standard",
         },
+        "desktop_control": {
+            "enabled": False,
+            "dry_run": True,
+            "require_confirmation": True,
+            "pause_on_user_input": True,
+            "allow_visible_ui_fallback": False,
+            "allowed_applications": [
+                "Microsoft Word",
+                "Microsoft Excel",
+                "OpenCode",
+                "ChatGPT",
+                "Mail",
+                "Finder",
+                "Google Chrome",
+            ],
+            "allowed_paths": [],
+        },
         "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
         "codex": {
             "enabled": False,
@@ -425,6 +442,9 @@ def save_config(config_path, config):
         json.dumps(config, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    # This file contains API keys and bridge tokens. Atomic replacement must
+    # not silently restore world-readable permissions through the process umask.
+    temporary.chmod(0o600)
     temporary.replace(path)
 
 

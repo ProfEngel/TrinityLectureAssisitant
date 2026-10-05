@@ -1,7 +1,7 @@
 # TRINITY: Ein lokaler, agentischer Academic Personal Concierge für die KI-gestützte Hochschullehre und das akademische Dokumentenmanagement
 
 **Autoren:**  
-*Mathias Engel* (mat.max.engel@gmail.com)  
+*Mathias Engel*
 *Zoe Engel*  
 *Eve* (Virtual AI Contributor)  
 

@@ -56,6 +56,17 @@ class RemoteTrinityClient:
     def get_runtime(self):
         return self._request("/runtime", method="GET")
 
+    def get_mode(self):
+        return self._request("/mode", method="GET")
+
+    def set_desktop_context(self, payload):
+        return self._request("/desktop/context", dict(payload))
+
+    def set_mode(self, mode):
+        if mode not in {"lecture", "office"}:
+            raise ValueError("Modus muss lecture oder office sein.")
+        return self._request("/mode", {"mode": mode})
+
     def get_speaker(self):
         return self._request("/speaker", method="GET")
 
@@ -67,6 +78,21 @@ class RemoteTrinityClient:
 
     def release_speaker(self):
         return self.set_speaker("none", "Stumm", kind="none")
+
+    def get_audio_input(self):
+        return self._request("/audio/input", method="GET")
+
+    def set_textedit_state(self, device_id, dictating):
+        return self._request("/audio/input", {
+            "action": "textedit_state", "kind": "desktop",
+            "device_id": device_id, "dictating": bool(dictating),
+        })
+
+    def set_audio_input(self, device_id, label, action="claim", kind="desktop"):
+        return self._request(
+            "/audio/input",
+            {"action": action, "kind": kind, "device_id": device_id, "label": label},
+        )
 
     def current_session(self):
         return self._request("/session/current", method="GET")

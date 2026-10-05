@@ -28,9 +28,10 @@ def test_old_turn_is_rejected_after_revision():
     assert session.is_current(second) is True
 
 
-def test_german_policy_allows_short_technical_terms_but_rejects_english_paragraph():
+def test_language_policy_accepts_technical_and_english_input():
     assert enforce_input_language("Trinity, öffne Qwen3-TTS.") is None
-    assert enforce_input_language("Please tell me what this is and how you would work with the model")
+    assert enforce_input_language("Please tell me what this is and how you would work with the model") is None
+    assert enforce_input_language("Trinity, explain bitte das Frontier Model and its reasoning benchmark") is None
     assert segment_for_speech("Erster Satz. Zweiter Satz.", max_chars=14) == ["Erster Satz.", "Zweiter Satz."]
 
 

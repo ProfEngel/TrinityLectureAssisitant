@@ -5,7 +5,7 @@ from urllib.request import Request, urlopen
 
 import pytest
 
-from voice.conversation.trinity_backend import TrinityConversationHTTPServer
+from voice.conversation.trinity_backend import READ_ALOUD_PREFIX, TrinityConversationHTTPServer
 from voice.interfaces import ConversationBackend
 
 
@@ -48,5 +48,30 @@ def test_backend_requires_token_and_returns_openai_shape():
         with urlopen(request(port, "secret"), timeout=2) as response:
             result = json.loads(response.read().decode("utf-8"))
         assert result["choices"][0]["message"]["content"] == "Antwort auf Hallo"
+    finally:
+        server.stop()
+
+
+def test_read_aloud_returns_exact_text_without_running_brain():
+    class RecordingBackend(FakeBackend):
+        def respond(self, text, *, session_id="", turn_id=""):
+            raise AssertionError("Already generated text must not run through the brain")
+
+    port = free_port()
+    server = TrinityConversationHTTPServer(RecordingBackend(), "127.0.0.1", port, "secret")
+    server.start()
+    try:
+        payload = json.dumps({
+            "model": "trinity-core",
+            "messages": [{"role": "user", "content": READ_ALOUD_PREFIX + "Hallo von Eve."}],
+        }).encode()
+        req = Request(
+            f"http://127.0.0.1:{port}/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer secret"},
+        )
+        with urlopen(req, timeout=2) as response:
+            result = json.loads(response.read())
+        assert result["choices"][0]["message"]["content"] == "Hallo von Eve."
     finally:
         server.stop()

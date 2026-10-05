@@ -1,5 +1,54 @@
 # Trinity — Academic Personal Concierge 🧞‍♀️
 
+## Aktuell: v0.19.0-rc.1 — Standalone oder ein gemeinsamer Server
+
+Trinity unterstützt Gespräche, Vorlesungen, Vorbereitung, Recherche und
+Schreibarbeit. Du kannst sie vollständig auf einem Desktop betreiben oder
+einen Linux-Server mit NVIDIA-GPU als einzige zentrale Instanz verwenden.
+Mac, iPhone, iPad und optional eine Smartbrille dienen dann als Clients.
+Eine Windows-VM ist für den Linux-Server nicht erforderlich.
+
+- **Ein Sprachsystem:** Parakeet-STT, dein konfiguriertes LLM und Qwen3-TTS
+  laufen zentral. Genau ein Gerät liefert das Mikrofon, genau ein Gerät spielt
+  die Antwort ab; diese Auswahl ist unabhängig. Die G2 liefert Ton und zeigt
+  Text, ist aber kein Lautsprecher.
+- **Schnellere Antworten:** Sichtbare Modellantworten werden satzweise an TTS
+  weitergereicht. UTF-8 bleibt erhalten; Reasoning wird nicht vorgelesen.
+  Abbruch, Geräteverbindung und neuere Fragen begrenzen alte Modellanfragen.
+  Zwei-Satz-TTS-Bündelung bleibt erhalten. Latenz und hörbare Übergänge hängen
+  weiterhin von Modell, Hardware, Netzwerk und Antwortlänge ab.
+- **Gemeinsames Memory:** Abgeschlossene Voice-Antworten werden einmal in das
+  dauerhafte Memory geschrieben. Die mobile Oberfläche benötigt keine manuellen
+  Sessions; intern bleibt eine Tages-/Gesprächszuordnung für die Speicherung.
+  Fragen nach Datum oder Thema können passende gespeicherte Inhalte abrufen.
+  Das ist kein lückenloser Mitschnitt: unbeantwortetes Wakeword-freies Zuhören
+  und lokale Diktate werden nicht automatisch als dauerhaftes Memory archiviert.
+- **Sehen und schreiben:** PDF-/HTML-Folien oder das aktive Mac-Fenster können
+  an ein Vision-Modell gehen. Nur das ausgewählte Ausgabegerät liefert Bilder.
+  MiniTrinity bietet Fensterhilfe und sprachgesteuertes Diktieren/Überarbeiten.
+  Bildschirmaufnahme und Bedienungshilfen benötigen ausdrückliche Freigaben;
+  zuverlässige Bearbeitung hängt von der jeweiligen App ab. Kein automatisches
+  Versenden von Mails und keine garantierte Steuerung beliebiger Anwendungen.
+- **Agenten und Medien:** Tavily-Websuche, Agentenaufträge und Medien-Player.
+  Mit konfiguriertem kie.ai-Standard entstehen Rasterbilder (16:9, 2K,
+  deutsche Bildtexte) und originale Suno-Musik. „Lokal“ nutzt ComfyUI;
+  ein verfügbarer lokaler Fallback erzeugt keinen zweiten Auftrag bei unklarem
+  Cloud-Jobstatus. Mermaid ersetzt kein angefordertes Bild.
+- **Companion:** Vortrag, HUB, Buchwerkstatt, Medienwerkstatt und eigene
+  URL-Ansichten mit Vollbild; sichtbare Mikrofon-/Lautsprecher-/Modussteuerung.
+  Der zusätzliche iPad-Hörsaalmixer ist ein **Hardwareprototyp**, nicht bereits
+  für jede USB-/HDMI-Kombination freigegeben.
+
+Dieser Release Candidate bündelt die Neuerungen und den Stabilitätsfix.
+Automatisierte Tests ersetzen keine Langzeit- oder Hörsaal-Abnahme.
+[Änderungen und Messungen](docs/release_notes/v0.19.0-rc.1.md),
+[Feldtests](docs/FIELD_TESTS.md) und
+[sicheres Update](docs/SAFE_UPDATE_0.19.md).
+Keine persönlichen Verbindungen, Schlüssel, Memory-Daten oder Stimmaufnahmen
+sind enthalten. Eigene Konfiguration und eigene/licenzierte Stimme bleiben
+bei einem Update erhalten. Die Companion-App ist ein
+[separates Repository](https://github.com/ProfEngel/TrinityCompanionIOS).
+
 > **22.09.2026: Creative Canvas ist auf Eis.** Kein automatischer Start,
 > kein Desktop-Reiter und keine Installation/CI-Builds mehr. Bestehende Canvas-Daten
 > und der historische Quellcode bleiben erhalten. Für die Agentenoberfläche wird
@@ -26,14 +75,11 @@
 > - Die vollstaendige Historie steht in **[RELEASES.md](RELEASES.md)** und in den detaillierten **[Release Notes](docs/release_notes/)**.
 
 > [!IMPORTANT]
-> Die verbindliche aktuelle Architektur trennt **Arbeit/BIZ auf Windows**,
-> **Privat/PRIVAT auf dem Mac** und **Development/TEST**. Dauerhafte Inhalte
-> liegen profilbezogen in BizVault beziehungsweise BrainVault; Runtime,
-> Datenbanken, Indizes und ausführbare Agenten bleiben lokal. Die einzige
-> aktuelle Resteliste ist der
-> **[Implementierungsplan Trinity](docs/IMPLEMENTIERUNGSPLAN_TRINITY.md)**.
-> Ältere Roadmaps und Release Notes bleiben als historische
-> Entwicklungsdokumentation erhalten.
+> Arbeit, Privat und Test sind optionale getrennte Profile, keine Pflicht zu
+> mehreren Instanzen. Im Server-Client-Betrieb besitzt der Server das Memory.
+> Ältere Roadmaps und Release Notes beschreiben historische Entwicklungsstände;
+> für den aktuellen Funktionsumfang gelten der Überblick oben und die neuen
+> Release Notes. Creative Canvas bleibt stillgelegt; TrinityHUB ist separat.
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
@@ -678,14 +724,14 @@ Wenn du Trinity in deiner Forschung verwendest, zitiere bitte wie folgt:
   title={Trinity: Academic Personal Concierge for macOS with modular Agentic-Skill-System},
   author={Engel, Mathias and Engel, Zoe},
   year={2026},
-  note={Ein privates Forschungsprojekt von Mathias Engel, Zoe Engel und Eve},
+  note={Ein privates Forschungsprojekt von Trinity-Nutzer, Zoe Engel und Eve},
   url={https://github.com/ProfEngel/TrinityLectureAssisitant}
 }
 ```
 
 ---
 
-_Made with ❤️ in Stuttgart / Nürtingen, Germany by Mathias Engel & Zoe Engel (2024–2025)_
+_Made with ❤️ in Stuttgart / Nürtingen, Germany by Trinity-Nutzer & Zoe Engel (2024–2025)_
 _Trinity ist bereit._ 🧞‍♀️
 
 ---

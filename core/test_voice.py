@@ -8,4 +8,4 @@ def speak(text):
 
 
 if __name__ == "__main__":
-    speak("Hallo Mat Max. Ich bin Trinity. Dein neuer Assistent ist bereit.")
+    speak("Hallo Trinity-Nutzer. Ich bin Trinity. Dein neuer Assistent ist bereit.")

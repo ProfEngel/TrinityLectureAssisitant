@@ -1,8 +1,10 @@
 from datetime import datetime
+from html import escape
+from urllib.parse import urlsplit
 
 def can_handle(query: str) -> bool:
     router_text = query.lower()
-    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online", "aktuell", "heute", "heutige", "neuigkeiten", "news", "gerade los", "web", "tavily"])
+    return any(word in router_text for word in ["recherchier", "such ", "suche ", "finde heraus", "nächste spiel", "nächstes spiel", "spielplan", "nachricht", "online", "im internet", "aktuell", "heute", "heutige", "neuigkeiten", "news", "gerade los", "web", "tavily"])
 
 def execute(query: str, context: dict = None) -> dict:
     if not context or "brain" not in context:
@@ -44,10 +46,19 @@ def execute(query: str, context: dict = None) -> dict:
         search_context = "--- AGENTIC ACTION ---\nDie Suchanfrage war unklar. Bitte den Nutzer, das Thema genauer zu benennen.\n\n"
         return {"has_payload": False, "html_payload": "", "search_context": search_context}
 
-    results = _search_tavily(search_query, brain.tavily_key)
+    results, search_error = _search_tavily(search_query, brain.tavily_key)
+    if search_error:
+        return {
+            "has_payload": False,
+            "html_payload": "",
+            "direct_answer": search_error,
+        }
     if results:
         print(f"✅ Tavily: {len(results)} Ergebnisse gefunden")
-        search_results_text = "\n".join([f"- {r['title']}: {r['content']}" for r in results])
+        search_results_text = "\n".join(
+            f"- {r.get('title', 'Quelle')} ({r.get('url', '')}; {r.get('published_date', 'Datum unbekannt')}): {r.get('content', '')}"
+            for r in results
+        )
         search_context = (
             f"--- AKTUELLE WEB-RECHERCHE (ECHTZEIT-DATEN) ---\n"
             f"HEUTIGES DATUM: {timestamp} (ISO: {date_iso})\n"
@@ -59,8 +70,12 @@ def execute(query: str, context: dict = None) -> dict:
         )
         
         # Payload für das UI-Dashboard erstellen
-        html_items = "".join([f"<div style='margin-bottom:20px;'><a href='{r.get('url','')}' style='color:#00bfff; font-weight:bold;'>{r['title']}</a><div style='font-size:15px; opacity:0.9; margin-top:5px; line-height:1.4;'>{r['content']}</div></div>" for r in results])
-        html_payload = f"<!-- KEEP_OPEN -->\n<h2 style='margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;'>🔍 {search_query}</h2><div style='padding-top:10px;'>{html_items}</div>"
+        html_items = "".join(
+            f"<div style='margin-bottom:20px;'><a href='{escape(r.get('url', ''), quote=True)}' style='color:#00bfff; font-weight:bold;'>{escape(r.get('title', 'Quelle'))}</a>"
+            f"<div style='font-size:15px; opacity:0.9; margin-top:5px; line-height:1.4;'>{escape(r.get('content', ''))}</div></div>"
+            for r in results if urlsplit(r.get('url', '')).scheme in {'http', 'https'}
+        )
+        html_payload = f"<!-- KEEP_OPEN -->\n<h2 style='margin-top: 0; font-weight: 300; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; font-size: 18px;'>🔍 {escape(search_query)}</h2><div style='padding-top:10px;'>{html_items}</div>"
         
         return {
             "has_payload": True,
@@ -75,11 +90,10 @@ def _search_tavily(query, api_key):
     import requests
     if not api_key:
         print("⚠️ Warnung: Tavily API-Key fehlt in config.json")
-        return []
+        return [], "Der Websuche-Schlüssel fehlt. Bitte trage ihn in den Trinity-Einstellungen ein."
     
     url = "https://api.tavily.com/search"
     payload = {
-        "api_key": api_key,
         "query": query,
         "search_depth": "advanced",
         "include_answer": False,
@@ -89,10 +103,16 @@ def _search_tavily(query, api_key):
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=15)
+        response = requests.post(url, json=payload, headers={"Authorization": f"Bearer {api_key}"}, timeout=15)
         response.raise_for_status()
         data = response.json()
-        return data.get("results", [])
+        return data.get("results", []), ""
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 0
+        if status in (401, 403):
+            return [], "Die Websuche ist eingerichtet, aber der Tavily-Schlüssel wurde abgelehnt. Bitte prüfe den Schlüssel in den Trinity-Einstellungen."
+        print(f"⚠️ Fehler bei Tavily Suche: HTTP {status}")
+        return [], "Die Websuche ist derzeit nicht erreichbar. Bitte versuche es später erneut."
     except Exception as e:
         print(f"⚠️ Fehler bei Tavily Suche: {e}")
-        return []
+        return [], "Die Websuche ist derzeit nicht erreichbar. Bitte versuche es später erneut."

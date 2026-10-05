@@ -413,6 +413,11 @@ class MemoryStore:
             rows = db.execute(sql, parameters).fetchall()
             results = []
             for row in rows:
+                # Legacy transport compaction mistakenly became a voice memory.
+                # Keep the record for audit, but never retrieve it as user intent.
+                if (str(row["text"]).startswith("User: Summarize the following conversation.  Return only the JSON object.")
+                        and "--- CONVERSATION START ---" in str(row["text"])):
+                    continue
                 tag_rows = db.execute(
                     "SELECT tag FROM memory_tags WHERE memory_id = ?",
                     (row["id"],),

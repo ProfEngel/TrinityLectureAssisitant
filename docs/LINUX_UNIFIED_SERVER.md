@@ -27,7 +27,7 @@ externen Kern weiter. Standalone-Profile auf Mac und Windows bleiben erhalten.
 Nach erfolgreichem Test und mit freien Ports:
 
 ```text
-python trinity_cli.py server --host 100.70.50.6 --port 8765 \
+python trinity_cli.py server --host 100.x.y.z --port 8765 \
   --voice-profile trinity-linux-server
 ```
 

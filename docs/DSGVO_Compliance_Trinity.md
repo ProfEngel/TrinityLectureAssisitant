@@ -1,7 +1,7 @@
 # Datenschutz- und Compliance-Dokumentation (DSGVO)
 **Projekt:** Trinity KI-Assistent
 **Einsatzort:** Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen (HfWU)
-**Verantwortlich:** Prof. Dr. Mathias Engel
+**Verantwortlich:** Trinity-Nutzer
 
 ---
 

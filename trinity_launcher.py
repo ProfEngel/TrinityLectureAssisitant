@@ -141,6 +141,38 @@ def _request_graceful_shutdown(_signum, _frame):
     raise KeyboardInterrupt
 
 
+def _launch_remote_client(base_dir, child_env, voice_config, logs_dir):
+    """Run only the remote desktop surface and audio transport, never a local Brain."""
+    ui_script = os.path.join(base_dir, "trinity_client_app.py")
+    cli_script = os.path.join(base_dir, "trinity_cli.py")
+    processes = []
+    with open(os.path.join(logs_dir, "client.log"), "a", encoding="utf-8") as log:
+        try:
+            if str(voice_config.get("engine") or "legacy").casefold() == "eve":
+                processes.append(subprocess.Popen(
+                    [sys.executable, "-u", cli_script, "--home", base_dir,
+                     "voice", "serve", "--profile", "trinity-mac-client"],
+                    cwd=base_dir, env=child_env, stdout=log, stderr=subprocess.STDOUT,
+                ))
+            processes.append(subprocess.Popen(
+                [sys.executable, "-u", ui_script], cwd=base_dir,
+                env=child_env, stdout=log, stderr=subprocess.STDOUT,
+            ))
+            while all(process.poll() is None for process in processes):
+                time.sleep(0.5)
+            return next((process.returncode for process in processes
+                         if process.poll() is not None), 0)
+        finally:
+            for process in reversed(processes):
+                _terminate(process)
+            for process in processes:
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=3)
+
+
 def _acquire_launcher_lock(base_dir, platform_name=None):
     """Hold one OS-level lock so a second app click cannot duplicate Trinity."""
 
@@ -304,6 +336,12 @@ def launch_trinity():
     server_config = _read_server_config(config_file)
     workbench_config = _read_workbench_config(config_file)
     voice_config = _read_voice_config(config_file)
+
+    client_config = load_config(config_file).get("client", {})
+    if client_config.get("enabled", False):
+        if not str(client_config.get("server_url") or "").startswith(("http://", "https://")):
+            raise ValueError("Client-Modus benötigt eine Trinity-Server-URL in den Einstellungen.")
+        return _launch_remote_client(base_dir, child_env, voice_config, logs_dir)
 
     with open(
         os.path.join(logs_dir, "launcher.log"), "a", encoding="utf-8"

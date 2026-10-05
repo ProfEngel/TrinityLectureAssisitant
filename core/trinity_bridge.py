@@ -36,6 +36,7 @@ from chat_protocol import (
 from canvas_manager import CanvasManager
 from configuration import load_config, save_config
 from external_stt_feed import append_external_stt_event
+from glossary_explainer import explain_lecture_term
 from memory_store import MemoryStore
 from runtime_reset import delete_session_summary
 from platform_adapters import (
@@ -49,6 +50,10 @@ from tenant_context import tenant_history_path, tenant_memory_db_path, tenant_up
 from trinity_paths import TrinityPaths
 from unified_session import UnifiedSessionStore
 from lecture_context import LectureContextStore
+from desktop_context import DesktopContextStore
+from voice.config import load_voice_config
+from voice.input_selection import AudioInputSelection
+from voice.capabilities import transcription_stream_capability
 from web_ui import render_web_ui
 from workbench import WorkbenchManager
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
@@ -77,6 +82,7 @@ QUIET_GET_LOG_PATHS = {
     "/dashboard",
     "/memory/graph",
     "/speaker",
+    "/audio/input",
     "/ambient",
 }
 
@@ -170,10 +176,64 @@ class TrinityBridge:
         self._session_close_lock = threading.Lock()
         self._summary_jobs = set()
         self._audio_transcriber = None
+        self.audio_input = AudioInputSelection(
+            self.config_path,
+            self.home / "TrinityRuntime" / "voice" / "input_lease.json",
+        )
         self._canvas_status_cache = (0.0, {})
         self.ambient = AmbientContextService()
         self.sessions = UnifiedSessionStore(self.home, load_config(self.config_path))
         self.workbench = WorkbenchManager(self.home)
+
+    def _make_audio_transcriber(self, config):
+        stt_config = config.get("stt", {})
+        backend = str(stt_config.get("companion_backend") or "auto").strip().lower()
+        voice_config = load_voice_config(self.home, config)
+        if (
+            backend == "auto"
+            and voice_config.enabled
+            and voice_config.profile.runtime_role == "client"
+            and voice_config.remote_voice_url.strip()
+        ):
+            backend = "eve-remote"
+        shared_parakeet = os.environ.get("TRINITY_VOICE_MULTIPLEX") == "1"
+        if shared_parakeet:
+            backend = "eve-remote"
+        return BridgeAudioTranscriber(
+            model_name=str(stt_config.get("model") or "small"),
+            backend=backend,
+            parakeet_model_name=stt_config.get(
+                "companion_model",
+                "mlx-community/parakeet-tdt-0.6b-v3",
+            ),
+            remote_voice_url=voice_config.remote_voice_url,
+            remote_stt_url=(
+                "http://127.0.0.1:18768/v1/audio/transcriptions"
+                if shared_parakeet else voice_config.remote_stt_url
+            ),
+            remote_voice_token=(
+                voice_config.access_token if shared_parakeet
+                else voice_config.remote_voice_token or voice_config.access_token
+            ),
+            remote_timeout_seconds=(
+                25 if shared_parakeet
+                else stt_config.get("companion_remote_timeout_seconds", 12)
+            ),
+            fallback_on_remote_error=not shared_parakeet,
+        )
+
+    def prepare_audio_transcriber(self):
+        """Warm the slot-free companion STT backend in the background."""
+        with self._lock:
+            if self._audio_transcriber is None:
+                config = load_config(self.config_path)
+                self._audio_transcriber = self._make_audio_transcriber(config)
+            transcriber = self._audio_transcriber
+        try:
+            transcriber.warm_up()
+            print(f"G2/Companion-STT bereit: {transcriber.backend}")
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"G2/Companion-STT wird bei Bedarf geladen: {exc}")
 
     @property
     def profile(self):
@@ -200,6 +260,7 @@ class TrinityBridge:
             "profile": paths.profile,
             "session": self.current_session(),
             "speaker": self.get_speaker(),
+            "audio_input": self.audio_input.current(),
             "knowledge": {
                 "vault_root": str(paths.vault_root),
                 "vault_available": paths.vault_root.is_dir(),
@@ -236,7 +297,7 @@ class TrinityBridge:
             "updated_at": float(value.get("updated_at") or 0.0),
         }
 
-    def set_speaker(self, payload):
+    def set_speaker(self, payload, client_ip=""):
         if not isinstance(payload, dict):
             raise ValueError("Sprechstelle muss ein Objekt sein.")
         kind = str(payload.get("kind") or "").strip().lower()
@@ -257,6 +318,8 @@ class TrinityBridge:
             "kind": kind,
             "updated_at": time.time(),
         }
+        if kind != "none" and client_ip:
+            speaker["client_ip"] = str(client_ip).strip()[:64]
         with self._lock:
             config = load_config(self.config_path)
             config.setdefault("system", {})["speech_output"] = speaker
@@ -418,8 +481,7 @@ class TrinityBridge:
         with self._lock:
             if self._audio_transcriber is None:
                 config = load_config(self.config_path)
-                model_name = str(config.get("stt", {}).get("model") or "small")
-                self._audio_transcriber = BridgeAudioTranscriber(model_name=model_name)
+                self._audio_transcriber = self._make_audio_transcriber(config)
 
         result = self._audio_transcriber.transcribe(
             payload.get("audio_base64"),
@@ -450,6 +512,11 @@ class TrinityBridge:
         return response
 
     def end_session(self, payload, user=None):
+        # Legacy companions called this automatically on session changes.
+        # Only a deliberate administrative summary may invoke the old agent.
+        if not payload.get("explicit_summary", False):
+            return {"ok": True, "created": False, "accepted": False,
+                    "disabled": True, "message": "Gemeinsames Memory bleibt aktiv; keine automatische Session-Zusammenfassung."}
         session_id = str(payload.get("session_id", "")).strip()
         session_name = str(payload.get("session_name", "")).strip()[:160]
         display_session_id = str(payload.get("display_session_id", "")).strip()
@@ -541,61 +608,14 @@ class TrinityBridge:
         }
 
     def close_session(self, payload, user=None):
-        """Close the canonical session, queue its summary, and activate one replacement."""
+        """Compatibility ACK for old clients, without splitting shared memory."""
         if not isinstance(payload, dict):
             raise ValueError("Session-Abschluss erwartet ein Objekt.")
-        with self._session_close_lock:
-            current = self.sessions.current()
-            requested_id = str(payload.get("session_id") or current.id).strip()
-            if requested_id != current.id:
-                raise ValueError(
-                    "Nur die aktuell aktive gemeinsame Session kann geschlossen werden."
-                )
-
-            manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
-            closing = manager.get_session(current.id)
-            summary = self.end_session(
-                {
-                    **payload,
-                    "session_id": closing.id,
-                    "session_name": closing.title,
-                    "display_session_id": "",
-                    "display_session_name": "",
-                    "wait": bool(payload.get("wait", False)),
-                },
-                user=user,
-            )
-            summary_status = (
-                "complete"
-                if summary.get("created")
-                else "queued"
-                if summary.get("accepted")
-                else "empty"
-            )
-            closed = manager.close_session(closing.id, summary_status=summary_status)
-            replacement_title = str(
-                payload.get("replacement_title") or payload.get("next_title") or ""
-            ).strip()
-            replacement = manager.create_session(
-                replacement_title or None,
-                workspace_id=str(
-                    payload.get("workspace_id") or closing.workspace_id or INBOX_WORKSPACE_ID
-                ),
-                mode=str(payload.get("mode") or "chat"),
-            )
-            self.sessions.activate(
-                replacement,
-                source=str(payload.get("source") or "session-close"),
-            )
-            return {
-                "ok": True,
-                "profile": self.profile,
-                "summary": summary,
-                "closed_session": closed.as_dict(),
-                "session": replacement.as_dict(),
-                "active_session": self.current_session(),
-            }
-
+        current = self.sessions.current()
+        return {"ok": True, "profile": self.profile,
+                "summary": {"created": False, "accepted": False, "disabled": True},
+                "session": current.as_dict(), "active_session": self.current_session(),
+                "message": "Gemeinsame Unterhaltung bleibt aktiv."}
     def _set_session_summary_status(self, session_id, status):
         try:
             manager = TrinityWorkspaceManager(str(self.home), load_config(self.config_path))
@@ -1776,6 +1796,9 @@ def make_handler(bridge):
                         {
                             "ok": True,
                             "name": "Trinity Bridge",
+                            "transcription_stream": transcription_stream_capability(
+                                bridge.home, load_config(bridge.config_path)
+                            ),
                             "time": time.time(),
                             "history": bridge.history_path_for(user).exists(),
                             "user": user or None,
@@ -1843,6 +1866,8 @@ def make_handler(bridge):
                     _json_response(self, 200, bridge.get_mode())
                 elif parsed.path == "/speaker":
                     _json_response(self, 200, {"ok": True, **bridge.get_speaker()})
+                elif parsed.path == "/audio/input":
+                    _json_response(self, 200, bridge.audio_input.current())
                 elif parsed.path == "/ambient":
                     _json_response(
                         self,
@@ -1964,10 +1989,21 @@ def make_handler(bridge):
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
                 if parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
+                elif parsed.path == "/glossary":
+                    payload = _read_json(self)
+                    _json_response(self, 200, explain_lecture_term(
+                        str(payload.get("text") or ""), load_config(bridge.config_path)
+                    ))
                 elif parsed.path == "/lecture/context":
                     if not bridge.can_manage_settings(self, user):
                         raise PermissionError("Folienkontext benötigt Zugriff auf die lokale Trinity-Instanz.")
                     _json_response(self, 200, LectureContextStore(bridge.home).update(
+                        _read_json(self), profile=bridge.profile, session_id=bridge.sessions.current().id
+                    ))
+                elif parsed.path == "/desktop/context":
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError("Mac-Fensterfreigabe benötigt Administrationszugriff.")
+                    _json_response(self, 200, DesktopContextStore(bridge.home).update(
                         _read_json(self), profile=bridge.profile, session_id=bridge.sessions.current().id
                     ))
                 elif parsed.path == "/workbench/run":
@@ -2091,7 +2127,13 @@ def make_handler(bridge):
                 elif parsed.path == "/mode":
                     _json_response(self, 200, bridge.set_mode(_read_json(self)))
                 elif parsed.path == "/speaker":
-                    _json_response(self, 200, bridge.set_speaker(_read_json(self)))
+                    _json_response(
+                        self,
+                        200,
+                        bridge.set_speaker(_read_json(self), self.client_address[0]),
+                    )
+                elif parsed.path == "/audio/input":
+                    _json_response(self, 200, bridge.audio_input.update(_read_json(self)))
                 elif parsed.path == "/ambient/device":
                     _json_response(self, 200, bridge.ambient.report_device(_read_json(self)))
                 elif parsed.path == "/runtime":
@@ -2143,6 +2185,7 @@ def make_handler(bridge):
 
 def run_bridge(home, host=DEFAULT_HOST, port=DEFAULT_PORT, token="", auth_enabled=False):
     bridge = TrinityBridge(home, token=token, auth_enabled=auth_enabled)
+    threading.Thread(target=bridge.prepare_audio_transcriber, daemon=True).start()
     server = ThreadingHTTPServer((host, int(port)), make_handler(bridge))
     print(f"Trinity Bridge läuft auf http://{host}:{port}")
     if host in {"0.0.0.0", "::"}:

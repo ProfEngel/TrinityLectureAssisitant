@@ -5,6 +5,13 @@ import subprocess
 import shutil
 import re
 import time
+import sys
+
+# Headless core/transcriber.py launches with core/ as sys.path[0]. Agents also
+# import sibling agents, so the application root must be available there.
+_APPLICATION_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _APPLICATION_ROOT not in sys.path:
+    sys.path.insert(0, _APPLICATION_ROOT)
 
 from answer_sanitizer import clean_visible_answer
 from platform_adapters import capability_message, detect_capabilities
@@ -14,6 +21,66 @@ from memory_store import MemoryStore
 from skill_registry import SkillRegistry
 from task_orchestrator import TaskOrchestrator
 from lecture_context import add_current_slide
+from desktop_context import add_current_desktop
+from image_routing import is_image_request, image_skill_allowed
+from voice.diagnostics import diagnostic
+from media_policy import wants_local_media, wants_song
+
+
+def reply_token_budget(query, voice_budget):
+    """Bound ordinary spoken replies without shortening requested writing work."""
+    if not voice_budget:
+        return 1500
+    detailed = re.search(
+        r"ausführlich|ausfuehrlich|detailliert|schritt für schritt|schritt fuer schritt|"
+        r"zusammenfass|fass.*zusammen|umschreib|überarbeit|ueberarbeit|formuliere|entwurf|herleitung|"
+        r"schreibe|niederschreib", str(query), re.I,
+    )
+    return 650 if detailed else 320
+
+
+def build_context_prompt(soul, user, slide_status, search_context, memory_context, transcript, query,
+                         desktop_status=""):
+    """Keep lecture context available without making every conversation a lecture."""
+    slide_status = str(slide_status or "")
+    actual_slide = slide_status and not slide_status.startswith("Keine aktuelle Folie")
+    asks_about_slide = bool(re.search(r"\b(folie|folien|vortrag|präsentation|praesentation)\b", query, re.I))
+    slide_section = (
+        f"--- FOLIENKONTEXT (NUR FALLS RELEVANT) ---\n{slide_status}\n\n"
+        if actual_slide or asks_about_slide else ""
+    )
+    asks_about_window = bool(re.search(
+        r"\b(fenster|bildschirm|desktop|aktive[nsrm]? programm|siehst du|schau mal|hier)\b",
+        query, re.I,
+    ))
+    desktop_section = (
+        f"--- AKTIVES MAC-FENSTER ---\n{desktop_status}\n\n"
+        if desktop_status else
+        "--- AKTIVES MAC-FENSTER ---\nKein aktuelles Mac-Fenster freigegeben. "
+        "Behaupte nicht, den Bildschirm zu sehen. Bitte um Aktivierung der Fensterfreigabe in MiniTrinity.\n\n"
+        if asks_about_window else ""
+    )
+    return (
+        f"{soul}\n\n"
+        f"--- INFORMATIONEN ZUM NUTZER ---\n{user}\n\n"
+        "Trinity ist eine vielseitige persönliche Assistentin für Beruf, Lehre, "
+        "Forschung, kreative Projekte und Privatleben. Die aktuelle Frage bestimmt "
+        "das Thema. Unterstelle keinen Vorlesungskontext, wenn er nicht erkennbar ist. "
+        "Nenne den Namen des Nutzers nur, wenn es sachlich notwendig ist; stelle "
+        "dich und deine Hilfsbereitschaft nicht wiederholt vor.\n\n"
+        "Bilder, Schaubilder, Infografiken und Diagramme werden ausschließlich "
+        "als generierte Rasterbilder über den Bild-Agenten erstellt, niemals "
+        "als Mermaid oder Diagramm-Code. Bei nicht verfügbarer Generierung "
+        "melde das ehrlich; liefere keinen Code als Ersatzbild.\n\n"
+        f"{desktop_section}{slide_section}{search_context}{memory_context}\n\n"
+        f"--- LETZTER GESPRÄCHSVERLAUF (NUR ALS KONTEXT) ---\n{transcript}\n\n"
+        "Frühere Themen im Verlauf sind nicht automatisch das aktuelle Thema. "
+        "Wenn nach früheren Aussagen gefragt wird, beziehe dich genau auf den Verlauf. "
+        "Gib niemals interne Reasoning-, Thinking-, Analyse-, Draft-, Check- oder "
+        "Self-Correction-Prozesse aus. Antworte nur mit der finalen Nutzerantwort. "
+        "Bei kurzen Sprachfragen antworte knapp in höchstens vier Sätzen, sofern "
+        "nicht ausdrücklich eine ausführliche Herleitung gewünscht ist."
+    )
 
 
 class TrinityBrain:
@@ -45,7 +112,7 @@ class TrinityBrain:
 
         # Soul + User einmalig laden und cachen (nicht bei jedem Request neu lesen)
         self._soul_cache = self.get_file_content(self.soul_path, "Du bist Trinity, ein KI-Assistent.")
-        self._user_cache = self.get_file_content(self.user_path, "Der Nutzer ist Mat Max.")
+        self._user_cache = self.get_file_content(self.user_path, "Unterstütze den Nutzer ohne Annahmen über seine Identität.")
         self._remember_runtime_signature()
 
     def load_config(self):
@@ -96,6 +163,7 @@ class TrinityBrain:
             apis = config.get("apis", {})
             self.tavily_key = apis.get("tavily", "")
             self.fal_key = apis.get("fal_ai", "")
+            self.media_provider = config.get("media_generation", {}).get("provider", "comfyui")
             
             # Persona
             persona = config.get("persona", {})
@@ -111,6 +179,7 @@ class TrinityBrain:
             self.comfyui_enabled = comfyui.get("enabled", False)
             self.comfyui_url = comfyui.get("server_url", "")
             self.comfyui_workflow = comfyui.get("default_workflow", "Flux2_Klein_T2I_API.json")
+            self.comfyui_music_workflow = comfyui.get("music_workflow", "AceStep1.5_T2A_API.json")
             
             # Telegram-Config (für Skill-Context-Weitergabe)
             self._telegram_cfg = config.get("telegram", {})
@@ -172,7 +241,7 @@ class TrinityBrain:
         )
         self._user_cache = self.get_file_content(
             self.user_path,
-            "Der Nutzer ist Mat Max.",
+            "Unterstütze den Nutzer ohne Annahmen über seine Identität.",
         )
         self._runtime_signature = current
         print("🔄 Trinity-Konfiguration für neue Anfrage neu geladen.")
@@ -255,6 +324,10 @@ class TrinityBrain:
 
     def ask_llm(self, messages):
         """Hilfsmethode für interne LLM-Aufrufe (z.B. Context Enrichment)."""
+        from core.voice.request_scope import (current_scope, check_cancelled,
+                                         interruptible_response, collect_content)
+        from voice.sentence_stream import StreamCancelled
+        check_cancelled()
         self.reload_runtime_config()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -269,7 +342,15 @@ class TrinityBrain:
         }
         if getattr(self, "enable_thinking", None) is not None:
             data["enable_thinking"] = bool(self.enable_thinking)
+            data["chat_template_kwargs"] = {"enable_thinking": bool(self.enable_thinking)}
         try:
+            if current_scope():
+                data.update(stream=True, max_tokens=1200)
+                with interruptible_response(requests.post(
+                    self.url, headers=headers, json=data, stream=True, timeout=(5, 25),
+                )) as resp:
+                    resp.raise_for_status()
+                    return clean_visible_answer(collect_content(resp))
             resp = requests.post(
                 self.url,
                 headers=headers,
@@ -282,7 +363,10 @@ class TrinityBrain:
                 return clean_visible_answer(
                     msg.get('content') or msg.get('reasoning_content') or ''
                 )
+        except StreamCancelled:
+            raise
         except Exception as e:
+            check_cancelled()
             print(f"⚠️ ask_llm Fehler: {e}")
         return ""
 
@@ -349,6 +433,8 @@ class TrinityBrain:
 
     def _skill_allowed_for_image_upload(self, skill, router_text):
         """Avoid hijacking normal image understanding with generation agents."""
+        if is_image_request(router_text):
+            return image_skill_allowed(skill, router_text, getattr(self, "media_provider", "comfyui"))
         module_name = getattr(skill, "__name__", "")
         if module_name.endswith("comfyui_agent") or "comfyui_agent" in module_name:
             return self._is_explicit_local_media_request(router_text)
@@ -361,6 +447,8 @@ class TrinityBrain:
         return getattr(skill, "__name__", getattr(skill, "__file__", "Skill"))
 
     def _skill_can_handle(self, skill, router_text, skill_context=None):
+        if is_image_request(router_text):
+            return image_skill_allowed(skill, router_text, getattr(self, "media_provider", "comfyui"))
         try:
             handles_query = bool(skill.can_handle(router_text))
         except Exception as exc:
@@ -388,6 +476,12 @@ class TrinityBrain:
         return handles_query
 
     def _skill_can_handle_song(self, skill, router_text):
+        if is_image_request(router_text):
+            return False
+        if getattr(self, "media_provider", "comfyui") == "kie":
+            expected = "comfyui_agent" if wants_local_media(router_text) else "kie_media_agent"
+            if expected not in self._skill_label(skill):
+                return False
         if not hasattr(skill, "can_handle_song"):
             return False
         try:
@@ -400,6 +494,30 @@ class TrinityBrain:
             return False
 
 
+    def _execute_media_skill(self, execute, query, context):
+        home = os.path.dirname(os.path.dirname(getattr(self, "config_path", __file__)))
+        context = dict(context)
+        if getattr(self, "config", {}).get("media_generation", {}).get("background_jobs"):
+            from media_jobs import start_media_job
+            return start_media_job(home, query, execute, context)
+        return self._run_media_skill(execute, query, context)
+
+    def _run_media_skill(self, execute, query, context):
+        home = os.path.dirname(os.path.dirname(getattr(self, "config_path", __file__)))
+        diagnostic(home, "Media", "started")
+        try:
+            result = execute(query, context=context)
+            if (not result.get("has_payload") and result.get("fallback_safe") is True
+                    and getattr(self, "config", {}).get("media_generation", {}).get("comfyui_fallback")
+                    and "kie_media_agent" in getattr(execute, "__module__", "")):
+                from agents.comfyui_agent import script as comfy
+                result = (comfy.execute_t2a if wants_song(query) else comfy.execute)(query, context=context)
+                if result.get("has_payload"):
+                    result["direct_answer"] = "Das Medium ist fertig. kie.ai war nicht verfügbar; ComfyUI hat lokal übernommen."
+            return result
+        finally:
+            diagnostic(home, "Media", "finished")
+
     def get_soul(self):
         return self._soul_cache
 
@@ -411,7 +529,7 @@ class TrinityBrain:
             with open(transcript_file, "r") as f:
                 lines = f.readlines()
                 # Nur die letzten 30 Zeilen nehmen, um Tokens zu sparen
-                return "".join(lines[-30:])
+                return "".join(lines[-30:])[-8000:]
         except FileNotFoundError:
             return "Noch kein Transkript vorhanden."
 
@@ -423,7 +541,14 @@ class TrinityBrain:
         action_text=None,
         from_telegram=False,
         attachments=None,
+        voice_budget=False,
+        desktop_image_available=None,
+        sentence_callback=None,
+        cancelled=lambda: False,
     ):
+        from core.voice.request_scope import check_cancelled, interruptible_response
+        from voice.sentence_stream import StreamCancelled
+        check_cancelled()
         self.reload_runtime_config()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -437,8 +562,13 @@ class TrinityBrain:
         user_prompt = self.get_user()
         attachment_content = prepare_attachment_content(user_query, attachments or [])
         slide_image = False
+        desktop_image = False
         if getattr(self, "config_path", None):
-            slide_image = add_current_slide(attachment_content, os.path.dirname(os.path.dirname(self.config_path)))
+            home = os.path.dirname(os.path.dirname(self.config_path))
+            if desktop_image_available is not False:
+                desktop_image = add_current_desktop(attachment_content, home, query=user_query)
+            if not desktop_image:
+                slide_image = add_current_slide(attachment_content, home)
         primary_image_path = attachment_content["primary_image_path"]
         if primary_image_path:
             self.last_media_path = primary_image_path
@@ -501,7 +631,7 @@ class TrinityBrain:
                 break
             if self._skill_can_handle_song(skill, router_text):
                 try:
-                    result = skill.execute_t2a(user_query, context={
+                    result = self._execute_media_skill(skill.execute_t2a, user_query, {
                         "brain": self,
                         "from_telegram": from_telegram,
                         "telegram_cfg": getattr(self, '_telegram_cfg', {}),
@@ -513,6 +643,7 @@ class TrinityBrain:
                         "attachments": attachments or [],
                         "task_decision": task_decision,
                     })
+                    check_cancelled()
                     if result.get("has_payload"):
                         payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
                         with open(payload_path, "w", encoding="utf-8") as f:
@@ -520,7 +651,10 @@ class TrinityBrain:
                         has_payload = True
                     search_context = result.get("search_context", search_context)
                     direct_answer = result.get("direct_answer", direct_answer)
+                except StreamCancelled:
+                    raise
                 except Exception as e:
+                    check_cancelled()
                     print(f"⚠️ Fehler bei T2A-Skill: {e}")
                 break  # Kein weiterer Skill nötig
 
@@ -539,7 +673,7 @@ class TrinityBrain:
                     "attachments": attachments or [],
                     "task_decision": task_decision,
                 }
-                if (primary_image_path or slide_image) and not self._skill_allowed_for_image_upload(skill, router_text):
+                if (primary_image_path or slide_image or desktop_image) and not self._skill_allowed_for_image_upload(skill, router_text):
                     print(
                         f"🖼️ Überspringe {getattr(skill, '__name__', 'Skill')} "
                         "für normale Bildanalyse."
@@ -552,7 +686,11 @@ class TrinityBrain:
                 )
                 if handles_query:
                     try:
-                        result = skill.execute(user_query, context=skill_context)
+                        if is_image_request(router_text):
+                            result = self._execute_media_skill(skill.execute, user_query, skill_context)
+                        else:
+                            result = skill.execute(user_query, context=skill_context)
+                        check_cancelled()
                         if result.get("has_payload"):
                             payload_path = os.path.join(os.path.dirname(__file__), "payload.html")
                             with open(payload_path, "w", encoding="utf-8") as f:
@@ -561,10 +699,28 @@ class TrinityBrain:
                         # search_context: Kontext vom Skill (Web, RAG, etc.) – nur einmal verwenden
                         search_context = result.get("search_context", search_context)
                         direct_answer = result.get("direct_answer", direct_answer)
+                    except StreamCancelled:
+                        raise
                     except Exception as e:
+                        check_cancelled()
                         print(f"⚠️ Fehler bei der Skill-Ausführung: {e}")
                     break
 
+        # An image request must terminate here: no LLM-generated Mermaid, HTML
+        # diagram, or implicit cloud fallback when the raster generator fails.
+        if is_image_request(router_text):
+            direct_answer = direct_answer or (
+                "Das generierte Bild ist fertig und im Medien-Player verfügbar."
+                if has_payload else
+                "Es wurde kein Bild erstellt. " + (search_context.strip() or
+                "Die Bildgenerierung ist derzeit nicht verfügbar. Bitte später erneut versuchen.")
+            )
+        elif getattr(self, "media_provider", "comfyui") == "kie":
+            from agents.kie_media_agent.script import can_handle_song
+            if can_handle_song(router_text) and not direct_answer:
+                direct_answer = "Es wurde kein Lied erstellt. " + (search_context.strip() or "Die Musikgenerierung ist derzeit nicht verfügbar.")
+
+        check_cancelled()
         if direct_answer:
             direct_answer = clean_visible_answer(direct_answer)
             if orchestrator is not None:
@@ -577,29 +733,16 @@ class TrinityBrain:
             print(f"⚠️ Memory-Kontext nicht verfügbar: {exc}")
             memory_context = ""
 
-        context_prompt = (
-            f"{soul_prompt}\n\n"
-            f"--- INFORMATIONEN ZUM NUTZER UND ZIELPUBLIKUM ---\n"
-            f"{user_prompt}\n\n"
-            f"--- TATSÄCHLICHER FOLIENZUGRIFF ---\n{attachment_content.get('lecture_status', 'Kein automatisch übertragener Folienkontext.')}\n\n"
-            f"{search_context}"
-            f"{memory_context}\n\n"
-            f"--- AKTUELLES VORLESUNGS-TRANSKRIPT ---\n"
-            f"Hier ist das aktuelle Transkript der Vorlesung inklusive Zeitstempel:\n"
-            f"{transcript}\n\n"
-            f"Regel: Wenn du nach dem Transkript oder vergangenen Aussagen gefragt wirst, "
-            f"beziehe dich exakt auf die Informationen und Zeitstempel in diesem Transkript.\n"
-            f"Absolute Ausgabe-Regel: Gib niemals interne Reasoning-, Thinking-, "
-            f"Analyse-, Draft-, Check- oder Self-Correction-Prozesse aus. "
-            f"Antworte nur mit der finalen Nutzerantwort. Bei kurzen Sprachfragen "
-            f"antworte knapp in hoechstens vier Saetzen, ausser der Nutzer fordert "
-            f"ausdruecklich eine ausfuehrliche Herleitung an."
+        context_prompt = build_context_prompt(
+            soul_prompt, user_prompt, attachment_content.get("lecture_status", ""),
+            search_context, memory_context, transcript, user_query,
+            desktop_status=attachment_content.get("desktop_status", ""),
         )
 
         data = {
             "model": self.model,
             "temperature": 0.1,
-            "max_tokens": 1500,   # Längere Antworten für ausführliche Erklärungen erlauben
+            "max_tokens": reply_token_budget(user_query, voice_budget),
             "messages": [
                 {"role": "system", "content": context_prompt},
                 {"role": "user", "content": attachment_content["content"]}
@@ -607,16 +750,38 @@ class TrinityBrain:
         }
         if getattr(self, "enable_thinking", None) is not None:
             data["enable_thinking"] = bool(self.enable_thinking)
+            # LMStudio / Qwen3: benötigt zusätzlich chat_template_kwargs
+            data["chat_template_kwargs"] = {"enable_thinking": bool(self.enable_thinking)}
         
         try:
             print(f"🧠 Trinity denkt nach über: '{user_query}'...")
+            if sentence_callback is not None:
+                from voice.sentence_stream import stream_sentences, StreamCancelled
+                data["stream"] = True
+                with interruptible_response(requests.post(self.url, headers=headers, json=data, stream=True,
+                                   timeout=(5, 25))) as streamed:
+                    if streamed.status_code >= 400 and (primary_image_path or slide_image or desktop_image):
+                        streamed.close()
+                        data["messages"][-1]["content"] = attachment_content["fallback_text"]
+                        data["messages"][0]["content"] += "\nACHTUNG: Kein Bild verfügbar; nutze nur Text und benenne die Einschränkung."
+                        with interruptible_response(requests.post(self.url, headers=headers, json=data, stream=True,
+                                           timeout=(5, 25))) as fallback:
+                            fallback.raise_for_status()
+                            answer = stream_sentences(fallback, sentence_callback, cancelled)
+                    else:
+                        streamed.raise_for_status()
+                        answer = stream_sentences(streamed, sentence_callback, cancelled)
+                if orchestrator is not None:
+                    check_cancelled()
+                    orchestrator.finish(task_decision, answer)
+                return answer, has_payload
             response = requests.post(
                 self.url,
                 headers=headers,
                 json=data,
-                timeout=getattr(self, "request_timeout_seconds", 90),
+                timeout=(5, 25) if voice_budget else getattr(self, "request_timeout_seconds", 90),
             )
-            if response.status_code >= 400 and (primary_image_path or slide_image):
+            if response.status_code >= 400 and (primary_image_path or slide_image or desktop_image):
                 print(
                     "⚠️ Das aktive Modell hat die Bildeingabe abgelehnt. "
                     "Wiederhole die Anfrage mit Dateikontext ohne Bilddaten."
@@ -627,9 +792,10 @@ class TrinityBrain:
                     self.url,
                     headers=headers,
                     json=data,
-                    timeout=getattr(self, "request_timeout_seconds", 90),
+                    timeout=(5, 25) if voice_budget else getattr(self, "request_timeout_seconds", 90),
                 )
             response.raise_for_status()
+            check_cancelled()
             
             result = response.json()
             msg = result['choices'][0]['message']
@@ -661,6 +827,13 @@ class TrinityBrain:
             return answer, has_payload
             
         except Exception as e:
+            from voice.sentence_stream import StreamCancelled
+            if isinstance(e, StreamCancelled):
+                raise
+            if sentence_callback is not None:
+                # Once audio started, never replace the answer with a fallback
+                # and persist it as though it were the spoken response.
+                raise
             print(f"Fehler bei der Kommunikation mit dem Gehirn: {e}")
             if orchestrator is not None:
                 orchestrator.finish(
