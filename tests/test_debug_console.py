@@ -1,4 +1,6 @@
 import os
+import pytest
+pytestmark = pytest.mark.usefixtures("qt_app")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 from core.debug_console import DebugConsole

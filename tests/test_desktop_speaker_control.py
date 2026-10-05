@@ -1,4 +1,6 @@
 import json
+import pytest
+pytestmark = pytest.mark.usefixtures("qt_app")
 import os
 import threading
 import time

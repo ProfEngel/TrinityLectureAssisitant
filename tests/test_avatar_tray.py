@@ -1,4 +1,6 @@
 import os
+import pytest
+pytestmark = pytest.mark.usefixtures("qt_app")
 from unittest.mock import Mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
