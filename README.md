@@ -1,4 +1,28 @@
-# Trinity — Academic Personal Concierge 🧞‍♀️
+# Trinity — Sprache, Sehen und ein gemeinsames Memory
+
+[**Downloads & Produktseite**](https://profengel.github.io/TrinityLectureAssisitant/) ·
+[**Desktop 0.19.1**](https://github.com/ProfEngel/TrinityLectureAssisitant/releases/tag/v0.19.1) ·
+[Ersteinrichtung & Hardware](docs/DESKTOP_DOWNLOADS.md)
+
+**Ein Gesprächspartner für Vorlesungen, Vorbereitung, Recherche, Schreiben und
+Alltag.** Trinity kann eigenständig auf einem Mac/Windows-PC laufen oder als
+gemeinsamer Linux-Server mit schlanken Clients. Die öffentlichen Desktop-
+Downloads enthalten einen grafischen Einrichtungsassistenten und Eve als
+freigegebene Initialstimme. Python, Parakeet-STT und Qwen3-TTS werden automatisch
+eingerichtet; die großen Modelle lädt der Assistent beim ersten Start herunter.
+Für das LLM gibst Du API-URL, Modellname und optional API-Key an.
+
+Apple Silicon bzw. eine geeignete NVIDIA-GPU unter Windows sind für schnelle
+lokale Sprache erforderlich. Ohne passende GPU nutze den Server-Client-Modus.
+Installer derzeit nicht öffentlich notarisiert/codesigniert; Hinweise und
+SHA256-Prüfsummen liegen im Release. Keine privaten Konfigurationen, Tokens,
+Memory-Daten oder Sound-Deck-MP3s werden mitgeliefert.
+
+![Trinity auf dem iPad: interaktive HTML-Folie mit Annotation](site/assets/ipad-annotations.jpg)
+
+Die iPhone/iPad-Companion-App ist separat und ihr Repository bleibt privat.
+Unlisted-App-Store-Veröffentlichung wird vorbereitet; ein öffentlicher
+App-Store-Link ist noch nicht verfügbar.
 
 ### Neu im Entwicklungsstand: DeckUI
 
@@ -8,7 +32,7 @@ läuft auf dem ausgewählten Ausgabegerät; STT, Modelle und Memory bleiben
 gemeinsam. Audiodateien liegen nur im privaten Runtime-Verzeichnis.
 [Einrichtung, Architektur und Feldtests](docs/SOUND_DECK.md).
 
-## Aktuell: v0.19.0-rc.1 — Standalone oder ein gemeinsamer Server
+## Aktuell: v0.19.1 — Standalone oder ein gemeinsamer Server
 
 Trinity unterstützt Gespräche, Vorlesungen, Vorbereitung, Recherche und
 Schreibarbeit. Du kannst sie vollständig auf einem Desktop betreiben oder
@@ -49,7 +73,7 @@ Eine Windows-VM ist für den Linux-Server nicht erforderlich.
 
 Dieser Release Candidate bündelt die Neuerungen und den Stabilitätsfix.
 Automatisierte Tests ersetzen keine Langzeit- oder Hörsaal-Abnahme.
-[Änderungen und Messungen](docs/release_notes/v0.19.0-rc.1.md),
+[Änderungen 0.19.1](docs/release_notes/v0.19.1.md),
 [Feldtests](docs/FIELD_TESTS.md) und
 [sicheres Update](docs/SAFE_UPDATE_0.19.md).
 Keine persönlichen Verbindungen, Schlüssel, Memory-Daten oder Stimmaufnahmen
@@ -91,7 +115,7 @@ bei einem Update erhalten. Die Companion-App ist ein
 
 ### Nicht Chatbot. Nicht Copilot. Ein Academic Personal Concierge.
 
-Trinity ist ein persönliches KI-Privatbüro für Professorinnen und Professoren: Ein **Academic Personal Concierge** für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11 sowie als schlanker Linux-Server mit WebUI. Trinity ist DSGVO-konform konzipiert und modellagnostisch.
+Trinity ist ein persönliches KI-Privatbüro für Vorlesungen, Recherche, Dokumente, Kommunikation und komplexe Wissensarbeit. Sie läuft lokal auf macOS und Windows 11 sowie als Linux-Server mit WebUI. Die Wahl des LLM ist offen; Datenschutz hängt von Deinen Freigaben, angeschlossenen Diensten und dem Einsatzkontext ab.
 
 > [!TIP]
 > **Neu bei Trinity oder bei den lokalen Harnesses Codex/Pi/OpenCode?** Starte mit dem
@@ -180,7 +204,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
  *   **AirPod Souffleur:** Private Informationen direkt ins Ohr, Umschalten auf Plenum-Speaker auf Befehl.
  *   **Proaktiver Heartbeat:** Analyse des Transkripts alle 2 Min. mit Warnungen vor logischen Fehlern.
 *   **Document Intelligence:** Lokale Dateien (Dokumente, Excel) einfach auf das UI "plumpsen" lassen zur Sofort-Analyse.
- *   **Secure Sandbox Environment:** 100% einbruchsichere Python/WASM-Umgebung (Pyodide) für wissenschaftliche Berechnungen, sympy-Algebra und interaktive Plotly-Diagramme.
+ *   **Sandbox Environment:** Python/WASM-Umgebung (Pyodide) für Berechnungen und Diagramme. Eine Sandbox ist keine Garantie gegen sämtliche Angriffe; Agentenrechte und Freigaben bleiben wichtig.
  *   **Dynamic Progress Ring:** Kreisförmige Fortschrittsanzeige (Orange: Reading, Rot: Analyzing) um den Avatar.
  *   **User Telemetry:** Tracking der Zeit in Vorlesungen, Teams-Sitzungen und Mail-Bearbeitung (analog Bildschirmzeit).
  *   **Local First & DSGVO:** Maximale Privatsphäre durch lokale Verarbeitung und gezieltes STT-Mikrofon.
@@ -191,7 +215,7 @@ Trinity ist mehr als ein Chatbot; sie ist das Interface zwischen deinem Wissen (
 
 | Komponente | Technologie |
 |---|---|
-| **STT (Sprache → Text)** | Standard: `faster-whisper` (`Legacy`); optional Eve mit deutschem Parakeet-STT via `speech-to-speech` |
+| **STT (Sprache → Text)** | Neuer grafischer Installer: Parakeet via `speech-to-speech`; Legacy/faster-whisper bleibt für ältere Installationen verfügbar |
 | **LLM** | Gemma 4 26B A4B oder Qwen3.6 35B A3B via LM Studio (lokal) oder OpenRouter (Fallback) |
 | **TTS (Text → Stimme)** | Standard: macOS `say` oder Windows SAPI (`Legacy`); optional Eve mit lokalem Qwen3-TTS-Voice-Cloning |
 | **UI** | PySide6 / QWebEngineView mit Glasmorphismus |
@@ -691,9 +715,14 @@ neue externe Agenten dem gewaehlten Standard-Harness zu.
 
 ---
 
-## 🔒 Datenschutz & DSGVO-Konformität
+## 🔒 Datenschutz und Freigaben
 
-Trinity ist vollständig **DSGVO-konform** im Hörsaal-Einsatz konzipiert. Da die Spracheingabe **exklusiv über ein einzelnes Apple AirPod** erfolgt, ist der Aufnahmeradius des Mikrofons auf ca. 20 cm um den Dozenten beschränkt. **Es werden keine Stimmen der Studierenden aufgezeichnet.**
+Trinity kann mit lokalen Modellen und einem eigenen Server betrieben werden.
+Mikrofone können trotzdem andere Personen und Raumton erfassen; es gibt keinen
+garantierten Aufnahmeradius. Im Hörsaal sind Einwilligungen, Datenminimierung,
+Aufbewahrung und die Regeln Deiner Einrichtung zu berücksichtigen. Externe
+LLM-/Medien-/Suchanbieter und aktivierte Bildschirmfreigaben beeinflussen die
+Datenwege. Das Projekt verspricht keine pauschale DSGVO-Konformität.
 
 ---
 
