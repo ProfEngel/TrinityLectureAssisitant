@@ -47,7 +47,12 @@ def main():
         for item in distribution.files or []:
             if item.name.startswith(("LICENSE", "COPYING")):
                 shutil.copyfile(distribution.locate_file(item), licenses / (package + "-" + item.name))
-    (licenses / "Python-LICENSE.txt").write_text(__import__("pydoc").render_doc(license), encoding="utf-8")
+    # The stdlib license printer holds the actual PSF notices. Rendering its
+    # Python object with pydoc would only document _Printer, not the license.
+    import builtins
+    builtins.license._Printer__setup()
+    (licenses / "Python-LICENSE.txt").write_text(
+        "\n".join(builtins.license._Printer__lines) + "\n", encoding="utf-8")
     for src, name in [("assets/voices/eve/initial.wav", "eve.wav"), ("assets/voices/eve/initial.txt", "eve.txt")]:
         if (ROOT / src).is_file():
             shutil.copyfile(ROOT / src, resources / name)
