@@ -16,6 +16,10 @@ from collections import deque
 
 from ..input_selection import AudioInputSelection
 from .auth_proxy import _token_from_request
+try:
+    from core.sound_deck import SoundDeck
+except ImportError:
+    from sound_deck import SoundDeck
 
 
 class MultiplexingVoiceRouter:
@@ -61,6 +65,10 @@ class MultiplexingVoiceRouter:
         self._response_finished = False
         self._diagnostic_path = self.config_path.parent.parent / "TrinityRuntime/voice/diagnostic_events.jsonl"
         self._diagnostic_offset = self._diagnostic_path.stat().st_size if self._diagnostic_path.exists() else 0
+        self.deck = SoundDeck(self.config_path.parent.parent)
+        self._deck_revision = {}
+        self._deck_active = False
+        self._deck_activity_at = 0.0
 
     def _output_id(self):
         try:
@@ -183,6 +191,7 @@ class MultiplexingVoiceRouter:
                 self._enqueue(client, raw)
 
     async def _notify_input_output_activity(self, active, hold_ms):
+        active = active or self._deck_active
         payload = json.dumps({"type": "trinity.output_activity", "active": active,
                               "hold_ms": hold_ms})
         input_id = self._input_id()
@@ -239,6 +248,11 @@ class MultiplexingVoiceRouter:
         if device_id not in {self._input_id(), self._output_id()}:
             await client.close(code=4403, reason="Select input or output first")
             return
+        for peer, previous_device in tuple(self._clients.items()):
+            if previous_device == device_id:
+                self._clients.pop(peer, None)
+                self._drop_outbox(peer)
+                await peer.close(code=4409, reason="New connection for this device")
         self._clients[client] = device_id
         if self._session_created:
             await client.send(json.dumps(self._session_created, ensure_ascii=False))
@@ -266,6 +280,13 @@ class MultiplexingVoiceRouter:
                 event_type = str(event.get("type") or "")
                 input_selected = device_id == self._input_id()
                 output_selected = device_id == self._output_id()
+                if event_type == "trinity.deck.ack":
+                    if output_selected:
+                        try:
+                            self.deck.acknowledge(str(event.get("revision", "")), device_id, str(event.get("status", "")))
+                        except Exception:
+                            pass  # A deck storage failure must not drop voice.
+                    continue
                 if event_type.startswith("input_audio_buffer.") and not input_selected:
                     continue
                 if event_type == "session.update":
@@ -279,6 +300,12 @@ class MultiplexingVoiceRouter:
                 elif event_type == "conversation.item.create" and not (input_selected or output_selected):
                     continue
                 try:
+                    if event_type == "response.cancel":
+                        try:
+                            if self.deck.state().get("active"):
+                                self.deck.toggle("", stop=True)
+                        except Exception:
+                            pass
                     await self._send_upstream(event)
                     if event_type == "response.cancel" and input_selected and not output_selected:
                         # A G2 double tap stops the selected speaker's buffered
@@ -305,6 +332,25 @@ class MultiplexingVoiceRouter:
             await asyncio.sleep(0.25)
             allowed = {self._input_id(), self._output_id()}
             self._relay_diagnostics(allowed)
+            # The HTTP bridge and voice backend share only this tiny control DB,
+            # not PCM or another model. Offline clients cannot hold a sound forever.
+            try:
+                state = await asyncio.to_thread(self.deck.state)
+            except Exception:
+                state = {"type": "trinity.deck", "revision": "deck-unavailable", "active": False,
+                         "error": "DeckUI momentan nicht verfügbar."}
+            active = bool(state.get("active") and state.get("playing"))
+            if active != self._deck_active or active and time.monotonic() >= self._deck_activity_at:
+                self._deck_active = active
+                self._deck_activity_at = time.monotonic() + 2
+                tail = self._response_audio_seconds - (time.monotonic() - self._response_first_audio_at) + 1.5 if self._response_first_audio_at else 0
+                await self._notify_input_output_activity(active or self._output_activity_started,
+                    min(300_000, max(500, int(tail * 1000))))
+            for client, device_id in tuple(self._clients.items()):
+                if device_id in allowed and self._deck_revision.get(client) != state.get("revision"):
+                    self._deck_revision[client] = state.get("revision")
+                    self._enqueue(client, json.dumps(state, ensure_ascii=False))
+            self._deck_revision = {client: rev for client, rev in self._deck_revision.items() if client in self._clients}
             for client, device_id in tuple(self._clients.items()):
                 if device_id not in allowed:
                     try:

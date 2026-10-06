@@ -55,6 +55,7 @@ from voice.config import load_voice_config
 from voice.input_selection import AudioInputSelection
 from voice.capabilities import transcription_stream_capability
 from web_ui import render_web_ui
+from sound_deck import SoundDeck
 from workbench import WorkbenchManager
 from workspace_manager import INBOX_WORKSPACE_ID, TrinityWorkspaceManager
 
@@ -418,7 +419,12 @@ class TrinityBridge:
                     "privacy_mode": request["privacy_mode"],
                 },
             )
-            enqueue_chat_request(self.core_dir, request)
+            deck = SoundDeck(self.home)
+            if (not self.auth_enabled or user and user.get("role") == "admin") and deck.execute_voice(text):
+                append_chat_event(history_path, {"request_id": request["request_id"], "role": "assistant", "source": "DeckUI",
+                    "text": "Deck-Klang gesteuert.", "session_id": request["session_id"], "session_name": request["session_name"]})
+            else:
+                enqueue_chat_request(self.core_dir, request)
 
         return {
             "ok": True,
@@ -1763,6 +1769,9 @@ def make_handler(bridge):
             if parsed.path in {"/", "/web"}:
                 _html_response(self, 200, render_web_ui(auth_enabled=bridge.auth_enabled))
                 return
+            if parsed.path == "/deck":
+                _html_response(self, 200, (bridge.core_dir / "sound_deck.html").read_text(encoding="utf-8"))
+                return
             if parsed.path == "/trinity-logo":
                 logo_path = bridge.core_dir / "icon.png"
                 if not logo_path.is_file():
@@ -1789,7 +1798,23 @@ def make_handler(bridge):
                 return
             try:
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
-                if parsed.path == "/health":
+                if parsed.path.startswith("/deck/") and not bridge.can_manage_settings(self, user):
+                    raise PermissionError("DeckUI benötigt Zugriff auf diese Trinity-Instanz.")
+                if parsed.path == "/deck/state":
+                    _json_response(self, 200, {"ok": True, "state": SoundDeck(bridge.home).state()})
+                elif parsed.path == "/deck/catalog":
+                    _json_response(self, 200, {"ok": True, "sounds": SoundDeck(bridge.home).catalog()})
+                elif parsed.path.startswith(("/deck/audio/", "/deck/pcm/")):
+                    pcm = parsed.path.startswith("/deck/pcm/")
+                    path = SoundDeck(bridge.home).media(parsed.path.rsplit("/", 1)[-1], pcm=pcm)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "audio/wav" if pcm else "audio/mpeg")
+                    self.send_header("Content-Length", str(path.stat().st_size))
+                    self.send_header("Cache-Control", "private, max-age=86400")
+                    self.end_headers()
+                    with path.open("rb") as source:
+                        shutil.copyfileobj(source, self.wfile)
+                elif parsed.path == "/health":
                     _json_response(
                         self,
                         200,
@@ -1987,7 +2012,15 @@ def make_handler(bridge):
                 return
             try:
                 bridge.validate_client_profile(self.headers.get("X-Trinity-Profile", ""))
-                if parsed.path == "/message":
+                if parsed.path in {"/deck/toggle", "/deck/stop", "/deck/ack"}:
+                    if not bridge.can_manage_settings(self, user):
+                        raise PermissionError("Deck-Steuerung benötigt Zugriff auf diese Trinity-Instanz.")
+                    payload = _read_json(self)
+                    deck = SoundDeck(bridge.home)
+                    state = (deck.acknowledge(str(payload.get("revision", "")), str(payload.get("device_id", "")), str(payload.get("status", "")))
+                             if parsed.path == "/deck/ack" else deck.toggle(str(payload.get("id", "")), stop=parsed.path == "/deck/stop"))
+                    _json_response(self, 200, {"ok": True, "state": state})
+                elif parsed.path == "/message":
                     _json_response(self, 200, bridge.send_message(_read_json(self), user=user))
                 elif parsed.path == "/glossary":
                     payload = _read_json(self)

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trinity · DeckUI</title>
+<style>
+:root{color-scheme:dark;font:16px system-ui;background:#101216;color:#eef1f5}body{max-width:1050px;margin:0 auto;padding:32px 20px}header{display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:28px;font-weight:600;margin:0}p{color:#a2abba;line-height:1.5}button{font:inherit;cursor:pointer;color:inherit;border:1px solid #35404e;border-radius:16px;background:#202631;padding:14px}#deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:20px;margin-top:28px}.tile{display:flex;flex-direction:column;align-items:center;gap:12px}.tile button{width:100%;aspect-ratio:1;box-shadow:0 4px 16px #0003;font-size:34px;transition:.15s}.tile button.on{border-color:#ffae55;background:#473020;box-shadow:0 0 20px #ffae5525}.tile span{font-size:15px;font-weight:600}input{font:inherit;background:#1d232c;color:inherit;border:1px solid #35404e;border-radius:10px;padding:12px;width:min(300px,70%)}#login{margin-top:24px}#error{color:#ffad8d}.small{font-size:13px}
+</style>
+<header><h1>DeckUI</h1><button id="stop">■ Stoppen</button></header>
+<p id="status">Ein Tippen startet. Noch einmal tippen stoppt. Ausgabe auf dem ausgewählten Trinity-Gerät.</p>
+<form id="login"><input type="password" id="token" autocomplete="off" placeholder="Trinity-Bridge-Token"><button>Verbinden</button></form>
+<p id="error" role="alert"></p><main id="deck"></main>
+<p class="small">Für die Wiedergabe muss die aktuelle Trinity-App mit dem Server verbunden sein. Diese WebUI steuert sie, nicht den Browser-Lautsprecher.</p>
+<script>
+let token='',sounds=[],busy=false;
+async function api(path,body){const response=await fetch(path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});let data=await response.json();if(!response.ok)throw Error(data.error||'Verbindung fehlgeschlagen');return data}
+function error(e){document.getElementById('error').textContent=e.message}
+async function update(){if(!token||busy||document.hidden)return;try{let {state}=await api('/deck/state');document.querySelectorAll('[data-sound]').forEach(b=>b.classList.toggle('on',state.active&&b.dataset.sound===state.sound_id));document.getElementById('status').textContent=state.active?'▶ '+state.name+' · Noch einmal tippen zum Stoppen':'Bereit · Ein Tippen startet, noch einmal stoppt.';document.getElementById('error').textContent=state.error||''}catch(e){error(e)}}
+document.getElementById('login').onsubmit=async e=>{e.preventDefault();token=document.getElementById('token').value.trim();try{sounds=(await api('/deck/catalog')).sounds;const deck=document.getElementById('deck');deck.replaceChildren();for(const sound of sounds){let tile=document.createElement('div');tile.className='tile';let button=document.createElement('button');button.dataset.sound=sound.id;button.textContent='♫';button.setAttribute('aria-label',sound.name+' starten oder stoppen');button.onclick=async()=>{if(busy)return;busy=true;try{await api('/deck/toggle',{id:sound.id})}catch(e){error(e)}finally{busy=false;update()}};let label=document.createElement('span');label.textContent=sound.name;tile.append(button,label);deck.append(tile)}document.getElementById('token').value='';document.getElementById('login').hidden=true;update()}catch(e){error(e)}};
+document.getElementById('stop').onclick=async()=>{try{await api('/deck/stop',{});update()}catch(e){error(e)}};
+setInterval(update,1000);
+</script></html>

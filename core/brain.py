@@ -329,6 +329,14 @@ class TrinityBrain:
         from voice.sentence_stream import StreamCancelled
         check_cancelled()
         self.reload_runtime_config()
+        from sound_deck import SoundDeck
+        deck = SoundDeck(os.path.dirname(os.path.dirname(self.config_path)))
+        if deck.command(user_query) is not None:
+            try:
+                deck.execute_voice(user_query)
+                return "", False
+            except ValueError as exc:
+                return str(exc), False
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "http://localhost",

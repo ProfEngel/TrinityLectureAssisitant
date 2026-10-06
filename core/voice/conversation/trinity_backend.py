@@ -23,6 +23,10 @@ from ..textedit_lease import TextEditVoiceLease
 from ..input_selection import AudioInputSelection
 from ..diagnostics import diagnostic
 from ..desktop_commands import app_to_open, mail_navigation
+try:
+    from core.sound_deck import SoundDeck
+except ImportError:
+    from sound_deck import SoundDeck
 
 
 DEFAULT_WAKEWORD_VARIANTS = (
@@ -302,6 +306,14 @@ class TrinityConversationBackend(ConversationBackend):
         query = str(text or "").strip()
         if not query:
             return []
+        deck = SoundDeck(self.home)
+        if deck.command(query) is not None:
+            try:
+                deck.execute_voice(query)
+                diagnostic(self.home, "DeckUI", "Klangsteuerung ausgeführt.")
+                return []
+            except ValueError as exc:
+                return [str(exc)]
         if is_transport_compaction(query):
             diagnostic(self.home, "Verlauf", "Interne Transport-Zusammenfassung abgefangen; keine Gesprächsfrage.")
             return []

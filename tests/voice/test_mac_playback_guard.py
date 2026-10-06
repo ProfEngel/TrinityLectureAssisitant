@@ -47,6 +47,32 @@ def test_server_done_does_not_release_mic_while_audio_remains(tmp_path, monkeypa
     assert voice._send_queue.empty()  # No audio echo or response.cancel.
 
 
+def test_deck_uses_existing_output_mixer_and_echo_guard(tmp_path, monkeypatch):
+    voice, clock = client(tmp_path, monkeypatch)
+    voice._deck_pcm.extend(np.full(OUTPUT_BLOCK_SAMPLES, 30000, dtype=np.int16).tobytes())
+    voice._output.extend(np.full(OUTPUT_BLOCK_SAMPLES, 4000, dtype=np.int16).tobytes())
+    assert voice._microphone_playback_guard_active()
+    outgoing = bytearray(OUTPUT_BLOCK_SAMPLES * 2)
+    voice._output_callback(outgoing, OUTPUT_BLOCK_SAMPLES, None, None)
+    assert np.all(np.frombuffer(outgoing, dtype=np.int16) == 32767)
+    assert not voice._deck_pcm and voice._deck_until > clock[0]
+
+
+def test_deck_connection_loss_retains_seen_revision(tmp_path, monkeypatch):
+    voice, _ = client(tmp_path, monkeypatch)
+    voice._deck_revision = "already-heard"
+    voice._deck_pcm.extend(bytes(50))
+    voice._stop_deck()
+    assert voice._deck_revision == "already-heard" and not voice._deck_pcm
+
+
+def test_fresh_client_does_not_replay_already_playing_sound(tmp_path, monkeypatch):
+    voice, _ = client(tmp_path, monkeypatch)
+    voice._handle_deck({"revision": "old", "active": True, "playing": True,
+                        "output_id": voice._remote_speaker_id})
+    assert not voice._deck_pcm and not voice._deck_playing
+
+
 def test_pcm_drain_hardware_delay_and_echo_tail_then_mic_resumes(tmp_path, monkeypatch):
     voice, clock = client(tmp_path, monkeypatch)
     pcm = audio(voice)

@@ -11,6 +11,8 @@ import platform
 import threading
 import time
 import uuid
+import io
+import wave
 from collections import deque
 from queue import Empty, Full, Queue
 from typing import Any
@@ -65,6 +67,12 @@ class LocalRealtimeAudioClient:
         self._error: BaseException | None = None
         self._send_queue: Queue[dict[str, Any]] = Queue(maxsize=96)
         self._output = bytearray()
+        self._deck_pcm = bytearray()
+        self._deck_revision = ""
+        self._deck_playing = False
+        self._deck_until = 0.0
+        self._deck_ack_at = 0.0
+        self._deck_cache = {}
         self._output_lock = threading.Lock()
         # Server completion is not playback completion: many seconds of PCM
         # can still be queued on this desktop after response.done arrives.
@@ -264,6 +272,7 @@ class LocalRealtimeAudioClient:
                         ):
                             self._sync_optional_streams(sd)
                             self._flush_audio_debug()
+                            self._tick_deck()
                             if not input_stream.active or not output_stream.active:
                                 raise RuntimeError("CoreAudio-Stream gestoppt; Mikrofon und Ausgabe werden neu verbunden.")
                             self._consume_speech_queue()
@@ -290,6 +299,7 @@ class LocalRealtimeAudioClient:
                     return
                 LOGGER.warning("Eve-Voice-Verbindung wird erneut versucht: %s", exc)
             finally:
+                self._stop_deck()
                 self._clear_output("Voice-Verbindung beendet oder neu verbunden")
                 self._remote_output_until = 0.0
                 self._close_optional_streams()
@@ -515,6 +525,7 @@ class LocalRealtimeAudioClient:
             LOGGER.debug("Desktop-Audioausgabe: %s", status)
         wanted = frames * SAMPLE_BYTES
         if not self._desktop_speaker_selected():
+            self._stop_deck()
             self._clear_output("Mac ist nicht mehr das Ausgabegerät")
             outdata[:] = b"\x00" * wanted
             return
@@ -522,7 +533,10 @@ class LocalRealtimeAudioClient:
             take = min(wanted, len(self._output))
             outgoing = bytes(self._output[:take])
             del self._output[:take]
-            if take:
+            deck_take = min(wanted, len(self._deck_pcm))
+            deck = bytes(self._deck_pcm[:deck_take])
+            del self._deck_pcm[:deck_take]
+            if take or deck_take:
                 now = time.monotonic()
                 # CoreAudio reports timestamps in its own clock domain. Use
                 # only their difference, not the absolute DAC timestamp.
@@ -533,8 +547,14 @@ class LocalRealtimeAudioClient:
                     hardware_delay = self._output_latency
                 self._playback_until = max(self._playback_until,
                     now + hardware_delay + frames / OUTPUT_SAMPLE_RATE)
+                if deck_take:
+                    self._deck_until = now + hardware_delay + frames / OUTPUT_SAMPLE_RATE + SPEAKER_ECHO_TAIL
         if take < wanted:
             outgoing += b"\x00" * (wanted - take)
+        if deck_take:
+            outgoing = np.clip(np.frombuffer(outgoing, dtype=np.int16).astype(np.int32)
+                               + np.frombuffer(deck.ljust(wanted, b"\x00"), dtype=np.int16).astype(np.int32),
+                               -32768, 32767).astype(np.int16).tobytes()
         outdata[:] = outgoing
 
         if self._broadcast_enabled:
@@ -690,7 +710,7 @@ class LocalRealtimeAudioClient:
         if not self._desktop_output_enabled:
             return now < self._remote_output_until
         with self._output_lock:
-            return (bool(self._output) or now < self._streaming_until
+            return (bool(self._output) or bool(self._deck_pcm) or now < self._streaming_until
                     or (self._playback_until > 0
                         and now < self._playback_until + SPEAKER_ECHO_TAIL))
 
@@ -700,6 +720,68 @@ class LocalRealtimeAudioClient:
             self._audio_debug.put_nowait(message)
         except Full:
             pass
+
+    def _stop_deck(self):
+        with self._output_lock:
+            self._deck_pcm.clear()
+            self._deck_playing = False
+
+    def _tick_deck(self):
+        now = time.monotonic()
+        with self._output_lock:
+            if not self._deck_playing:
+                return
+            ended = not self._deck_pcm and now > self._deck_until
+            revision = self._deck_revision
+            if ended:
+                self._deck_playing = False
+        if ended or now >= self._deck_ack_at:
+            self._deck_ack_at = now + 2
+            self._queue_event({"type": "trinity.deck.ack", "revision": revision,
+                               "status": "ended" if ended else "playing"})
+
+    def _handle_deck(self, event):
+        revision = str(event.get("revision") or "")
+        if revision == self._deck_revision:
+            return
+        self._stop_deck()
+        self._deck_revision = revision
+        if not event.get("active") or event.get("output_id") != self._remote_speaker_id or event.get("playing"):
+            return
+        def load():
+            try:
+                identifier = str(event.get("sound_id") or "")
+                pcm = self._deck_cache.get(identifier)
+                if pcm is None:
+                    path = str(event.get("pcm_url") or "")
+                    if not path.startswith("/deck/pcm/") or not self._remote_speaker_url:
+                        raise ValueError("Deck-PCM-Adresse fehlt")
+                    request = Request(self._remote_speaker_url.removesuffix("/speaker") + path,
+                                      headers={"Authorization": "Bearer " + self._remote_speaker_token})
+                    with urlopen(request, timeout=10) as response:
+                        data = response.read(32 * 1024 * 1024 + 1)
+                    if len(data) > 32 * 1024 * 1024:
+                        raise ValueError("Deck-Audio ist zu groß")
+                    with wave.open(io.BytesIO(data)) as audio:
+                        if (audio.getnchannels(), audio.getsampwidth(), audio.getframerate()) != (1, 2, OUTPUT_SAMPLE_RATE):
+                            raise ValueError("Deck-Audioformat muss Mono-PCM/24kHz sein")
+                        pcm = audio.readframes(audio.getnframes())
+                    if sum(map(len, self._deck_cache.values())) + len(pcm) > 96 * 1024 * 1024:
+                        self._deck_cache.clear()
+                    self._deck_cache[identifier] = pcm
+                if self._stop.is_set() or revision != self._deck_revision or not self._desktop_speaker_selected():
+                    return
+                with self._output_lock:
+                    self._deck_pcm = bytearray(pcm)
+                    self._deck_playing = True
+                    self._deck_until = time.monotonic() + .5
+                    self._deck_ack_at = 0
+                self._queue_audio_debug("DeckUI spielt: " + str(event.get("name") or identifier))
+            except Exception as exc:
+                if revision == self._deck_revision:
+                    self._queue_event({"type": "trinity.deck.ack", "revision": revision, "status": "error"})
+                    self._queue_audio_debug("DeckUI: " + str(exc))
+        threading.Thread(target=load, name="trinity-deck-download", daemon=True).start()
 
     def _flush_audio_debug(self):
         for _ in range(32):
@@ -805,7 +887,9 @@ class LocalRealtimeAudioClient:
         except (UnicodeDecodeError, json.JSONDecodeError):
             return
         event_type = str(event.get("type") or "")
-        if event_type == "trinity.debug":
+        if event_type == "trinity.deck":
+            self._handle_deck(event)
+        elif event_type == "trinity.debug":
             print(f"Server · {event.get('stage', '')}: {event.get('message', '')}", flush=True)
         elif event_type == "input_audio_buffer.speech_started":
             # Also used by the router for an explicit G2 stop. Always honor it;

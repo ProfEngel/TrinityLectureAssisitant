@@ -1,5 +1,13 @@
 # Trinity — Academic Personal Concierge 🧞‍♀️
 
+### Neu im Entwicklungsstand: DeckUI
+
+Private Sound-Kacheln in der Companion-App und unter `/deck`: vorhandene
+MP3s per Tipp oder „Trinity, NAME!“ starten/stoppen. Genau ein Deck-Klang
+läuft auf dem ausgewählten Ausgabegerät; STT, Modelle und Memory bleiben
+gemeinsam. Audiodateien liegen nur im privaten Runtime-Verzeichnis.
+[Einrichtung, Architektur und Feldtests](docs/SOUND_DECK.md).
+
 ## Aktuell: v0.19.0-rc.1 — Standalone oder ein gemeinsamer Server
 
 Trinity unterstützt Gespräche, Vorlesungen, Vorbereitung, Recherche und
