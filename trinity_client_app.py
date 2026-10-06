@@ -884,6 +884,18 @@ class ClientWindow(QMainWindow):
         except Exception as exc:
             self.statusBar().showMessage(f"Sprechstelle nicht erreichbar: {exc}", 7000)
 
+    def stop_voice_answer(self):
+        try:
+            if self.remote.get_speaker().get("device_id") != self._device_id:
+                self.statusBar().showMessage("Keine Mac-Wiedergabe: am aktuellen Ausgabegerät stoppen.", 6000)
+                return
+            self._speech_queue.parent.mkdir(parents=True, exist_ok=True)
+            with self._speech_queue.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"action": "stop", "device_id": self._device_id}) + "\n")
+            self.statusBar().showMessage("Aktuelle Mac-Antwort gestoppt; Ausgabe bleibt auf dem Mac.", 5000)
+        except Exception as exc:
+            self.statusBar().showMessage(f"Antwort konnte nicht gestoppt werden: {exc}", 7000)
+
     def mute_speaker(self):
         try:
             self.remote.release_speaker()

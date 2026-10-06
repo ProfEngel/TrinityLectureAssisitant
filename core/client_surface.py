@@ -121,6 +121,11 @@ class ClientTray(QObject):
         self.output_action = self.menu.addAction("Hier auf dem Mac antworten", window.claim_speaker)
         self.output_action.setCheckable(True)
         self.menu.addAction("Sprachausgabe stumm", window.mute_speaker)
+        self.menu.addAction("Antwort stoppen", window.stop_voice_answer)
+        self.headphones_action = self.menu.addAction("Unterbrechen durch Reinsprechen (Kopfhörer)")
+        self.headphones_action.setCheckable(True)
+        self.headphones_action.setChecked(self.settings.value("headphoneBargeIn", False, type=bool))
+        self.headphones_action.toggled.connect(self.set_headphone_barge_in)
         self.dictation_action = self.menu.addAction("Diktat starten")
         self.dictation_action.setCheckable(True)
         self.dictation_action.triggered.connect(lambda checked: window.set_dictation_from_menu(checked))
@@ -231,6 +236,14 @@ class ClientTray(QObject):
         self.window.statusBar().showMessage(
             "Trinity und Dein Mikrofon liegen auf BlackHole 2ch; dieses Gerät in Teams/OBS als Mikrofon auswählen"
             if enabled else "Trinity-Ausgabe nach Teams/OBS ausgeschaltet", 10000,
+        )
+
+    def set_headphone_barge_in(self, enabled: bool):
+        self.settings.setValue("headphoneBargeIn", bool(enabled))
+        self.settings.sync()
+        self.window.statusBar().showMessage(
+            "Reinsprechen aktiviert: bitte Kopfhörer verwenden, sonst kann Trinity sich selbst unterbrechen."
+            if enabled else "Lautsprecherschutz aktiv: Mac-Mikrofon pausiert während der Antwort.", 10000,
         )
 
     def _poll_status(self):

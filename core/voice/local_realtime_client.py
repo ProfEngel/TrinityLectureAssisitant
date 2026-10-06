@@ -33,6 +33,8 @@ VIRTUAL_SAMPLE_RATE = 48_000
 VIRTUAL_BLOCK_SAMPLES = 1_536
 SAMPLE_BYTES = 2
 BARGE_IN_CONFIRM_BLOCKS = 4
+SPEAKER_ECHO_TAIL = 0.35
+STREAM_GAP_LIMIT = 15.0
 
 
 class LocalRealtimeAudioClient:
@@ -64,6 +66,16 @@ class LocalRealtimeAudioClient:
         self._send_queue: Queue[dict[str, Any]] = Queue(maxsize=96)
         self._output = bytearray()
         self._output_lock = threading.Lock()
+        # Server completion is not playback completion: many seconds of PCM
+        # can still be queued on this desktop after response.done arrives.
+        self._playback_until = 0.0
+        self._streaming_until = 0.0
+        self._remote_output_until = 0.0
+        self._output_latency = 0.0
+        self._mac_echo_guard = platform.system() == "Darwin"
+        self._headphone_barge_in = False
+        self._mic_paused_for_playback = False
+        self._audio_debug: Queue[str] = Queue(maxsize=32)
         self._played_output: deque[np.ndarray] = deque(maxlen=20)
         self._echo_lock = threading.Lock()
         self._barge_in_candidate: deque[bytes] = deque(maxlen=BARGE_IN_CONFIRM_BLOCKS)
@@ -244,11 +256,14 @@ class LocalRealtimeAudioClient:
                     ) as input_stream:
                         self._ready.set()
                         self._write_ready_marker()
-                        print("Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
+                        self._output_latency = max(0.0, float(output_stream.latency))
+                        print("Eve Desktop-Audio bereit: Mac-Lautsprecherschutz aktiv; Reinsprechen nur im Kopfhörermodus."
+                              if self._mac_echo_guard else "Eve Desktop-Audio bereit: Unterbrechen durch Sprechen ist aktiv.")
                         while not self._stop.is_set() and (
                             not self._remote_speaker_url or self._desktop_connection_selected()
                         ):
                             self._sync_optional_streams(sd)
+                            self._flush_audio_debug()
                             if not input_stream.active or not output_stream.active:
                                 raise RuntimeError("CoreAudio-Stream gestoppt; Mikrofon und Ausgabe werden neu verbunden.")
                             self._consume_speech_queue()
@@ -275,6 +290,8 @@ class LocalRealtimeAudioClient:
                     return
                 LOGGER.warning("Eve-Voice-Verbindung wird erneut versucht: %s", exc)
             finally:
+                self._clear_output("Voice-Verbindung beendet oder neu verbunden")
+                self._remote_output_until = 0.0
                 self._close_optional_streams()
                 session_stop.set()
                 self._connection = None
@@ -321,6 +338,15 @@ class LocalRealtimeAudioClient:
             try:
                 payload = json.loads(line)
             except (TypeError, ValueError):
+                continue
+            if payload.get("action") == "stop":
+                # A menu click queued before a device handoff must not cancel
+                # the iPad/iPhone's newly selected response.
+                if (payload.get("device_id") == self._remote_speaker_id
+                        and self._desktop_speaker_selected()):
+                    self._clear_output("Antwort manuell auf dem Mac gestoppt")
+                    self._remote_output_until = 0.0
+                    self._queue_event({"type": "response.cancel"})
                 continue
             text = str(payload.get("text") or "").strip()
             if not text:
@@ -381,8 +407,14 @@ class LocalRealtimeAudioClient:
             settings.sync()
             hear_mac = settings.value("hearMacAudio", False, type=bool)
             broadcast = settings.value("broadcastTrinity", False, type=bool)
+            headphones = settings.value("headphoneBargeIn", False, type=bool)
         except Exception:
             hear_mac = broadcast = False
+            headphones = False
+        if headphones != self._headphone_barge_in:
+            self._headphone_barge_in = headphones
+            print("Mac-Audio: Reinsprechen mit Kopfhörern aktiviert."
+                  if headphones else "Mac-Audio: Lautsprecherschutz aktiviert.", flush=True)
 
         if not hear_mac and self._system_stream:
             self._system_stream.close()
@@ -483,13 +515,24 @@ class LocalRealtimeAudioClient:
             LOGGER.debug("Desktop-Audioausgabe: %s", status)
         wanted = frames * SAMPLE_BYTES
         if not self._desktop_speaker_selected():
-            self._clear_output()
+            self._clear_output("Mac ist nicht mehr das Ausgabegerät")
             outdata[:] = b"\x00" * wanted
             return
         with self._output_lock:
             take = min(wanted, len(self._output))
             outgoing = bytes(self._output[:take])
             del self._output[:take]
+            if take:
+                now = time.monotonic()
+                # CoreAudio reports timestamps in its own clock domain. Use
+                # only their difference, not the absolute DAC timestamp.
+                try:
+                    hardware_delay = max(0.0, float(_time_info.outputBufferDacTime)
+                                         - float(_time_info.currentTime))
+                except (AttributeError, TypeError, ValueError):
+                    hardware_delay = self._output_latency
+                self._playback_until = max(self._playback_until,
+                    now + hardware_delay + frames / OUTPUT_SAMPLE_RATE)
         if take < wanted:
             outgoing += b"\x00" * (wanted - take)
         outdata[:] = outgoing
@@ -538,6 +581,8 @@ class LocalRealtimeAudioClient:
                 request = Request(self._remote_speaker_url, headers=headers)
                 with urlopen(request, timeout=2) as response:
                     speaker = json.load(response)
+                if speaker.get("kind") == "none":
+                    self._remote_output_until = 0.0
                 self._desktop_output_enabled = (
                     bool(speaker.get("ok"))
                     and str(speaker.get("device_id") or "") == self._remote_speaker_id
@@ -574,6 +619,16 @@ class LocalRealtimeAudioClient:
             return
         if status:
             LOGGER.debug("Desktop-Audioeingabe: %s", status)
+        paused = self._microphone_playback_guard_active()
+        if paused != self._mic_paused_for_playback:
+            self._mic_paused_for_playback = paused
+            self._queue_audio_debug("Mac-Mikrofon pausiert: Antwort wird noch abgespielt (Echoschutz)."
+                                    if paused else "Mac-Mikrofon hört wieder zu: Wiedergabe und Echo-Nachlauf beendet.")
+        if paused:
+            self._barge_in_candidate.clear()
+            with self._system_lock:
+                self._system_blocks.clear()
+            return
         if self._system_audio_enabled and time.monotonic() - self._last_output_at > 0.7:
             with self._system_lock:
                 system = self._system_blocks.pop() if self._system_blocks else b""
@@ -625,8 +680,33 @@ class LocalRealtimeAudioClient:
         if now - self._last_output_at >= 0.18 or now - self._last_cancel_at < 0.45:
             return
         self._last_cancel_at = now
-        self._clear_output()
+        self._clear_output("Unterbrechung durch Reinsprechen erkannt")
         self._queue_event({"type": "response.cancel"})
+
+    def _microphone_playback_guard_active(self) -> bool:
+        if not self._mac_echo_guard or self._headphone_barge_in:
+            return False
+        now = time.monotonic()
+        if not self._desktop_output_enabled:
+            return now < self._remote_output_until
+        with self._output_lock:
+            return (bool(self._output) or now < self._streaming_until
+                    or (self._playback_until > 0
+                        and now < self._playback_until + SPEAKER_ECHO_TAIL))
+
+    def _queue_audio_debug(self, message):
+        # Never block CoreAudio callbacks on terminal/file I/O.
+        try:
+            self._audio_debug.put_nowait(message)
+        except Full:
+            pass
+
+    def _flush_audio_debug(self):
+        for _ in range(32):
+            try:
+                print("Mac-Audio: " + self._audio_debug.get_nowait(), flush=True)
+            except Empty:
+                break
 
     def _should_forward_microphone(self, pcm: bytes) -> bool:
         if not pcm or self._stop.is_set():
@@ -728,8 +808,13 @@ class LocalRealtimeAudioClient:
         if event_type == "trinity.debug":
             print(f"Server · {event.get('stage', '')}: {event.get('message', '')}", flush=True)
         elif event_type == "input_audio_buffer.speech_started":
-            self._clear_output()
+            # Also used by the router for an explicit G2 stop. Always honor it;
+            # the guard prevents local echo from reaching VAD in the first place.
+            self._clear_output("Server meldet neue Sprache oder Stop vom Eingabegerät")
             print("Trinity hört Sprache vom ausgewählten Mikrofon.", flush=True)
+        elif event_type == "trinity.output_activity":
+            hold = max(0, min(300_000, int(event.get("hold_ms") or 0))) / 1000
+            self._remote_output_until = time.monotonic() + (300 if event.get("active") else hold)
         elif event_type == "conversation.item.input_audio_transcription.delta":
             now = time.monotonic()
             if now - self._last_partial_log_at >= 0.5:
@@ -771,16 +856,30 @@ class LocalRealtimeAudioClient:
             with self._output_lock:
                 first_chunk = not self._output and time.monotonic() - self._last_output_at > 0.5
                 self._output.extend(audio)
+                self._streaming_until = time.monotonic() + STREAM_GAP_LIMIT
             if first_chunk:
                 print("Eve-Audio vom Server empfangen · Wiedergabe auf dem Mac.", flush=True)
             self._last_output_at = time.monotonic()
+        elif event_type == "response.done":
+            status = (event.get("response") or {}).get("status")
+            if status in {"cancelled", "failed", "incomplete"}:
+                self._clear_output("Server meldet Antwortstatus " + status)
+                self._remote_output_until = 0.0
+            else:
+                with self._output_lock:
+                    self._streaming_until = 0.0
+                self._queue_audio_debug("Server-Generierung fertig; vorhandener Audiopuffer wird vollständig abgespielt.")
         elif event_type == "error":
             error = event.get("error") if isinstance(event.get("error"), dict) else {}
             LOGGER.warning("Eve-Realtime-Fehler: %s", error.get("message") or "unbekannt")
 
-    def _clear_output(self) -> None:
+    def _clear_output(self, reason: str = "") -> None:
         with self._output_lock:
+            had_audio = bool(self._output) or self._streaming_until > 0
             self._output.clear()
+            self._streaming_until = 0.0
+        if reason and had_audio:
+            self._queue_audio_debug("Wiedergabe beendet: " + reason)
         # Keep the recent playback fingerprint. The physical speaker tail still
         # reaches the microphone after the digital buffer has been cancelled;
         # clearing this history made every following response interrupt itself.

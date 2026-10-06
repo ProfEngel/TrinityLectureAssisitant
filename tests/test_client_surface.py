@@ -26,9 +26,16 @@ def test_client_tray_keeps_microphone_and_output_independent(monkeypatch, tmp_pa
                  "remember_foreground_app", "set_runtime_mode", "set_window_sharing",
                  "insert_last_answer", "set_debug_terminal", "set_dictation_from_menu"):
         setattr(window, name, Mock())
+    window.stop_voice_answer = Mock()
     tray = ClientTray(window)
     try:
         tray._apply_status(window.remote.get_audio_input(), window.remote.get_speaker())
+        assert not tray.headphones_action.isChecked()
+        tray.headphones_action.setChecked(True)
+        assert tray.settings.value("headphoneBargeIn", type=bool)
+        tray.headphones_action.setChecked(False)
+        next(a for a in tray.menu.actions() if a.text() == "Antwort stoppen").trigger()
+        window.stop_voice_answer.assert_called_once()
         assert tray.vision_action.isChecked()
         assert tray.vision_action in tray.menu.actions()
         assert tray.vision_action.text() == "Aktives Fenster erfassen"
