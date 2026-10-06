@@ -57,12 +57,15 @@ def build_speech_to_speech_command(config: VoiceConfig) -> list[str]:
         "--qwen3_tts_model_name", profile.tts_model,
         "--qwen3_tts_device", profile.device,
         "--qwen3_tts_backend", profile.tts_backend,
-        "--qwen3_tts_ref_audio", str(Path(config.reference_audio)),
-        "--qwen3_tts_ref_text", config.reference_text,
         "--qwen3_tts_language", "German",
         "--qwen3_tts_streaming_chunk_size", str(config.streaming_chunk_size),
         "--log_level", "info",
     ])
+    if "customvoice" in profile.tts_model.lower():
+        command.extend(["--qwen3_tts_speaker", config.tts_speaker or "Vivian"])
+    else:
+        command.extend(["--qwen3_tts_ref_audio", str(Path(config.reference_audio)),
+                        "--qwen3_tts_ref_text", config.reference_text])
     # Upstream defaults to 6bit even when an explicit 4bit model is selected.
     if profile.device == "mps" and profile.tts_model.startswith("mlx-community/"):
         quantization = profile.tts_model.rsplit("-", 1)[-1]

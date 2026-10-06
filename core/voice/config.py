@@ -217,6 +217,7 @@ class VoiceConfig:
     tts_model: str = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit"
     reference_audio: Path = field(default_factory=Path)
     reference_text: str = EVE_REFERENCE_TEXT
+    tts_speaker: str = ""
     streaming_chunk_size: int = 8
     audio_prebuffer_ms: int = 180
     barge_in_enabled: bool = True
@@ -299,9 +300,10 @@ class VoiceConfig:
             and not self.backend_token
         ):
             errors.append("Ein extern gebundener Trinity-Core-Backend braucht voice.backend_token.")
-        if self.enabled and profile.runtime_role != "client" and not self.reference_audio.is_file():
+        needs_reference = "customvoice" not in profile.tts_model.lower()
+        if self.enabled and profile.runtime_role != "client" and needs_reference and not self.reference_audio.is_file():
             errors.append(f"Eve-Referenzaudio fehlt: {self.reference_audio or '(nicht konfiguriert)'}")
-        if self.enabled and not self.reference_text.strip():
+        if self.enabled and needs_reference and not self.reference_text.strip():
             errors.append("Eve-Referenztranskript fehlt.")
         if not 1 <= int(self.streaming_chunk_size) <= 64:
             errors.append("voice.streaming_chunk_size muss zwischen 1 und 64 liegen.")
@@ -333,6 +335,7 @@ def default_voice_config() -> dict[str, Any]:
         "tts_model": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit",
         "reference_audio": "",
         "reference_text": EVE_REFERENCE_TEXT,
+        "tts_speaker": "",
         "streaming_chunk_size": 8,
         "audio_prebuffer_ms": 180,
         "barge_in_enabled": True,
@@ -446,6 +449,7 @@ def load_voice_config(home: str | Path, config: dict[str, Any], profile_name: st
         tts_model=str(raw.get("tts_model") or "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit"),
         reference_audio=_expand_path(configured_audio, root),
         reference_text=reference_text,
+        tts_speaker=str(raw.get("tts_speaker") or ""),
         streaming_chunk_size=int(raw.get("streaming_chunk_size") or 8),
         audio_prebuffer_ms=int(raw.get("audio_prebuffer_ms") if raw.get("audio_prebuffer_ms") is not None else 180),
         barge_in_enabled=bool(raw.get("barge_in_enabled", True)),

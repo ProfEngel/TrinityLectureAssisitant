@@ -1,0 +1,51 @@
+name: Desktop executable release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag
+        required: true
+        default: v0.19.1
+  push:
+    tags: ['v0.19.*']
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install packaging tools
+        run: python -m pip install pyinstaller==6.16.0 PySide6==6.11.1 uv==0.11.2 pytest requests
+      - name: Validate release payload
+        run: python tools/audit_release.py
+      - name: Test public setup policy
+        run: python -m pytest tests/test_desktop_distribution.py
+      - name: Build executable
+        run: python desktop_distribution/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ runner.os }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.zip
+            dist/SHA256SUMS-*.txt
+            dist/build-info.json
+      - name: Attach verified build to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        shell: python
+        run: |
+          import os, pathlib, subprocess
+          files = [str(p) for p in pathlib.Path('dist').iterdir() if p.suffix in {'.dmg', '.exe', '.zip'} or p.name.startswith('SHA256SUMS-')]
+          subprocess.run(['gh', 'release', 'upload', os.environ['RELEASE_TAG'], *files, '--clobber'], check=True)

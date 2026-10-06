@@ -23,6 +23,7 @@ memory/
 logs/
 TrinityRuntime/
 build/
+dist/
 venv/
 __pycache__/
 *.pyc

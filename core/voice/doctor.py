@@ -63,7 +63,8 @@ def run_checks(config: VoiceConfig) -> list[Check]:
         Check("speech-to-speech", s2s_version == "0.2.11", s2s_version or "nur auf dem GPU-Host benötigt", required=inference_required),
         Check("mlx-audio", bool(mlx_audio_version), mlx_audio_version or "nicht installiert", required=inference_required and platform.system() == "Darwin"),
         Check("Parakeet-Modul", importlib.util.find_spec("speech_to_speech") is not None, config.stt_model, required=inference_required),
-        Check("Eve-Referenzaudio", config.reference_audio.is_file(), str(config.reference_audio), required=inference_required),
+        Check("Eve-Referenzaudio", config.reference_audio.is_file(), str(config.reference_audio),
+              required=inference_required and "customvoice" not in profile.tts_model.lower()),
     ]
     if profile.runtime_role != "client" and profile.conversation_backend == "trinity":
         checks.append(Check("Backend-Port", _port_available(config.backend_host, config.backend_port), f"{config.backend_host}:{config.backend_port}"))
