@@ -33,6 +33,21 @@ def main():
     if os.name != "nt":
         (resources / binary.name).chmod(0o755)
     shutil.copyfile(ROOT / "assets/trinity_icon_new.png", resources / "icon.png")
+    licenses = resources / "licenses"
+    licenses.mkdir()
+    shutil.copytree(ROOT / "desktop_distribution/licenses", licenses, dirs_exist_ok=True)
+    shutil.copyfile(ROOT / "desktop_distribution/THIRD_PARTY_NOTICES.md", licenses / "THIRD_PARTY_NOTICES.md")
+    shutil.copyfile(ROOT / "LICENSE", licenses / "Trinity-LICENSE.txt")
+    import importlib.metadata
+    for package in ("uv", "pyinstaller", "PySide6", "shiboken6", "altgraph", "macholib"):
+        try:
+            distribution = importlib.metadata.distribution(package)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+        for item in distribution.files or []:
+            if item.name.startswith(("LICENSE", "COPYING")):
+                shutil.copyfile(distribution.locate_file(item), licenses / (package + "-" + item.name))
+    (licenses / "Python-LICENSE.txt").write_text(__import__("pydoc").render_doc(license), encoding="utf-8")
     for src, name in [("assets/voices/eve/initial.wav", "eve.wav"), ("assets/voices/eve/initial.txt", "eve.txt")]:
         if (ROOT / src).is_file():
             shutil.copyfile(ROOT / src, resources / name)

@@ -206,7 +206,7 @@ def setup(values, root: Path, log):
         pending.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
         pending.chmod(0o600)
         try:
-            run_command([python, app / "desktop_distribution/warm_voice.py", "--config", pending], log, env)
+            run_command([python, "-u", app / "desktop_distribution/warm_voice.py", "--config", pending], log, env)
         finally:
             pending.unlink(missing_ok=True)
     if not existing.exists():

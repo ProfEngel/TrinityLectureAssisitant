@@ -69,6 +69,11 @@ Deinstallation des Windows-Starters löscht Benutzerdaten nicht. Die laufende
 private Produktionsinstallation und der Server werden durch den öffentlichen
 Build nicht verändert. Erst nach eigener Abnahme migrieren.
 
+Die separate Mac-Ersteinrichtung wurde ohne vorinstalliertes Python/Git im
+Starter-Pfad geprüft: Bibliotheken, Parakeet und Qwen3 heruntergeladen und
+beide Modelle aufgewärmt; `voice doctor` ohne erforderliche Fehler.
+Das ersetzt keinen Hör-/Mikrofontest oder einen Windows-GPU-Test.
+
 Bei Einrichtungsfehlern zeigt der Assistent das Paket-/Hardwareproblem. Nach
 Netzwerkfehlern erneut starten; Downloads werden über die Caches wiederverwendet.
 Diagnosen: `logs/desktop.log` im Datenverzeichnis, Laufzeitlogs unter `app/logs/`.
