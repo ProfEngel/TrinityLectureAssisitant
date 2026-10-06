@@ -21,8 +21,10 @@ Memory-Daten oder Sound-Deck-MP3s werden mitgeliefert.
 ![Trinity auf dem iPad: interaktive HTML-Folie mit Annotation](site/assets/ipad-annotations.jpg)
 
 Die iPhone/iPad-Companion-App ist separat und ihr Repository bleibt privat.
-Unlisted-App-Store-Veröffentlichung wird vorbereitet; ein öffentlicher
-App-Store-Link ist noch nicht verfügbar.
+Die kostenlose Veröffentlichung im regulären App Store wird vorbereitet;
+ein App-Store-Link ist erst nach Apples Review und Veröffentlichung verfügbar.
+Trinity Desktop bleibt kostenlos und Open Source. Die Companion-App liefert
+keinen kostenlosen öffentlichen KI-Server mit.
 
 ### Neu im Entwicklungsstand: DeckUI
 
