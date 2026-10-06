@@ -30,7 +30,9 @@ def test_unsafe_api_url(source):
 def test_zip_traversal(tmp_path, name):
     archive = tmp_path / "payload.zip"
     with zipfile.ZipFile(archive, "w") as bundle:
-        bundle.writestr(name, "not installed")
+        entry = zipfile.ZipInfo("placeholder")
+        entry.filename = name  # Preserve raw ZIP separators on Windows too.
+        bundle.writestr(entry, "not installed")
     with pytest.raises(ValueError):
         distribution.safe_extract(archive, tmp_path / "app")
 

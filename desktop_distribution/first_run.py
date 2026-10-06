@@ -46,7 +46,7 @@ def safe_extract(archive: Path, target: Path):
     with zipfile.ZipFile(archive) as bundle:
         for info in bundle.infolist():
             parts = PurePosixPath(info.filename)
-            if parts.is_absolute() or ".." in parts.parts or "\\" in info.filename or ":" in info.filename:
+            if parts.is_absolute() or ".." in parts.parts or "\\" in info.orig_filename or ":" in info.filename:
                 raise ValueError("Ungültiger Pfad im Installationspaket.")
             if (info.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValueError("Symbolischer Link im Installationspaket nicht erlaubt.")
