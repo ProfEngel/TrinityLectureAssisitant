@@ -178,7 +178,9 @@ class TrinityConversationBackend(ConversationBackend):
         configured = config.get("persona", {}).get("trigger_variants") or DEFAULT_WAKEWORD_VARIANTS
         variants = tuple(str(item) for item in configured if str(item).strip())
         if "trinity" in variants:
-            variants = tuple(dict.fromkeys((*variants, "trinetti", "trinetty")))
+            # Observed Parakeet renderings of the addressed name; do not make
+            # ordinary words such as "trainiert" a broad wakeword.
+            variants = tuple(dict.fromkeys((*variants, "trinetti", "trinetty", "trinny")))
         return mode, variants or DEFAULT_WAKEWORD_VARIANTS
 
     def _ensure_brain(self):

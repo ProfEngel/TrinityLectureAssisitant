@@ -55,6 +55,12 @@ def test_lecture_voice_answers_after_fuzzy_wakeword(tmp_path):
     assert backend._brain.queries == ["Triniti, erkläre das Nash-Gleichgewicht"]
 
 
+def test_observed_trinny_name_is_recognized_but_trainiert_is_not(tmp_path):
+    backend = backend_for(tmp_path, "lecture")
+    assert list(backend.respond("Mensch, trinny, kannst du mich hören?")) == ["Verstanden."]
+    assert list(backend.respond("Das Modell wird trainiert.")) == []
+
+
 def test_office_voice_answers_without_wakeword(tmp_path):
     backend = backend_for(tmp_path, "office")
 

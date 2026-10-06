@@ -61,6 +61,9 @@ class MultiplexingVoiceRouter:
         self._response_audio_seconds = 0.0
         self._response_first_audio_at = 0.0
         self._output_activity_started = False
+        self._output_blocked_until = 0.0
+        self._activity_heartbeat_at = 0.0
+        self._last_audio_input_at = time.monotonic()
         self._response_chunks = deque()
         self._response_finished = False
         self._diagnostic_path = self.config_path.parent.parent / "TrinityRuntime/voice/diagnostic_events.jsonl"
@@ -85,7 +88,48 @@ class MultiplexingVoiceRouter:
         if self._upstream is None:
             raise ConnectionError("Parakeet-Realtime ist nicht verbunden.")
         async with self._send_lock:
-            await self._upstream.send(json.dumps(event, ensure_ascii=False))
+            # Trinity's transport-only setting is not part of upstream Realtime.
+            wire = {key: value for key, value in event.items() if key != "trinity_allow_barge_in"}
+            await self._upstream.send(json.dumps(wire, ensure_ascii=False))
+
+    def _playback_tail_ms(self):
+        return min(300_000, max(0, int((self._output_blocked_until - time.monotonic()) * 1000)))
+
+    def _mask_input_echo(self, event):
+        """Keep VAD time continuous while suppressing an acoustic answer echo.
+
+        Input packets already in flight when playback begins can otherwise
+        immediately cancel the very answer whose first audio just arrived.
+        Explicit headphone clients may opt into interruption; buttons always work.
+        """
+        if event.get("type") != "input_audio_buffer.append":
+            return event
+        if (self._last_session_update or {}).get("trinity_allow_barge_in") is True:
+            return event
+        if not (self._output_activity_started or self._deck_active or self._playback_tail_ms()):
+            return event
+        encoded = event.get("audio")
+        if not isinstance(encoded, str) or len(encoded) > 262_144:
+            return None
+        try:
+            samples = base64.b64decode(encoded, validate=True)
+        except (ValueError, TypeError):
+            return None
+        return {**event, "audio": base64.b64encode(bytes(len(samples))).decode("ascii")}
+
+    async def _keep_vad_clock_running(self):
+        # Older Mac/Companion clients completely stop sending during playback.
+        # Supply only silence through the SAME pipeline, not a second input/STT.
+        if not self._upstream or not self._input_id():
+            return
+        if not (self._output_activity_started or self._deck_active or self._playback_tail_ms()):
+            return
+        elapsed = time.monotonic() - self._last_audio_input_at
+        if elapsed < 0.20:
+            return
+        self._last_audio_input_at = time.monotonic()
+        audio = base64.b64encode(bytes(6400)).decode("ascii")  # 200 ms, mono/16 kHz PCM16
+        await self._send_upstream({"type": "input_audio_buffer.append", "audio": audio})
 
     def _enqueue(self, client, raw):
         """A stalled device must never stall Parakeet or the other device."""
@@ -161,12 +205,17 @@ class MultiplexingVoiceRouter:
                     self._output_activity_started = True
                     self._response_first_audio_at = time.monotonic()
                     await self._notify_input_output_activity(True, 0)
+                self._output_blocked_until = max(self._output_blocked_until,
+                    self._response_first_audio_at + self._response_audio_seconds + 0.5)
             if event_type == "response.done" and self._output_activity_started:
                 self._response_finished = True
-                elapsed = time.monotonic() - self._response_first_audio_at
                 # The server can synthesize faster than the chosen speaker plays.
                 # Keep the glasses deaf to acoustic playback, not merely to generation.
-                hold_ms = min(300_000, max(1500, int((self._response_audio_seconds - elapsed + 1.5) * 1000)))
+                cancelled = event.get("response", {}).get("status") in {"cancelled", "failed"}
+                if cancelled:
+                    self._output_blocked_until = time.monotonic() + 0.35
+                    self._response_chunks.clear()
+                hold_ms = self._playback_tail_ms()
                 await self._notify_input_output_activity(False, hold_ms)
                 self._output_activity_started = False
             if event_type == "session.created":
@@ -193,7 +242,7 @@ class MultiplexingVoiceRouter:
     async def _notify_input_output_activity(self, active, hold_ms):
         active = active or self._deck_active
         payload = json.dumps({"type": "trinity.output_activity", "active": active,
-                              "hold_ms": hold_ms})
+                              "hold_ms": hold_ms, "lease_ms": 8000})
         input_id = self._input_id()
         for client, device_id in tuple(self._clients.items()):
             if device_id != input_id:
@@ -218,6 +267,7 @@ class MultiplexingVoiceRouter:
                 pass
             finally:
                 self._upstream = None
+                self._output_blocked_until = 0.0
                 self._session_created = None
                 if self._output_activity_started:
                     await self._notify_input_output_activity(False, 0)
@@ -301,11 +351,20 @@ class MultiplexingVoiceRouter:
                     continue
                 try:
                     if event_type == "response.cancel":
+                        self._output_blocked_until = time.monotonic() + 0.35
+                        self._output_activity_started = False
+                        self._response_chunks.clear()
+                        await self._notify_input_output_activity(False, 350)
                         try:
                             if self.deck.state().get("active"):
                                 self.deck.toggle("", stop=True)
                         except Exception:
                             pass
+                    event = self._mask_input_echo(event)
+                    if event is None:
+                        continue
+                    if event_type == "input_audio_buffer.append":
+                        self._last_audio_input_at = time.monotonic()
                     await self._send_upstream(event)
                     if event_type == "response.cancel" and input_selected and not output_selected:
                         # A G2 double tap stops the selected speaker's buffered
@@ -331,6 +390,12 @@ class MultiplexingVoiceRouter:
         while True:
             await asyncio.sleep(0.25)
             allowed = {self._input_id(), self._output_id()}
+            try:
+                await self._keep_vad_clock_running()
+            except Exception:
+                # Upstream can disappear between the availability check and
+                # send. Its supervisor reconnects; this watcher must survive.
+                pass
             self._relay_diagnostics(allowed)
             # The HTTP bridge and voice backend share only this tiny control DB,
             # not PCM or another model. Offline clients cannot hold a sound forever.
@@ -343,9 +408,14 @@ class MultiplexingVoiceRouter:
             if active != self._deck_active or active and time.monotonic() >= self._deck_activity_at:
                 self._deck_active = active
                 self._deck_activity_at = time.monotonic() + 2
-                tail = self._response_audio_seconds - (time.monotonic() - self._response_first_audio_at) + 1.5 if self._response_first_audio_at else 0
                 await self._notify_input_output_activity(active or self._output_activity_started,
-                    min(300_000, max(500, int(tail * 1000))))
+                    max(350, self._playback_tail_ms()))
+            # Renew short client leases during synthesis/playout. A lost end
+            # event or reconnect must never leave a microphone blocked for minutes.
+            if time.monotonic() >= self._activity_heartbeat_at:
+                self._activity_heartbeat_at = time.monotonic() + 2
+                await self._notify_input_output_activity(self._output_activity_started,
+                    self._playback_tail_ms())
             for client, device_id in tuple(self._clients.items()):
                 if device_id in allowed and self._deck_revision.get(client) != state.get("revision"):
                     self._deck_revision[client] = state.get("revision")

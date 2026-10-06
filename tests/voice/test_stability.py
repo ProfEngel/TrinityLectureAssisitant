@@ -120,7 +120,7 @@ def test_bad_audio_never_leaks_and_deterministic_retry_preserves_reference():
     def generate(**kwargs):
         calls.append(kwargs)
         duration = 15 if kwargs["do_sample"] else 2
-        yield np.zeros(duration * 100), 100, {}
+        yield np.full(duration * 100, 0.03), 100, {}
 
     handler = SimpleNamespace(
         model=SimpleNamespace(generate_voice_clone_streaming=generate),
@@ -148,7 +148,7 @@ def test_final_tts_retry_uses_same_speaker_without_reference_text_context():
     def generate(**kwargs):
         calls.append(kwargs)
         duration = 2 if kwargs["xvec_only"] else 15
-        yield np.zeros(duration * 100), 100, {}
+        yield np.full(duration * 100, 0.03), 100, {}
     handler = SimpleNamespace(
         model=SimpleNamespace(generate_voice_clone_streaming=generate),
         language="German", ref_audio="eve.wav", ref_text="Eve reference",
@@ -159,8 +159,43 @@ def test_final_tts_retry_uses_same_speaker_without_reference_text_context():
     )
     chunks = list(checked_clone_chunks(handler, "Hallo."))
     assert len(chunks) == 1 and chunks[0][0].size == 200
-    assert len(calls) == 3 and calls[-1]["xvec_only"]
+    assert len(calls) == 2 and calls[-1]["xvec_only"]
     assert all(call["ref_audio"] == "eve.wav" for call in calls)
+
+
+def test_clone_rejects_silence_early_and_keeps_same_eve_embedding():
+    calls = []
+    def generate(**kwargs):
+        calls.append(kwargs)
+        if not kwargs["xvec_only"]:
+            for _ in range(20):
+                yield np.zeros(64), 100, {}
+        else:
+            yield np.full(200, 0.03), 100, {}
+    handler = SimpleNamespace(
+        model=SimpleNamespace(generate_voice_clone_streaming=generate),
+        language="German", ref_audio="eve.wav", ref_text="Eve reference",
+        xvec_only=False, streaming_chunk_size=8, parity_mode=False,
+        non_streaming_mode=True, cancel_scope=None,
+        _estimate_max_new_tokens=lambda text: 360,
+        _stream=lambda chunks, **kwargs: chunks,
+    )
+    chunks = list(checked_clone_chunks(handler, "Ich höre dir zu."))
+    assert len(calls) == 2
+    assert chunks[0][0].size == 200
+    assert all(call["ref_audio"] == "eve.wav" for call in calls)
+    assert calls[1]["xvec_only"] and calls[1]["do_sample"] is False
+
+
+def test_silent_clone_never_counts_as_valid_speech():
+    from core.voice.tts_safety import trim_clone_silence
+    assert trim_clone_silence([(np.zeros(400), 100, {})]) == []
+    wave = np.concatenate([np.zeros(200), np.full(100, .05), np.zeros(50),
+                           np.full(100, .05), np.zeros(200)])
+    cleaned = trim_clone_silence([(wave[:300], 100, {}), (wave[300:], 100, {})])
+    assert cleaned[0][0].size == 265
+    assert np.count_nonzero(cleaned[0][0]) == 200
+
 
 
 def test_slow_peer_cannot_block_other_peer(tmp_path):
